@@ -8,6 +8,32 @@ discoverable by an agent, and is the `description` clear and trigger-friendly?
 This is **MVP1**: local, deterministic, and fast. There is no LLM integration,
 no network access, and no telemetry.
 
+## Running the extension
+
+> **Opening this repository in VS Code does not load the extension** — the
+> folder is just its source code, so the `SKILL.md Inspector:` commands will not
+> appear in the Command Palette of your normal window. You must *run* or
+> *install* the extension first.
+
+**Option A — run it (for trying/developing):**
+
+1. `npm install`
+2. Press **F5** (or Run and Debug → "Run Extension"). This builds `dist/` and
+   opens a second window titled **[Extension Development Host]**.
+3. In *that* window, open the Command Palette (Ctrl/Cmd+Shift+P) and type
+   "SKILL.md Inspector" — the four commands appear there. Open a `SKILL.md`
+   file (e.g. from `fixtures/`) to see diagnostics and quick fixes.
+
+**Option B — install it (to use in your normal window):**
+
+1. `npm install`
+2. `npx @vscode/vsce package` → produces `skill-md-inspector-0.1.0.vsix`.
+3. In VS Code: Command Palette → **Extensions: Install from VSIX…** → pick the
+   file, then reload. The commands now appear in your normal window.
+
+If pressing F5 does nothing, make sure `npm install` has run so the build task
+can execute.
+
 ## Features
 
 - **Frontmatter validation** — reports missing, malformed, or not-at-top YAML
