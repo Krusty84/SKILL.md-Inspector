@@ -1,0 +1,23 @@
+import * as vscode from 'vscode';
+import type { DiagnosticsProvider } from '../diagnostics/diagnosticsProvider';
+import { validateCurrentSkill } from './validateCurrentSkill';
+import { validateWorkspaceSkills } from './validateWorkspaceSkills';
+import { insertTemplate } from './insertTemplate';
+import { showSkillReport } from './showSkillReport';
+
+/** Registers all extension commands and ties their disposables to `context`. */
+export function registerCommands(
+  context: vscode.ExtensionContext,
+  provider: DiagnosticsProvider,
+): void {
+  context.subscriptions.push(
+    vscode.commands.registerCommand('skillMdInspector.validateCurrentSkill', () =>
+      validateCurrentSkill(provider),
+    ),
+    vscode.commands.registerCommand('skillMdInspector.validateWorkspaceSkills', () =>
+      validateWorkspaceSkills(provider),
+    ),
+    vscode.commands.registerCommand('skillMdInspector.insertTemplate', () => insertTemplate()),
+    vscode.commands.registerCommand('skillMdInspector.showSkillReport', () => showSkillReport()),
+  );
+}

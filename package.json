@@ -1,0 +1,126 @@
+{
+  "name": "skill-md-inspector",
+  "displayName": "SKILL.md Inspector",
+  "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "publisher": "krusty84",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krusty84/skill-md-inspector.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "keywords": [
+    "skill",
+    "SKILL.md",
+    "agent",
+    "linter",
+    "markdown"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:markdown",
+    "workspaceContains:**/SKILL.md"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "skillMdInspector.validateCurrentSkill",
+        "title": "Validate Current Skill",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.validateWorkspaceSkills",
+        "title": "Validate Workspace Skills",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.insertTemplate",
+        "title": "Insert SKILL.md Template",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.showSkillReport",
+        "title": "Show Skill Report",
+        "category": "SKILL.md Inspector"
+      }
+    ],
+    "configuration": {
+      "title": "SKILL.md Inspector",
+      "properties": {
+        "skillMdInspector.validation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable deterministic validation of SKILL.md files."
+        },
+        "skillMdInspector.validation.runOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Re-run validation whenever a SKILL.md file is saved."
+        },
+        "skillMdInspector.profile": {
+          "type": "string",
+          "default": "generic",
+          "enum": [
+            "generic",
+            "vscode",
+            "claude",
+            "codex"
+          ],
+          "description": "Validation profile applied to SKILL.md files."
+        },
+        "skillMdInspector.description.minLength": {
+          "type": "number",
+          "default": 40,
+          "description": "Minimum recommended length of the description field."
+        },
+        "skillMdInspector.description.maxLength": {
+          "type": "number",
+          "default": 1024,
+          "description": "Maximum allowed length of the description field."
+        },
+        "skillMdInspector.name.maxLength": {
+          "type": "number",
+          "default": 64,
+          "description": "Maximum allowed length of the name field."
+        },
+        "skillMdInspector.experimental.llmReview.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reserved for future LLM-assisted review. Not implemented in MVP1."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.0",
+    "@types/node": "^22.7.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.11.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.8.0",
+    "vitest": "^2.1.1"
+  }
+}
