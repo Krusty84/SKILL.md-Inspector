@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0 — MVP3 (Workspace Intelligence)
+
+### Added
+
+- **Workspace discovery** — recursively finds every `SKILL.md` (skipping
+  `node_modules`, `.git`, and build output).
+- **Skills tree view** in the Explorer showing each skill's status, Trigger
+  Quality score, error/warning counts, profile, and resource graph.
+- **Skill collision detection** using smoothed TF-IDF cosine similarity, with
+  High/Medium/Low risk bands and shared-term reporting.
+- **Workspace report webview** — collision matrix, portability matrix, and
+  per-skill resource graphs.
+- **Portability evaluation** across the `generic`, `vscode`, `claude`, and
+  `codex` profiles, each with its own extra rules.
+- **Resource graph** classifying resources as referenced/unreferenced/missing/
+  remote/absolute and flagging scripts, binaries, and large files.
+- **Export Skills Index** command that writes `skills.index.json`.
+- Commands: Show Workspace Report, Export Skills Index, Refresh Skills.
+- Unit tests for similarity, collision detection, workspace scanning, resource
+  graph, portability, and workspace-report rendering.
+
 ## 0.2.0 — MVP2 (Description Quality Analyzer)
 
 ### Added
