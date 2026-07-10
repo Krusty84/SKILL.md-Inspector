@@ -1,0 +1,110 @@
+/**
+ * Deterministic text-similarity helpers for skill collision detection
+ * (brief §13.2). Content tokens drop very common/skill-generic stopwords so the
+ * signal comes from the domain-specific words.
+ */
+
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with', 'from',
+  'by', 'as', 'at', 'is', 'are', 'be', 'this', 'that', 'these', 'those', 'it',
+  'use', 'used', 'using', 'when', 'skill', 'agent', 'user', 'users', 'do', 'not',
+  'you', 'your', 'can', 'will', 'should', 'if', 'into', 'out', 'up', 'via', 'per',
+]);
+
+/** Lower-cases and keeps meaningful tokens (length > 2, non-stopword). */
+export function tokenizeContent(text: string): string[] {
+  return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+    (token) => token.length > 2 && !STOPWORDS.has(token),
+  );
+}
+
+/** Jaccard similarity of two token sets (0..1). */
+export function jaccard(a: string[], b: string[]): number {
+  const sa = new Set(a);
+  const sb = new Set(b);
+  if (sa.size === 0 || sb.size === 0) {
+    return 0;
+  }
+  let intersection = 0;
+  for (const token of sa) {
+    if (sb.has(token)) {
+      intersection += 1;
+    }
+  }
+  const union = sa.size + sb.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+export type TfidfVector = Map<string, number>;
+
+/**
+ * Builds smoothed TF-IDF vectors for a corpus. Smoothing
+ * (idf = ln((1+N)/(1+df)) + 1) keeps shared terms non-zero even in tiny
+ * corpora, so two identical descriptions score a cosine of 1.
+ */
+export function tfidfVectors(corpusTokens: string[][]): TfidfVector[] {
+  const n = corpusTokens.length;
+  const documentFrequency = new Map<string, number>();
+  for (const tokens of corpusTokens) {
+    for (const term of new Set(tokens)) {
+      documentFrequency.set(term, (documentFrequency.get(term) ?? 0) + 1);
+    }
+  }
+
+  return corpusTokens.map((tokens) => {
+    const termFrequency = new Map<string, number>();
+    for (const term of tokens) {
+      termFrequency.set(term, (termFrequency.get(term) ?? 0) + 1);
+    }
+    const vector: TfidfVector = new Map();
+    for (const [term, tf] of termFrequency) {
+      const df = documentFrequency.get(term) ?? 0;
+      const idf = Math.log((1 + n) / (1 + df)) + 1;
+      vector.set(term, tf * idf);
+    }
+    return vector;
+  });
+}
+
+/** Cosine similarity between two sparse vectors (0..1 for non-negative TF-IDF). */
+export function cosine(a: TfidfVector, b: TfidfVector): number {
+  if (a.size === 0 || b.size === 0) {
+    return 0;
+  }
+  let dot = 0;
+  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
+  for (const [term, weight] of small) {
+    const other = large.get(term);
+    if (other !== undefined) {
+      dot += weight * other;
+    }
+  }
+  return dot / (norm(a) * norm(b));
+}
+
+/** Terms shared by two token lists, most frequent first. */
+export function sharedTerms(a: string[], b: string[], limit = 8): string[] {
+  const countA = frequency(a);
+  const setB = new Set(b);
+  return [...countA.entries()]
+    .filter(([term]) => setB.has(term))
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, limit)
+    .map(([term]) => term);
+}
+
+function norm(vector: TfidfVector): number {
+  let sum = 0;
+  for (const weight of vector.values()) {
+    sum += weight * weight;
+  }
+  return Math.sqrt(sum) || 1;
+}
+
+function frequency(tokens: string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const token of tokens) {
+    counts.set(token, (counts.get(token) ?? 0) + 1);
+  }
+  return counts;
+}

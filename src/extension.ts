@@ -4,6 +4,7 @@ import { SkillCodeActionProvider } from './codeActions/skillCodeActions';
 import { registerCommands } from './commands';
 import { isSkillFile } from './diagnostics/mapping';
 import { readConfig } from './config';
+import { SkillTreeProvider } from './ui/skillTreeProvider';
 
 const CHANGE_DEBOUNCE_MS = 300;
 
@@ -12,6 +13,16 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(provider);
 
   registerCommands(context, provider);
+
+  const treeProvider = new SkillTreeProvider();
+  const skillWatcher = vscode.workspace.createFileSystemWatcher('**/SKILL.md');
+  skillWatcher.onDidCreate(() => treeProvider.refresh());
+  skillWatcher.onDidDelete(() => treeProvider.refresh());
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
+    vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
+    skillWatcher,
+  );
 
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
@@ -45,8 +56,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidOpenTextDocument((document) => provider.validate(document)),
     vscode.workspace.onDidChangeTextDocument((event) => scheduleValidate(event.document)),
     vscode.workspace.onDidSaveTextDocument((document) => {
-      if (isSkillFile(document) && readConfig(document.uri).runOnSave) {
-        provider.validate(document);
+      if (isSkillFile(document)) {
+        if (readConfig(document.uri).runOnSave) {
+          provider.validate(document);
+        }
+        treeProvider.refresh();
       }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
@@ -57,6 +71,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('skillMdInspector')) {
         revalidateVisible(provider);
+        treeProvider.refresh();
       }
     }),
     new vscode.Disposable(() => {

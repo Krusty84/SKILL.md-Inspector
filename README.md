@@ -5,9 +5,10 @@ files — the metadata files that describe Agent Skills. It acts as a
 deterministic **quality gate** for skills: is the file valid, is it
 discoverable by an agent, and is the `description` clear and trigger-friendly?
 
-This is **MVP1 + MVP2**: local, deterministic, and fast. It validates skills and
-scores how well each `description` will trigger for an agent. There is no LLM
-integration, no network access, and no telemetry.
+This is **MVP1–MVP3**: local, deterministic, and fast. It validates skills,
+scores how well each `description` will trigger for an agent, and analyzes the
+whole workspace for overlaps and portability. There is no LLM integration, no
+network access, and no telemetry.
 
 ## Running the extension
 
@@ -28,7 +29,7 @@ integration, no network access, and no telemetry.
 **Option B — install it (to use in your normal window):**
 
 1. `npm install`
-2. `npx @vscode/vsce package` → produces `skill-md-inspector-0.2.0.vsix`.
+2. `npx @vscode/vsce package` → produces `skill-md-inspector-0.3.0.vsix`.
 3. In VS Code: Command Palette → **Extensions: Install from VSIX…** → pick the
    file, then reload. The commands now appear in your normal window.
 
@@ -68,8 +69,22 @@ can execute.
   "Use when…" or "Do not use when…" clause, create a missing linked file, and
   add a Markdown link to an unreferenced resource.
 - **Skill Report** — a read-only webview summarizing the skill's status,
-  diagnostic counts, referenced/unreferenced files, and description-quality
-  notes.
+  diagnostic counts, referenced/unreferenced files, and the Trigger Quality
+  breakdown.
+- **Workspace tree view** — a "SKILL.md Skills" view in the Explorer lists every
+  skill with its status icon, Trigger Quality score, error/warning counts, and
+  profile, and expands to show each skill's resource graph.
+- **Skill collision detection** — finds skills whose descriptions overlap using
+  smoothed TF-IDF cosine similarity, with High/Medium/Low risk bands and a
+  collision matrix (skill A, skill B, similarity, shared terms, risk,
+  recommendation).
+- **Portability report** — shows per-skill compatibility (✓ / ⚠ / ✗) across the
+  `generic`, `vscode`, `claude`, and `codex` profiles.
+- **Resource graph** — per skill, classifies linked/bundled files as referenced,
+  unreferenced, missing, remote, or absolute, and flags scripts, binaries, and
+  large files.
+- **Export Skills Index** — writes `skills.index.json` describing every skill
+  (name, path, score, counts, profile compatibility).
 
 ## Where skills are detected
 
@@ -97,6 +112,9 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | Insert SKILL.md Template | Insert a starter template. |
 | Show Skill Report | Open the read-only report (incl. Trigger Quality) for the active skill. |
 | Improve Description Locally | Suggest a better `description` (no LLM) and optionally apply it. |
+| Show Workspace Report | Open the workspace report: collision matrix, portability, resource graphs. |
+| Export Skills Index | Write `skills.index.json` for the workspace. |
+| Refresh Skills | Rescan the workspace and refresh the Skills tree view. |
 
 ## Settings
 
@@ -141,11 +159,11 @@ API is confined to the adapter layer (`extension.ts`, `diagnostics/`,
 
 - **MVP2 (done)** — a 0–100 Trigger Quality Score, front-loaded-intent and
   boundary checks, and local description rewrite templates.
-- **MVP3 (next)** — workspace tree view, skill collision detection and matrix,
+- **MVP3 (done)** — workspace tree view, skill collision detection and matrix,
   portability report, resource graph, and `skills.index.json` export.
-
-The architecture leaves seams for these (e.g. `quality/`, `profiles/`, and an
-inert `llm/` provider interface) without requiring changes to the core parser.
+- **Later (not built)** — optional LLM-assisted review, a skill test harness,
+  and a security scanner. The architecture leaves seams for these (e.g. the
+  inert `llm/` provider interface) without requiring changes to the core parser.
 
 ## License
 

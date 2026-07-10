@@ -5,6 +5,8 @@ import { validateWorkspaceSkills } from './validateWorkspaceSkills';
 import { insertTemplate } from './insertTemplate';
 import { showSkillReport } from './showSkillReport';
 import { improveDescriptionLocally } from './improveDescription';
+import { showWorkspaceReport } from './showWorkspaceReport';
+import { exportSkillsIndex } from './exportSkillsIndex';
 
 /** Registers all extension commands and ties their disposables to `context`. */
 export function registerCommands(
@@ -23,5 +25,9 @@ export function registerCommands(
     vscode.commands.registerCommand('skillMdInspector.improveDescriptionLocally', () =>
       improveDescriptionLocally(),
     ),
+    vscode.commands.registerCommand('skillMdInspector.showWorkspaceReport', () =>
+      showWorkspaceReport(),
+    ),
+    vscode.commands.registerCommand('skillMdInspector.exportSkillsIndex', () => exportSkillsIndex()),
   );
 }

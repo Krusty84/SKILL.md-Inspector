@@ -2,7 +2,7 @@
   "name": "skill-md-inspector",
   "displayName": "SKILL.md Inspector",
   "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "publisher": "krusty84",
   "repository": {
@@ -53,8 +53,41 @@
         "command": "skillMdInspector.improveDescriptionLocally",
         "title": "Improve Description Locally",
         "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.showWorkspaceReport",
+        "title": "Show Workspace Report",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.exportSkillsIndex",
+        "title": "Export Skills Index",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.refreshSkills",
+        "title": "Refresh Skills",
+        "category": "SKILL.md Inspector",
+        "icon": "$(refresh)"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "skillMdInspectorSkills",
+          "name": "SKILL.md Skills"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "skillMdInspector.refreshSkills",
+          "when": "view == skillMdInspectorSkills",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "SKILL.md Inspector",
       "properties": {
