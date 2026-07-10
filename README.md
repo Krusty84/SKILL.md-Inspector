@@ -5,8 +5,9 @@ files — the metadata files that describe Agent Skills. It acts as a
 deterministic **quality gate** for skills: is the file valid, is it
 discoverable by an agent, and is the `description` clear and trigger-friendly?
 
-This is **MVP1**: local, deterministic, and fast. There is no LLM integration,
-no network access, and no telemetry.
+This is **MVP1 + MVP2**: local, deterministic, and fast. It validates skills and
+scores how well each `description` will trigger for an agent. There is no LLM
+integration, no network access, and no telemetry.
 
 ## Running the extension
 
@@ -27,7 +28,7 @@ no network access, and no telemetry.
 **Option B — install it (to use in your normal window):**
 
 1. `npm install`
-2. `npx @vscode/vsce package` → produces `skill-md-inspector-0.1.0.vsix`.
+2. `npx @vscode/vsce package` → produces `skill-md-inspector-0.2.0.vsix`.
 3. In VS Code: Command Palette → **Extensions: Install from VSIX…** → pick the
    file, then reload. The commands now appear in your normal window.
 
@@ -44,6 +45,16 @@ can execute.
 - **`description` rules** — required, string, ≤ 1024 chars, with quality
   warnings for descriptions that are too short, vague, missing an action verb,
   or missing a usage-trigger clause.
+- **Trigger Quality Score (0–100)** — a deterministic score for each
+  `description` across seven weighted criteria (action verb, usage trigger,
+  concrete artifact, boundary, front-loaded intent, low vagueness, good length),
+  shown in the Skill Report with a per-criterion breakdown. Missing boundary and
+  front-loaded-intent are surfaced as information diagnostics that explain the
+  lost points.
+- **Improve Description Locally** — a command that builds a better `description`
+  without an LLM: it keeps your wording and appends the missing "Use when…" /
+  "Do not use when…" clauses (or offers the full template when the current one
+  scores poorly).
 - **Markdown link validation** — relative links to missing files are errors,
   absolute local paths are warnings, and remote URLs are information (or a
   warning when they look suspicious).
@@ -84,7 +95,8 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | Validate Current Skill | Validate the `SKILL.md` in the active editor. |
 | Validate Workspace Skills | Validate every `SKILL.md` in the workspace. |
 | Insert SKILL.md Template | Insert a starter template. |
-| Show Skill Report | Open the read-only report for the active skill. |
+| Show Skill Report | Open the read-only report (incl. Trigger Quality) for the active skill. |
+| Improve Description Locally | Suggest a better `description` (no LLM) and optionally apply it. |
 
 ## Settings
 
@@ -127,9 +139,9 @@ API is confined to the adapter layer (`extension.ts`, `diagnostics/`,
 
 ## Roadmap
 
-- **MVP2** — a 0–100 Trigger Quality Score, front-loaded-intent and boundary
-  checks, and local description rewrite templates.
-- **MVP3** — workspace tree view, skill collision detection and matrix,
+- **MVP2 (done)** — a 0–100 Trigger Quality Score, front-loaded-intent and
+  boundary checks, and local description rewrite templates.
+- **MVP3 (next)** — workspace tree view, skill collision detection and matrix,
   portability report, resource graph, and `skills.index.json` export.
 
 The architecture leaves seams for these (e.g. `quality/`, `profiles/`, and an

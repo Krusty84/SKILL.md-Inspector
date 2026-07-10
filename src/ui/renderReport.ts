@@ -1,4 +1,5 @@
-import type { SkillReport, QualityNote } from './reportModel';
+import type { SkillReport } from './reportModel';
+import type { TriggerQualityFinding, TriggerQualityLabel } from '../types/TriggerQuality';
 
 export interface RenderOptions {
   nonce: string;
@@ -9,6 +10,7 @@ export interface RenderOptions {
 export function renderReportHtml(report: SkillReport, opts: RenderOptions): string {
   const statusClass = report.status === 'pass' ? 'ok' : 'fail';
   const statusLabel = report.status === 'pass' ? 'PASS' : 'FAIL';
+  const q = report.triggerQuality;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -21,28 +23,33 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
   h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; margin-top: 2rem; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 0.35rem; }
   .badge { font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 999px; }
-  .badge.ok { background: var(--vscode-testing-iconPassed, #3fb950); color: #06210c; }
-  .badge.fail { background: var(--vscode-errorForeground, #f14c4c); color: #2b0606; }
+  .badge.ok, .badge.q-good { background: var(--vscode-testing-iconPassed, #3fb950); color: #06210c; }
+  .badge.fail, .badge.q-low { background: var(--vscode-errorForeground, #f14c4c); color: #2b0606; }
+  .badge.q-mid { background: var(--vscode-editorWarning-foreground, #cca700); color: #241f00; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
   .card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; padding: 0.7rem 0.85rem; }
   .card .label { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }
   .card .value { font-size: 1.35rem; font-weight: 600; margin-top: 0.15rem; }
   .value.error { color: var(--vscode-errorForeground, #f14c4c); }
   .value.warn { color: var(--vscode-editorWarning-foreground, #cca700); }
+  .score { font-size: 2.4rem; font-weight: 700; }
+  .score .max { font-size: 1rem; font-weight: 400; opacity: 0.6; }
   ul { list-style: none; padding-left: 0; }
-  li { padding: 0.25rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
+  li { padding: 0.3rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
   .mark { font-weight: 700; width: 1rem; flex: none; }
   .mark.yes { color: var(--vscode-testing-iconPassed, #3fb950); }
-  .mark.no { color: var(--vscode-editorWarning-foreground, #cca700); }
-  .detail { opacity: 0.6; font-size: 0.85em; }
+  .mark.partial, .mark.no { color: var(--vscode-editorWarning-foreground, #cca700); }
+  .pts { opacity: 0.6; font-size: 0.85em; margin-left: auto; padding-left: 0.75rem; white-space: nowrap; }
+  .msg { opacity: 0.85; font-size: 0.9em; }
   code { font-family: var(--vscode-editor-font-family, monospace); background: var(--vscode-textCodeBlock-background); padding: 0.05rem 0.3rem; border-radius: 3px; }
   .empty { opacity: 0.6; font-style: italic; }
 </style>
 <title>Skill Report</title>
 </head>
 <body>
-  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span></h1>
+  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Trigger Quality ${q.score}/100 · ${capitalize(q.label)}</span></h1>
   <div class="grid">
+    ${card('Trigger Quality', `<span class="score">${q.score}<span class="max"> / 100</span></span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
@@ -50,8 +57,8 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     ${card('Information', String(report.informationCount))}
   </div>
 
-  <h2>Description quality</h2>
-  <ul>${report.qualityNotes.map(renderNote).join('')}</ul>
+  <h2>Trigger quality breakdown</h2>
+  <ul>${q.findings.map(renderFinding).join('')}</ul>
 
   <h2>Referenced files</h2>
   ${renderFileList(report.referencedFiles, 'No referenced resource files.')}
@@ -66,10 +73,14 @@ function card(label: string, value: string, valueClass = ''): string {
   return `<div class="card"><div class="label">${label}</div><div class="value ${valueClass}">${value}</div></div>`;
 }
 
-function renderNote(note: QualityNote): string {
-  const mark = note.ok ? '<span class="mark yes">✓</span>' : '<span class="mark no">✗</span>';
-  const detail = note.detail ? ` <span class="detail">(${escapeHtml(note.detail)})</span>` : '';
-  return `<li>${mark}<span>${escapeHtml(note.label)}${detail}</span></li>`;
+function renderFinding(finding: TriggerQualityFinding): string {
+  const state =
+    finding.pointsEarned === finding.pointsPossible
+      ? { cls: 'yes', glyph: '✓' }
+      : finding.pointsEarned === 0
+        ? { cls: 'no', glyph: '✗' }
+        : { cls: 'partial', glyph: '◐' };
+  return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(finding.criterion)}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
 }
 
 function renderFileList(files: string[], emptyMessage: string): string {
@@ -77,6 +88,16 @@ function renderFileList(files: string[], emptyMessage: string): string {
     return `<p class="empty">${emptyMessage}</p>`;
   }
   return `<ul>${files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join('')}</ul>`;
+}
+
+function scoreBadgeClass(label: TriggerQualityLabel): string {
+  if (label === 'excellent' || label === 'good') return 'q-good';
+  if (label === 'acceptable') return 'q-mid';
+  return 'q-low';
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function escapeHtml(value: string): string {

@@ -12,10 +12,10 @@ function codes(description: string): string[] {
 }
 
 describe('validateDescription', () => {
-  it('accepts an action-oriented, trigger-friendly description', () => {
+  it('accepts a complete, action-oriented, trigger-friendly description', () => {
     expect(
       codes(
-        'Format technical PDF reports using company layout rules. Use when asked to clean up, standardize, or prepare inspection reports.',
+        'Format technical PDF reports using company layout rules. Use when asked to clean up, standardize, or prepare inspection reports. Do not use for legal contracts.',
       ),
     ).toHaveLength(0);
   });

@@ -23,6 +23,8 @@ export const DiagnosticCode = {
   DescriptionVague: 'skill.description.vague',
   DescriptionNoVerb: 'skill.description.noVerb',
   DescriptionNoTrigger: 'skill.description.noTrigger',
+  DescriptionNoBoundary: 'skill.description.noBoundary',
+  DescriptionNotFrontLoaded: 'skill.description.notFrontLoaded',
 
   // Markdown links
   LinkMissing: 'skill.link.missing',

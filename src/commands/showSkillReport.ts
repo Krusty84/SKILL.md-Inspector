@@ -19,6 +19,6 @@ export function showSkillReport(): void {
     editor.document.getText(),
     config.profile,
   );
-  const report = buildReportModel(document, diagnostics, config.profile.label);
+  const report = buildReportModel(document, diagnostics, config.profile);
   SkillReportPanel.show(report);
 }
