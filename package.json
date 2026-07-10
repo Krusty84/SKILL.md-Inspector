@@ -2,7 +2,7 @@
   "name": "skill-md-inspector",
   "displayName": "SKILL.md Inspector",
   "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "publisher": "krusty84",
   "repository": {
@@ -47,6 +47,11 @@
       {
         "command": "skillMdInspector.showSkillReport",
         "title": "Show Skill Report",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.improveDescriptionLocally",
+        "title": "Improve Description Locally",
         "category": "SKILL.md Inspector"
       }
     ],

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0 — MVP2 (Description Quality Analyzer)
+
+### Added
+
+- **Trigger Quality Score (0–100)** for every `description`, computed across
+  seven weighted criteria (action verb 20, usage trigger 20, concrete artifact
+  15, boundary 15, front-loaded intent 10, low vagueness 10, good length 10),
+  with `excellent`/`good`/`acceptable`/`weak`/`poor` labels.
+- Score and a per-criterion breakdown (points earned/possible) in the Skill
+  Report webview.
+- Information diagnostics for a missing boundary (`skill.description.noBoundary`)
+  and non-front-loaded intent (`skill.description.notFrontLoaded`) that explain
+  lost points.
+- **Improve Description Locally** command — deterministic, no-LLM rewrite that
+  preserves existing wording and appends missing trigger/boundary clauses (or
+  offers the full template for poor descriptions).
+- Unit tests for scoring behavior and the local rewrite/suggestions.
+
 ## 0.1.0 — MVP1
 
 Initial release: a deterministic linter for `SKILL.md` files.
