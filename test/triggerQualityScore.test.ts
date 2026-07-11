@@ -31,6 +31,26 @@ describe('computeTriggerQuality', () => {
     expect(result.score).toBeLessThanOrEqual(100);
   });
 
+  it('does not award trigger points to a negative-only description', () => {
+    const result = computeTriggerQuality('Format reports. Do not use when handling PDFs.');
+    const verb = result.findings.find((f) => f.criterion.startsWith('Action verb'));
+    const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
+    const boundary = result.findings.find((f) => f.criterion === 'Boundary phrase');
+    expect(verb?.pointsEarned).toBe(20);
+    expect(trigger?.pointsEarned).toBe(0);
+    expect(boundary?.pointsEarned).toBe(15);
+  });
+
+  it('awards both trigger and boundary points for "only use when"', () => {
+    const result = computeTriggerQuality(
+      'Format release notes. Only use when preparing a tagged release.',
+    );
+    const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
+    const boundary = result.findings.find((f) => f.criterion === 'Boundary phrase');
+    expect(trigger?.pointsEarned).toBe(20);
+    expect(boundary?.pointsEarned).toBe(15);
+  });
+
   it('deducts for vague wording', () => {
     const withVague = computeTriggerQuality('Format powerful reports. Use when needed.');
     const vagueFinding = withVague.findings.find((f) => f.criterion === 'Low vagueness');

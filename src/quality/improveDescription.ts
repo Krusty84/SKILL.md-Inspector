@@ -24,10 +24,10 @@ export function buildImprovedDescription(
 
   const base = analysis.trimmed.replace(/[.\s]+$/, '');
   const parts = [`${base}.`];
-  if (!analysis.triggerPhrase.found) {
+  if (!analysis.positiveTriggerPhrase.found) {
     parts.push('Use when <trigger context>.');
   }
-  if (!analysis.boundaryPhrase.found) {
+  if (!(analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found)) {
     parts.push('Do not use when <boundary>.');
   }
   return parts.join(' ');
