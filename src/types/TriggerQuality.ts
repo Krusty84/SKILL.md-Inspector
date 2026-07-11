@@ -17,4 +17,6 @@ export interface TriggerQualityResult {
   score: number;
   label: TriggerQualityLabel;
   findings: TriggerQualityFinding[];
+  /** True when analysis was language-limited (the description is likely not English). */
+  partial?: boolean;
 }

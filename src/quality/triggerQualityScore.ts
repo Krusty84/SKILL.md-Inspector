@@ -1,13 +1,16 @@
 import { analyzeDescription, hasActionVerb, type DescriptionAnalysis } from './descriptionHeuristics';
+import { isProbablyNonEnglish } from './language';
 import type {
   TriggerQualityResult,
   TriggerQualityFinding,
   TriggerQualityLabel,
 } from '../types/TriggerQuality';
+import type { DescriptionLanguage } from '../types/SkillProfile';
 
 export interface TriggerQualityOptions {
   minLength?: number;
   maxLength?: number;
+  language?: DescriptionLanguage;
 }
 
 /** Points allotted to each criterion (brief §10.1). Sum = 100. */
@@ -39,6 +42,8 @@ export function scoreAnalysis(
 ): TriggerQualityResult {
   const minLength = options.minLength ?? 40;
   const maxLength = options.maxLength ?? 1024;
+  const language = options.language ?? 'auto';
+  const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
 
   const frontLoaded = hasActionVerb(analysis.leadingText).found;
   const vaguePoints = Math.max(0, CRITERION_POINTS.lowVagueness - 5 * analysis.vagueTerms.length);
@@ -112,8 +117,19 @@ export function scoreAnalysis(
     ),
   ];
 
+  if (languageLimited) {
+    findings.push(
+      finding(
+        'Language support',
+        0,
+        0,
+        'Description does not appear to be English; deterministic semantic analysis (verbs, triggers, vagueness) may be incomplete.',
+      ),
+    );
+  }
+
   const score = findings.reduce((sum, f) => sum + f.pointsEarned, 0);
-  return { score, label: labelFor(score), findings };
+  return { score, label: labelFor(score), findings, ...(languageLimited ? { partial: true } : {}) };
 }
 
 /** Maps a score to its label band (brief §10.1). */

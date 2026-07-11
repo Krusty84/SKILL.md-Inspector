@@ -69,6 +69,7 @@ function toWorkspaceSkill(
   const triggerQuality = computeTriggerQuality(description, {
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
+    language: profile.description.language,
   });
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
   const warnings = diagnostics.filter((d) => d.severity === 'warning').length;

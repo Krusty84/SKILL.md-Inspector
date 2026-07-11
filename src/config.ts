@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
-import type { SkillProfile } from './types/SkillProfile';
+import type { SkillProfile, DescriptionLanguage } from './types/SkillProfile';
 
 export interface InspectorConfig {
   enabled: boolean;
@@ -19,6 +19,7 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       nameMaxLength: cfg.get<number>('name.maxLength'),
       descriptionMinLength: cfg.get<number>('description.minLength'),
       descriptionMaxLength: cfg.get<number>('description.maxLength'),
+      descriptionLanguage: cfg.get<DescriptionLanguage>('description.language'),
     }),
   };
 }

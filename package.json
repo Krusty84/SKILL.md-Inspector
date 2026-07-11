@@ -127,6 +127,15 @@
           "default": 64,
           "description": "Maximum allowed length of the name field."
         },
+        "skillMdInspector.description.language": {
+          "type": "string",
+          "enum": [
+            "en",
+            "auto"
+          ],
+          "default": "auto",
+          "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" detects a non-English description and marks its quality score as language-limited."
+        },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",
           "default": false,

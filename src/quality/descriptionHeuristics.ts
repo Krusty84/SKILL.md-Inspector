@@ -1,6 +1,8 @@
 import { ACTION_VERBS } from './actionVerbs';
 import { VAGUE_TERMS } from './vagueWords';
 import { TRIGGER_PHRASES, BOUNDARY_PHRASES } from './triggerPhrases';
+import { isKnownAcronym } from './acronyms';
+import { IRREGULAR_VERB_FORMS } from './irregularVerbs';
 
 export interface PhraseMatch {
   found: boolean;
@@ -127,15 +129,19 @@ function matchPhrase(lower: string, phrases: readonly string[]): PhraseMatch {
 function hasConcreteArtifact(text: string, tokens: string[]): boolean {
   const forms = tokenForms(tokens);
   if (ARTIFACT_HINTS.some((hint) => forms.has(hint))) {
-    return true;
+    return true; // artifact vocabulary
   }
-  // File extension like ".pdf" or an uppercase acronym like "PDF"/"API".
-  // Acronyms are checked against the original-case text, not the lower-cased form.
-  return /\.[a-z]{2,4}\b/i.test(text) || /\b[A-Z]{2,}\b/.test(text);
+  if (tokens.some((token) => isKnownAcronym(token))) {
+    return true; // known acronym / technology (e.g. PDF, SQL, JSON)
+  }
+  // File extension like ".pdf". The broad "any run of uppercase letters"
+  // heuristic is intentionally gone — it flagged words like "IMPORTANT".
+  return /\.[a-z0-9]{2,4}\b/i.test(text);
 }
 
-function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+export function tokenize(text: string): string[] {
+  // Unicode-aware so Cyrillic/accented/CJK words are preserved as tokens.
+  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 
 /** Token set augmented with naive singular forms, for plural-insensitive matching. */
@@ -163,10 +169,17 @@ function singularize(token: string): string {
 
 function buildVerbForms(verbs: readonly string[]): Set<string> {
   const forms = new Set<string>();
-  for (const verb of verbs) {
-    for (const form of inflect(verb)) {
+  const addForms = (verb: string): void => {
+    for (const form of IRREGULAR_VERB_FORMS[verb] ?? inflect(verb)) {
       forms.add(form);
     }
+  };
+  for (const verb of verbs) {
+    addForms(verb);
+  }
+  // Recognize every irregular verb, including ones not in ACTION_VERBS (write, read).
+  for (const verb of Object.keys(IRREGULAR_VERB_FORMS)) {
+    addForms(verb);
   }
   return forms;
 }

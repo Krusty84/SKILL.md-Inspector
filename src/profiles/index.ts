@@ -1,4 +1,4 @@
-import type { SkillProfile, SkillProfileId } from '../types/SkillProfile';
+import type { SkillProfile, SkillProfileId, DescriptionLanguage } from '../types/SkillProfile';
 import { genericProfile } from './genericProfile';
 import { vscodeProfile } from './vscodeProfile';
 import { claudeProfile } from './claudeProfile';
@@ -16,6 +16,7 @@ export interface ProfileOverrides {
   nameMaxLength?: number;
   descriptionMinLength?: number;
   descriptionMaxLength?: number;
+  descriptionLanguage?: DescriptionLanguage;
 }
 
 /**
@@ -30,6 +31,7 @@ export function resolveProfile(id: string, overrides: ProfileOverrides = {}): Sk
     description: {
       minLength: overrides.descriptionMinLength ?? base.description.minLength,
       maxLength: overrides.descriptionMaxLength ?? base.description.maxLength,
+      language: overrides.descriptionLanguage ?? base.description.language,
     },
   };
 }

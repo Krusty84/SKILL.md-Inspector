@@ -38,6 +38,7 @@ export function buildReportModel(
   const triggerQuality = computeTriggerQuality(description, {
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
+    language: profile.description.language,
   });
 
   return {

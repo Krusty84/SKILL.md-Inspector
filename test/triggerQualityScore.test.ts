@@ -46,6 +46,28 @@ describe('computeTriggerQuality', () => {
   });
 });
 
+describe('computeTriggerQuality language support', () => {
+  const CYRILLIC = 'Форматировать инспекционные отчёты. Использовать когда нужно готовить.';
+
+  it('flags a non-English description as partial in auto mode', () => {
+    const result = computeTriggerQuality(CYRILLIC, { language: 'auto' });
+    expect(result.partial).toBe(true);
+    expect(result.findings.some((f) => f.criterion === 'Language support')).toBe(true);
+  });
+
+  it('does not flag English descriptions and keeps 7 findings', () => {
+    const result = computeTriggerQuality(EXCELLENT, { language: 'auto' });
+    expect(result.partial).toBeUndefined();
+    expect(result.findings).toHaveLength(7);
+  });
+
+  it('forces English heuristics in "en" mode (no language finding)', () => {
+    const result = computeTriggerQuality(CYRILLIC, { language: 'en' });
+    expect(result.partial).toBeUndefined();
+    expect(result.findings.some((f) => f.criterion === 'Language support')).toBe(false);
+  });
+});
+
 describe('labelFor', () => {
   it.each([
     [100, 'excellent'],
