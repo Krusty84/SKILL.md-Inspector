@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
-import { resolveRelativeLinkPath, cleanLinkTarget } from '../parser/linkPaths';
+import { resolveRelativeLinkPath, cleanLinkTarget, isPathInsideDir } from '../parser/linkPaths';
 import { diag } from './util';
 
 const SUSPICIOUS_EXTENSIONS = /\.(exe|sh|bat|ps1|scr|cmd|zip|dll)(\?|#|$)/i;
@@ -55,6 +55,17 @@ export function validateLinks(doc: SkillDocument): SkillDiagnostic[] {
 
     // relative
     const target = resolveRelativeLinkPath(doc.directory, link.raw);
+    if (!isPathInsideDir(doc.directory, target)) {
+      diagnostics.push(
+        diag(
+          DiagnosticCode.LinkEscapesSkillRoot,
+          'error',
+          `Linked path escapes the skill package: ${cleanLinkTarget(link.raw)}`,
+          link.range,
+        ),
+      );
+      continue;
+    }
     if (!fileExists(target)) {
       diagnostics.push(
         diag(
@@ -63,6 +74,17 @@ export function validateLinks(doc: SkillDocument): SkillDiagnostic[] {
           `Linked file does not exist: ${cleanLinkTarget(link.raw)}`,
           link.range,
           { quickFixId: QuickFixId.CreateMissingLinkedFile, data: { absolutePath: target, raw: link.raw } },
+        ),
+      );
+      continue;
+    }
+    if (realTargetEscapes(doc.directory, target)) {
+      diagnostics.push(
+        diag(
+          DiagnosticCode.LinkEscapesSkillRoot,
+          'warning',
+          `Linked path escapes the skill package: ${cleanLinkTarget(link.raw)}`,
+          link.range,
         ),
       );
     }
@@ -90,6 +112,19 @@ function isSuspiciousRemote(url: string): boolean {
 function fileExists(target: string): boolean {
   try {
     return fs.statSync(target).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detects a symlink escape: the link resolves inside the package lexically, but
+ * its real (symlink-resolved) target lies outside. Only meaningful for existing
+ * targets. Unresolvable paths are treated as non-escaping to avoid false alarms.
+ */
+function realTargetEscapes(dir: string, target: string): boolean {
+  try {
+    return !isPathInsideDir(fs.realpathSync(dir), fs.realpathSync(target));
   } catch {
     return false;
   }

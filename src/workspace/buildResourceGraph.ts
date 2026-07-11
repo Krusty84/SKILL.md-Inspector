@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { ResourceGraph, ResourceNode, ResourceFlag } from '../types/Workspace';
-import { resolveRelativeLinkPath, cleanLinkTarget } from '../parser/linkPaths';
+import { resolveRelativeLinkPath, cleanLinkTarget, canonicalizeLocalPath } from '../parser/linkPaths';
 
 export interface ResourceGraphOptions {
   /** Files at or above this size are flagged `large`. */
@@ -44,7 +44,9 @@ export function buildResourceGraph(
     });
   }
 
-  const knownResourcePaths = new Set(doc.resources.map((r) => r.absolutePath));
+  const knownResourcePaths = new Set(
+    doc.resources.map((r) => canonicalizeLocalPath(doc.directory, r.absolutePath)),
+  );
 
   for (const link of doc.links) {
     if (link.kind === 'remote') {
@@ -58,7 +60,7 @@ export function buildResourceGraph(
 
     // relative link
     const target = resolveRelativeLinkPath(doc.directory, link.raw);
-    if (knownResourcePaths.has(target)) {
+    if (knownResourcePaths.has(canonicalizeLocalPath(doc.directory, link.raw))) {
       continue; // already represented as a (referenced) resource node
     }
     if (fileExists(target)) {

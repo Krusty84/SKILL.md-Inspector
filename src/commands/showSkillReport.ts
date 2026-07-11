@@ -18,6 +18,7 @@ export function showSkillReport(): void {
     editor.document.uri.fsPath,
     editor.document.getText(),
     config.profile,
+    config.resourceExclude,
   );
   const report = buildReportModel(document, diagnostics, config.profile);
   SkillReportPanel.show(report);

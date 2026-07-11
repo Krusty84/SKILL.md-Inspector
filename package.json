@@ -127,6 +127,19 @@
           "default": 64,
           "description": "Maximum allowed length of the name field."
         },
+        "skillMdInspector.resources.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/dist/**",
+            "**/out/**"
+          ],
+          "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
+        },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",
           "default": false,

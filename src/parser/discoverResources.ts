@@ -1,41 +1,47 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { SkillResource, SkillResourceCategory } from '../types/SkillDocument';
+import { matchesAnyGlob } from './globMatch';
 
-/** Well-known resource folders inside a skill package (brief §7.6). */
-const RESOURCE_CATEGORIES: SkillResourceCategory[] = [
-  'references',
-  'scripts',
-  'assets',
-  'templates',
+/** Default resource-directory exclusions: generated output and VCS metadata. */
+export const DEFAULT_RESOURCE_EXCLUDES: readonly string[] = [
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/out/**',
 ];
 
+/** Folders that map to a named resource category; anything else is `other`. */
+const KNOWN_CATEGORIES: readonly string[] = ['references', 'scripts', 'assets', 'templates'];
+
 /**
- * Enumerates resource files inside a skill directory. Recurses into the
- * well-known folders (`references/`, `scripts/`, `assets/`, `templates/`).
+ * Enumerates resource files anywhere inside a skill directory (brief §7.6).
+ * Recurses through every subfolder, skipping the skill's own `SKILL.md` and any
+ * path matching an exclusion glob (defaults skip node_modules/.git/dist/out).
  * `referenced` starts false; the caller marks referenced files.
  */
-export function discoverResources(skillDir: string): SkillResource[] {
+export function discoverResources(
+  skillDir: string,
+  exclude: readonly string[] = DEFAULT_RESOURCE_EXCLUDES,
+): SkillResource[] {
   const resources: SkillResource[] = [];
-  for (const category of RESOURCE_CATEGORIES) {
-    const dir = path.join(skillDir, category);
-    if (!isDirectory(dir)) {
+  for (const absolutePath of walkFiles(skillDir, skillDir, exclude)) {
+    const relativePath = toPosix(path.relative(skillDir, absolutePath));
+    if (relativePath === 'SKILL.md') {
       continue;
     }
-    for (const absolutePath of walkFiles(dir)) {
-      resources.push({
-        relativePath: toPosix(path.relative(skillDir, absolutePath)),
-        absolutePath,
-        category,
-        sizeBytes: fileSize(absolutePath),
-        referenced: false,
-      });
-    }
+    resources.push({
+      relativePath,
+      absolutePath,
+      category: categoryFor(relativePath),
+      sizeBytes: fileSize(absolutePath),
+      referenced: false,
+    });
   }
   return resources;
 }
 
-function* walkFiles(dir: string): Generator<string> {
+function* walkFiles(dir: string, skillDir: string, exclude: readonly string[]): Generator<string> {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -44,20 +50,20 @@ function* walkFiles(dir: string): Generator<string> {
   }
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
+    if (matchesAnyGlob(toPosix(path.relative(skillDir, full)), exclude)) {
+      continue;
+    }
     if (entry.isDirectory()) {
-      yield* walkFiles(full);
+      yield* walkFiles(full, skillDir, exclude);
     } else if (entry.isFile()) {
       yield full;
     }
   }
 }
 
-function isDirectory(target: string): boolean {
-  try {
-    return fs.statSync(target).isDirectory();
-  } catch {
-    return false;
-  }
+function categoryFor(relativePath: string): SkillResourceCategory {
+  const top = relativePath.split('/')[0];
+  return KNOWN_CATEGORIES.includes(top) ? (top as SkillResourceCategory) : 'other';
 }
 
 function fileSize(target: string): number {
