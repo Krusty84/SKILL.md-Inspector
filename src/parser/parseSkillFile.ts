@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { parseFrontmatter } from './parseFrontmatter';
 import { parseMarkdownLinks } from './parseMarkdownLinks';
-import { resolveRelativeLinkPath } from './linkPaths';
+import { canonicalizeLocalPath } from './linkPaths';
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 
 /**
@@ -38,11 +38,11 @@ export function withResources(doc: SkillDocument, resources: SkillResource[]): S
   const referenced = new Set(
     doc.links
       .filter((link) => link.kind === 'relative')
-      .map((link) => resolveRelativeLinkPath(doc.directory, link.raw)),
+      .map((link) => canonicalizeLocalPath(doc.directory, link.raw)),
   );
   const withFlags = resources.map((resource) => ({
     ...resource,
-    referenced: referenced.has(resource.absolutePath),
+    referenced: referenced.has(canonicalizeLocalPath(doc.directory, resource.absolutePath)),
   }));
   return { ...doc, resources: withFlags };
 }

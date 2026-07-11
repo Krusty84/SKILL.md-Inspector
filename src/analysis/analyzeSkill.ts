@@ -19,9 +19,10 @@ export function analyzeSkill(
   filePath: string,
   content: string,
   profile: SkillProfile,
+  exclude?: readonly string[],
 ): SkillAnalysis {
   const parsed = parseSkillFile(filePath, content);
-  const document = withResources(parsed, discoverResources(parsed.directory));
+  const document = withResources(parsed, discoverResources(parsed.directory, exclude));
   const diagnostics = runAllValidations(document, profile);
   return { document, diagnostics };
 }

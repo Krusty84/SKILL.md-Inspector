@@ -27,7 +27,12 @@ export class DiagnosticsProvider implements vscode.Disposable {
       return undefined;
     }
 
-    const analysis = analyzeSkill(document.uri.fsPath, document.getText(), config.profile);
+    const analysis = analyzeSkill(
+      document.uri.fsPath,
+      document.getText(),
+      config.profile,
+      config.resourceExclude,
+    );
     this.collection.set(
       document.uri,
       analysis.diagnostics.map((d) => toVscodeDiagnostic(d, document)),

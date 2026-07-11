@@ -6,6 +6,7 @@ import { isSkillFile } from '../diagnostics/mapping';
 import { QuickFixId } from '../types/DiagnosticCode';
 import { locateFrontmatterKey } from '../parser/parseFrontmatter';
 import { frontmatterStartLine } from '../parser/parseSkillFile';
+import { isPathInsideDir } from '../parser/linkPaths';
 import { toKebabCase } from '../validation/validateName';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
@@ -34,6 +35,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
       document.uri.fsPath,
       document.getText(),
       config.profile,
+      config.resourceExclude,
     );
 
     const actions: vscode.CodeAction[] = [];
@@ -135,7 +137,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
         );
 
       case QuickFixId.CreateMissingLinkedFile:
-        return this.createLinkedFile(diagnostic, context);
+        return this.createLinkedFile(diagnostic, skillDoc, context);
 
       case QuickFixId.AddResourceLink:
         return this.addResourceLink(diagnostic, document, context);
@@ -224,10 +226,16 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
 
   private createLinkedFile(
     diagnostic: SkillDiagnostic,
+    skillDoc: SkillDocument,
     context: vscode.CodeActionContext,
   ): vscode.CodeAction | undefined {
     const absolutePath = diagnostic.data?.absolutePath;
     if (typeof absolutePath !== 'string') {
+      return undefined;
+    }
+    // Never offer to create a file outside the skill package, even if the
+    // diagnostic data is malformed or points at an escaping path.
+    if (!isPathInsideDir(skillDoc.directory, absolutePath)) {
       return undefined;
     }
     const fileUri = vscode.Uri.file(absolutePath);

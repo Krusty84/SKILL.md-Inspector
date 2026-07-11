@@ -28,3 +28,41 @@ describe('parseMarkdownLinks', () => {
     expect(parseMarkdownLinks(body)).toHaveLength(0);
   });
 });
+
+describe('parseMarkdownLinks resource-path detection', () => {
+  it('detects a resource path written in prose', () => {
+    const links = parseMarkdownLinks('Run scripts/extract.py.');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({ raw: 'scripts/extract.py', kind: 'relative' });
+  });
+
+  it('detects a resource path in inline code with an accurate range', () => {
+    const links = parseMarkdownLinks('Run `scripts/extract.py` now.');
+    expect(links).toHaveLength(1);
+    expect(links[0].raw).toBe('scripts/extract.py');
+    expect(links[0].range).toMatchObject({ startLine: 0, startCharacter: 5, endCharacter: 23 });
+  });
+
+  it('detects a resource path in a fenced code block with an accurate range', () => {
+    const body = ['```bash', 'node scripts/process.js', '```'].join('\n');
+    const link = parseMarkdownLinks(body).find((l) => l.raw === 'scripts/process.js');
+    expect(link).toBeDefined();
+    expect(link?.range).toMatchObject({ startLine: 1, startCharacter: 5, endCharacter: 23 });
+  });
+
+  it('detects other resource extensions and folders', () => {
+    expect(parseMarkdownLinks('See references/style-guide.md.')[0]?.raw).toBe(
+      'references/style-guide.md',
+    );
+    expect(parseMarkdownLinks('Icon: assets/icon.svg here.')[0]?.raw).toBe('assets/icon.svg');
+  });
+
+  it('does not treat commands or ordinary prose as file paths', () => {
+    expect(parseMarkdownLinks('Run `npm run build` to compile.')).toHaveLength(0);
+    expect(parseMarkdownLinks('This tool formats reports and documents.')).toHaveLength(0);
+  });
+
+  it('does not double-count a markdown link as a prose mention', () => {
+    expect(parseMarkdownLinks('See [guide](./references/guide.md).')).toHaveLength(1);
+  });
+});
