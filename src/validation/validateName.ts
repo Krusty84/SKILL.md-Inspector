@@ -16,7 +16,11 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
   const range = keyRange(doc, 'name');
   const value = doc.frontmatter.name;
 
-  if (value === undefined || value === null || value === '') {
+  if (
+    value === undefined ||
+    value === null ||
+    (typeof value === 'string' && value.trim().length === 0)
+  ) {
     return [
       diag(
         DiagnosticCode.NameMissing,

@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   analyzeDescription,
   hasActionVerb,
-  hasTriggerPhrase,
-  hasBoundaryPhrase,
+  hasPositiveTriggerPhrase,
+  hasNegativeBoundaryPhrase,
+  hasExclusiveTriggerPhrase,
 } from '../src/quality/descriptionHeuristics';
 
 describe('descriptionHeuristics', () => {
@@ -16,10 +17,22 @@ describe('descriptionHeuristics', () => {
     expect(hasActionVerb('A helper for documents').found).toBe(false);
   });
 
-  it('detects trigger and boundary phrases', () => {
-    expect(hasTriggerPhrase('Use when the user needs a report').found).toBe(true);
-    expect(hasBoundaryPhrase('Do not use when the input is a contract').found).toBe(true);
-    expect(hasBoundaryPhrase('Format the report').found).toBe(false);
+  it('detects positive trigger phrases', () => {
+    expect(hasPositiveTriggerPhrase('Use when the user needs a report').found).toBe(true);
+    expect(hasPositiveTriggerPhrase('Format the report').found).toBe(false);
+  });
+
+  it('does not credit a negative boundary as a positive trigger', () => {
+    expect(hasPositiveTriggerPhrase('Do not use when the input is a contract').found).toBe(false);
+    expect(hasNegativeBoundaryPhrase('Do not use when the input is a contract').found).toBe(true);
+    expect(hasNegativeBoundaryPhrase('Format the report').found).toBe(false);
+  });
+
+  it('treats "only use when" as both a positive trigger and an exclusive boundary', () => {
+    expect(hasPositiveTriggerPhrase('Only use when preparing a release').found).toBe(true);
+    expect(hasExclusiveTriggerPhrase('Only use when preparing a release').found).toBe(true);
+    expect(hasNegativeBoundaryPhrase('Only use when preparing a release').found).toBe(false);
+    expect(hasExclusiveTriggerPhrase('Use when needed').found).toBe(false);
   });
 
   it('detects vague wording including simple plurals', () => {

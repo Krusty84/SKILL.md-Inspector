@@ -1,7 +1,10 @@
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
-import { hasBoundaryPhrase } from '../quality/descriptionHeuristics';
+import {
+  hasNegativeBoundaryPhrase,
+  hasExclusiveTriggerPhrase,
+} from '../quality/descriptionHeuristics';
 import { diag, bodyTopRange } from './util';
 
 /**
@@ -57,7 +60,8 @@ export function validateBody(doc: SkillDocument): SkillDiagnostic[] {
   }
 
   const hasBoundary =
-    hasBoundaryPhrase(doc.body).found ||
+    hasNegativeBoundaryPhrase(doc.body).found ||
+    hasExclusiveTriggerPhrase(doc.body).found ||
     hasSection(headings, ['constraint', 'constraints', 'limitation', 'do not', 'boundaries']);
   if (!hasBoundary) {
     diagnostics.push(
