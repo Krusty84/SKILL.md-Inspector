@@ -16,7 +16,11 @@ export function validateDescription(
   const range = keyRange(doc, 'description');
   const value = doc.frontmatter.description;
 
-  if (value === undefined || value === null || value === '') {
+  if (
+    value === undefined ||
+    value === null ||
+    (typeof value === 'string' && value.trim().length === 0)
+  ) {
     return [
       diag(
         DiagnosticCode.DescriptionMissing,
@@ -82,7 +86,7 @@ export function validateDescription(
     );
   }
 
-  if (!analysis.triggerPhrase.found) {
+  if (!analysis.positiveTriggerPhrase.found) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNoTrigger,
@@ -96,7 +100,7 @@ export function validateDescription(
 
   // MVP2: boundary and front-loaded-intent checks explain lost Trigger Quality
   // points (brief §10.3 / §10.4). Information-level so they stay non-intrusive.
-  if (!analysis.boundaryPhrase.found) {
+  if (!(analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found)) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNoBoundary,

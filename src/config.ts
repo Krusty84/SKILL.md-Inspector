@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
 import type { SkillProfile, DescriptionLanguage } from './types/SkillProfile';
+import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
+import type { SkillProfile } from './types/SkillProfile';
 
 export interface InspectorConfig {
   enabled: boolean;
   runOnSave: boolean;
   profile: SkillProfile;
+  resourceExclude: string[];
 }
 
 /** Reads `skillMdInspector.*` settings and resolves the effective profile. */
@@ -21,5 +24,6 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       descriptionMaxLength: cfg.get<number>('description.maxLength'),
       descriptionLanguage: cfg.get<DescriptionLanguage>('description.language'),
     }),
+    resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
   };
 }

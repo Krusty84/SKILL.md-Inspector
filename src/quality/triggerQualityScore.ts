@@ -46,6 +46,9 @@ export function scoreAnalysis(
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
 
   const frontLoaded = hasActionVerb(analysis.leadingText).found;
+  const boundary = analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found;
+  const boundaryMatch =
+    analysis.negativeBoundaryPhrase.matched ?? analysis.exclusiveTriggerPhrase.matched;
   const vaguePoints = Math.max(0, CRITERION_POINTS.lowVagueness - 5 * analysis.vagueTerms.length);
   const lengthPoints = scoreLength(analysis.length, minLength, maxLength);
 
@@ -61,12 +64,12 @@ export function scoreAnalysis(
     ),
     finding(
       'Usage trigger phrase',
-      analysis.triggerPhrase.found ? CRITERION_POINTS.triggerPhrase : 0,
+      analysis.positiveTriggerPhrase.found ? CRITERION_POINTS.triggerPhrase : 0,
       CRITERION_POINTS.triggerPhrase,
-      analysis.triggerPhrase.found
-        ? `Explains when to use the skill ("${analysis.triggerPhrase.matched}").`
+      analysis.positiveTriggerPhrase.found
+        ? `Explains when to use the skill ("${analysis.positiveTriggerPhrase.matched}").`
         : 'No usage trigger — add a clause like "Use when ...".',
-      analysis.triggerPhrase.found ? undefined : 'Add "Use when <context>".',
+      analysis.positiveTriggerPhrase.found ? undefined : 'Add "Use when <context>".',
     ),
     finding(
       'Concrete artifact / domain',
@@ -79,12 +82,12 @@ export function scoreAnalysis(
     ),
     finding(
       'Boundary phrase',
-      analysis.boundaryPhrase.found ? CRITERION_POINTS.boundary : 0,
+      boundary ? CRITERION_POINTS.boundary : 0,
       CRITERION_POINTS.boundary,
-      analysis.boundaryPhrase.found
-        ? `Defines a boundary ("${analysis.boundaryPhrase.matched}").`
+      boundary
+        ? `Defines a boundary ("${boundaryMatch}").`
         : 'No boundary — add "Do not use when ...".',
-      analysis.boundaryPhrase.found ? undefined : 'Add "Do not use when <boundary>".',
+      boundary ? undefined : 'Add "Do not use when <boundary>".',
     ),
     finding(
       'Front-loaded intent',

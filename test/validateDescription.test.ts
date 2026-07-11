@@ -39,6 +39,17 @@ describe('validateDescription', () => {
     expect(result.map((d) => d.code)).toContain(DiagnosticCode.DescriptionMissing);
   });
 
+  it.each([[''], ['   '], ['\n\t']])(
+    'treats a whitespace-only description as missing: %j',
+    (description) => {
+      expect(codes(description)).toContain(DiagnosticCode.DescriptionMissing);
+    },
+  );
+
+  it('does not report a missing description for non-empty text', () => {
+    expect(codes('Format inspection reports.')).not.toContain(DiagnosticCode.DescriptionMissing);
+  });
+
   it('flags a missing trigger clause while accepting the verb', () => {
     const result = codes('Format technical PDF reports using the standard company layout rules.');
     expect(result).toContain(DiagnosticCode.DescriptionNoTrigger);

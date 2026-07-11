@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parseSkillFile } from '../src/parser/parseSkillFile';
 import { validateName, toKebabCase } from '../src/validation/validateName';
 import { genericProfile } from '../src/profiles/genericProfile';
-import { DiagnosticCode } from '../src/types/DiagnosticCode';
+import { DiagnosticCode, QuickFixId } from '../src/types/DiagnosticCode';
 
 function doc(name: unknown, filePath = '/ws/skills/pdf-report-formatter/SKILL.md') {
   const content = `---\nname: ${name}\ndescription: placeholder\n---\n`;
@@ -38,6 +38,16 @@ describe('validateName', () => {
     expect(validateName(built, genericProfile).map((d) => d.code)).toContain(
       DiagnosticCode.NameMissing,
     );
+  });
+
+  it.each([['""'], ['"   "']])('treats a whitespace-only name as missing: %s', (name) => {
+    expect(codes(name)).toContain(DiagnosticCode.NameMissing);
+  });
+
+  it('does not offer the kebab-case quick fix for an empty name', () => {
+    const diagnostics = validateName(doc('"   "'), genericProfile);
+    expect(diagnostics.some((d) => d.quickFixId === QuickFixId.ConvertNameToKebabCase)).toBe(false);
+    expect(diagnostics.map((d) => d.code)).toContain(DiagnosticCode.NameMissing);
   });
 
   it('reports a name longer than the profile maximum', () => {

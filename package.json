@@ -135,6 +135,18 @@
           ],
           "default": "auto",
           "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" detects a non-English description and marks its quality score as language-limited."
+        "skillMdInspector.resources.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/dist/**",
+            "**/out/**"
+          ],
+          "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
         },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",

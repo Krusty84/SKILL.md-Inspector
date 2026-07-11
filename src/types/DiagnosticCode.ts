@@ -30,6 +30,7 @@ export const DiagnosticCode = {
   LinkMissing: 'skill.link.missing',
   LinkAbsolute: 'skill.link.absolute',
   LinkRemoteSuspicious: 'skill.link.remoteSuspicious',
+  LinkEscapesSkillRoot: 'skill.link.escapesRoot',
 
   // Resources
   ResourceUnreferenced: 'skill.resource.unreferenced',

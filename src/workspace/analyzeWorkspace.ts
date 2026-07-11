@@ -17,9 +17,10 @@ export function analyzeWorkspace(
   rootDir: string,
   skillPaths: string[],
   profile: SkillProfile,
+  exclude?: readonly string[],
 ): WorkspaceAnalysis {
   const skills = skillPaths
-    .map((skillPath) => toWorkspaceSkill(rootDir, skillPath, profile))
+    .map((skillPath) => toWorkspaceSkill(rootDir, skillPath, profile, exclude))
     .filter((skill): skill is WorkspaceSkill => skill !== undefined)
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -50,6 +51,7 @@ function toWorkspaceSkill(
   rootDir: string,
   absolutePath: string,
   profile: SkillProfile,
+  exclude?: readonly string[],
 ): WorkspaceSkill | undefined {
   let content: string;
   try {
@@ -58,7 +60,7 @@ function toWorkspaceSkill(
     return undefined;
   }
 
-  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile);
+  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, exclude);
   const name =
     typeof document.frontmatter?.name === 'string' && document.frontmatter.name
       ? document.frontmatter.name

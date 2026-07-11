@@ -3,6 +3,11 @@ import { VAGUE_TERMS } from './vagueWords';
 import { TRIGGER_PHRASES, BOUNDARY_PHRASES } from './triggerPhrases';
 import { isKnownAcronym } from './acronyms';
 import { IRREGULAR_VERB_FORMS } from './irregularVerbs';
+import {
+  POSITIVE_TRIGGER_PHRASES,
+  NEGATIVE_BOUNDARY_PHRASES,
+  EXCLUSIVE_TRIGGER_PHRASES,
+} from './triggerPhrases';
 
 export interface PhraseMatch {
   found: boolean;
@@ -17,8 +22,9 @@ export interface DescriptionAnalysis {
   /** First ~12 words, lower-cased — used for the front-loaded-intent check. */
   leadingText: string;
   actionVerb: PhraseMatch;
-  triggerPhrase: PhraseMatch;
-  boundaryPhrase: PhraseMatch;
+  positiveTriggerPhrase: PhraseMatch;
+  negativeBoundaryPhrase: PhraseMatch;
+  exclusiveTriggerPhrase: PhraseMatch;
   concreteArtifact: boolean;
   vagueTerms: string[];
 }
@@ -74,8 +80,9 @@ export function analyzeDescription(description: string): DescriptionAnalysis {
     wordCount: words.length,
     leadingText: words.slice(0, 12).join(' ').toLowerCase(),
     actionVerb: matchVerb(tokens),
-    triggerPhrase: matchPhrase(lower, TRIGGER_PHRASES),
-    boundaryPhrase: matchPhrase(lower, BOUNDARY_PHRASES),
+    positiveTriggerPhrase: hasPositiveTriggerPhrase(lower),
+    negativeBoundaryPhrase: hasNegativeBoundaryPhrase(lower),
+    exclusiveTriggerPhrase: hasExclusiveTriggerPhrase(lower),
     concreteArtifact: hasConcreteArtifact(trimmed, tokens),
     vagueTerms: findVagueTerms(lower, tokens),
   };
@@ -85,12 +92,35 @@ export function hasActionVerb(description: string): PhraseMatch {
   return matchVerb(tokenize(description.toLowerCase()));
 }
 
-export function hasTriggerPhrase(description: string): PhraseMatch {
-  return matchPhrase(description.toLowerCase(), TRIGGER_PHRASES);
+export function hasPositiveTriggerPhrase(description: string): PhraseMatch {
+  const lower = description.toLowerCase();
+  const positive = matchPhrase(stripBoundaryPhrases(lower), POSITIVE_TRIGGER_PHRASES);
+  if (positive.found) {
+    return positive;
+  }
+  // "only use when ..." is a positive trigger too, even though it also bounds scope.
+  return matchPhrase(lower, EXCLUSIVE_TRIGGER_PHRASES);
 }
 
-export function hasBoundaryPhrase(description: string): PhraseMatch {
-  return matchPhrase(description.toLowerCase(), BOUNDARY_PHRASES);
+export function hasNegativeBoundaryPhrase(description: string): PhraseMatch {
+  return matchPhrase(description.toLowerCase(), NEGATIVE_BOUNDARY_PHRASES);
+}
+
+export function hasExclusiveTriggerPhrase(description: string): PhraseMatch {
+  return matchPhrase(description.toLowerCase(), EXCLUSIVE_TRIGGER_PHRASES);
+}
+
+/**
+ * Removes negative and exclusive boundary phrases from the text so that the
+ * "use when" fragment embedded in "do not use when" / "only use when" is not
+ * counted as a standalone positive trigger.
+ */
+function stripBoundaryPhrases(lower: string): string {
+  let stripped = lower;
+  for (const phrase of [...NEGATIVE_BOUNDARY_PHRASES, ...EXCLUSIVE_TRIGGER_PHRASES]) {
+    stripped = stripped.split(phrase).join(' ');
+  }
+  return stripped;
 }
 
 export function findVagueTerms(lower: string, tokens: string[] = tokenize(lower)): string[] {

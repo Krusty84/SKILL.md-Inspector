@@ -13,9 +13,18 @@ interface LinkLikeNode {
   type: string;
   url?: string;
   alt?: string | null;
+  value?: string;
   children?: Array<{ type: string; value?: string; children?: unknown[] }>;
   position?: UnistPosition;
 }
+
+/**
+ * A resource path written in prose or code: starts with a known resource folder,
+ * has a path separator and a file extension, and is not a URL. Conservative on
+ * purpose so ordinary prose and shell commands (`npm run build`) are not matched.
+ */
+const RESOURCE_PATH_RE =
+  /(?<![\w./-])(?:\.\/)?(?:references|scripts|assets|templates)\/[\w./-]*\.\w+/g;
 
 /**
  * Extracts file-referencing Markdown links and images from the body. Anchors,
@@ -30,24 +39,96 @@ export function parseMarkdownLinks(body: string, bodyStartLine = 0): SkillLink[]
   const tree = unified().use(remarkParse).parse(body);
   const links: SkillLink[] = [];
 
-  visit(tree, (raw: unknown) => {
+  visit(tree, (raw: unknown, _index: number | undefined, parent: unknown) => {
     const node = raw as LinkLikeNode;
-    if (node.type !== 'link' && node.type !== 'image') {
+    if (node.type === 'link' || node.type === 'image') {
+      const url = (node.url ?? '').trim();
+      if (isIgnorableTarget(url)) {
+        return;
+      }
+      links.push({
+        raw: url,
+        text: node.type === 'image' ? (node.alt ?? '') : collectText(node),
+        kind: classifyLink(url),
+        range: nodeRange(node, bodyStartLine),
+      });
       return;
     }
-    const url = (node.url ?? '').trim();
-    if (isIgnorableTarget(url)) {
-      return;
+
+    // Resource paths written in prose, inline code, or fenced code blocks
+    // (brief §7.5). Skip a link/image's own text — the link is already captured.
+    if (node.type === 'text' || node.type === 'inlineCode' || node.type === 'code') {
+      const parentType = (parent as { type?: string } | null | undefined)?.type;
+      if (node.type === 'text' && (parentType === 'link' || parentType === 'image')) {
+        return;
+      }
+      collectResourcePaths(node, bodyStartLine, links);
     }
-    links.push({
-      raw: url,
-      text: node.type === 'image' ? (node.alt ?? '') : collectText(node),
-      kind: classifyLink(url),
-      range: nodeRange(node, bodyStartLine),
-    });
   });
 
   return links;
+}
+
+/** Extracts resource-like paths from a text/inlineCode/code node's value. */
+function collectResourcePaths(node: LinkLikeNode, bodyStartLine: number, links: SkillLink[]): void {
+  const value = node.value;
+  if (typeof value !== 'string' || !node.position) {
+    return;
+  }
+  const origin = valueOrigin(node, bodyStartLine);
+  RESOURCE_PATH_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = RESOURCE_PATH_RE.exec(value)) !== null) {
+    const raw = match[0];
+    if (classifyLink(raw) === 'remote') {
+      continue;
+    }
+    links.push({
+      raw,
+      text: raw,
+      kind: classifyLink(raw),
+      range: pathRange(origin, value, match.index, raw.length),
+    });
+  }
+}
+
+/** Document position of `node.value[0]`, accounting for code fences/backticks. */
+function valueOrigin(
+  node: LinkLikeNode,
+  bodyStartLine: number,
+): { line: number; character: number } {
+  const { start, end } = node.position!;
+  const line = bodyStartLine + start.line - 1;
+  if (node.type === 'code') {
+    // Fenced block: content begins on the line after the opening fence, column 0.
+    return { line: line + 1, character: 0 };
+  }
+  if (node.type === 'inlineCode' && start.line === end.line) {
+    const backticks = Math.max(1, Math.floor((end.column - start.column - (node.value ?? '').length) / 2));
+    return { line, character: start.column - 1 + backticks };
+  }
+  // Plain text (and any fallback): the value starts exactly at the node position.
+  return { line, character: start.column - 1 };
+}
+
+/** Range of a match inside `value`, walking newlines from the value origin. */
+function pathRange(
+  origin: { line: number; character: number },
+  value: string,
+  index: number,
+  length: number,
+): SkillDiagnosticRange {
+  let line = origin.line;
+  let character = origin.character;
+  for (let i = 0; i < index; i++) {
+    if (value.charCodeAt(i) === 10 /* \n */) {
+      line += 1;
+      character = 0;
+    } else {
+      character += 1;
+    }
+  }
+  return { startLine: line, startCharacter: character, endLine: line, endCharacter: character + length };
 }
 
 export function classifyLink(url: string): SkillLinkKind {

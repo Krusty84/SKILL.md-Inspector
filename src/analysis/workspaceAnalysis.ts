@@ -22,5 +22,8 @@ export function computeWorkspaceAnalysis(): WorkspaceAnalysisResult | undefined 
   const rootDir = folders[0].uri.fsPath;
   const config = readConfig(folders[0].uri);
   const skillPaths = discoverSkillPaths(rootDir);
-  return { rootDir, analysis: analyzeWorkspace(rootDir, skillPaths, config.profile) };
+  return {
+    rootDir,
+    analysis: analyzeWorkspace(rootDir, skillPaths, config.profile, config.resourceExclude),
+  };
 }
