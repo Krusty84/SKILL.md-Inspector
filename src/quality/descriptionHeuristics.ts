@@ -1,5 +1,7 @@
 import { ACTION_VERBS } from './actionVerbs';
 import { VAGUE_TERMS } from './vagueWords';
+import { isKnownAcronym } from './acronyms';
+import { IRREGULAR_VERB_FORMS } from './irregularVerbs';
 import {
   POSITIVE_TRIGGER_PHRASES,
   NEGATIVE_BOUNDARY_PHRASES,
@@ -61,6 +63,9 @@ const ARTIFACT_HINTS: readonly string[] = [
   'database',
 ];
 
+/** Action-registry verbs whose final consonant doubles before -ing/-ed. */
+const CVC_DOUBLING_VERBS = new Set(['format', 'debug']);
+
 const ACTION_VERB_FORMS: ReadonlySet<string> = buildVerbForms(ACTION_VERBS);
 
 export function analyzeDescription(description: string): DescriptionAnalysis {
@@ -87,6 +92,19 @@ export function analyzeDescription(description: string): DescriptionAnalysis {
 
 export function hasActionVerb(description: string): PhraseMatch {
   return matchVerb(tokenize(description.toLowerCase()));
+}
+
+/**
+ * Stricter front-loaded-intent check: the FIRST token must be an action verb and
+ * a concrete artifact/object must follow it in the leading text. A verb anywhere
+ * in the first 12 words, or a bare verb with no object, is too weak to pass.
+ */
+export function isFrontLoaded(leadingText: string): boolean {
+  const tokens = tokenize(leadingText);
+  if (tokens.length === 0 || !ACTION_VERB_FORMS.has(tokens[0])) {
+    return false;
+  }
+  return hasConcreteArtifact(leadingText, tokens.slice(1));
 }
 
 export function hasPositiveTriggerPhrase(description: string): PhraseMatch {
@@ -156,15 +174,19 @@ function matchPhrase(lower: string, phrases: readonly string[]): PhraseMatch {
 function hasConcreteArtifact(text: string, tokens: string[]): boolean {
   const forms = tokenForms(tokens);
   if (ARTIFACT_HINTS.some((hint) => forms.has(hint))) {
-    return true;
+    return true; // artifact vocabulary
   }
-  // File extension like ".pdf" or an uppercase acronym like "PDF"/"API".
-  // Acronyms are checked against the original-case text, not the lower-cased form.
-  return /\.[a-z]{2,4}\b/i.test(text) || /\b[A-Z]{2,}\b/.test(text);
+  if (tokens.some((token) => isKnownAcronym(token))) {
+    return true; // known acronym / technology (e.g. PDF, SQL, JSON)
+  }
+  // File extension like ".pdf". The broad "any run of uppercase letters"
+  // heuristic is intentionally gone — it flagged words like "IMPORTANT".
+  return /\.[a-z0-9]{2,4}\b/i.test(text);
 }
 
-function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+export function tokenize(text: string): string[] {
+  // Unicode-aware so Cyrillic/accented/CJK words are preserved as tokens.
+  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 
 /** Token set augmented with naive singular forms, for plural-insensitive matching. */
@@ -192,10 +214,17 @@ function singularize(token: string): string {
 
 function buildVerbForms(verbs: readonly string[]): Set<string> {
   const forms = new Set<string>();
-  for (const verb of verbs) {
-    for (const form of inflect(verb)) {
+  const addForms = (verb: string): void => {
+    for (const form of IRREGULAR_VERB_FORMS[verb] ?? inflect(verb)) {
       forms.add(form);
     }
+  };
+  for (const verb of verbs) {
+    addForms(verb);
+  }
+  // Recognize every irregular verb, including ones not in ACTION_VERBS (write, read).
+  for (const verb of Object.keys(IRREGULAR_VERB_FORMS)) {
+    addForms(verb);
   }
   return forms;
 }
@@ -223,8 +252,10 @@ function inflect(verb: string): string[] {
     forms.add(`${verb}ed`);
   }
 
-  // Consonant-doubling for CVC verbs: format -> formatting, debug -> debugged.
-  if (/[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
+  // Consonant-doubling only for the known CVC action verbs that need it. A blind
+  // CVC rule wrongly doubles multisyllabic verbs (render -> renderring); prefer
+  // explicit membership over broad linguistic generation.
+  if (CVC_DOUBLING_VERBS.has(verb) && /[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
     const doubled = verb + verb[verb.length - 1];
     forms.add(`${doubled}ing`);
     forms.add(`${doubled}ed`);

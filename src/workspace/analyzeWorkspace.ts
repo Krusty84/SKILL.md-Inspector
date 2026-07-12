@@ -5,6 +5,7 @@ import { computeTriggerQuality } from '../quality/triggerQualityScore';
 import { buildResourceGraph } from './buildResourceGraph';
 import { evaluatePortability, toCompatibilityMap } from './portability';
 import { detectCollisions } from './detectSkillCollisions';
+import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { WorkspaceAnalysis, WorkspaceSkill, SkillsIndex } from '../types/Workspace';
 
@@ -18,6 +19,7 @@ export function analyzeWorkspace(
   skillPaths: string[],
   profile: SkillProfile,
   exclude?: readonly string[],
+  similarityThreshold?: number,
 ): WorkspaceAnalysis {
   const skills = skillPaths
     .map((skillPath) => toWorkspaceSkill(rootDir, skillPath, profile, exclude))
@@ -27,8 +29,11 @@ export function analyzeWorkspace(
   const collisions = detectCollisions(
     skills.map((skill) => ({ name: skill.name, description: skill.description })),
   );
+  const named = skills.map((skill) => ({ name: skill.name, path: skill.path }));
+  const nameConflicts = detectNameConflicts(named);
+  const similarNames = detectSimilarNames(named, similarityThreshold);
 
-  return { skills, collisions };
+  return { skills, collisions, nameConflicts, similarNames };
 }
 
 /** Builds the exportable index model (brief §13.6). */
@@ -71,6 +76,8 @@ function toWorkspaceSkill(
   const triggerQuality = computeTriggerQuality(description, {
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
+    language: profile.description.language,
+    weights: profile.description.weights,
   });
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
   const warnings = diagnostics.filter((d) => d.severity === 'warning').length;

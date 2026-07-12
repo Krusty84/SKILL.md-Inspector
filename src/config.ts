@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
+import type { SkillProfile, DescriptionLanguage } from './types/SkillProfile';
 import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
-import type { SkillProfile } from './types/SkillProfile';
 
 export interface InspectorConfig {
   enabled: boolean;
   runOnSave: boolean;
   profile: SkillProfile;
   resourceExclude: string[];
+  nameSimilarityThreshold: number;
 }
 
 /** Reads `skillMdInspector.*` settings and resolves the effective profile. */
@@ -21,7 +22,9 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       nameMaxLength: cfg.get<number>('name.maxLength'),
       descriptionMinLength: cfg.get<number>('description.minLength'),
       descriptionMaxLength: cfg.get<number>('description.maxLength'),
+      descriptionLanguage: cfg.get<DescriptionLanguage>('description.language'),
     }),
     resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
+    nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),
   };
 }

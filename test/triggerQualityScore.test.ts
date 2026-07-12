@@ -64,6 +64,35 @@ describe('computeTriggerQuality', () => {
     const lengthFinding = strict.findings.find((f) => f.criterion === 'Good length');
     expect(lengthFinding?.pointsEarned).toBeLessThan(10);
   });
+
+  it('penalizes length gradually and zeroes out over the maximum', () => {
+    const good = (text: string) =>
+      computeTriggerQuality(text).findings.find((f) => f.criterion === 'Good length')!.pointsEarned;
+    expect(good('x'.repeat(501))).toBeGreaterThan(good('x'.repeat(1000)));
+    expect(good('x'.repeat(1100))).toBe(0); // over the 1024 maximum
+  });
+});
+
+describe('computeTriggerQuality language support', () => {
+  const CYRILLIC = 'Форматировать инспекционные отчёты. Использовать когда нужно готовить.';
+
+  it('flags a non-English description as partial in auto mode', () => {
+    const result = computeTriggerQuality(CYRILLIC, { language: 'auto' });
+    expect(result.partial).toBe(true);
+    expect(result.findings.some((f) => f.criterion === 'Language support')).toBe(true);
+  });
+
+  it('does not flag English descriptions and keeps 7 findings', () => {
+    const result = computeTriggerQuality(EXCELLENT, { language: 'auto' });
+    expect(result.partial).toBeUndefined();
+    expect(result.findings).toHaveLength(7);
+  });
+
+  it('forces English heuristics in "en" mode (no language finding)', () => {
+    const result = computeTriggerQuality(CYRILLIC, { language: 'en' });
+    expect(result.partial).toBeUndefined();
+    expect(result.findings.some((f) => f.criterion === 'Language support')).toBe(false);
+  });
 });
 
 describe('labelFor', () => {

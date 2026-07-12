@@ -1,10 +1,21 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { computeWorkspaceAnalysis } from '../analysis/workspaceAnalysis';
-import type { WorkspaceAnalysis, WorkspaceSkill, SkillCollision, ResourceNode } from '../types/Workspace';
+import type {
+  WorkspaceAnalysis,
+  WorkspaceSkill,
+  SkillCollision,
+  NameConflict,
+  SimilarNames,
+  ResourceNode,
+} from '../types/Workspace';
 
 type TreeNode =
   | { type: 'message'; text: string }
+  | { type: 'nameConflicts'; conflicts: NameConflict[] }
+  | { type: 'nameConflict'; conflict: NameConflict }
+  | { type: 'similarNames'; similar: SimilarNames[] }
+  | { type: 'similar'; pair: SimilarNames }
   | { type: 'collisions'; collisions: SkillCollision[] }
   | { type: 'collision'; collision: SkillCollision }
   | { type: 'skill'; skill: WorkspaceSkill }
@@ -27,6 +38,38 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     switch (node.type) {
       case 'message':
         return new vscode.TreeItem(node.text, vscode.TreeItemCollapsibleState.None);
+      case 'nameConflicts': {
+        const item = new vscode.TreeItem(
+          `Duplicate names (${node.conflicts.length})`,
+          vscode.TreeItemCollapsibleState.Expanded,
+        );
+        item.iconPath = new vscode.ThemeIcon('error');
+        return item;
+      }
+      case 'nameConflict': {
+        const c = node.conflict;
+        const item = new vscode.TreeItem(c.normalized, vscode.TreeItemCollapsibleState.None);
+        item.description = `${c.entries.length} skills`;
+        item.tooltip = c.entries.map((e) => `${e.name} — ${e.path}`).join('\n');
+        item.iconPath = new vscode.ThemeIcon('error');
+        return item;
+      }
+      case 'similarNames': {
+        const item = new vscode.TreeItem(
+          `Similar names (${node.similar.length})`,
+          vscode.TreeItemCollapsibleState.Expanded,
+        );
+        item.iconPath = new vscode.ThemeIcon('warning');
+        return item;
+      }
+      case 'similar': {
+        const s = node.pair;
+        const item = new vscode.TreeItem(`${s.a} ↔ ${s.b}`, vscode.TreeItemCollapsibleState.None);
+        item.description = s.similarity.toFixed(2);
+        item.tooltip = `${s.aPath}\n${s.bPath}`;
+        item.iconPath = new vscode.ThemeIcon('warning');
+        return item;
+      }
       case 'collisions': {
         const item = new vscode.TreeItem(
           `Potential collisions (${node.collisions.length})`,
@@ -54,6 +97,12 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     if (!node) {
       return this.rootChildren();
     }
+    if (node.type === 'nameConflicts') {
+      return node.conflicts.map((conflict) => ({ type: 'nameConflict', conflict }));
+    }
+    if (node.type === 'similarNames') {
+      return node.similar.map((pair) => ({ type: 'similar', pair }));
+    }
     if (node.type === 'collisions') {
       return node.collisions.map((collision) => ({ type: 'collision', collision }));
     }
@@ -80,6 +129,12 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       return [{ type: 'message', text: 'No SKILL.md files found in this workspace.' }];
     }
     const nodes: TreeNode[] = [];
+    if (this.analysis.nameConflicts.length > 0) {
+      nodes.push({ type: 'nameConflicts', conflicts: this.analysis.nameConflicts });
+    }
+    if (this.analysis.similarNames.length > 0) {
+      nodes.push({ type: 'similarNames', similar: this.analysis.similarNames });
+    }
     if (this.analysis.collisions.length > 0) {
       nodes.push({ type: 'collisions', collisions: this.analysis.collisions });
     }

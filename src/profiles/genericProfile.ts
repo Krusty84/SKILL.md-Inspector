@@ -8,5 +8,16 @@ export const genericProfile: SkillProfile = {
   description: {
     minLength: 40,
     maxLength: 1024,
+    // Boundary de-emphasized: a description can be excellent without a "Do not
+    // use when..." clause; the freed weight goes to artifact/length.
+    weights: {
+      actionVerb: 20,
+      triggerPhrase: 20,
+      concreteArtifact: 20,
+      boundary: 5,
+      frontLoaded: 10,
+      lowVagueness: 10,
+      goodLength: 15,
+    },
   },
 };

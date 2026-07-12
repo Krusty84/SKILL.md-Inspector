@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   analyzeDescription,
   hasActionVerb,
+  isFrontLoaded,
+  tokenize,
   hasPositiveTriggerPhrase,
   hasNegativeBoundaryPhrase,
   hasExclusiveTriggerPhrase,
@@ -45,6 +47,44 @@ describe('descriptionHeuristics', () => {
   it('recognizes concrete artifacts and acronyms', () => {
     expect(analyzeDescription('Format inspection reports').concreteArtifact).toBe(true);
     expect(analyzeDescription('Convert to PDF').concreteArtifact).toBe(true);
+    expect(analyzeDescription('Generate SQL').concreteArtifact).toBe(true); // registry-only acronym
     expect(analyzeDescription('Does helpful things generally').concreteArtifact).toBe(false);
+  });
+
+  it('does not treat ordinary uppercase words as artifacts', () => {
+    expect(analyzeDescription('Format IMPORTANT THINGS.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Make it GOOD.').concreteArtifact).toBe(false);
+  });
+
+  it('tokenizes Latin, Cyrillic, accented, and CJK text', () => {
+    expect(tokenize('Format reports')).toEqual(['format', 'reports']);
+    expect(tokenize('Форматировать отчёт').length).toBe(2);
+    expect(tokenize('café résumé').length).toBe(2);
+    expect(tokenize('日本語 テキスト').length).toBeGreaterThan(0);
+  });
+
+  it('detects irregular action-verb forms', () => {
+    expect(hasActionVerb('wrote the report').found).toBe(true);
+    expect(hasActionVerb('written documentation').found).toBe(true);
+    expect(hasActionVerb('reads files').found).toBe(true);
+    expect(hasActionVerb('built the pipeline').found).toBe(true);
+  });
+
+  it('does not consonant-double multisyllabic verbs', () => {
+    expect(hasActionVerb('formatting the report').found).toBe(true);
+    expect(hasActionVerb('debugged the script').found).toBe(true);
+    expect(hasActionVerb('rendering the template').found).toBe(true); // correct form
+    expect(hasActionVerb('renderring the template').found).toBe(false); // invalid doubled form
+    expect(hasActionVerb('refactorring the code').found).toBe(false);
+  });
+
+  it('front-loads only when a verb starts the text and an object follows', () => {
+    expect(isFrontLoaded('format technical reports using company rules')).toBe(true);
+    expect(isFrontLoaded('generates release notes from commit history')).toBe(true);
+    expect(isFrontLoaded('format reports')).toBe(true);
+    expect(isFrontLoaded('analyze log files')).toBe(true);
+    expect(isFrontLoaded('analyze when needed')).toBe(false); // verb, no object
+    expect(isFrontLoaded('analyze and help when needed')).toBe(false);
+    expect(isFrontLoaded('a general utility for teams that can analyze many things')).toBe(false);
   });
 });

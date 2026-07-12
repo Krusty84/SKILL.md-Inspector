@@ -59,9 +59,27 @@ export interface SkillCollision {
   recommendation: string;
 }
 
+/** Two or more skills sharing the same `name` (compared case-insensitively). */
+export interface NameConflict {
+  /** The lower-cased name shared by every entry. */
+  normalized: string;
+  entries: { name: string; path: string }[];
+}
+
+/** Two skills whose names are confusingly similar but not identical. */
+export interface SimilarNames {
+  a: string;
+  b: string;
+  aPath: string;
+  bPath: string;
+  similarity: number;
+}
+
 export interface WorkspaceAnalysis {
   skills: WorkspaceSkill[];
   collisions: SkillCollision[];
+  nameConflicts: NameConflict[];
+  similarNames: SimilarNames[];
 }
 
 export interface SkillsIndexEntry {

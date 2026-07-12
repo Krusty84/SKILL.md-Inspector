@@ -27,6 +27,7 @@ export async function improveDescriptionLocally(): Promise<void> {
   const improved = buildImprovedDescription(current, {
     minLength: config.profile.description.minLength,
     maxLength: config.profile.description.maxLength,
+    weights: config.profile.description.weights,
   });
 
   const choice = await vscode.window.showInformationMessage(
