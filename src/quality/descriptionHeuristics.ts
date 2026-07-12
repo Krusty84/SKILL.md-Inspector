@@ -1,6 +1,5 @@
 import { ACTION_VERBS } from './actionVerbs';
 import { VAGUE_TERMS } from './vagueWords';
-import { TRIGGER_PHRASES, BOUNDARY_PHRASES } from './triggerPhrases';
 import { isKnownAcronym } from './acronyms';
 import { IRREGULAR_VERB_FORMS } from './irregularVerbs';
 import {
@@ -64,6 +63,9 @@ const ARTIFACT_HINTS: readonly string[] = [
   'database',
 ];
 
+/** Action-registry verbs whose final consonant doubles before -ing/-ed. */
+const CVC_DOUBLING_VERBS = new Set(['format', 'debug']);
+
 const ACTION_VERB_FORMS: ReadonlySet<string> = buildVerbForms(ACTION_VERBS);
 
 export function analyzeDescription(description: string): DescriptionAnalysis {
@@ -90,6 +92,19 @@ export function analyzeDescription(description: string): DescriptionAnalysis {
 
 export function hasActionVerb(description: string): PhraseMatch {
   return matchVerb(tokenize(description.toLowerCase()));
+}
+
+/**
+ * Stricter front-loaded-intent check: the FIRST token must be an action verb and
+ * a concrete artifact/object must follow it in the leading text. A verb anywhere
+ * in the first 12 words, or a bare verb with no object, is too weak to pass.
+ */
+export function isFrontLoaded(leadingText: string): boolean {
+  const tokens = tokenize(leadingText);
+  if (tokens.length === 0 || !ACTION_VERB_FORMS.has(tokens[0])) {
+    return false;
+  }
+  return hasConcreteArtifact(leadingText, tokens.slice(1));
 }
 
 export function hasPositiveTriggerPhrase(description: string): PhraseMatch {
@@ -237,8 +252,10 @@ function inflect(verb: string): string[] {
     forms.add(`${verb}ed`);
   }
 
-  // Consonant-doubling for CVC verbs: format -> formatting, debug -> debugged.
-  if (/[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
+  // Consonant-doubling only for the known CVC action verbs that need it. A blind
+  // CVC rule wrongly doubles multisyllabic verbs (render -> renderring); prefer
+  // explicit membership over broad linguistic generation.
+  if (CVC_DOUBLING_VERBS.has(verb) && /[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
     const doubled = verb + verb[verb.length - 1];
     forms.add(`${doubled}ing`);
     forms.add(`${doubled}ed`);

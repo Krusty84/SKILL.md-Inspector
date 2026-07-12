@@ -149,6 +149,13 @@
           ],
           "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
         },
+        "skillMdInspector.names.similarityThreshold": {
+          "type": "number",
+          "default": 0.8,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
+        },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",
           "default": false,

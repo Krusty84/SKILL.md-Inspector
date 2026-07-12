@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   analyzeDescription,
   hasActionVerb,
-  hasTriggerPhrase,
-  hasBoundaryPhrase,
+  isFrontLoaded,
   tokenize,
   hasPositiveTriggerPhrase,
   hasNegativeBoundaryPhrase,
@@ -69,5 +68,23 @@ describe('descriptionHeuristics', () => {
     expect(hasActionVerb('written documentation').found).toBe(true);
     expect(hasActionVerb('reads files').found).toBe(true);
     expect(hasActionVerb('built the pipeline').found).toBe(true);
+  });
+
+  it('does not consonant-double multisyllabic verbs', () => {
+    expect(hasActionVerb('formatting the report').found).toBe(true);
+    expect(hasActionVerb('debugged the script').found).toBe(true);
+    expect(hasActionVerb('rendering the template').found).toBe(true); // correct form
+    expect(hasActionVerb('renderring the template').found).toBe(false); // invalid doubled form
+    expect(hasActionVerb('refactorring the code').found).toBe(false);
+  });
+
+  it('front-loads only when a verb starts the text and an object follows', () => {
+    expect(isFrontLoaded('format technical reports using company rules')).toBe(true);
+    expect(isFrontLoaded('generates release notes from commit history')).toBe(true);
+    expect(isFrontLoaded('format reports')).toBe(true);
+    expect(isFrontLoaded('analyze log files')).toBe(true);
+    expect(isFrontLoaded('analyze when needed')).toBe(false); // verb, no object
+    expect(isFrontLoaded('analyze and help when needed')).toBe(false);
+    expect(isFrontLoaded('a general utility for teams that can analyze many things')).toBe(false);
   });
 });

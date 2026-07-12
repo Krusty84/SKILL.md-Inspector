@@ -24,6 +24,12 @@ export function computeWorkspaceAnalysis(): WorkspaceAnalysisResult | undefined 
   const skillPaths = discoverSkillPaths(rootDir);
   return {
     rootDir,
-    analysis: analyzeWorkspace(rootDir, skillPaths, config.profile, config.resourceExclude),
+    analysis: analyzeWorkspace(
+      rootDir,
+      skillPaths,
+      config.profile,
+      config.resourceExclude,
+      config.nameSimilarityThreshold,
+    ),
   };
 }

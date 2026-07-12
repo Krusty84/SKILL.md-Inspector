@@ -97,6 +97,24 @@ describe('workspace discovery + analysis', () => {
     expect(names).toContain('engineering-report-formatter');
   });
 
+  it('detects duplicate and confusingly similar skill names', () => {
+    writeSkill(
+      'skills/dup/SKILL.md',
+      '---\nname: PDF-Report-Formatter\ndescription: Format PDF reports. Use when needed.\n---\n',
+    );
+    writeSkill(
+      'skills/near/SKILL.md',
+      '---\nname: pdf-reports-formatter\ndescription: Format PDF reports. Use when needed.\n---\n',
+    );
+    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+
+    const conflict = analysis.nameConflicts.find((c) => c.normalized === 'pdf-report-formatter');
+    expect(conflict).toBeDefined();
+    expect(conflict!.entries.length).toBeGreaterThanOrEqual(2);
+
+    expect(analysis.similarNames.flatMap((s) => [s.a, s.b])).toContain('pdf-reports-formatter');
+  });
+
   it('exports an index with the documented shape', () => {
     const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const index = buildSkillsIndex(analysis);

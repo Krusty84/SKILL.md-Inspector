@@ -48,8 +48,9 @@ describe('buildReportModel', () => {
       model.triggerQuality.findings.find((f) => f.criterion.startsWith('Action verb'))?.pointsEarned,
     ).toBe(20);
     expect(
+      // Generic profile de-emphasizes the boundary criterion (weight 5).
       model.triggerQuality.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned,
-    ).toBe(15);
+    ).toBe(5);
   });
 
   it('marks a skill with errors as failing', () => {

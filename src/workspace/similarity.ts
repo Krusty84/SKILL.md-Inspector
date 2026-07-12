@@ -93,6 +93,34 @@ export function sharedTerms(a: string[], b: string[], limit = 8): string[] {
     .map(([term]) => term);
 }
 
+/** Levenshtein edit distance between two strings (two-row dynamic programming). */
+export function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  let curr = new Array<number>(n + 1);
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+/** Normalized name similarity in 0..1 (1 = identical), trimmed and case-insensitive. */
+export function nameSimilarity(a: string, b: string): number {
+  const x = a.trim().toLowerCase();
+  const y = b.trim().toLowerCase();
+  if (x === y) return 1;
+  const maxLen = Math.max(x.length, y.length);
+  return maxLen === 0 ? 1 : 1 - levenshtein(x, y) / maxLen;
+}
+
 function norm(vector: TfidfVector): number {
   let sum = 0;
   for (const weight of vector.values()) {
