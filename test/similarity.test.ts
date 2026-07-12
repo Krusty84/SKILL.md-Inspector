@@ -5,6 +5,8 @@ import {
   tfidfVectors,
   cosine,
   sharedTerms,
+  levenshtein,
+  nameSimilarity,
 } from '../src/workspace/similarity';
 
 describe('tokenizeContent', () => {
@@ -63,5 +65,19 @@ describe('sharedTerms', () => {
       tokenizeContent('format engineering inspection reports'),
     );
     expect(terms).toEqual(expect.arrayContaining(['format', 'inspection', 'reports']));
+  });
+});
+
+describe('levenshtein / nameSimilarity', () => {
+  it('computes edit distance', () => {
+    expect(levenshtein('kitten', 'sitting')).toBe(3);
+    expect(levenshtein('abc', 'abc')).toBe(0);
+    expect(levenshtein('', 'abc')).toBe(3);
+  });
+
+  it('normalizes name similarity case-insensitively', () => {
+    expect(nameSimilarity('pdf-helper', 'PDF-Helper')).toBe(1);
+    expect(nameSimilarity('pdf-report-formatter', 'pdf-reports-formatter')).toBeGreaterThan(0.9);
+    expect(nameSimilarity('alpha', 'omega-generator')).toBeLessThan(0.5);
   });
 });

@@ -64,6 +64,13 @@ describe('computeTriggerQuality', () => {
     const lengthFinding = strict.findings.find((f) => f.criterion === 'Good length');
     expect(lengthFinding?.pointsEarned).toBeLessThan(10);
   });
+
+  it('penalizes length gradually and zeroes out over the maximum', () => {
+    const good = (text: string) =>
+      computeTriggerQuality(text).findings.find((f) => f.criterion === 'Good length')!.pointsEarned;
+    expect(good('x'.repeat(501))).toBeGreaterThan(good('x'.repeat(1000)));
+    expect(good('x'.repeat(1100))).toBe(0); // over the 1024 maximum
+  });
 });
 
 describe('computeTriggerQuality language support', () => {

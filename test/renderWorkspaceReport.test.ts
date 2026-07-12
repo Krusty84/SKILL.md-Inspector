@@ -38,6 +38,24 @@ function analysis(): WorkspaceAnalysis {
         recommendation: 'Merge or differentiate.',
       },
     ],
+    nameConflicts: [
+      {
+        normalized: 'pdf-helper',
+        entries: [
+          { name: 'pdf-helper', path: 'skills/a/SKILL.md' },
+          { name: 'PDF-Helper', path: 'skills/b/SKILL.md' },
+        ],
+      },
+    ],
+    similarNames: [
+      {
+        a: 'pdf-report-formatter',
+        b: 'pdf-reports-formatter',
+        aPath: 'skills/x/SKILL.md',
+        bPath: 'skills/y/SKILL.md',
+        similarity: 0.95,
+      },
+    ],
   };
 }
 
@@ -50,6 +68,10 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('High');
     expect(html).toContain('references/unused.md');
     expect(html).toContain('pdf-report-formatter');
+    expect(html).toContain('Duplicate names');
+    expect(html).toContain('skills/b/SKILL.md'); // every conflicting path is listed
+    expect(html).toContain('Similar names');
+    expect(html).toContain('pdf-reports-formatter');
   });
 
   it('escapes HTML in skill names', () => {

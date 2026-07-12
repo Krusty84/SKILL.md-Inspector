@@ -1,16 +1,17 @@
-import { analyzeDescription, hasActionVerb, type DescriptionAnalysis } from './descriptionHeuristics';
+import { analyzeDescription, isFrontLoaded, type DescriptionAnalysis } from './descriptionHeuristics';
 import { isProbablyNonEnglish } from './language';
 import type {
   TriggerQualityResult,
   TriggerQualityFinding,
   TriggerQualityLabel,
 } from '../types/TriggerQuality';
-import type { DescriptionLanguage } from '../types/SkillProfile';
+import type { DescriptionLanguage, TriggerQualityWeights } from '../types/SkillProfile';
 
 export interface TriggerQualityOptions {
   minLength?: number;
   maxLength?: number;
   language?: DescriptionLanguage;
+  weights?: TriggerQualityWeights;
 }
 
 /** Points allotted to each criterion (brief §10.1). Sum = 100. */
@@ -44,19 +45,20 @@ export function scoreAnalysis(
   const maxLength = options.maxLength ?? 1024;
   const language = options.language ?? 'auto';
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
+  const weights = normalizeWeights(options.weights ?? CRITERION_POINTS);
 
-  const frontLoaded = hasActionVerb(analysis.leadingText).found;
+  const frontLoaded = isFrontLoaded(analysis.leadingText);
   const boundary = analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found;
   const boundaryMatch =
     analysis.negativeBoundaryPhrase.matched ?? analysis.exclusiveTriggerPhrase.matched;
-  const vaguePoints = Math.max(0, CRITERION_POINTS.lowVagueness - 5 * analysis.vagueTerms.length);
-  const lengthPoints = scoreLength(analysis.length, minLength, maxLength);
+  const vaguePoints = Math.max(0, weights.lowVagueness - 5 * analysis.vagueTerms.length);
+  const lengthPoints = scoreLength(analysis.length, minLength, maxLength, weights.goodLength);
 
   const findings: TriggerQualityFinding[] = [
     finding(
       'Action verb / capability',
-      analysis.actionVerb.found ? CRITERION_POINTS.actionVerb : 0,
-      CRITERION_POINTS.actionVerb,
+      analysis.actionVerb.found ? weights.actionVerb : 0,
+      weights.actionVerb,
       analysis.actionVerb.found
         ? `States the capability with "${analysis.actionVerb.matched}".`
         : 'No action verb — start with a capability such as "format" or "generate".',
@@ -64,8 +66,8 @@ export function scoreAnalysis(
     ),
     finding(
       'Usage trigger phrase',
-      analysis.positiveTriggerPhrase.found ? CRITERION_POINTS.triggerPhrase : 0,
-      CRITERION_POINTS.triggerPhrase,
+      analysis.positiveTriggerPhrase.found ? weights.triggerPhrase : 0,
+      weights.triggerPhrase,
       analysis.positiveTriggerPhrase.found
         ? `Explains when to use the skill ("${analysis.positiveTriggerPhrase.matched}").`
         : 'No usage trigger — add a clause like "Use when ...".',
@@ -73,8 +75,8 @@ export function scoreAnalysis(
     ),
     finding(
       'Concrete artifact / domain',
-      analysis.concreteArtifact ? CRITERION_POINTS.concreteArtifact : 0,
-      CRITERION_POINTS.concreteArtifact,
+      analysis.concreteArtifact ? weights.concreteArtifact : 0,
+      weights.concreteArtifact,
       analysis.concreteArtifact
         ? 'Names a concrete artifact or domain.'
         : 'No concrete artifact — say what the skill operates on.',
@@ -82,8 +84,8 @@ export function scoreAnalysis(
     ),
     finding(
       'Boundary phrase',
-      boundary ? CRITERION_POINTS.boundary : 0,
-      CRITERION_POINTS.boundary,
+      boundary ? weights.boundary : 0,
+      weights.boundary,
       boundary
         ? `Defines a boundary ("${boundaryMatch}").`
         : 'No boundary — add "Do not use when ...".',
@@ -91,8 +93,8 @@ export function scoreAnalysis(
     ),
     finding(
       'Front-loaded intent',
-      frontLoaded ? CRITERION_POINTS.frontLoaded : 0,
-      CRITERION_POINTS.frontLoaded,
+      frontLoaded ? weights.frontLoaded : 0,
+      weights.frontLoaded,
       frontLoaded
         ? 'States the main capability in the first words.'
         : 'Main capability is not stated up front.',
@@ -101,7 +103,7 @@ export function scoreAnalysis(
     finding(
       'Low vagueness',
       vaguePoints,
-      CRITERION_POINTS.lowVagueness,
+      weights.lowVagueness,
       analysis.vagueTerms.length === 0
         ? 'No vague wording.'
         : `Vague wording: ${analysis.vagueTerms.join(', ')}.`,
@@ -110,11 +112,11 @@ export function scoreAnalysis(
     finding(
       'Good length',
       lengthPoints,
-      CRITERION_POINTS.goodLength,
-      lengthPoints === CRITERION_POINTS.goodLength
+      weights.goodLength,
+      lengthPoints === weights.goodLength
         ? `Length is ${analysis.length} characters.`
         : `Length is ${analysis.length} characters (aim for ${minLength}–${GOOD_LENGTH_MAX}).`,
-      lengthPoints === CRITERION_POINTS.goodLength
+      lengthPoints === weights.goodLength
         ? undefined
         : `Aim for roughly ${minLength}–${GOOD_LENGTH_MAX} characters.`,
     ),
@@ -144,17 +146,49 @@ export function labelFor(score: number): TriggerQualityLabel {
   return 'poor';
 }
 
-function scoreLength(length: number, minLength: number, maxLength: number): number {
+function scoreLength(
+  length: number,
+  minLength: number,
+  maxLength: number,
+  maxPoints: number,
+): number {
   if (length >= minLength && length <= GOOD_LENGTH_MAX) {
-    return CRITERION_POINTS.goodLength;
+    return maxPoints; // recommended range
   }
   if (length >= Math.floor(minLength * 0.6) && length < minLength) {
-    return 5;
+    return Math.round(maxPoints * 0.5); // slightly short
   }
   if (length > GOOD_LENGTH_MAX && length <= maxLength) {
-    return 5;
+    // Graduated: a moderately long description beats a very long one.
+    const mid = GOOD_LENGTH_MAX + Math.floor((maxLength - GOOD_LENGTH_MAX) / 2);
+    return length <= mid ? Math.round(maxPoints * 0.6) : Math.round(maxPoints * 0.3);
   }
-  return 0;
+  return 0; // far too short, or over the profile maximum
+}
+
+/** Scales criterion weights to sum to 100 (a no-op when they already do). */
+function normalizeWeights(weights: TriggerQualityWeights): TriggerQualityWeights {
+  const total =
+    weights.actionVerb +
+    weights.triggerPhrase +
+    weights.concreteArtifact +
+    weights.boundary +
+    weights.frontLoaded +
+    weights.lowVagueness +
+    weights.goodLength;
+  if (total === 100 || total === 0) {
+    return weights;
+  }
+  const factor = 100 / total;
+  return {
+    actionVerb: weights.actionVerb * factor,
+    triggerPhrase: weights.triggerPhrase * factor,
+    concreteArtifact: weights.concreteArtifact * factor,
+    boundary: weights.boundary * factor,
+    frontLoaded: weights.frontLoaded * factor,
+    lowVagueness: weights.lowVagueness * factor,
+    goodLength: weights.goodLength * factor,
+  };
 }
 
 function finding(

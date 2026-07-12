@@ -2,6 +2,8 @@ import type {
   WorkspaceAnalysis,
   WorkspaceSkill,
   SkillCollision,
+  NameConflict,
+  SimilarNames,
   PortabilityStatus,
 } from '../types/Workspace';
 import type { SkillProfileId } from '../types/SkillProfile';
@@ -55,6 +57,12 @@ export function renderWorkspaceReportHtml(analysis: WorkspaceAnalysis, opts: Ren
     </table>
   </div>
 
+  <h2>Duplicate names</h2>
+  ${renderNameConflicts(analysis.nameConflicts)}
+
+  <h2>Similar names</h2>
+  ${renderSimilarNames(analysis.similarNames)}
+
   <h2>Collision matrix</h2>
   ${renderCollisions(analysis.collisions)}
 
@@ -80,6 +88,34 @@ function renderCollisions(collisions: SkillCollision[]): string {
     )
     .join('');
   return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th><th>Shared terms</th><th>Risk</th><th>Recommendation</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function renderNameConflicts(conflicts: NameConflict[]): string {
+  if (conflicts.length === 0) {
+    return '<p class="empty">No duplicate names.</p>';
+  }
+  const items = conflicts
+    .map((c) => {
+      const paths = c.entries
+        .map((e) => `<li><code>${escapeHtml(e.name)}</code> — ${escapeHtml(e.path)}</li>`)
+        .join('');
+      return `<li class="fail"><code>${escapeHtml(c.normalized)}</code> (${c.entries.length} skills)<ul>${paths}</ul></li>`;
+    })
+    .join('');
+  return `<ul>${items}</ul>`;
+}
+
+function renderSimilarNames(similar: SimilarNames[]): string {
+  if (similar.length === 0) {
+    return '<p class="empty">No confusingly similar names.</p>';
+  }
+  const rows = similar
+    .map(
+      (s) =>
+        `<tr><td><code>${escapeHtml(s.a)}</code></td><td><code>${escapeHtml(s.b)}</code></td><td>${s.similarity.toFixed(2)}</td></tr>`,
+    )
+    .join('');
+  return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function renderResourceGraph(skill: WorkspaceSkill): string {

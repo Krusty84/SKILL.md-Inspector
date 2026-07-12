@@ -32,6 +32,7 @@ export function resolveProfile(id: string, overrides: ProfileOverrides = {}): Sk
       minLength: overrides.descriptionMinLength ?? base.description.minLength,
       maxLength: overrides.descriptionMaxLength ?? base.description.maxLength,
       language: overrides.descriptionLanguage ?? base.description.language,
+      weights: base.description.weights,
     },
   };
 }

@@ -39,6 +39,7 @@ export function buildReportModel(
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
     language: profile.description.language,
+    weights: profile.description.weights,
   });
 
   return {
