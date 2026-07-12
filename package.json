@@ -4,7 +4,7 @@
   "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
   "version": "0.3.0",
   "license": "MIT",
-  "publisher": "krusty84",
+  "publisher": "Sedoykin Alexey",
   "repository": {
     "type": "git",
     "url": "https://github.com/krusty84/skill-md-inspector.git"
@@ -135,6 +135,7 @@
           ],
           "default": "auto",
           "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" detects a non-English description and marks its quality score as language-limited."
+        },
         "skillMdInspector.resources.exclude": {
           "type": "array",
           "items": {
