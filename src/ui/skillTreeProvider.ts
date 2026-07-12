@@ -80,9 +80,15 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       }
       case 'collision': {
         const c = node.collision;
+        const m = c.metrics;
         const item = new vscode.TreeItem(`${c.a} ↔ ${c.b}`, vscode.TreeItemCollapsibleState.None);
         item.description = `${c.risk} · ${c.similarity.toFixed(2)}`;
-        item.tooltip = `Shared: ${c.sharedTerms.join(', ')}\n${c.recommendation}`;
+        const sep =
+          m.boundarySeparation > 0 ? `, boundary sep ${m.boundarySeparation.toFixed(2)}` : '';
+        item.tooltip =
+          `Metrics — Jaccard ${m.jaccard.toFixed(2)}, cosine ${m.cosine.toFixed(2)}, ` +
+          `char n-gram ${m.charNgram.toFixed(2)}, name ${m.nameSimilarity.toFixed(2)}${sep}\n` +
+          `Shared: ${c.sharedTerms.join(', ')}\n${c.recommendation}`;
         item.iconPath = new vscode.ThemeIcon(riskIcon(c.risk));
         return item;
       }

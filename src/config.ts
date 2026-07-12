@@ -1,6 +1,14 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
 import type { SkillProfile, DescriptionLanguage } from './types/SkillProfile';
+import type { CollisionWeights } from './types/Workspace';
+import type { CollisionOptions } from './workspace/detectSkillCollisions';
+import {
+  DEFAULT_COLLISION_WEIGHTS,
+  DEFAULT_COLLISION_THRESHOLD,
+  DEFAULT_NGRAM_SIZE,
+  DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
+} from './workspace/detectSkillCollisions';
 import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
 
 export interface InspectorConfig {
@@ -9,6 +17,7 @@ export interface InspectorConfig {
   profile: SkillProfile;
   resourceExclude: string[];
   nameSimilarityThreshold: number;
+  collision: CollisionOptions;
 }
 
 /** Reads `skillMdInspector.*` settings and resolves the effective profile. */
@@ -26,5 +35,18 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
     }),
     resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),
+    collision: {
+      threshold: cfg.get<number>('collision.threshold', DEFAULT_COLLISION_THRESHOLD),
+      ngramSize: cfg.get<number>('collision.ngramSize', DEFAULT_NGRAM_SIZE),
+      boundarySeparationWeight: cfg.get<number>(
+        'collision.boundarySeparationWeight',
+        DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
+      ),
+      // Merge with defaults so a partial user override never leaves a weight undefined.
+      weights: {
+        ...DEFAULT_COLLISION_WEIGHTS,
+        ...cfg.get<Partial<CollisionWeights>>('collision.weights', {}),
+      },
+    },
   };
 }

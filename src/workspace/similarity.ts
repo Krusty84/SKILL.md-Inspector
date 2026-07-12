@@ -5,10 +5,50 @@
  */
 
 const STOPWORDS = new Set([
-  'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with', 'from',
-  'by', 'as', 'at', 'is', 'are', 'be', 'this', 'that', 'these', 'those', 'it',
-  'use', 'used', 'using', 'when', 'skill', 'agent', 'user', 'users', 'do', 'not',
-  'you', 'your', 'can', 'will', 'should', 'if', 'into', 'out', 'up', 'via', 'per',
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'to',
+  'of',
+  'in',
+  'on',
+  'for',
+  'with',
+  'from',
+  'by',
+  'as',
+  'at',
+  'is',
+  'are',
+  'be',
+  'this',
+  'that',
+  'these',
+  'those',
+  'it',
+  'use',
+  'used',
+  'using',
+  'when',
+  'skill',
+  'agent',
+  'user',
+  'users',
+  'do',
+  'not',
+  'you',
+  'your',
+  'can',
+  'will',
+  'should',
+  'if',
+  'into',
+  'out',
+  'up',
+  'via',
+  'per',
 ]);
 
 /** Lower-cases and keeps meaningful tokens (length > 2, non-stopword). */
@@ -119,6 +159,34 @@ export function nameSimilarity(a: string, b: string): number {
   if (x === y) return 1;
   const maxLen = Math.max(x.length, y.length);
   return maxLen === 0 ? 1 : 1 - levenshtein(x, y) / maxLen;
+}
+
+/**
+ * Character n-grams of normalized text: lower-cased, reduced to alphanumerics and
+ * single spaces. Strings shorter than `n` yield a single gram of the whole string.
+ */
+export function charNgrams(text: string, n = 3): string[] {
+  const normalized = text
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (normalized.length === 0) return [];
+  if (normalized.length <= n) return [normalized];
+  const grams: string[] = [];
+  for (let i = 0; i + n <= normalized.length; i++) {
+    grams.push(normalized.slice(i, i + n));
+  }
+  return grams;
+}
+
+/**
+ * Cosine similarity over character n-gram frequency vectors (0..1). A separate,
+ * corpus-independent metric that catches small spelling/morphological variation
+ * token metrics miss (e.g. "formatter" vs "formatting").
+ */
+export function charNgramSimilarity(a: string, b: string, n = 3): number {
+  return cosine(frequency(charNgrams(a, n)), frequency(charNgrams(b, n)));
 }
 
 function norm(vector: TfidfVector): number {

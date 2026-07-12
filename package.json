@@ -156,6 +156,60 @@
           "maximum": 1,
           "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
         },
+        "skillMdInspector.collision.threshold": {
+          "type": "number",
+          "default": 0.4,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
+        },
+        "skillMdInspector.collision.ngramSize": {
+          "type": "number",
+          "default": 3,
+          "minimum": 2,
+          "maximum": 5,
+          "description": "Character n-gram size used by the collision character-similarity metric."
+        },
+        "skillMdInspector.collision.boundarySeparationWeight": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "How strongly mutually-exclusive \"Do not use for...\" boundaries reduce the composite collision score (0 = ignore boundaries, 1 = fully cancel overlap when scopes are mutually excluded)."
+        },
+        "skillMdInspector.collision.weights": {
+          "type": "object",
+          "properties": {
+            "jaccard": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Weight of pairwise token Jaccard."
+            },
+            "cosine": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Weight of TF-IDF cosine."
+            },
+            "charNgram": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Weight of character n-gram similarity."
+            },
+            "nameSimilarity": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Weight of skill-name similarity."
+            }
+          },
+          "additionalProperties": false,
+          "default": {
+            "jaccard": 0.3,
+            "cosine": 0.3,
+            "charNgram": 0.2,
+            "nameSimilarity": 0.2
+          },
+          "description": "Relative weights blended into the composite collision score. Normalized to sum to 1 at runtime, so only the ratios matter."
+        },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",
           "default": false,

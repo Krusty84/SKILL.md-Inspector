@@ -33,7 +33,14 @@ function analysis(): WorkspaceAnalysis {
         a: 'pdf-report-formatter',
         b: 'engineering-report-formatter',
         similarity: 0.84,
-        sharedTerms: ['format', 'reports'],
+        metrics: {
+          cosine: 0.84,
+          jaccard: 0.8,
+          charNgram: 0.9,
+          nameSimilarity: 0.6,
+          boundarySeparation: 0,
+        },
+        sharedTerms: ['format', 'report'],
         risk: 'High',
         recommendation: 'Merge or differentiate.',
       },
@@ -61,7 +68,10 @@ function analysis(): WorkspaceAnalysis {
 
 describe('renderWorkspaceReportHtml', () => {
   it('renders the collision matrix, portability, and resources with a CSP', () => {
-    const html = renderWorkspaceReportHtml(analysis(), { nonce: 'n', cspSource: 'vscode-webview://x' });
+    const html = renderWorkspaceReportHtml(analysis(), {
+      nonce: 'n',
+      cspSource: 'vscode-webview://x',
+    });
     expect(html).toContain('Content-Security-Policy');
     expect(html).toContain('Collision matrix');
     expect(html).toContain('0.84');
