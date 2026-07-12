@@ -2,6 +2,7 @@ import type {
   WorkspaceAnalysis,
   WorkspaceSkill,
   SkillCollision,
+  CollisionMetrics,
   NameConflict,
   SimilarNames,
   PortabilityStatus,
@@ -17,7 +18,10 @@ const PROFILES: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
 
 /** Renders the workspace report (skills overview, collision matrix, portability,
  * resource graphs) as a self-contained, theme-aware HTML document. */
-export function renderWorkspaceReportHtml(analysis: WorkspaceAnalysis, opts: RenderOptions): string {
+export function renderWorkspaceReportHtml(
+  analysis: WorkspaceAnalysis,
+  opts: RenderOptions,
+): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -84,10 +88,24 @@ function renderCollisions(collisions: SkillCollision[]): string {
   const rows = collisions
     .map(
       (c) =>
-        `<tr><td><code>${escapeHtml(c.a)}</code></td><td><code>${escapeHtml(c.b)}</code></td><td>${c.similarity.toFixed(2)}</td><td>${escapeHtml(c.sharedTerms.join(', '))}</td><td class="risk-${c.risk}">${c.risk}</td><td>${escapeHtml(c.recommendation)}</td></tr>`,
+        `<tr><td><code>${escapeHtml(c.a)}</code></td><td><code>${escapeHtml(c.b)}</code></td><td>${c.similarity.toFixed(2)}</td><td>${metricsSummary(c.metrics)}</td><td>${escapeHtml(c.sharedTerms.join(', '))}</td><td class="risk-${c.risk}">${c.risk}</td><td>${escapeHtml(c.recommendation)}</td></tr>`,
     )
     .join('');
-  return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th><th>Shared terms</th><th>Risk</th><th>Recommendation</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th><th>Metrics</th><th>Shared terms</th><th>Risk</th><th>Recommendation</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/** Compact per-metric breakdown behind the composite similarity. */
+function metricsSummary(m: CollisionMetrics): string {
+  const parts = [
+    `J ${m.jaccard.toFixed(2)}`,
+    `C ${m.cosine.toFixed(2)}`,
+    `N ${m.charNgram.toFixed(2)}`,
+    `name ${m.nameSimilarity.toFixed(2)}`,
+  ];
+  if (m.boundarySeparation > 0) {
+    parts.push(`sep ${m.boundarySeparation.toFixed(2)}`);
+  }
+  return escapeHtml(parts.join(' · '));
 }
 
 function renderNameConflicts(conflicts: NameConflict[]): string {
@@ -125,7 +143,8 @@ function renderResourceGraph(skill: WorkspaceSkill): string {
   }
   const items = nodes
     .map((node) => {
-      const flags = node.flags.length > 0 ? ` <span class="warn">[${node.flags.join(', ')}]</span>` : '';
+      const flags =
+        node.flags.length > 0 ? ` <span class="warn">[${node.flags.join(', ')}]</span>` : '';
       const cls = node.kind === 'missing' ? 'fail' : node.kind === 'unreferenced' ? 'warn' : '';
       return `<li><code>${escapeHtml(node.path)}</code> — <span class="${cls}">${node.kind}</span>${flags}</li>`;
     })

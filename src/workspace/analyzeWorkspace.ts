@@ -5,6 +5,7 @@ import { computeTriggerQuality } from '../quality/triggerQualityScore';
 import { buildResourceGraph } from './buildResourceGraph';
 import { evaluatePortability, toCompatibilityMap } from './portability';
 import { detectCollisions } from './detectSkillCollisions';
+import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { WorkspaceAnalysis, WorkspaceSkill, SkillsIndex } from '../types/Workspace';
@@ -20,6 +21,7 @@ export function analyzeWorkspace(
   profile: SkillProfile,
   exclude?: readonly string[],
   similarityThreshold?: number,
+  collisionOptions?: CollisionOptions,
 ): WorkspaceAnalysis {
   const skills = skillPaths
     .map((skillPath) => toWorkspaceSkill(rootDir, skillPath, profile, exclude))
@@ -28,6 +30,7 @@ export function analyzeWorkspace(
 
   const collisions = detectCollisions(
     skills.map((skill) => ({ name: skill.name, description: skill.description })),
+    collisionOptions,
   );
   const named = skills.map((skill) => ({ name: skill.name, path: skill.path }));
   const nameConflicts = detectNameConflicts(named);

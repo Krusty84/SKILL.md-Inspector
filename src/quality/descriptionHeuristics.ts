@@ -1,7 +1,7 @@
-import { ACTION_VERBS } from './actionVerbs';
 import { VAGUE_TERMS } from './vagueWords';
 import { isKnownAcronym } from './acronyms';
-import { IRREGULAR_VERB_FORMS } from './irregularVerbs';
+import { ACTION_VERB_FORMS, singularize } from './wordForms';
+import { ARTIFACT_HINTS } from './artifacts';
 import {
   POSITIVE_TRIGGER_PHRASES,
   NEGATIVE_BOUNDARY_PHRASES,
@@ -27,46 +27,6 @@ export interface DescriptionAnalysis {
   concreteArtifact: boolean;
   vagueTerms: string[];
 }
-
-/** Domain/artifact hints signalling a concrete subject (brief §7.7 item 3). */
-const ARTIFACT_HINTS: readonly string[] = [
-  'report',
-  'document',
-  'file',
-  'code',
-  'api',
-  'table',
-  'data',
-  'config',
-  'configuration',
-  'schema',
-  'log',
-  'test',
-  'image',
-  'markdown',
-  'pdf',
-  'csv',
-  'json',
-  'yaml',
-  'diagram',
-  'template',
-  'manual',
-  'spreadsheet',
-  'contract',
-  'invoice',
-  'email',
-  'commit',
-  'changelog',
-  'release',
-  'component',
-  'query',
-  'database',
-];
-
-/** Action-registry verbs whose final consonant doubles before -ing/-ed. */
-const CVC_DOUBLING_VERBS = new Set(['format', 'debug']);
-
-const ACTION_VERB_FORMS: ReadonlySet<string> = buildVerbForms(ACTION_VERBS);
 
 export function analyzeDescription(description: string): DescriptionAnalysis {
   const raw = description ?? '';
@@ -197,69 +157,4 @@ function tokenForms(tokens: string[]): Set<string> {
     forms.add(singularize(token));
   }
   return forms;
-}
-
-function singularize(token: string): string {
-  if (token.endsWith('ies') && token.length > 4) {
-    return `${token.slice(0, -3)}y`;
-  }
-  if (/(ses|xes|zes|ches|shes)$/.test(token)) {
-    return token.slice(0, -2);
-  }
-  if (token.endsWith('s') && !token.endsWith('ss')) {
-    return token.slice(0, -1);
-  }
-  return token;
-}
-
-function buildVerbForms(verbs: readonly string[]): Set<string> {
-  const forms = new Set<string>();
-  const addForms = (verb: string): void => {
-    for (const form of IRREGULAR_VERB_FORMS[verb] ?? inflect(verb)) {
-      forms.add(form);
-    }
-  };
-  for (const verb of verbs) {
-    addForms(verb);
-  }
-  // Recognize every irregular verb, including ones not in ACTION_VERBS (write, read).
-  for (const verb of Object.keys(IRREGULAR_VERB_FORMS)) {
-    addForms(verb);
-  }
-  return forms;
-}
-
-/** Produces base, third-person, gerund, and past forms of a regular verb. */
-function inflect(verb: string): string[] {
-  const forms = new Set<string>([verb]);
-
-  if (/(s|x|z|ch|sh)$/.test(verb)) {
-    forms.add(`${verb}es`);
-  } else if (/[^aeiou]y$/.test(verb)) {
-    forms.add(`${verb.slice(0, -1)}ies`);
-  } else {
-    forms.add(`${verb}s`);
-  }
-
-  if (verb.endsWith('e')) {
-    forms.add(`${verb.slice(0, -1)}ing`);
-    forms.add(`${verb}d`);
-  } else if (/[^aeiou]y$/.test(verb)) {
-    forms.add(`${verb}ing`);
-    forms.add(`${verb.slice(0, -1)}ied`);
-  } else {
-    forms.add(`${verb}ing`);
-    forms.add(`${verb}ed`);
-  }
-
-  // Consonant-doubling only for the known CVC action verbs that need it. A blind
-  // CVC rule wrongly doubles multisyllabic verbs (render -> renderring); prefer
-  // explicit membership over broad linguistic generation.
-  if (CVC_DOUBLING_VERBS.has(verb) && /[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
-    const doubled = verb + verb[verb.length - 1];
-    forms.add(`${doubled}ing`);
-    forms.add(`${doubled}ed`);
-  }
-
-  return [...forms];
 }

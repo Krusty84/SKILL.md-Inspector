@@ -7,6 +7,7 @@ import {
   sharedTerms,
   levenshtein,
   nameSimilarity,
+  charNgramSimilarity,
 } from '../src/workspace/similarity';
 
 describe('tokenizeContent', () => {
@@ -35,13 +36,19 @@ describe('jaccard', () => {
 
 describe('tfidf cosine', () => {
   it('scores identical descriptions at ~1 even in a tiny corpus', () => {
-    const docs = [tokenizeContent('format inspection reports'), tokenizeContent('format inspection reports')];
+    const docs = [
+      tokenizeContent('format inspection reports'),
+      tokenizeContent('format inspection reports'),
+    ];
     const vectors = tfidfVectors(docs);
     expect(cosine(vectors[0], vectors[1])).toBeCloseTo(1, 5);
   });
 
   it('scores disjoint descriptions at 0', () => {
-    const docs = [tokenizeContent('format inspection reports'), tokenizeContent('generate release notes')];
+    const docs = [
+      tokenizeContent('format inspection reports'),
+      tokenizeContent('generate release notes'),
+    ];
     const vectors = tfidfVectors(docs);
     expect(cosine(vectors[0], vectors[1])).toBe(0);
   });
@@ -79,5 +86,26 @@ describe('levenshtein / nameSimilarity', () => {
     expect(nameSimilarity('pdf-helper', 'PDF-Helper')).toBe(1);
     expect(nameSimilarity('pdf-report-formatter', 'pdf-reports-formatter')).toBeGreaterThan(0.9);
     expect(nameSimilarity('alpha', 'omega-generator')).toBeLessThan(0.5);
+  });
+});
+
+describe('charNgramSimilarity', () => {
+  it('gives morphological variants partial similarity', () => {
+    const value = charNgramSimilarity('formatter', 'formatting');
+    expect(value).toBeGreaterThan(0);
+    expect(value).toBeLessThan(1);
+  });
+
+  it('scores identical text at ~1 and unrelated text near 0', () => {
+    expect(
+      charNgramSimilarity('format inspection reports', 'format inspection reports'),
+    ).toBeCloseTo(1, 5);
+    expect(charNgramSimilarity('format inspection reports', 'zxq wvk')).toBeLessThan(0.2);
+  });
+
+  it('is symmetric', () => {
+    expect(charNgramSimilarity('formatter', 'formatting')).toBe(
+      charNgramSimilarity('formatting', 'formatter'),
+    );
   });
 });

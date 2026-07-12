@@ -50,10 +50,35 @@ export interface WorkspaceSkill {
 
 export type CollisionRisk = 'High' | 'Medium' | 'Low';
 
+/** The individual normalized metrics behind a composite collision score (each 0..1). */
+export interface CollisionMetrics {
+  /** TF-IDF cosine over the whole corpus (corpus-dependent). */
+  cosine: number;
+  /** Pairwise token Jaccard — independent of the rest of the corpus. */
+  jaccard: number;
+  /** Character n-gram cosine (spelling/morphological overlap). */
+  charNgram: number;
+  /** Normalized name edit-distance similarity. */
+  nameSimilarity: number;
+  /** Degree to which each skill's scope is excluded by the other's boundaries. */
+  boundarySeparation: number;
+}
+
+/** Weights for blending the collision metrics into the composite score. */
+export interface CollisionWeights {
+  jaccard: number;
+  cosine: number;
+  charNgram: number;
+  nameSimilarity: number;
+}
+
 export interface SkillCollision {
   a: string;
   b: string;
+  /** Composite headline similarity (0..1), rounded to 2 dp for display. */
   similarity: number;
+  /** Breakdown of the individual metrics behind `similarity`. */
+  metrics: CollisionMetrics;
   sharedTerms: string[];
   risk: CollisionRisk;
   recommendation: string;

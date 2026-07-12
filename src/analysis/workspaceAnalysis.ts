@@ -30,6 +30,7 @@ export function computeWorkspaceAnalysis(): WorkspaceAnalysisResult | undefined 
       config.profile,
       config.resourceExclude,
       config.nameSimilarityThreshold,
+      config.collision,
     ),
   };
 }
