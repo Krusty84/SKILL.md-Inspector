@@ -115,6 +115,8 @@ export interface WorkspaceAnalysis {
   collisions: SkillCollision[];
   nameConflicts: NameConflict[];
   similarNames: SimilarNames[];
+  /** True when the scan stopped early due to cancellation; `skills` is then partial. */
+  cancelled: boolean;
 }
 
 export interface SkillsIndexEntry {
