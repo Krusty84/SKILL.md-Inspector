@@ -41,6 +41,19 @@ describe('computeTriggerQuality', () => {
     expect(boundary?.pointsEarned).toBe(15);
   });
 
+  it('awards no artifact points for arbitrary uppercase words but still credits acronyms (Task 72)', () => {
+    const artifactPoints = (desc: string): number =>
+      computeTriggerQuality(desc).findings.find((f) => f.criterion.startsWith('Concrete artifact'))!
+        .pointsEarned;
+    // Regression: "any run of uppercase letters" used to count as a concrete artifact.
+    expect(artifactPoints('Format IMPORTANT THINGS.')).toBe(0);
+    expect(artifactPoints('Generate GOOD RESULTS.')).toBe(0);
+    // A real acronym is still recognized as a concrete artifact.
+    expect(artifactPoints('Format PDF files. Use when converting. Do not use for images.')).toBe(
+      15,
+    );
+  });
+
   it('awards both trigger and boundary points for "only use when"', () => {
     const result = computeTriggerQuality(
       'Format release notes. Only use when preparing a tagged release.',

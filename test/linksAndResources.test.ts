@@ -62,10 +62,27 @@ describe('validateLinks', () => {
     const codes = diagnostics.map((d) => d.code);
     expect(codes).toContain(DiagnosticCode.LinkEscapesSkillRoot);
     expect(codes).not.toContain(DiagnosticCode.LinkMissing);
-    expect(diagnostics.some((d) => d.quickFixId === QuickFixId.CreateMissingLinkedFile)).toBe(false);
+    expect(diagnostics.some((d) => d.quickFixId === QuickFixId.CreateMissingLinkedFile)).toBe(
+      false,
+    );
     expect(diagnostics.find((d) => d.code === DiagnosticCode.LinkEscapesSkillRoot)?.severity).toBe(
       'error',
     );
+  });
+
+  it('flags directory traversal via resource links with no create-file fix (Task 74)', () => {
+    const diagnostics = validateLinks(skill('See [env](../../.env) and [f](../outside/file.md).'));
+    const escapes = diagnostics.filter((d) => d.code === DiagnosticCode.LinkEscapesSkillRoot);
+    expect(escapes).toHaveLength(2);
+    // The security diagnostic is not replaced by a missing-file diagnostic...
+    expect(diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.LinkMissing);
+    // ...and no file-creation quick fix is offered for an escaping path.
+    expect(diagnostics.some((d) => d.quickFixId === QuickFixId.CreateMissingLinkedFile)).toBe(
+      false,
+    );
+    for (const escape of escapes) {
+      expect(escape.severity).toBe('error');
+    }
   });
 
   it('accepts a symlink whose target is inside the package', () => {
@@ -114,10 +131,7 @@ describe('discoverResources + validateResources', () => {
 
   it('does not warn about a referenced resource', () => {
     write('scripts/run.js');
-    const doc = withResources(
-      skill('Run [it](./scripts/run.js).'),
-      discoverResources(dir),
-    );
+    const doc = withResources(skill('Run [it](./scripts/run.js).'), discoverResources(dir));
     expect(validateResources(doc)).toHaveLength(0);
   });
 });
@@ -158,6 +172,19 @@ describe('resource references detected in prose and code', () => {
   it('treats a plain-text resource path as a reference', () => {
     write('scripts/run.js');
     const doc = withResources(skill('Run scripts/run.js to start.'), discoverResources(dir));
+    expect(validateResources(doc)).toHaveLength(0);
+  });
+
+  it('marks the Task 73 plain-text paths as referenced (extract.py, style-guide.md)', () => {
+    write('scripts/extract.py');
+    write('references/style-guide.md');
+    const doc = withResources(
+      skill('Run scripts/extract.py.\nRead references/style-guide.md before processing.'),
+      discoverResources(dir),
+    );
+    const referenced = Object.fromEntries(doc.resources.map((r) => [r.relativePath, r.referenced]));
+    expect(referenced['scripts/extract.py']).toBe(true);
+    expect(referenced['references/style-guide.md']).toBe(true);
     expect(validateResources(doc)).toHaveLength(0);
   });
 });
