@@ -117,6 +117,21 @@ describe('detectCollisions boundary separation (Task 40)', () => {
   });
 });
 
+describe('detectCollisions morphological overlap (Task 75)', () => {
+  it('matches different grammatical forms of the same concepts after normalization', () => {
+    const collisions = detectCollisions([
+      { name: 'inspection-report-formatter', description: 'Format inspection reports.' },
+      { name: 'report-doc-formatter', description: 'Formatting inspection report documents.' },
+    ]);
+    // Detected at all means the composite reached the 0.4 threshold after normalization.
+    expect(collisions).toHaveLength(1);
+    expect(collisions[0].similarity).toBeGreaterThanOrEqual(0.4);
+    expect(collisions[0].sharedTerms).toEqual(
+      expect.arrayContaining(['format', 'inspection', 'report']),
+    );
+  });
+});
+
 describe('riskFor', () => {
   it('maps similarity to risk bands', () => {
     expect(riskFor(0.85)).toBe('High');
