@@ -18,10 +18,10 @@ function analysis(): WorkspaceAnalysis {
         profile: 'generic',
         profileCompatibility: { generic: 'pass', vscode: 'pass', claude: 'warning', codex: 'pass' },
         portability: [
-          { profile: 'generic', status: 'pass', notes: [] },
-          { profile: 'vscode', status: 'pass', notes: [] },
-          { profile: 'claude', status: 'warning', notes: ['too long'] },
-          { profile: 'codex', status: 'pass', notes: [] },
+          { profile: 'generic', status: 'pass', notes: [], diagnostics: [] },
+          { profile: 'vscode', status: 'pass', notes: [], diagnostics: [] },
+          { profile: 'claude', status: 'warning', notes: ['too long'], diagnostics: [] },
+          { profile: 'codex', status: 'pass', notes: [], diagnostics: [] },
         ],
         resourceGraph: {
           nodes: [{ path: 'references/unused.md', kind: 'unreferenced', flags: [] }],

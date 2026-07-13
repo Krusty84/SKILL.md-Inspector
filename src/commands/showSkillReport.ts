@@ -9,7 +9,9 @@ import { SkillReportPanel } from '../ui/skillReportWebview';
 export function showSkillReport(): void {
   const editor = vscode.window.activeTextEditor;
   if (!editor || !isSkillFile(editor.document)) {
-    vscode.window.showWarningMessage('SKILL.md Inspector: open a SKILL.md file to show its report.');
+    vscode.window.showWarningMessage(
+      'SKILL.md Inspector: open a SKILL.md file to show its report.',
+    );
     return;
   }
 
@@ -18,7 +20,7 @@ export function showSkillReport(): void {
     editor.document.uri.fsPath,
     editor.document.getText(),
     config.profile,
-    config.resourceExclude,
+    { exclude: config.resourceExclude },
   );
   const report = buildReportModel(document, diagnostics, config.profile);
   SkillReportPanel.show(report);

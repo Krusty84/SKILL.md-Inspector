@@ -1,7 +1,7 @@
 import { parseSkillFile, withResources } from '../parser/parseSkillFile';
 import { discoverResources } from '../parser/discoverResources';
 import { runAllValidations } from '../validation';
-import type { SkillDocument } from '../types/SkillDocument';
+import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 
@@ -10,19 +10,39 @@ export interface SkillAnalysis {
   diagnostics: SkillDiagnostic[];
 }
 
+export type AnalysisMode = 'text-only' | 'full';
+
+export interface AnalyzeSkillOptions {
+  /** 'text-only' performs no filesystem access; 'full' (default) discovers resources. */
+  mode?: AnalysisMode;
+  /** Resource-directory exclusion globs (full mode only). */
+  exclude?: readonly string[];
+  /** Resource discovery function (full mode only); defaults to filesystem discovery. */
+  discover?: (dir: string, exclude?: readonly string[]) => SkillResource[];
+}
+
 /**
  * Full deterministic analysis for one SKILL.md: parse -> attach resources ->
- * run every rule. Filesystem access is limited to resource discovery, so this
- * is easy to drive from tests with a temp directory. No `vscode` dependency.
+ * run every rule. In `text-only` mode it performs NO filesystem access (no
+ * resource discovery, no linked-file existence checks) so it is safe to run on
+ * every keystroke; `full` mode (default, used on save/commands) runs the whole
+ * pipeline. No `vscode` dependency.
  */
 export function analyzeSkill(
   filePath: string,
   content: string,
   profile: SkillProfile,
-  exclude?: readonly string[],
+  options: AnalyzeSkillOptions = {},
 ): SkillAnalysis {
   const parsed = parseSkillFile(filePath, content);
-  const document = withResources(parsed, discoverResources(parsed.directory, exclude));
+
+  if (options.mode === 'text-only') {
+    const diagnostics = runAllValidations(parsed, profile, { skipFilesystem: true });
+    return { document: parsed, diagnostics };
+  }
+
+  const discover = options.discover ?? discoverResources;
+  const document = withResources(parsed, discover(parsed.directory, options.exclude));
   const diagnostics = runAllValidations(document, profile);
   return { document, diagnostics };
 }

@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { readConfig } from '../config';
 import { isSkillFile } from '../diagnostics/mapping';
 import { parseSkillFile, frontmatterStartLine } from '../parser/parseSkillFile';
-import { locateFrontmatterKey } from '../parser/parseFrontmatter';
 import { buildImprovedDescription } from '../quality/improveDescription';
 
 /**
@@ -45,9 +44,7 @@ export async function improveDescriptionLocally(): Promise<void> {
     return;
   }
 
-  const keyRange = doc.frontmatter
-    ? locateFrontmatterKey(doc.frontmatterRaw, frontmatterStartLine(doc), 'description')
-    : undefined;
+  const keyRange = doc.frontmatter ? doc.frontmatterKeyRanges?.['description'] : undefined;
 
   await editor.edit((builder) => {
     if (keyRange) {

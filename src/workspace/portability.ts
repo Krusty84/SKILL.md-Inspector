@@ -1,13 +1,17 @@
+import { DiagnosticCode } from '../types/DiagnosticCode';
 import type { SkillProfileId } from '../types/SkillProfile';
+import type { SkillDocument } from '../types/SkillDocument';
+import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { PortabilityEntry, PortabilityStatus } from '../types/Workspace';
-
-export interface PortabilityContext {
-  errorCount: number;
-  descriptionLength: number;
-  nameLength: number;
-  hasRemoteLinks: boolean;
-  hasScripts: boolean;
-}
+import { PROFILES } from '../profiles';
+import {
+  validateFrontmatter,
+  validateLinks,
+  validateName,
+  validateDescription,
+  validateProfileMetadata,
+} from '../validation';
+import { diag, keyRange } from '../validation/util';
 
 const PROFILE_IDS: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
 
@@ -15,12 +19,47 @@ const PROFILE_IDS: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
 const CLAUDE_DESCRIPTION_SOFT_MAX = 500;
 
 /**
- * Evaluates how portable a skill is across the supported profiles (brief §13.4).
- * A skill that fails baseline validation fails everywhere; otherwise each
- * profile applies its own extra rules and may downgrade to a warning.
+ * Evaluates how portable a skill is by validating it independently against every
+ * profile (brief §13.4, Task 41). Profile-independent rules (frontmatter, links)
+ * run once; profile-dependent rules run per profile. A profile FAILS on any
+ * validation error (a shared baseline error fails all; a profile-specific error
+ * fails only that profile) and WARNS on portability-relevant warnings — link
+ * portability plus the profile's own metadata rules and notes. General quality
+ * warnings (unreferenced files, vague wording, missing sections) are surfaced in
+ * the editor, not here. Each entry keeps its own diagnostics (Task 42), and the
+ * selected editor profile never skews the result.
  */
-export function evaluatePortability(context: PortabilityContext): PortabilityEntry[] {
-  return PROFILE_IDS.map((profile) => evaluateProfile(profile, context));
+export function evaluatePortability(doc: SkillDocument): PortabilityEntry[] {
+  const frontmatter = validateFrontmatter(doc);
+  const links = validateLinks(doc);
+
+  return PROFILE_IDS.map((id) => {
+    const profile = PROFILES[id];
+    const name = validateName(doc, profile);
+    const description = validateDescription(doc, profile);
+    const metadata = validateProfileMetadata(doc, profile);
+    const notes = portabilityNotes(id, doc);
+
+    const errors = [...frontmatter, ...links, ...name, ...description, ...metadata].filter(
+      (d) => d.severity === 'error',
+    );
+    // Link portability + profile-specific rules are the portability warnings.
+    const warnings = [...links, ...metadata, ...notes].filter((d) => d.severity === 'warning');
+
+    const relevant = [...errors, ...warnings];
+    const status: PortabilityStatus =
+      errors.length > 0 ? 'fail' : warnings.length > 0 ? 'warning' : 'pass';
+    return {
+      profile: id,
+      status,
+      notes: relevant.map((d) => d.message),
+      diagnostics: relevant.map((d) => ({
+        code: d.code,
+        severity: d.severity,
+        message: d.message,
+      })),
+    };
+  });
 }
 
 export function toCompatibilityMap(
@@ -33,33 +72,27 @@ export function toCompatibilityMap(
   return map;
 }
 
-function evaluateProfile(profile: SkillProfileId, ctx: PortabilityContext): PortabilityEntry {
-  if (ctx.errorCount > 0) {
-    return { profile, status: 'fail', notes: ['Skill has validation errors.'] };
+/**
+ * Per-profile portability considerations that aren't baseline validation errors.
+ * Codex remote-link and script handling is intentionally left to the baseline
+ * link severity (Tasks 47/48): normal scripts and documentation URLs no longer
+ * downgrade portability, while insecure/executable remote links stay warnings.
+ */
+function portabilityNotes(id: SkillProfileId, doc: SkillDocument): SkillDiagnostic[] {
+  if (id !== 'claude') {
+    return [];
   }
-
-  const notes: string[] = [];
-  let status: PortabilityStatus = 'pass';
-
-  if (profile === 'claude') {
-    if (ctx.descriptionLength > CLAUDE_DESCRIPTION_SOFT_MAX) {
-      status = 'warning';
-      notes.push(
-        `Description is ${ctx.descriptionLength} chars; keep it under ~${CLAUDE_DESCRIPTION_SOFT_MAX} for Claude.`,
-      );
-    }
+  const description =
+    typeof doc.frontmatter?.description === 'string' ? doc.frontmatter.description : '';
+  if (description.trim().length > CLAUDE_DESCRIPTION_SOFT_MAX) {
+    return [
+      diag(
+        DiagnosticCode.PortabilityClaudeDescriptionLong,
+        'warning',
+        `Description is ${description.trim().length} chars; keep it under ~${CLAUDE_DESCRIPTION_SOFT_MAX} for Claude.`,
+        keyRange(doc, 'description'),
+      ),
+    ];
   }
-
-  if (profile === 'codex') {
-    if (ctx.hasRemoteLinks) {
-      status = 'warning';
-      notes.push('Uses remote links, which the Codex sandbox may block.');
-    }
-    if (ctx.hasScripts) {
-      status = 'warning';
-      notes.push('Bundles scripts, which may not run in a restricted sandbox.');
-    }
-  }
-
-  return { profile, status, notes };
+  return [];
 }

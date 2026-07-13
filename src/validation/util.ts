@@ -5,8 +5,6 @@ import type {
   SkillDiagnosticSeverity,
 } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
-import { locateFrontmatterKey } from '../parser/parseFrontmatter';
-import { frontmatterStartLine } from '../parser/parseSkillFile';
 
 export interface DiagnosticExtras {
   quickFixId?: string;
@@ -32,10 +30,9 @@ export function diag(
   };
 }
 
-/** Range of a frontmatter key's line, falling back to the whole block. */
+/** Range of a top-level frontmatter key (from the YAML AST), else the whole block. */
 export function keyRange(doc: SkillDocument, key: string): SkillDiagnosticRange | undefined {
-  const located = locateFrontmatterKey(doc.frontmatterRaw, frontmatterStartLine(doc), key);
-  return located ?? doc.frontmatterRange;
+  return doc.frontmatterKeyRanges?.[key] ?? doc.frontmatterRange;
 }
 
 /** A single-line range at the start of the Markdown body (for body-level notes). */

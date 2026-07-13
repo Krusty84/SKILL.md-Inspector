@@ -1,10 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { parseFrontmatter, locateFrontmatterKey } from '../src/parser/parseFrontmatter';
+import { parseFrontmatter } from '../src/parser/parseFrontmatter';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
 
 describe('parseFrontmatter', () => {
   it('parses valid frontmatter and separates the body', () => {
-    const content = ['---', 'name: pdf-report-formatter', 'description: Format reports.', '---', '', '# Body', 'text'].join('\n');
+    const content = [
+      '---',
+      'name: pdf-report-formatter',
+      'description: Format reports.',
+      '---',
+      '',
+      '# Body',
+      'text',
+    ].join('\n');
     const result = parseFrontmatter(content);
 
     expect(result.errors).toHaveLength(0);
@@ -57,10 +65,51 @@ describe('parseFrontmatter', () => {
     expect(result.frontmatter).toEqual({});
   });
 
-  it('locates a frontmatter key line for ranges', () => {
+  it('exposes top-level key ranges from the AST', () => {
     const content = ['---', 'name: demo', 'description: text', '---'].join('\n');
     const result = parseFrontmatter(content);
-    const range = locateFrontmatterKey(result.frontmatterRaw, result.yamlStartLine, 'description');
-    expect(range?.startLine).toBe(2);
+    expect(result.frontmatterKeyRanges['name'].startLine).toBe(1);
+    expect(result.frontmatterKeyRanges['description'].startLine).toBe(2);
+  });
+
+  it('locates quoted keys correctly (Task 51)', () => {
+    const content = ['---', '"name": demo', "'description': text", '---'].join('\n');
+    const result = parseFrontmatter(content);
+    expect(result.frontmatter).toEqual({ name: 'demo', description: 'text' });
+    expect(result.frontmatterKeyRanges['name'].startLine).toBe(1);
+    expect(result.frontmatterKeyRanges['description'].startLine).toBe(2);
+  });
+
+  it('does not treat a nested key as a top-level key (Task 52)', () => {
+    const content = ['---', 'metadata:', '  name: nested-name', '---'].join('\n');
+    const result = parseFrontmatter(content);
+    expect(result.frontmatterKeyRanges['metadata']).toBeDefined();
+    expect(result.frontmatterKeyRanges['name']).toBeUndefined();
+    expect(result.frontmatter?.name).toBeUndefined();
+  });
+
+  it('points a multiline value key range at the key line (Task 51)', () => {
+    const content = ['---', 'name: n', 'description: >', '  line one', '  line two', '---'].join(
+      '\n',
+    );
+    const result = parseFrontmatter(content);
+    expect(result.frontmatterKeyRanges['description'].startLine).toBe(2);
+    expect(typeof result.frontmatter?.description).toBe('string');
+  });
+
+  it('reports a duplicate top-level key at the duplicate (Task 50)', () => {
+    const content = ['---', 'name: first', 'name: second', 'description: d', '---'].join('\n');
+    const result = parseFrontmatter(content);
+    const dup = result.errors.find((e) => e.code === DiagnosticCode.FrontmatterDuplicateKey);
+    expect(dup).toBeDefined();
+    expect(dup?.range?.startLine).toBe(2); // the second `name:` line
+    // Still parses (last value wins) so the other rules can still run.
+    expect(result.frontmatter).toEqual({ name: 'second', description: 'd' });
+  });
+
+  it('reports a duplicate description key (Task 50)', () => {
+    const content = ['---', 'name: n', 'description: a', 'description: b', '---'].join('\n');
+    const result = parseFrontmatter(content);
+    expect(result.errors.some((e) => e.code === DiagnosticCode.FrontmatterDuplicateKey)).toBe(true);
   });
 });

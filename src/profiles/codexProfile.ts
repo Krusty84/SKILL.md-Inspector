@@ -1,7 +1,13 @@
 import type { SkillProfile } from '../types/SkillProfile';
 import { genericProfile } from './genericProfile';
+import {
+  EXAMPLES_SECTION,
+  WHEN_TO_USE_SECTION,
+  BOUNDARY_SECTION,
+  IO_SECTION,
+} from '../validation/bodySections';
 
-/** Codex-style skills. Shares generic rules in MVP1 (brief §7.11). */
+/** Codex-style skills. */
 export const codexProfile: SkillProfile = {
   ...genericProfile,
   id: 'codex',
@@ -18,5 +24,18 @@ export const codexProfile: SkillProfile = {
       lowVagueness: 10,
       goodLength: 10,
     },
+  },
+  // Codex skills should document boundaries and I/O.
+  body: {
+    strictness: 'recommended',
+    sections: [EXAMPLES_SECTION, WHEN_TO_USE_SECTION, BOUNDARY_SECTION, IO_SECTION],
+  },
+  metadata: {
+    // Best-effort placeholder — reconcile with the live Codex skill format.
+    fields: {
+      version: { type: 'string' },
+      tools: { type: 'string[]' },
+    },
+    unknownKeyPolicy: 'warn',
   },
 };

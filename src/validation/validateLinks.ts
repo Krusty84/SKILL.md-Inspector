@@ -8,13 +8,24 @@ import { diag } from './util';
 const SUSPICIOUS_EXTENSIONS = /\.(exe|sh|bat|ps1|scr|cmd|zip|dll)(\?|#|$)/i;
 const SHORTENER_HOSTS = /(^|\/\/)([^/]*\.)?(bit\.ly|tinyurl\.com|goo\.gl|t\.co|is\.gd)\b/i;
 
+export interface LinkValidationOptions {
+  /** Skip filesystem-dependent checks (linked-file existence, symlink escape). */
+  skipFilesystem?: boolean;
+}
+
 /**
  * Validates Markdown links in the body (brief §7.5):
  *  - relative link to a missing file -> error
  *  - absolute local path            -> warning (not portable)
  *  - remote URL                     -> information (warning if suspicious)
+ *
+ * With `skipFilesystem`, the missing-file and symlink-escape checks (the only
+ * filesystem access) are omitted; all lexical checks still run.
  */
-export function validateLinks(doc: SkillDocument): SkillDiagnostic[] {
+export function validateLinks(
+  doc: SkillDocument,
+  options: LinkValidationOptions = {},
+): SkillDiagnostic[] {
   const diagnostics: SkillDiagnostic[] = [];
 
   for (const link of doc.links) {
@@ -66,6 +77,10 @@ export function validateLinks(doc: SkillDocument): SkillDiagnostic[] {
       );
       continue;
     }
+    if (options.skipFilesystem) {
+      // Defer the on-disk existence and symlink-escape checks to full analysis.
+      continue;
+    }
     if (!fileExists(target)) {
       diagnostics.push(
         diag(
@@ -73,7 +88,10 @@ export function validateLinks(doc: SkillDocument): SkillDiagnostic[] {
           'error',
           `Linked file does not exist: ${cleanLinkTarget(link.raw)}`,
           link.range,
-          { quickFixId: QuickFixId.CreateMissingLinkedFile, data: { absolutePath: target, raw: link.raw } },
+          {
+            quickFixId: QuickFixId.CreateMissingLinkedFile,
+            data: { absolutePath: target, raw: link.raw },
+          },
         ),
       );
       continue;

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
-import type { SkillProfile, DescriptionLanguage } from './types/SkillProfile';
+import type { SkillProfile, DescriptionLanguage, BodyStrictness } from './types/SkillProfile';
 import type { CollisionWeights } from './types/Workspace';
 import type { CollisionOptions } from './workspace/detectSkillCollisions';
 import {
@@ -32,6 +32,7 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       descriptionMinLength: cfg.get<number>('description.minLength'),
       descriptionMaxLength: cfg.get<number>('description.maxLength'),
       descriptionLanguage: cfg.get<DescriptionLanguage>('description.language'),
+      bodyStrictness: cfg.get<BodyStrictness>('body.strictness'),
     }),
     resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),

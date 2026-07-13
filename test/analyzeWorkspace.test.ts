@@ -115,6 +115,30 @@ describe('workspace discovery + analysis', () => {
     expect(analysis.similarNames.flatMap((s) => [s.a, s.b])).toContain('pdf-reports-formatter');
   });
 
+  it('does not lower Codex portability for a bundled script (Task 47)', () => {
+    writeSkill(
+      'skills/script-skill/SKILL.md',
+      [
+        '---',
+        'name: script-skill',
+        'description: Format inspection reports with helpers. Use when building. Do not use for docs.',
+        '---',
+        '',
+        '## Examples',
+        '',
+        'See [runner](./scripts/run.py).',
+        '',
+        '## When to use',
+        '',
+        'Use when building. Do not use for docs.',
+      ].join('\n'),
+    );
+    writeSkill('skills/script-skill/scripts/run.py', 'print(1)');
+    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const skill = analysis.skills.find((s) => s.name === 'script-skill')!;
+    expect(skill.profileCompatibility.codex).toBe('pass');
+  });
+
   it('exports an index with the documented shape', () => {
     const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const index = buildSkillsIndex(analysis);
