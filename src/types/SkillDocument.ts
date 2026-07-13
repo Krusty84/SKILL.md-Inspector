@@ -11,12 +11,7 @@ export interface SkillLink {
   range?: SkillDiagnosticRange;
 }
 
-export type SkillResourceCategory =
-  | 'references'
-  | 'scripts'
-  | 'assets'
-  | 'templates'
-  | 'other';
+export type SkillResourceCategory = 'references' | 'scripts' | 'assets' | 'templates' | 'other';
 
 export interface SkillResource {
   /** Path relative to the skill directory, POSIX-style, e.g. "scripts/run.js". */
@@ -49,6 +44,8 @@ export interface SkillDocument {
   frontmatterRange?: SkillDiagnosticRange;
   /** Raw YAML text between the fences, used to locate individual keys. */
   frontmatterRaw: string;
+  /** Document ranges of each top-level frontmatter key, from the YAML AST. */
+  frontmatterKeyRanges?: Record<string, SkillDiagnosticRange>;
   body: string;
   /** 0-based line where the Markdown body begins (line after the closing fence). */
   bodyStartLine: number;

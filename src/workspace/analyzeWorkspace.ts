@@ -68,7 +68,7 @@ function toWorkspaceSkill(
     return undefined;
   }
 
-  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, exclude);
+  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, { exclude });
   const name =
     typeof document.frontmatter?.name === 'string' && document.frontmatter.name
       ? document.frontmatter.name
@@ -87,13 +87,7 @@ function toWorkspaceSkill(
   const information = diagnostics.filter((d) => d.severity === 'information').length;
   const resourceGraph = buildResourceGraph(document);
 
-  const portability = evaluatePortability({
-    errorCount: errors,
-    descriptionLength: description.trim().length,
-    nameLength: name.length,
-    hasRemoteLinks: document.links.some((link) => link.kind === 'remote'),
-    hasScripts: resourceGraph.nodes.some((node) => node.flags.includes('script')),
-  });
+  const portability = evaluatePortability(document);
 
   return {
     name,

@@ -1,18 +1,22 @@
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
-import type { SkillDiagnostic } from '../types/SkillDiagnostic';
+import type { SkillDiagnostic, SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
+import type { SkillProfile } from '../types/SkillProfile';
 import {
   hasNegativeBoundaryPhrase,
   hasExclusiveTriggerPhrase,
 } from '../quality/descriptionHeuristics';
+import { extractHeadings } from '../parser/parseMarkdownHeadings';
+import { DEFAULT_BODY_SECTIONS, hasSection } from './bodySections';
 import { diag, bodyTopRange } from './util';
 
 /**
  * Checks the Markdown body for the sections a well-formed skill should have
- * (brief §7.4). Warnings for missing body/examples/when-to-use; information
- * diagnostics suggesting boundaries and I/O documentation.
+ * (brief §7.4). An empty body is a structural warning regardless of strictness;
+ * the section recommendations come from the profile and are surfaced at a
+ * severity governed by `profile.body.strictness` (off | recommended | strict).
  */
-export function validateBody(doc: SkillDocument): SkillDiagnostic[] {
+export function validateBody(doc: SkillDocument, profile: SkillProfile): SkillDiagnostic[] {
   // Only meaningful once the frontmatter parsed; otherwise the frontmatter
   // error dominates and `body` may be the entire file.
   if (!doc.frontmatter) {
@@ -34,72 +38,26 @@ export function validateBody(doc: SkillDocument): SkillDiagnostic[] {
     ];
   }
 
+  const strictness = profile.body?.strictness ?? 'recommended';
+  if (strictness === 'off') {
+    return [];
+  }
+  const severity: SkillDiagnosticSeverity = strictness === 'strict' ? 'warning' : 'information';
+  const sections = profile.body?.sections ?? DEFAULT_BODY_SECTIONS;
+
   const headings = extractHeadings(doc.body);
   const diagnostics: SkillDiagnostic[] = [];
 
-  if (!hasSection(headings, ['example', 'examples', 'sample'])) {
-    diagnostics.push(
-      diag(
-        DiagnosticCode.BodyNoExamples,
-        'warning',
-        'No examples section found. Add examples showing how the skill is used.',
-        range,
-      ),
-    );
-  }
-
-  if (!hasSection(headings, ['when to use', 'use when', 'usage', 'when the'])) {
-    diagnostics.push(
-      diag(
-        DiagnosticCode.BodyNoWhenToUse,
-        'warning',
-        'No "When to use" section found. Describe the situations the skill applies to.',
-        range,
-      ),
-    );
-  }
-
-  const hasBoundary =
-    hasNegativeBoundaryPhrase(doc.body).found ||
-    hasExclusiveTriggerPhrase(doc.body).found ||
-    hasSection(headings, ['constraint', 'constraints', 'limitation', 'do not', 'boundaries']);
-  if (!hasBoundary) {
-    diagnostics.push(
-      diag(
-        DiagnosticCode.BodySuggestBoundary,
-        'information',
-        'Consider adding "Do not use when..." boundaries so the agent knows when to skip the skill.',
-        range,
-      ),
-    );
-  }
-
-  if (!hasSection(headings, ['input', 'inputs', 'output', 'outputs', 'format'])) {
-    diagnostics.push(
-      diag(
-        DiagnosticCode.BodySuggestIO,
-        'information',
-        'Consider documenting the expected input and output format.',
-        range,
-      ),
-    );
+  for (const spec of sections) {
+    // A boundary can also be expressed in prose ("Do not use when...").
+    const satisfied =
+      hasSection(headings, spec) ||
+      (spec.id === 'boundary' &&
+        (hasNegativeBoundaryPhrase(doc.body).found || hasExclusiveTriggerPhrase(doc.body).found));
+    if (!satisfied) {
+      diagnostics.push(diag(spec.code, severity, spec.message, range));
+    }
   }
 
   return diagnostics;
-}
-
-/** Returns heading texts (lower-cased) for ATX headings in the body. */
-function extractHeadings(body: string): string[] {
-  const headings: string[] = [];
-  for (const line of body.split(/\r?\n/)) {
-    const match = /^\s{0,3}#{1,6}\s+(.*\S)\s*$/.exec(line);
-    if (match) {
-      headings.push(match[1].toLowerCase());
-    }
-  }
-  return headings;
-}
-
-function hasSection(headings: string[], keywords: string[]): boolean {
-  return headings.some((heading) => keywords.some((keyword) => heading.includes(keyword)));
 }

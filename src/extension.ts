@@ -18,10 +18,26 @@ export function activate(context: vscode.ExtensionContext): void {
   const skillWatcher = vscode.workspace.createFileSystemWatcher('**/SKILL.md');
   skillWatcher.onDidCreate(() => treeProvider.refresh());
   skillWatcher.onDidDelete(() => treeProvider.refresh());
+
+  // Watch bundled resource files so adding/removing/renaming one refreshes the
+  // tree and re-validates the owning skill (Task 60). Renames fire delete+create.
+  const resourceWatcher = vscode.workspace.createFileSystemWatcher(
+    '**/{references,scripts,assets,templates}/**',
+  );
+  const onResourceChange = (uri: vscode.Uri): void => {
+    provider.invalidateResource(uri.fsPath);
+    treeProvider.refresh();
+    revalidateVisible(provider);
+  };
+  resourceWatcher.onDidCreate(onResourceChange);
+  resourceWatcher.onDidDelete(onResourceChange);
+  resourceWatcher.onDidChange(onResourceChange);
+
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
     skillWatcher,
+    resourceWatcher,
   );
 
   context.subscriptions.push(
@@ -47,7 +63,8 @@ export function activate(context: vscode.ExtensionContext): void {
       key,
       setTimeout(() => {
         pending.delete(key);
-        provider.validate(document);
+        // While typing, run the filesystem-free pipeline (Tasks 57/58).
+        provider.validate(document, 'text-only');
       }, CHANGE_DEBOUNCE_MS),
     );
   };
@@ -70,6 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('skillMdInspector')) {
+        provider.clearResourceCache();
         revalidateVisible(provider);
         treeProvider.refresh();
       }

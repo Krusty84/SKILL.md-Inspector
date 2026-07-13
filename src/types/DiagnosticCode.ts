@@ -7,6 +7,16 @@ export const DiagnosticCode = {
   FrontmatterMissing: 'skill.frontmatter.missing',
   FrontmatterInvalid: 'skill.frontmatter.invalid',
   FrontmatterNotAtTop: 'skill.frontmatter.notAtTop',
+  FrontmatterDuplicateKey: 'skill.frontmatter.duplicateKey',
+
+  // Profile-specific metadata rules
+  MetadataReservedWord: 'skill.metadata.reservedWord',
+  MetadataXmlTag: 'skill.metadata.xmlTag',
+  MetadataFieldType: 'skill.metadata.fieldType',
+  MetadataUnknownKey: 'skill.metadata.unknownKey',
+
+  // Portability notes (not editor diagnostics)
+  PortabilityClaudeDescriptionLong: 'skill.portability.claude.descriptionLong',
 
   // name
   NameMissing: 'skill.name.missing',

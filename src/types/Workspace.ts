@@ -1,12 +1,22 @@
 import type { SkillProfileId } from './SkillProfile';
+import type { SkillDiagnosticSeverity } from './SkillDiagnostic';
 import type { TriggerQualityLabel } from './TriggerQuality';
 
 export type PortabilityStatus = 'pass' | 'warning' | 'fail';
+
+/** A single diagnostic contributing to a profile's portability status (Task 42). */
+export interface PortabilityDiagnostic {
+  code: string;
+  severity: SkillDiagnosticSeverity;
+  message: string;
+}
 
 export interface PortabilityEntry {
   profile: SkillProfileId;
   status: PortabilityStatus;
   notes: string[];
+  /** The error/warning diagnostics that produced this profile's status. */
+  diagnostics: PortabilityDiagnostic[];
 }
 
 export type ResourceNodeKind =

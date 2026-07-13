@@ -210,6 +210,16 @@
           },
           "description": "Relative weights blended into the composite collision score. Normalized to sum to 1 at runtime, so only the ratios matter."
         },
+        "skillMdInspector.body.strictness": {
+          "type": "string",
+          "enum": [
+            "off",
+            "recommended",
+            "strict"
+          ],
+          "default": "recommended",
+          "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
+        },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",
           "default": false,

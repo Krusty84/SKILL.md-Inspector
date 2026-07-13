@@ -4,7 +4,6 @@ import { analyzeSkill } from '../analysis/analyzeSkill';
 import { readConfig } from '../config';
 import { isSkillFile } from '../diagnostics/mapping';
 import { QuickFixId } from '../types/DiagnosticCode';
-import { locateFrontmatterKey } from '../parser/parseFrontmatter';
 import { frontmatterStartLine } from '../parser/parseSkillFile';
 import { isPathInsideDir } from '../parser/linkPaths';
 import { toKebabCase } from '../validation/validateName';
@@ -35,7 +34,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
       document.uri.fsPath,
       document.getText(),
       config.profile,
-      config.resourceExclude,
+      { exclude: config.resourceExclude },
     );
 
     const actions: vscode.CodeAction[] = [];
@@ -157,7 +156,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     title: string,
     isPreferred = false,
   ): vscode.CodeAction | undefined {
-    const keyRange = locateFrontmatterKey(skillDoc.frontmatterRaw, frontmatterStartLine(skillDoc), key);
+    const keyRange = skillDoc.frontmatterKeyRanges?.[key];
     if (!keyRange) {
       return undefined;
     }
@@ -210,11 +209,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     if (typeof skillDoc.frontmatter?.description !== 'string') {
       return undefined;
     }
-    const keyRange = locateFrontmatterKey(
-      skillDoc.frontmatterRaw,
-      frontmatterStartLine(skillDoc),
-      'description',
-    );
+    const keyRange = skillDoc.frontmatterKeyRanges?.['description'];
     if (!keyRange) {
       return undefined;
     }
@@ -287,11 +282,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
   }
 
   private descriptionInsertPosition(skillDoc: SkillDocument): vscode.Position {
-    const nameRange = locateFrontmatterKey(
-      skillDoc.frontmatterRaw,
-      frontmatterStartLine(skillDoc),
-      'name',
-    );
+    const nameRange = skillDoc.frontmatterKeyRanges?.['name'];
     const line = nameRange ? nameRange.startLine + 1 : frontmatterStartLine(skillDoc);
     return new vscode.Position(line, 0);
   }

@@ -1,4 +1,4 @@
-import { parse as parseYaml, YAMLParseError } from 'yaml';
+import { parseDocument, LineCounter, isMap, isScalar } from 'yaml';
 import { DiagnosticCode } from '../types/DiagnosticCode';
 import type { SkillDiagnosticRange } from '../types/SkillDiagnostic';
 import type { SkillFrontmatter, SkillParseError } from '../types/SkillDocument';
@@ -10,6 +10,8 @@ export interface FrontmatterParseResult {
   frontmatterRaw: string;
   /** Range covering the raw YAML block (0-based lines), if a block was found. */
   frontmatterRange?: SkillDiagnosticRange;
+  /** Document ranges of each top-level key, from the YAML AST (0-based lines). */
+  frontmatterKeyRanges: Record<string, SkillDiagnosticRange>;
   /** 0-based line index of the first YAML line (line after the opening fence). */
   yamlStartLine: number;
   /** Markdown body after the closing fence. */
@@ -29,12 +31,14 @@ function toLines(content: string): string[] {
 }
 
 /**
- * Parses the YAML frontmatter at the very top of a SKILL.md file.
+ * Parses the YAML frontmatter at the very top of a SKILL.md file using the YAML
+ * AST (so top-level key ranges, quoted/nested keys, and duplicate keys are exact).
  *
- * Distinguishes three failure modes the linter cares about:
+ * Distinguishes the failure modes the linter cares about:
  *  - missing:    no frontmatter block at all
  *  - not at top: a `---` block exists but content precedes it
  *  - invalid:    a top block exists but the YAML is unterminated or malformed
+ *  - duplicate:  a top-level key appears more than once (non-fatal; last wins)
  */
 export function parseFrontmatter(content: string): FrontmatterParseResult {
   const lines = toLines(content);
@@ -68,6 +72,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     return {
       frontmatter: null,
       frontmatterRaw: '',
+      frontmatterKeyRanges: {},
       yamlStartLine: 0,
       body: content,
       bodyStartLine: 0,
@@ -87,6 +92,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     return {
       frontmatter: null,
       frontmatterRaw: '',
+      frontmatterKeyRanges: {},
       yamlStartLine: 1,
       body: lines.slice(1).join('\n'),
       bodyStartLine: 1,
@@ -106,38 +112,61 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     endCharacter: yamlLines.length > 0 ? yamlLines[yamlLines.length - 1].length : 0,
   };
 
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(frontmatterRaw);
-  } catch (err) {
-    errors.push({
-      code: DiagnosticCode.FrontmatterInvalid,
-      message: `Invalid YAML in frontmatter: ${yamlErrorMessage(err)}`,
-      range: yamlErrorRange(err, yamlStartLine) ?? frontmatterRange,
-    });
+  const lineCounter = new LineCounter();
+  const doc = parseDocument(frontmatterRaw, { lineCounter });
+
+  // Converts YAML character offsets (into frontmatterRaw) to document coordinates.
+  const toRange = (start: number, end: number): SkillDiagnosticRange => {
+    const s = lineCounter.linePos(start);
+    const e = lineCounter.linePos(end);
     return {
-      frontmatter: null,
-      frontmatterRaw,
-      frontmatterRange,
-      yamlStartLine,
-      body,
-      bodyStartLine,
-      errors,
+      startLine: yamlStartLine + s.line - 1,
+      startCharacter: Math.max(0, s.col - 1),
+      endLine: yamlStartLine + e.line - 1,
+      endCharacter: Math.max(0, e.col - 1),
     };
+  };
+
+  // Top-level key ranges straight from the AST — nested keys never appear here.
+  const frontmatterKeyRanges: Record<string, SkillDiagnosticRange> = {};
+  if (isMap(doc.contents)) {
+    for (const item of doc.contents.items) {
+      if (isScalar(item.key) && item.key.range) {
+        const name = String(item.key.value);
+        if (!(name in frontmatterKeyRanges)) {
+          frontmatterKeyRanges[name] = toRange(item.key.range[0], item.key.range[1]);
+        }
+      }
+    }
   }
 
+  // Duplicate keys are non-fatal (last value wins) but reported at the duplicate.
+  for (const err of doc.errors) {
+    if (err.code === 'DUPLICATE_KEY') {
+      errors.push({
+        code: DiagnosticCode.FrontmatterDuplicateKey,
+        message: `Duplicate frontmatter key: ${err.message.split('\n')[0]}`,
+        range: err.pos ? toRange(err.pos[0], err.pos[1]) : frontmatterRange,
+      });
+    }
+  }
+
+  const fatal = doc.errors.filter((err) => err.code !== 'DUPLICATE_KEY');
+  if (fatal.length > 0) {
+    errors.push({
+      code: DiagnosticCode.FrontmatterInvalid,
+      message: `Invalid YAML in frontmatter: ${fatal[0].message.split('\n')[0]}`,
+      range: fatal[0].pos ? toRange(fatal[0].pos[0], fatal[0].pos[1]) : frontmatterRange,
+    });
+    return baseResult(null);
+  }
+
+  const parsed = doc.toJS();
+
   if (parsed === null || parsed === undefined) {
-    // Empty frontmatter block: treat as an empty mapping so that the
-    // required-field rules report the missing name/description.
-    return {
-      frontmatter: {},
-      frontmatterRaw,
-      frontmatterRange,
-      yamlStartLine,
-      body,
-      bodyStartLine,
-      errors,
-    };
+    // Empty frontmatter block: treat as an empty mapping so the required-field
+    // rules report the missing name/description.
+    return baseResult({});
   }
 
   if (typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -146,78 +175,25 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
       message: 'Frontmatter must be a YAML mapping of keys to values.',
       range: frontmatterRange,
     });
+    return baseResult(null);
+  }
+
+  return baseResult(parsed as SkillFrontmatter);
+
+  function baseResult(frontmatter: SkillFrontmatter | null): FrontmatterParseResult {
     return {
-      frontmatter: null,
+      frontmatter,
       frontmatterRaw,
       frontmatterRange,
+      frontmatterKeyRanges,
       yamlStartLine,
       body,
       bodyStartLine,
       errors,
     };
   }
-
-  return {
-    frontmatter: parsed as SkillFrontmatter,
-    frontmatterRaw,
-    frontmatterRange,
-    yamlStartLine,
-    body,
-    bodyStartLine,
-    errors,
-  };
-}
-
-/**
- * Locates a top-level key inside the raw frontmatter and returns its range in
- * document coordinates, so diagnostics can point at the offending line.
- */
-export function locateFrontmatterKey(
-  frontmatterRaw: string,
-  yamlStartLine: number,
-  key: string,
-): SkillDiagnosticRange | undefined {
-  const lines = frontmatterRaw.split(/\r?\n/);
-  const pattern = new RegExp(`^(\\s*)${escapeRegExp(key)}\\s*:`);
-  for (let i = 0; i < lines.length; i++) {
-    const match = pattern.exec(lines[i]);
-    if (match) {
-      return {
-        startLine: yamlStartLine + i,
-        startCharacter: match[1].length,
-        endLine: yamlStartLine + i,
-        endCharacter: lines[i].length,
-      };
-    }
-  }
-  return undefined;
 }
 
 function singleLineRange(line: number): SkillDiagnosticRange {
   return { startLine: line, startCharacter: 0, endLine: line, endCharacter: 3 };
-}
-
-function yamlErrorMessage(err: unknown): string {
-  if (err instanceof YAMLParseError) {
-    return err.message.split('\n')[0];
-  }
-  return err instanceof Error ? err.message : String(err);
-}
-
-function yamlErrorRange(err: unknown, yamlStartLine: number): SkillDiagnosticRange | undefined {
-  if (err instanceof YAMLParseError && err.linePos && err.linePos[0]) {
-    const start = err.linePos[0];
-    const end = err.linePos[1] ?? start;
-    return {
-      startLine: yamlStartLine + start.line - 1,
-      startCharacter: Math.max(0, start.col - 1),
-      endLine: yamlStartLine + end.line - 1,
-      endCharacter: Math.max(0, end.col - 1),
-    };
-  }
-  return undefined;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
