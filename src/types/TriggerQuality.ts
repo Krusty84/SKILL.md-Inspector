@@ -5,6 +5,9 @@
  */
 export type TriggerQualityLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 
+/** How much to trust the score given language/length limitations (Task 79). */
+export type TriggerQualityConfidence = 'high' | 'medium' | 'low';
+
 export interface TriggerQualityFinding {
   criterion: string;
   pointsEarned: number;
@@ -17,6 +20,10 @@ export interface TriggerQualityResult {
   score: number;
   label: TriggerQualityLabel;
   findings: TriggerQualityFinding[];
+  /** How confident the score is, given language and length limitations (Task 79). */
+  confidence: TriggerQualityConfidence;
+  /** Human-readable reasons the analysis may be incomplete (Task 79). */
+  limitations: string[];
   /** True when analysis was language-limited (the description is likely not English). */
   partial?: boolean;
 }

@@ -1,9 +1,14 @@
-import { analyzeDescription, isFrontLoaded, type DescriptionAnalysis } from './descriptionHeuristics';
+import {
+  analyzeDescription,
+  isFrontLoaded,
+  type DescriptionAnalysis,
+} from './descriptionHeuristics';
 import { isProbablyNonEnglish } from './language';
 import type {
   TriggerQualityResult,
   TriggerQualityFinding,
   TriggerQualityLabel,
+  TriggerQualityConfidence,
 } from '../types/TriggerQuality';
 import type { DescriptionLanguage, TriggerQualityWeights } from '../types/SkillProfile';
 
@@ -134,7 +139,51 @@ export function scoreAnalysis(
   }
 
   const score = findings.reduce((sum, f) => sum + f.pointsEarned, 0);
-  return { score, label: labelFor(score), findings, ...(languageLimited ? { partial: true } : {}) };
+  const { confidence, limitations } = assessConfidence(analysis, minLength, languageLimited);
+  return {
+    score,
+    label: labelFor(score),
+    findings,
+    confidence,
+    limitations,
+    ...(languageLimited ? { partial: true } : {}),
+  };
+}
+
+/**
+ * How much to trust the score (Task 79). Empty or non-English descriptions are
+ * low confidence; a description below the recommended minimum is medium; a
+ * sufficient English description is high. `limitations` explains any downgrade.
+ */
+function assessConfidence(
+  analysis: DescriptionAnalysis,
+  minLength: number,
+  languageLimited: boolean,
+): { confidence: TriggerQualityConfidence; limitations: string[] } {
+  const limitations: string[] = [];
+  let confidence: TriggerQualityConfidence = 'high';
+
+  if (analysis.trimmed.length === 0) {
+    limitations.push(
+      'The description is empty, so the score reflects only missing-field penalties.',
+    );
+    return { confidence: 'low', limitations };
+  }
+  if (languageLimited) {
+    confidence = 'low';
+    limitations.push(
+      'The description does not appear to be English, so the semantic checks (action verb, trigger, vagueness) may be unreliable.',
+    );
+  }
+  if (analysis.length < minLength) {
+    limitations.push(
+      `The description is shorter than the recommended minimum (${minLength} characters), so some signals are weak.`,
+    );
+    if (confidence === 'high') {
+      confidence = 'medium';
+    }
+  }
+  return { confidence, limitations };
 }
 
 /** Maps a score to its label band (brief §10.1). */
@@ -198,5 +247,11 @@ function finding(
   message: string,
   suggestion?: string,
 ): TriggerQualityFinding {
-  return { criterion, pointsEarned, pointsPossible, message, ...(suggestion ? { suggestion } : {}) };
+  return {
+    criterion,
+    pointsEarned,
+    pointsPossible,
+    message,
+    ...(suggestion ? { suggestion } : {}),
+  };
 }

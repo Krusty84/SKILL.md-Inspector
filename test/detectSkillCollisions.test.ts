@@ -132,6 +132,38 @@ describe('detectCollisions morphological overlap (Task 75)', () => {
   });
 });
 
+describe('detectCollisions confidence (Task 80)', () => {
+  it('gives high confidence to long descriptions whose metrics agree', () => {
+    const [collision] = detectCollisions([
+      {
+        name: 'pdf-report-formatter',
+        description:
+          'Format technical PDF reports using company layout rules. Use when asked to standardize inspection reports.',
+      },
+      {
+        name: 'engineering-report-formatter',
+        description:
+          'Format technical engineering reports using company layout rules. Use when asked to standardize inspection reports.',
+      },
+    ]);
+    expect(collision.confidence).toBe('high');
+  });
+
+  it('gives low confidence to very short descriptions, independent of risk', () => {
+    const collisions = detectCollisions(
+      [
+        { name: 'a-formatter', description: 'Format X.' },
+        { name: 'b-formatter', description: 'Format Y.' },
+      ],
+      { threshold: 0 },
+    );
+    expect(collisions).toHaveLength(1);
+    expect(collisions[0].confidence).toBe('low');
+    // Risk and confidence are distinct — a short pair can still read as high risk.
+    expect(['High', 'Medium', 'Low']).toContain(collisions[0].risk);
+  });
+});
+
 describe('riskFor', () => {
   it('maps similarity to risk bands', () => {
     expect(riskFor(0.85)).toBe('High');

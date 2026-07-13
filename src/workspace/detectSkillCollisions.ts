@@ -1,6 +1,7 @@
 import type {
   SkillCollision,
   CollisionRisk,
+  CollisionConfidence,
   CollisionMetrics,
   CollisionWeights,
 } from '../types/Workspace';
@@ -88,6 +89,13 @@ export function detectCollisions(
         metrics: roundMetrics(metrics),
         sharedTerms: sharedTerms(tokens[i], tokens[j]),
         risk,
+        confidence: confidenceFor(
+          skills[i].description,
+          skills[j].description,
+          tokens[i],
+          tokens[j],
+          metrics,
+        ),
         recommendation: recommendationFor(risk),
       });
     }
@@ -100,6 +108,31 @@ export function riskFor(similarity: number): CollisionRisk {
   if (similarity >= 0.8) return 'High';
   if (similarity >= 0.6) return 'Medium';
   return 'Low';
+}
+
+/**
+ * How much textual evidence backs a collision (Task 80) — distinct from risk.
+ * Short descriptions or too few meaningful tokens give low confidence; long
+ * descriptions whose similarity metrics agree give high confidence.
+ */
+function confidenceFor(
+  descA: string,
+  descB: string,
+  tokensA: string[],
+  tokensB: string[],
+  metrics: CollisionMetrics,
+): CollisionConfidence {
+  const minLength = Math.min(descA.trim().length, descB.trim().length);
+  const minTokens = Math.min(tokensA.length, tokensB.length);
+  if (minLength < 30 || minTokens < 3) {
+    return 'low'; // too little text to trust the overlap
+  }
+  const sims = [metrics.cosine, metrics.jaccard, metrics.charNgram];
+  const spread = Math.max(...sims) - Math.min(...sims);
+  if (minTokens >= 6 && minLength >= 60 && spread <= 0.25) {
+    return 'high'; // ample tokens and the metrics agree
+  }
+  return 'medium';
 }
 
 /**
