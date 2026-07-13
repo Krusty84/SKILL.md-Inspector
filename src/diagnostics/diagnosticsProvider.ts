@@ -56,14 +56,31 @@ export class DiagnosticsProvider implements vscode.Disposable {
     this.resourceCache.clear();
   }
 
-  /** Validates every SKILL.md in the workspace. Returns the file count. */
-  async validateWorkspace(): Promise<number> {
+  /**
+   * Validates every SKILL.md in the workspace, checking the cancellation token
+   * between files and reporting progress. Returns how many files were processed,
+   * the total discovered, and whether the run was cancelled.
+   */
+  async validateWorkspace(
+    token?: vscode.CancellationToken,
+    progress?: vscode.Progress<{ message?: string; increment?: number }>,
+  ): Promise<{ processed: number; total: number; cancelled: boolean }> {
     const files = await vscode.workspace.findFiles('**/SKILL.md', '**/node_modules/**');
+    const total = files.length;
+    let processed = 0;
     for (const uri of files) {
+      if (token?.isCancellationRequested) {
+        return { processed, total, cancelled: true };
+      }
       const document = await vscode.workspace.openTextDocument(uri);
       this.validate(document);
+      processed += 1;
+      progress?.report({
+        message: `${processed}/${total}`,
+        increment: total > 0 ? 100 / total : 0,
+      });
     }
-    return files.length;
+    return { processed, total, cancelled: false };
   }
 
   clear(uri: vscode.Uri): void {

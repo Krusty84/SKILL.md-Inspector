@@ -10,12 +10,14 @@ import {
   DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
 } from './workspace/detectSkillCollisions';
 import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
+import { DEFAULT_SKILL_DISCOVERY_EXCLUDES } from './workspace/discoverSkills';
 
 export interface InspectorConfig {
   enabled: boolean;
   runOnSave: boolean;
   profile: SkillProfile;
   resourceExclude: string[];
+  discoveryExclude: string[];
   nameSimilarityThreshold: number;
   collision: CollisionOptions;
 }
@@ -35,6 +37,7 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       bodyStrictness: cfg.get<BodyStrictness>('body.strictness'),
     }),
     resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
+    discoveryExclude: cfg.get<string[]>('discovery.exclude', [...DEFAULT_SKILL_DISCOVERY_EXCLUDES]),
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),
     collision: {
       threshold: cfg.get<number>('collision.threshold', DEFAULT_COLLISION_THRESHOLD),

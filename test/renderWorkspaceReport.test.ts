@@ -63,6 +63,7 @@ function analysis(): WorkspaceAnalysis {
         similarity: 0.95,
       },
     ],
+    cancelled: false,
   };
 }
 

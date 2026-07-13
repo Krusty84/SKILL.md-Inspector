@@ -10,10 +10,25 @@ import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { WorkspaceAnalysis, WorkspaceSkill, SkillsIndex } from '../types/Workspace';
 
+/** Minimal cancellation signal, structurally compatible with `vscode.CancellationToken`. */
+export interface CancellationSignal {
+  isCancellationRequested: boolean;
+}
+
+/** Cancellation and progress hooks for a workspace scan (keeps this module vscode-free). */
+export interface WorkspaceAnalysisOptions {
+  /** Checked before each skill file; when it flips, the scan stops and the result is marked partial. */
+  cancel?: CancellationSignal;
+  /** Reports progress after each analyzed skill as (done, total). */
+  onProgress?: (done: number, total: number) => void;
+}
+
 /**
  * Analyzes every discovered skill and detects collisions across them
  * (brief §13). Reads files via node fs, so it is testable with a temp workspace
- * and has no `vscode` dependency.
+ * and has no `vscode` dependency. Cancellation is checked between files; on
+ * cancel the returned analysis covers only the files scanned so far and its
+ * `cancelled` flag is set so callers never present a partial scan as complete.
  */
 export function analyzeWorkspace(
   rootDir: string,
@@ -22,12 +37,25 @@ export function analyzeWorkspace(
   exclude?: readonly string[],
   similarityThreshold?: number,
   collisionOptions?: CollisionOptions,
+  options: WorkspaceAnalysisOptions = {},
 ): WorkspaceAnalysis {
-  const skills = skillPaths
-    .map((skillPath) => toWorkspaceSkill(rootDir, skillPath, profile, exclude))
-    .filter((skill): skill is WorkspaceSkill => skill !== undefined)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const analyzed: WorkspaceSkill[] = [];
+  const total = skillPaths.length;
+  let cancelled = false;
 
+  for (let i = 0; i < total; i++) {
+    if (options.cancel?.isCancellationRequested) {
+      cancelled = true;
+      break;
+    }
+    const skill = toWorkspaceSkill(rootDir, skillPaths[i], profile, exclude);
+    if (skill) {
+      analyzed.push(skill);
+    }
+    options.onProgress?.(i + 1, total);
+  }
+
+  const skills = analyzed.sort((a, b) => a.name.localeCompare(b.name));
   const collisions = detectCollisions(
     skills.map((skill) => ({ name: skill.name, description: skill.description })),
     collisionOptions,
@@ -36,7 +64,7 @@ export function analyzeWorkspace(
   const nameConflicts = detectNameConflicts(named);
   const similarNames = detectSimilarNames(named, similarityThreshold);
 
-  return { skills, collisions, nameConflicts, similarNames };
+  return { skills, collisions, nameConflicts, similarNames, cancelled };
 }
 
 /** Builds the exportable index model (brief §13.6). */

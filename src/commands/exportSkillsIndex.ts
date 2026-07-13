@@ -5,9 +5,33 @@ import { buildSkillsIndex } from '../workspace/analyzeWorkspace';
 
 /** Command: write skills.index.json for the workspace (brief §13.6). */
 export async function exportSkillsIndex(): Promise<void> {
-  const result = computeWorkspaceAnalysis();
+  const result = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: 'Analyzing skills for index',
+      cancellable: true,
+    },
+    (progress, token) =>
+      Promise.resolve(
+        computeWorkspaceAnalysis({
+          cancel: token,
+          onProgress: (done, total) =>
+            progress.report({
+              message: `${done}/${total}`,
+              increment: total > 0 ? 100 / total : 0,
+            }),
+        }),
+      ),
+  );
+
   if (!result) {
     vscode.window.showWarningMessage('SKILL.md Inspector: open a folder to export a skills index.');
+    return;
+  }
+  if (result.analysis.cancelled) {
+    vscode.window.showWarningMessage(
+      'SKILL.md Inspector: index export cancelled; nothing written.',
+    );
     return;
   }
 

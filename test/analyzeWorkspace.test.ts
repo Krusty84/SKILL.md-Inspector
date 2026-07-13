@@ -148,4 +148,52 @@ describe('workspace discovery + analysis', () => {
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
     expect(entry.profileCompatibility.generic).toBe('pass');
   });
+
+  it('stops analysis when cancellation is requested and marks the result partial (Task 64)', () => {
+    const paths = discoverSkillPaths(root); // 3 skills
+    const cancel = { isCancellationRequested: false };
+    let lastDone = 0;
+    const analysis = analyzeWorkspace(
+      root,
+      paths,
+      genericProfile,
+      undefined,
+      undefined,
+      undefined,
+      {
+        cancel,
+        onProgress: (done) => {
+          lastDone = done;
+          if (done === 1) {
+            cancel.isCancellationRequested = true; // cancel after the first file
+          }
+        },
+      },
+    );
+    expect(analysis.cancelled).toBe(true);
+    expect(analysis.skills).toHaveLength(1);
+    expect(lastDone).toBe(1);
+  });
+
+  it('reports progress for every skill on a completed scan (Task 65)', () => {
+    const paths = discoverSkillPaths(root); // 3 skills
+    const seen: Array<[number, number]> = [];
+    const analysis = analyzeWorkspace(
+      root,
+      paths,
+      genericProfile,
+      undefined,
+      undefined,
+      undefined,
+      {
+        onProgress: (done, total) => seen.push([done, total]),
+      },
+    );
+    expect(analysis.cancelled).toBe(false);
+    expect(seen).toEqual([
+      [1, 3],
+      [2, 3],
+      [3, 3],
+    ]);
+  });
 });

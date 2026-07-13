@@ -149,6 +149,20 @@
           ],
           "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
         },
+        "skillMdInspector.discovery.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/dist/**",
+            "**/out/**",
+            "**/.vscode-test/**"
+          ],
+          "description": "Glob patterns for directories to skip when discovering SKILL.md files across the workspace (the tree view and workspace report). Setting this replaces the defaults."
+        },
         "skillMdInspector.names.similarityThreshold": {
           "type": "number",
           "default": 0.8,
