@@ -46,17 +46,22 @@ export function renderWorkspaceReportHtml(
   code { font-family: var(--vscode-editor-font-family, monospace); background: var(--vscode-textCodeBlock-background); padding: 0.05rem 0.3rem; border-radius: 3px; }
   ul { margin: 0.2rem 0; padding-left: 1.1rem; }
   .empty { opacity: 0.6; font-style: italic; }
+  .note { opacity: 0.65; font-size: 0.85rem; margin: 0.25rem 0 0; }
+  .conf-high { color: var(--vscode-testing-iconPassed, #3fb950); }
+  .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
+  .conf-low { opacity: 0.7; }
 </style>
 <title>Workspace Skill Report</title>
 </head>
 <body>
   <h1>Workspace Skill Report</h1>
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
+  <p class="note">Trigger Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
 
   <h2>Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th>Name</th><th>Trigger Quality</th><th>Errors</th><th>Warnings</th>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
+      <thead><tr><th>Name</th><th>Heuristic Trigger Quality</th><th>Errors</th><th>Warnings</th>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -88,10 +93,10 @@ function renderCollisions(collisions: SkillCollision[]): string {
   const rows = collisions
     .map(
       (c) =>
-        `<tr><td><code>${escapeHtml(c.a)}</code></td><td><code>${escapeHtml(c.b)}</code></td><td>${c.similarity.toFixed(2)}</td><td>${metricsSummary(c.metrics)}</td><td>${escapeHtml(c.sharedTerms.join(', '))}</td><td class="risk-${c.risk}">${c.risk}</td><td>${escapeHtml(c.recommendation)}</td></tr>`,
+        `<tr><td><code>${escapeHtml(c.a)}</code></td><td><code>${escapeHtml(c.b)}</code></td><td>${c.similarity.toFixed(2)}</td><td>${metricsSummary(c.metrics)}</td><td>${escapeHtml(c.sharedTerms.join(', '))}</td><td class="risk-${c.risk}">${c.risk}</td><td class="conf-${c.confidence}">${c.confidence}</td><td>${escapeHtml(c.recommendation)}</td></tr>`,
     )
     .join('');
-  return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th><th>Metrics</th><th>Shared terms</th><th>Risk</th><th>Recommendation</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th><th>Metrics</th><th>Shared terms</th><th>Risk</th><th>Confidence</th><th>Recommendation</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 /** Compact per-metric breakdown behind the composite similarity. */

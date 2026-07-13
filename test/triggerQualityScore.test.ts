@@ -108,6 +108,35 @@ describe('computeTriggerQuality language support', () => {
   });
 });
 
+describe('computeTriggerQuality confidence (Task 79)', () => {
+  it('is high for a sufficient English description with no limitations', () => {
+    const result = computeTriggerQuality(EXCELLENT);
+    expect(result.confidence).toBe('high');
+    expect(result.limitations).toEqual([]);
+  });
+
+  it('is low for a non-English description and lists a limitation', () => {
+    const result = computeTriggerQuality(
+      'Форматировать инспекционные отчёты. Использовать когда нужно готовить.',
+      { language: 'auto' },
+    );
+    expect(result.confidence).toBe('low');
+    expect(result.limitations.length).toBeGreaterThan(0);
+  });
+
+  it('is low for an empty description', () => {
+    const result = computeTriggerQuality('');
+    expect(result.confidence).toBe('low');
+    expect(result.limitations.length).toBeGreaterThan(0);
+  });
+
+  it('is medium for a short English description below the recommended minimum', () => {
+    const result = computeTriggerQuality('Format reports.');
+    expect(result.confidence).toBe('medium');
+    expect(result.limitations.some((l) => l.toLowerCase().includes('minimum'))).toBe(true);
+  });
+});
+
 describe('labelFor', () => {
   it.each([
     [100, 'excellent'],

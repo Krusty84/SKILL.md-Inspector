@@ -46,12 +46,14 @@ can execute.
 - **`description` rules** — required, string, ≤ 1024 chars, with quality
   warnings for descriptions that are too short, vague, missing an action verb,
   or missing a usage-trigger clause.
-- **Trigger Quality Score (0–100)** — a deterministic score for each
-  `description` across seven weighted criteria (action verb, usage trigger,
+- **Heuristic Trigger Quality Score (0–100)** — a *deterministic heuristic* for
+  each `description` across seven weighted criteria (action verb, usage trigger,
   concrete artifact, boundary, front-loaded intent, low vagueness, good length),
-  shown in the Skill Report with a per-criterion breakdown. Missing boundary and
-  front-loaded-intent are surfaced as information diagnostics that explain the
-  lost points.
+  shown in the Skill Report with a per-criterion breakdown, a **confidence** level,
+  and any analysis **limitations**. It estimates how discoverable a description is
+  and **does not guarantee** that an agent will select the skill at runtime.
+  Missing boundary and front-loaded-intent are surfaced as information diagnostics
+  that explain the lost points.
 - **Improve Description Locally** — a command that builds a better `description`
   without an LLM: it keeps your wording and appends the missing "Use when…" /
   "Do not use when…" clauses (or offers the full template when the current one
@@ -74,10 +76,11 @@ can execute.
 - **Workspace tree view** — a "SKILL.md Skills" view in the Explorer lists every
   skill with its status icon, Trigger Quality score, error/warning counts, and
   profile, and expands to show each skill's resource graph.
-- **Skill collision detection** — finds skills whose descriptions overlap using
-  smoothed TF-IDF cosine similarity, with High/Medium/Low risk bands and a
-  collision matrix (skill A, skill B, similarity, shared terms, risk,
-  recommendation).
+- **Skill collision detection** — finds skills whose descriptions overlap using a
+  composite of smoothed TF-IDF cosine, token Jaccard, character n-gram, and name
+  similarity, with High/Medium/Low risk bands and a separate **confidence** in the
+  textual evidence, shown in a collision matrix (skill A, skill B, similarity,
+  shared terms, risk, confidence, recommendation).
 - **Portability report** — shows per-skill compatibility (✓ / ⚠ / ✗) across the
   `generic`, `vscode`, `claude`, and `codex` profiles.
 - **Resource graph** — per skill, classifies linked/bundled files as referenced,
@@ -100,6 +103,13 @@ skills/<skill-name>/SKILL.md
 ```
 
 A standalone `SKILL.md` opened anywhere in the workspace also works.
+
+## Diagnostic rules
+
+Every diagnostic code — its default severity, which profiles it applies to, why it
+exists, a bad/good example, and whether a quick fix is offered — is documented in
+[docs/rules.md](docs/rules.md). Rules are grouped by kind, so **specification errors**
+(an invalid file) are clearly separated from **quality recommendations**.
 
 ## Commands
 

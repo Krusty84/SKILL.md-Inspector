@@ -43,19 +43,34 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   .msg { opacity: 0.85; font-size: 0.9em; }
   code { font-family: var(--vscode-editor-font-family, monospace); background: var(--vscode-textCodeBlock-background); padding: 0.05rem 0.3rem; border-radius: 3px; }
   .empty { opacity: 0.6; font-style: italic; }
+  .note { opacity: 0.7; font-size: 0.85rem; margin: 0.35rem 0 0; }
+  .limitations { margin-top: 1rem; font-size: 0.9rem; }
+  .limitations ul { list-style: disc; padding-left: 1.2rem; }
+  .conf-high { color: var(--vscode-testing-iconPassed, #3fb950); }
+  .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
+  .conf-low { color: var(--vscode-errorForeground, #f14c4c); }
 </style>
 <title>Skill Report</title>
 </head>
 <body>
-  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Trigger Quality ${q.score}/100 · ${capitalize(q.label)}</span></h1>
+  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Heuristic Trigger Quality ${q.score}/100 · ${capitalize(q.label)}</span></h1>
+  <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
   <div class="grid">
-    ${card('Trigger Quality', `<span class="score">${q.score}<span class="max"> / 100</span></span>`)}
+    ${card('Heuristic Trigger Quality', `<span class="score">${q.score}<span class="max"> / 100</span></span>`)}
+    ${card('Confidence', `<span class="conf-${q.confidence}">${capitalize(q.confidence)}</span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
     ${card('Warnings', String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
     ${card('Information', String(report.informationCount))}
   </div>
+  ${
+    q.limitations.length > 0
+      ? `<div class="limitations"><strong>Limitations</strong><ul>${q.limitations
+          .map((l) => `<li>${escapeHtml(l)}</li>`)
+          .join('')}</ul></div>`
+      : ''
+  }
 
   <h2>Trigger quality breakdown</h2>
   <ul>${q.findings.map(renderFinding).join('')}</ul>

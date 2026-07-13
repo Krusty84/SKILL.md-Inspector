@@ -60,6 +60,9 @@ export interface WorkspaceSkill {
 
 export type CollisionRisk = 'High' | 'Medium' | 'Low';
 
+/** How much textual evidence backs a collision result (Task 80). */
+export type CollisionConfidence = 'high' | 'medium' | 'low';
+
 /** The individual normalized metrics behind a composite collision score (each 0..1). */
 export interface CollisionMetrics {
   /** TF-IDF cosine over the whole corpus (corpus-dependent). */
@@ -91,6 +94,8 @@ export interface SkillCollision {
   metrics: CollisionMetrics;
   sharedTerms: string[];
   risk: CollisionRisk;
+  /** How much textual evidence backs the risk assessment — distinct from risk (Task 80). */
+  confidence: CollisionConfidence;
   recommendation: string;
 }
 

@@ -42,6 +42,7 @@ function analysis(): WorkspaceAnalysis {
         },
         sharedTerms: ['format', 'report'],
         risk: 'High',
+        confidence: 'high',
         recommendation: 'Merge or differentiate.',
       },
     ],

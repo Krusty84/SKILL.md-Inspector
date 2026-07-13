@@ -82,10 +82,11 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         const c = node.collision;
         const m = c.metrics;
         const item = new vscode.TreeItem(`${c.a} ↔ ${c.b}`, vscode.TreeItemCollapsibleState.None);
-        item.description = `${c.risk} · ${c.similarity.toFixed(2)}`;
+        item.description = `${c.risk} · ${c.similarity.toFixed(2)} · ${c.confidence} conf`;
         const sep =
           m.boundarySeparation > 0 ? `, boundary sep ${m.boundarySeparation.toFixed(2)}` : '';
         item.tooltip =
+          `Risk ${c.risk} · confidence ${c.confidence}\n` +
           `Metrics — Jaccard ${m.jaccard.toFixed(2)}, cosine ${m.cosine.toFixed(2)}, ` +
           `char n-gram ${m.charNgram.toFixed(2)}, name ${m.nameSimilarity.toFixed(2)}${sep}\n` +
           `Shared: ${c.sharedTerms.join(', ')}\n${c.recommendation}`;
@@ -161,9 +162,10 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     item.tooltip = new vscode.MarkdownString(
       [
         `**${skill.name}**  \n`,
-        `Trigger Quality: ${skill.triggerQualityScore}/100 (${skill.triggerQualityLabel})  \n`,
+        `Heuristic Trigger Quality: ${skill.triggerQualityScore}/100 (${skill.triggerQualityLabel})  \n`,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
-        `Portability: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}`,
+        `Portability: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}  \n`,
+        `_Heuristic score — deterministic, and does not guarantee an agent will select this skill at runtime._`,
       ].join(''),
     );
     item.iconPath = new vscode.ThemeIcon(
