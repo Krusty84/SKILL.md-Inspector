@@ -8,6 +8,7 @@ import { SkillTreeProvider } from './ui/skillTreeProvider';
 import { FavoritesTreeProvider } from './ui/favoritesTreeProvider';
 import { WorkspaceTreeProvider } from './ui/workspaceTreeProvider';
 import { InstalledAgentsTreeProvider } from './ui/installedAgentsTreeProvider';
+import { registerWorkspaceCommands } from './commands/workspace/registerWorkspaceCommands';
 import { addFavorite, FAVORITES_KEY, removeFavorite, restoreFavorites, updateFavoriteUri } from './navigator/favoritesStore';
 
 const CHANGE_DEBOUNCE_MS = 300;
@@ -24,8 +25,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const workspaceProvider = new WorkspaceTreeProvider(context, output);
   const installedAgentsProvider = new InstalledAgentsTreeProvider(context, output);
   const favoritesView = vscode.window.createTreeView('skillMdInspectorFavorites', { treeDataProvider: favoritesProvider });
-  const workspaceView = vscode.window.createTreeView('skillMdInspectorWorkspace', { treeDataProvider: workspaceProvider });
+  const workspaceView = vscode.window.createTreeView('skillMdInspectorWorkspace', { treeDataProvider: workspaceProvider, canSelectMany: true, showCollapseAll: true });
   const installedAgentsView = vscode.window.createTreeView('skillMdInspectorInstalledAgents', { treeDataProvider: installedAgentsProvider });
+  registerWorkspaceCommands(context, { provider: workspaceProvider, view: workspaceView, output });
   const refreshNavigator = (): void => { favoritesProvider.refresh(); workspaceProvider.refresh(); installedAgentsProvider.refresh(); };
   const updateFavoritesContext = (): void => {
     const favorites = restoreFavorites(context.globalState.get(FAVORITES_KEY));
