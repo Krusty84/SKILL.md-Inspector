@@ -4,6 +4,7 @@ import type {
   SkillDiagnosticRange,
   SkillDiagnosticSeverity,
 } from '../types/SkillDiagnostic';
+import { KIND_BY_CODE } from '../types/DiagnosticCode';
 import type { SkillDocument } from '../types/SkillDocument';
 
 export interface DiagnosticExtras {
@@ -22,12 +23,43 @@ export function diag(
   return {
     code,
     severity,
+    kind: KIND_BY_CODE[code] ?? 'quality',
     message,
     range,
     source: DIAGNOSTIC_SOURCE,
     ...(extras.quickFixId ? { quickFixId: extras.quickFixId } : {}),
     ...(extras.data ? { data: extras.data } : {}),
   };
+}
+
+const SEVERITY_RANK: Record<SkillDiagnosticSeverity, number> = {
+  error: 0,
+  warning: 1,
+  information: 2,
+};
+
+/**
+ * Deterministic diagnostic order (Task 82): by document position (diagnostics
+ * with no range sort last), then severity (error < warning < information), then
+ * diagnostic code. Pure — returns a new array.
+ */
+export function sortDiagnostics(diagnostics: SkillDiagnostic[]): SkillDiagnostic[] {
+  return [...diagnostics].sort((a, b) => {
+    if (a.range && b.range) {
+      if (a.range.startLine !== b.range.startLine) {
+        return a.range.startLine - b.range.startLine;
+      }
+      if (a.range.startCharacter !== b.range.startCharacter) {
+        return a.range.startCharacter - b.range.startCharacter;
+      }
+    } else if (a.range || b.range) {
+      return a.range ? -1 : 1;
+    }
+    if (SEVERITY_RANK[a.severity] !== SEVERITY_RANK[b.severity]) {
+      return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+    }
+    return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
+  });
 }
 
 /** Range of a top-level frontmatter key (from the YAML AST), else the whole block. */

@@ -1,3 +1,5 @@
+import type { SkillDiagnosticKind } from './SkillDiagnostic';
+
 /**
  * Stable diagnostic codes. Quick fixes key off these values, so they must not
  * change casually. Grouped by the rule area that produces them.
@@ -54,6 +56,51 @@ export const DiagnosticCode = {
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCode)[keyof typeof DiagnosticCode];
+
+/**
+ * The kind of every diagnostic code (Task 86). Kept next to the codes so the
+ * classification stays visible and exhaustive; `diag()` stamps it centrally.
+ * See docs/rules.md for the same grouping.
+ */
+export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
+  // Specification — the file is invalid.
+  [DiagnosticCode.FrontmatterMissing]: 'specification',
+  [DiagnosticCode.FrontmatterInvalid]: 'specification',
+  [DiagnosticCode.FrontmatterNotAtTop]: 'specification',
+  [DiagnosticCode.FrontmatterDuplicateKey]: 'specification',
+  [DiagnosticCode.NameMissing]: 'specification',
+  [DiagnosticCode.NameType]: 'specification',
+  [DiagnosticCode.NameTooLong]: 'specification',
+  [DiagnosticCode.NameFormat]: 'specification',
+  [DiagnosticCode.DescriptionMissing]: 'specification',
+  [DiagnosticCode.DescriptionType]: 'specification',
+  [DiagnosticCode.DescriptionTooLong]: 'specification',
+  [DiagnosticCode.LinkMissing]: 'specification',
+  // Compatibility — valid, but a target profile is stricter or less portable.
+  [DiagnosticCode.LinkAbsolute]: 'compatibility',
+  [DiagnosticCode.MetadataReservedWord]: 'compatibility',
+  [DiagnosticCode.MetadataXmlTag]: 'compatibility',
+  [DiagnosticCode.MetadataFieldType]: 'compatibility',
+  [DiagnosticCode.MetadataUnknownKey]: 'compatibility',
+  [DiagnosticCode.PortabilityClaudeDescriptionLong]: 'compatibility',
+  // Security — a risky reference.
+  [DiagnosticCode.LinkEscapesSkillRoot]: 'security',
+  [DiagnosticCode.LinkRemoteSuspicious]: 'security',
+  // Quality — discoverability recommendations.
+  [DiagnosticCode.NameFolderMismatch]: 'quality',
+  [DiagnosticCode.DescriptionTooShort]: 'quality',
+  [DiagnosticCode.DescriptionVague]: 'quality',
+  [DiagnosticCode.DescriptionNoVerb]: 'quality',
+  [DiagnosticCode.DescriptionNoTrigger]: 'quality',
+  [DiagnosticCode.DescriptionNoBoundary]: 'quality',
+  [DiagnosticCode.DescriptionNotFrontLoaded]: 'quality',
+  [DiagnosticCode.ResourceUnreferenced]: 'quality',
+  [DiagnosticCode.BodyMissing]: 'quality',
+  [DiagnosticCode.BodyNoExamples]: 'quality',
+  [DiagnosticCode.BodyNoWhenToUse]: 'quality',
+  [DiagnosticCode.BodySuggestBoundary]: 'quality',
+  [DiagnosticCode.BodySuggestIO]: 'quality',
+};
 
 /**
  * Quick-fix identifiers referenced by the code-action provider. Kept alongside

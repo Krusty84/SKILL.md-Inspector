@@ -234,6 +234,25 @@
           "default": "recommended",
           "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
         },
+        "skillMdInspector.severityOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning",
+              "information",
+              "off"
+            ]
+          },
+          "default": {},
+          "description": "Override the severity of diagnostics by code, or disable one with \"off\" (e.g. { \"skill.description.vague\": \"information\" }). Specification errors are protected unless skillMdInspector.severity.allowSpecificationOverrides is enabled."
+        },
+        "skillMdInspector.severity.allowSpecificationOverrides": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow skillMdInspector.severityOverrides to downgrade or disable specification-level errors (an invalid file). Off by default so structural errors are not hidden accidentally."
+        },
         "skillMdInspector.experimental.llmReview.enabled": {
           "type": "boolean",
           "default": false,

@@ -5,6 +5,14 @@
  */
 export type SkillDiagnosticSeverity = 'error' | 'warning' | 'information';
 
+/**
+ * Classifies a diagnostic so reports and CI can separate hard requirements from
+ * advice (Task 86): `specification` = the file is invalid; `compatibility` =
+ * valid but not portable to a target profile; `security` = a risky reference;
+ * `quality` = a discoverability recommendation.
+ */
+export type SkillDiagnosticKind = 'specification' | 'compatibility' | 'quality' | 'security';
+
 export interface SkillDiagnosticRange {
   startLine: number;
   startCharacter: number;
@@ -15,6 +23,8 @@ export interface SkillDiagnosticRange {
 export interface SkillDiagnostic {
   code: string;
   severity: SkillDiagnosticSeverity;
+  /** Classification of the rule (Task 86); set centrally from the code. */
+  kind: SkillDiagnosticKind;
   message: string;
   range?: SkillDiagnosticRange;
   source: 'SKILL.md Inspector';
