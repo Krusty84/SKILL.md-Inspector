@@ -1,20 +1,15 @@
 import * as vscode from 'vscode';
 import type { DiagnosticsProvider } from '../diagnostics/diagnosticsProvider';
-import { isSkillFile } from '../diagnostics/mapping';
+import { resolveSkillTarget } from './resolveSkillTarget';
 
 /** Command: validate the SKILL.md in the active editor and report a summary. */
-export function validateCurrentSkill(provider: DiagnosticsProvider): void {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    vscode.window.showWarningMessage('SKILL.md Inspector: open a SKILL.md file to validate.');
-    return;
-  }
-  if (!isSkillFile(editor.document)) {
-    vscode.window.showWarningMessage('SKILL.md Inspector: the active file is not a SKILL.md file.');
+export async function validateCurrentSkill(provider: DiagnosticsProvider, uri?: vscode.Uri): Promise<void> {
+  const target = await resolveSkillTarget(uri, { warningAction: 'validate' });
+  if (!target) {
     return;
   }
 
-  const analysis = provider.validate(editor.document);
+  const analysis = provider.validate(target.document);
   if (!analysis) {
     vscode.window.showInformationMessage('SKILL.md Inspector: validation is disabled in settings.');
     return;

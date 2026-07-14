@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../config';
-import { isSkillFile } from '../diagnostics/mapping';
 import { parseSkillFile, frontmatterStartLine } from '../parser/parseSkillFile';
 import { buildImprovedDescription } from '../quality/improveDescription';
+import { resolveSkillTarget } from './resolveSkillTarget';
 
 /**
  * Command: build a deterministic (no-LLM) improved `description` and offer to
@@ -10,17 +10,15 @@ import { buildImprovedDescription } from '../quality/improveDescription';
  * only the missing trigger/boundary clauses are added, unless the current
  * description scores "poor", in which case the full template is suggested.
  */
-export async function improveDescriptionLocally(): Promise<void> {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || !isSkillFile(editor.document)) {
-    vscode.window.showWarningMessage(
-      'SKILL.md Inspector: open a SKILL.md file to improve its description.',
-    );
+export async function improveDescriptionLocally(uri?: vscode.Uri): Promise<void> {
+  const target = await resolveSkillTarget(uri, { requireEditor: true, warningAction: 'improve its description' });
+  if (!target || !target.editor) {
     return;
   }
+  const editor = target.editor;
 
-  const config = readConfig(editor.document.uri);
-  const doc = parseSkillFile(editor.document.uri.fsPath, editor.document.getText());
+  const config = readConfig(target.document.uri);
+  const doc = parseSkillFile(target.document.uri.fsPath, target.document.getText());
   const current =
     typeof doc.frontmatter?.description === 'string' ? doc.frontmatter.description : '';
   const improved = buildImprovedDescription(current, {

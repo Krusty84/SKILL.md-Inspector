@@ -69,6 +69,16 @@
         "title": "Refresh Skills",
         "category": "SKILL.md Inspector",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "skillMdInspector.openTemplateSettings",
+        "title": "Open Template Settings",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.resetTemplates",
+        "title": "Reset Templates to Defaults",
+        "category": "SKILL.md Inspector"
       }
     ],
     "views": {
@@ -85,6 +95,62 @@
           "command": "skillMdInspector.refreshSkills",
           "when": "view == skillMdInspectorSkills",
           "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "skillMdInspector/context",
+          "when": "resourceFilename == SKILL.md",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "skillMdInspector/context",
+          "when": "resourceFilename == SKILL.md",
+          "group": "navigation"
+        }
+      ],
+      "skillMdInspector/context": [
+        {
+          "command": "skillMdInspector.validateCurrentSkill",
+          "group": "1_validation@1"
+        },
+        {
+          "command": "skillMdInspector.validateWorkspaceSkills",
+          "group": "1_validation@2"
+        },
+        {
+          "command": "skillMdInspector.insertTemplate",
+          "group": "2_editing@1"
+        },
+        {
+          "command": "skillMdInspector.improveDescriptionLocally",
+          "group": "2_editing@2"
+        },
+        {
+          "command": "skillMdInspector.showSkillReport",
+          "group": "3_reports@1"
+        },
+        {
+          "command": "skillMdInspector.showWorkspaceReport",
+          "group": "3_reports@2"
+        },
+        {
+          "command": "skillMdInspector.exportSkillsIndex",
+          "group": "3_reports@3"
+        },
+        {
+          "command": "skillMdInspector.refreshSkills",
+          "group": "4_maintenance@1"
+        },
+        {
+          "command": "skillMdInspector.openTemplateSettings",
+          "group": "5_templates@1"
+        },
+        {
+          "command": "skillMdInspector.resetTemplates",
+          "group": "5_templates@2"
         }
       ]
     },
@@ -168,14 +234,14 @@
           "default": 0.8,
           "minimum": 0,
           "maximum": 1,
-          "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
+          "description": "Similarity (0\u20131) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
         },
         "skillMdInspector.collision.threshold": {
           "type": "number",
           "default": 0.4,
           "minimum": 0,
           "maximum": 1,
-          "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
+          "description": "Composite similarity (0\u20131) at or above which two skills are reported as a potential collision."
         },
         "skillMdInspector.collision.ngramSize": {
           "type": "number",
@@ -257,9 +323,61 @@
           "type": "boolean",
           "default": false,
           "description": "Reserved for future LLM-assisted review. Not implemented in MVP1."
+        },
+        "skillMdInspector.templates": {
+          "type": "array",
+          "default": [],
+          "description": "Custom SKILL.md templates. A non-empty array replaces the bundled templates.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "frontmatter",
+              "body"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Stable unique template identifier."
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Template name displayed in the selection list."
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional explanation displayed in the selection list."
+              },
+              "frontmatter": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "YAML frontmatter lines without the opening and closing --- delimiters."
+              },
+              "body": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Markdown body lines. Use an empty string to insert a blank line."
+              }
+            },
+            "additionalProperties": false
+          }
         }
       }
-    }
+    },
+    "submenus": [
+      {
+        "id": "skillMdInspector/context",
+        "label": "SKILL.md Inspector"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build",

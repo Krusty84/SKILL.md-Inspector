@@ -200,3 +200,73 @@ API is confined to the adapter layer (`extension.ts`, `diagnostics/`,
 ## License
 
 MIT
+
+## Context menus and templates
+
+SKILL.md Inspector adds a grouped **SKILL.md Inspector** submenu when you right-click inside an open `SKILL.md` editor or right-click a `SKILL.md` file in the Explorer. The submenu groups validation, editing, reports, maintenance, and template-management commands while keeping the same Command Palette entries.
+
+### Inserting bundled templates
+
+Use **SKILL.md Inspector: Insert SKILL.md Template** from the Command Palette, the editor context submenu, or the Explorer context submenu. When invoked from Explorer, the command targets the selected `SKILL.md`; when invoked from the Command Palette, it falls back to the active editor.
+
+Bundled templates are generic editing presets and are independent from validation profiles:
+
+- **Minimal** — compact required frontmatter and a short body.
+- **Standard** — balanced starter content converted from the original built-in template.
+- **Detailed** — expanded scope, resources, examples, and constraints.
+- **Workflow-oriented** — step-by-step procedure layout.
+
+The command can insert into a new or empty `SKILL.md` at the start of the file. In an existing `SKILL.md`, it inserts at the active cursor position and does not replace existing content or merge frontmatter automatically. If multiple valid templates are available, a Quick Pick lets you choose one in configured order; cancelling the picker makes no edit.
+
+### Custom templates
+
+Configure `skillMdInspector.templates` in User, Workspace, or Workspace Folder settings. An unset or empty array uses the bundled templates. A non-empty array replaces the bundled catalog; bundled and custom templates are not merged. Template settings do not depend on `skillMdInspector.profile`, and changing validation profiles does not change available templates.
+
+Templates use line arrays instead of escaped `\n` strings. `frontmatter` contains YAML lines without `---` delimiters, and `body` contains Markdown lines. Empty strings represent blank lines. Frontmatter delimiters and one blank line before the body are generated automatically. The placeholders `{{name}}` and `{{title}}` are replaced throughout frontmatter and body; unknown placeholders are left unchanged. `{{name}}` is inferred from the parent folder as kebab-case, and `{{title}}` is a readable title derived from that name.
+
+Open **SKILL.md Inspector: Open Template Settings** to focus the setting in VS Code Settings. Use **SKILL.md Inspector: Reset Templates to Defaults** to remove an explicit User, Workspace, or Workspace Folder override and return to bundled templates. Resetting removes the setting; it does not copy bundled templates into `settings.json`.
+
+Complete `settings.json` example:
+
+```json
+{
+  "skillMdInspector.templates": [
+    {
+      "id": "workflow",
+      "label": "Workflow",
+      "description": "A template for step-based skills.",
+      "frontmatter": [
+        "name: {{name}}",
+        "description: <Describe the task, usage trigger, and expected result.>",
+        "metadata:",
+        "  category: <category>"
+      ],
+      "body": [
+        "# {{title}}",
+        "",
+        "## When to use",
+        "",
+        "<Describe when this skill should be used.>",
+        "",
+        "## Workflow",
+        "",
+        "1. <First step>",
+        "2. <Second step>",
+        "3. <Third step>",
+        "",
+        "## Inputs",
+        "",
+        "- <Input>",
+        "",
+        "## Outputs",
+        "",
+        "- <Output>",
+        "",
+        "## Constraints",
+        "",
+        "- <Constraint>"
+      ]
+    }
+  ]
+}
+```

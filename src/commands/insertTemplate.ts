@@ -1,44 +1,65 @@
-import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { fullTemplate } from '../codeActions/templates';
-import { isSkillFile } from '../diagnostics/mapping';
-import { toKebabCase } from '../validation/validateName';
+import { resolveTemplates } from '../templates/resolveTemplates';
+import { inferSkillNameFromPath, renderTemplate, titleFromSkillName } from '../templates/renderTemplate';
+import type { SkillTemplateDefinition } from '../templates/types';
+import { resolveSkillTarget } from './resolveSkillTarget';
 
-/** Command: insert a starter SKILL.md template into the active editor. */
-export async function insertTemplate(): Promise<void> {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    vscode.window.showWarningMessage(
-      'SKILL.md Inspector: open a file to insert the SKILL.md template.',
-    );
+/** Command: insert a starter SKILL.md template into the active or selected editor. */
+export async function insertTemplate(uri?: vscode.Uri): Promise<void> {
+  const target = await resolveSkillTarget(uri, {
+    requireEditor: true,
+    warningAction: 'insert the SKILL.md template',
+  });
+  if (!target || !target.editor) {
     return;
   }
 
-  const name = suggestName(editor.document);
-  const template = fullTemplate(name, toTitle(name));
-  const isEmpty = editor.document.getText().trim() === '';
+  const templates = loadTemplates(target.uri);
+  const selected = await selectTemplate(templates);
+  if (!selected) {
+    return;
+  }
 
-  await editor.edit((builder) => {
+  const name = inferSkillNameFromPath(target.uri.fsPath);
+  const template = renderTemplate(selected, { name, title: titleFromSkillName(name) });
+  const isEmpty = target.document.getText().trim() === '';
+
+  await target.editor.edit((builder) => {
     if (isEmpty) {
       builder.insert(new vscode.Position(0, 0), template);
     } else {
-      builder.insert(editor.selection.active, template);
+      builder.insert(target.editor!.selection.active, template);
     }
   });
 }
 
-function suggestName(document: vscode.TextDocument): string {
-  if (isSkillFile(document)) {
-    const folder = path.basename(path.dirname(document.uri.fsPath));
-    return toKebabCase(folder) || 'skill-name';
+function loadTemplates(uri: vscode.Uri): SkillTemplateDefinition[] {
+  const configuredTemplates = vscode.workspace
+    .getConfiguration('skillMdInspector', uri)
+    .get<unknown>('templates');
+  const resolved = resolveTemplates(configuredTemplates);
+  if (resolved.issues.length > 0) {
+    const action = resolved.source === 'fallback' ? ' Falling back to bundled templates.' : '';
+    vscode.window.showWarningMessage(
+      `SKILL.md Inspector: ignored ${resolved.issues.length} invalid template setting entr${resolved.issues.length === 1 ? 'y' : 'ies'}.${action}`,
+    );
   }
-  return 'skill-name';
+  return resolved.templates;
 }
 
-function toTitle(name: string): string {
-  return name
-    .split('-')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+async function selectTemplate(
+  templates: SkillTemplateDefinition[],
+): Promise<SkillTemplateDefinition | undefined> {
+  if (templates.length === 1) {
+    return templates[0];
+  }
+  const selected = await vscode.window.showQuickPick(
+    templates.map((template) => ({
+      label: template.label,
+      description: template.description,
+      template,
+    })),
+    { title: 'Insert SKILL.md Template', placeHolder: 'Select a SKILL.md template' },
+  );
+  return selected?.template;
 }
