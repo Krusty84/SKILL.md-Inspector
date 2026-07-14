@@ -42,39 +42,62 @@ describe('package manifest context menus and templates', () => {
     expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.newFile', when: 'view == skillMdInspectorWorkspace', group: 'navigation@1' }));
     expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.newFolder', when: 'view == skillMdInspectorWorkspace', group: 'navigation@2' }));
     expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshWorkspace', when: 'view == skillMdInspectorWorkspace', group: 'navigation@3' }));
-    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.addFolders', when: 'view == skillMdInspectorWorkspace', group: 'secondary@1' }));
-    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.openFolderInNewWindow', when: 'view == skillMdInspectorWorkspace', group: 'secondary@2' }));
 
     const commands = packageJson.contributes.commands.map((command) => command.command);
     expect(commands).toEqual(expect.arrayContaining([
       'skillMdInspector.workspace.newFile',
       'skillMdInspector.workspace.newFolder',
-      'skillMdInspector.workspace.addFolders',
-      'skillMdInspector.workspace.openFolderInNewWindow',
-      'skillMdInspector.workspace.removeFolder',
-      'skillMdInspector.workspace.open',
-      'skillMdInspector.workspace.openToSide',
-      'skillMdInspector.workspace.rename',
-      'skillMdInspector.workspace.delete',
-      'skillMdInspector.workspace.copy',
-      'skillMdInspector.workspace.cut',
-      'skillMdInspector.workspace.paste',
-      'skillMdInspector.workspace.copyPath',
-      'skillMdInspector.workspace.copyRelativePath',
-      'skillMdInspector.workspace.openInTerminal',
-      'skillMdInspector.workspace.refreshFolder',
+      'skillMdInspector.workspace.newFileContext',
+      'skillMdInspector.workspace.newFolderContext',
+      'skillMdInspector.workspace.openPreview',
+      'skillMdInspector.workspace.openWith',
+      'skillMdInspector.workspace.openImagesPreview',
+      'skillMdInspector.workspace.selectForCompare',
+      'skillMdInspector.workspace.compareWithSelected',
+      'skillMdInspector.workspace.findFileReferences',
+      'skillMdInspector.workspace.openTimeline',
+      'skillMdInspector.workspace.findInFolder',
     ]));
 
     const workspaceContexts = packageJson.contributes.menus['view/item/context'].filter((item) => item.when?.includes('view == skillMdInspectorWorkspace'));
     expect(workspaceContexts).toEqual(expect.arrayContaining([
-      expect.objectContaining({ command: 'skillMdInspector.workspace.open', group: '1_open@1' }),
-      expect.objectContaining({ command: 'skillMdInspector.workspace.cut', group: '4_clipboard@1' }),
-      expect.objectContaining({ command: 'skillMdInspector.workspace.copyPath', group: '5_path@1' }),
-      expect.objectContaining({ command: 'skillMdInspector.workspace.rename', group: '6_manage@1' }),
-      expect.objectContaining({ command: 'skillMdInspector.workspace.removeFolder', group: '7_workspace@2' }),
-      expect.objectContaining({ submenu: 'skillMdInspector/context', group: '9_inspector@1' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.openToSide', group: 'navigation@20' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.openWith', group: 'navigation@30' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.selectForCompare', group: '3_compare@10' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.findFileReferences', group: '4_search@10' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.openTimeline', group: '4_timeline@10' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.cut', group: '5_cutcopypaste@10' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.copyPath', group: '6_copypath@10' }),
+      expect.objectContaining({ command: 'skillMdInspector.workspace.renameContext', group: '7_modification@10' }),
+      expect.objectContaining({ submenu: 'skillMdInspector/context', group: '9_inspector@10' }),
     ]));
     expect(JSON.stringify(packageJson.contributes.menus['view/item/context'])).not.toContain('explorer/context');
+    expect(JSON.stringify(workspaceContexts)).not.toMatch(/Maven|Java|Checkstyle/);
+  });
+
+  it('keeps WORKSPACE file, folder, and root menus scoped like VS Code Explorer', () => {
+    const workspaceContexts = packageJson.contributes.menus['view/item/context'].filter((item) => item.when?.includes('view == skillMdInspectorWorkspace'));
+    const fileWhen = (command: string) => workspaceContexts.find((item) => item.command === command && item.when?.includes('skillMdInspector.workspaceFile'))?.when ?? '';
+    const folderWhen = (command: string) => workspaceContexts.find((item) => item.command === command && item.when?.includes('skillMdInspector.workspaceDirectory'))?.when ?? '';
+    const rootWhen = (command: string) => workspaceContexts.find((item) => item.command === command && item.when?.includes('skillMdInspector.workspaceRoot'))?.when ?? '';
+
+    expect(fileWhen('skillMdInspector.workspace.newFileContext')).toBe('');
+    expect(fileWhen('skillMdInspector.workspace.newFolderContext')).toBe('');
+    expect(fileWhen('skillMdInspector.workspace.paste')).toBe('');
+    expect(fileWhen('skillMdInspector.workspace.openPreview')).toContain('resourceExtname == .md');
+    expect(fileWhen('skillMdInspector.workspace.findFileReferences')).toContain('resourceExtname == .md');
+
+    expect(folderWhen('skillMdInspector.workspace.newFileContext')).toContain('skillMdInspector.workspaceDirectory');
+    expect(folderWhen('skillMdInspector.workspace.paste')).toContain('skillMdInspector.workspaceClipboardHasItems');
+    expect(folderWhen('skillMdInspector.workspace.openPreview')).toBe('');
+    expect(folderWhen('skillMdInspector.workspace.openWith')).toBe('');
+    expect(folderWhen('skillMdInspector.workspace.openTimeline')).toBe('');
+
+    expect(rootWhen('skillMdInspector.workspace.newFileContext')).toContain('skillMdInspector.workspaceRoot');
+    expect(rootWhen('skillMdInspector.workspace.paste')).toContain('skillMdInspector.workspaceClipboardHasItems');
+    expect(rootWhen('skillMdInspector.workspace.copyPath')).toContain('skillMdInspector.workspaceRoot');
+    expect(rootWhen('skillMdInspector.workspace.renameContext')).toBe('');
+    expect(rootWhen('skillMdInspector.workspace.delete')).toBe('');
   });
 
 });
