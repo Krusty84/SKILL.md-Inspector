@@ -80,9 +80,9 @@ can execute.
 - **Skill Report** — a read-only webview summarizing the skill's status,
   diagnostic counts, referenced/unreferenced files, and the Trigger Quality
   breakdown.
-- **Activity Bar navigator** — a dedicated **SKILL.md Inspector** icon opens the **Agent Files** view with Favorites, an Explorer-like Workspace browser, and installed local agent files.
-- **Favorites** — add frequently inspected `SKILL.md` files from the editor, Explorer, or Agent Files navigator. Favorites persist locally across restarts and workspace changes; missing files stay visible with a warning until removed.
-- **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view now lives in the bottom Panel. It still lists every skill with its status icon, Trigger Quality score, error/warning counts, profile, and resource graph.
+- **Activity Bar navigator** — a dedicated **SKILL.md INSPECTOR** icon opens three independent Views: **FAVORITES**, **WORKSPACE**, and **INSTALLED AGENTS**.
+- **Favorites** — add frequently inspected `SKILL.md` files from the Inspector submenu in the editor, Explorer, or Inspector Views. Favorites persist locally across restarts and workspace changes; missing files stay visible with a warning until removed.
+- **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view remains separate in the bottom Panel. It still lists every skill with its status icon, Trigger Quality score, error/warning counts, profile, and resource graph.
 - **Skill collision detection** — finds skills whose descriptions overlap using a
   composite of smoothed TF-IDF cosine, token Jaccard, character n-gram, and name
   similarity, with High/Medium/Low risk bands and a separate **confidence** in the
@@ -115,25 +115,39 @@ skills/<skill-name>/SKILL.md
 
 A standalone `SKILL.md` opened anywhere in the workspace also works.
 
-## Agent Files navigator
+## SKILL.md Inspector sidebar
 
-Select the **SKILL.md Inspector** icon in the Activity Bar to open **Agent Files**.
-This navigation view is separate from the analysis tree and always shows three
-sections:
+Select the **SKILL.md INSPECTOR** icon in the Activity Bar to open the extension
+sidebar. The container has three independent Views instead of one combined
+**Agent Files** tree:
 
-- **Favorites** — local, ordered shortcuts to `SKILL.md` files you inspect often.
+- **FAVORITES** — local, ordered shortcuts to `SKILL.md` files you inspect often.
   Only files named exactly `SKILL.md` can be added. If a favorite is on a
   disconnected drive or was deleted, it remains visible as **Missing** and can be
   removed from its context menu.
-- **Workspace** — an Explorer-like browser for every open workspace folder,
+- **WORKSPACE** — an Explorer-like browser for every open workspace folder,
   including multi-root and remote workspaces. Expand and collapse directories to
   load their direct children lazily. All files are visible, subject only to VS
   Code's standard `files.exclude` setting; `skillMdInspector.discovery.exclude`
   does not control this browser. Selecting a file opens it with its original VS
-  Code URI, and `SKILL.md` files still support Favorites and Inspector commands.
-- **Installed Agents** — supported local agent files discovered from bounded,
+  Code URI. Workspace files and directories keep normal VS Code resource behavior
+  such as file icons, decorations, URI handling, and resource-aware commands from
+  VS Code or other extensions.
+- **INSTALLED AGENTS** — supported local agent files discovered from bounded,
   declared roots without running agent executables or scanning your full home
   directory.
+
+Because these are standard VS Code Views, **FAVORITES**, **WORKSPACE**, and
+**INSTALLED AGENTS** can each be collapsed, expanded, resized vertically, hidden,
+or restored from the standard Views menu independently.
+
+Inspector-specific context actions are grouped under the **SKILL.md Inspector**
+submenu. **Add SKILL.md to Favorites** is no longer contributed as a standalone
+top-level context-menu item; it appears in that submenu for `SKILL.md` files.
+Already favorited `SKILL.md` entries can expose **Remove from Favorites** instead.
+The submenu is shown in editor and built-in Explorer context menus only while the
+**SKILL.md INSPECTOR** Activity Bar container is active. It remains available for
+relevant `SKILL.md` items inside the extension's own Views.
 
 Built-in local agent locations are:
 
@@ -146,20 +160,20 @@ Built-in local agent locations are:
 | GitHub Copilot | Skills | `~/.copilot/skills/**/SKILL.md` |
 
 Project-level agent folders such as `.agents/skills`, `.claude/skills`, and
-`.github/skills` are shown in **Workspace**, not repeated under **Installed
-Agents**.
+`.github/skills` are shown in **WORKSPACE**, not repeated under **INSTALLED
+AGENTS**.
 
-Use **Add SKILL.md to Favorites** from an editor tab, Explorer item, or navigator
-`SKILL.md` item. Use **Remove from Favorites** on a favorite or already-favorited
-navigator item, and **Clear All Favorites** from the Favorites section or view
-title menu.
+Use **Add SKILL.md to Favorites** from the **SKILL.md Inspector** submenu on an
+editor, Explorer item, or Inspector `SKILL.md` item. Use **Remove from Favorites**
+on a favorite or already-favorited Inspector item, and **Clear All Favorites**
+from the **FAVORITES** View title menu.
 
-**Agent Files vs. SKILL.md Skills:** **Agent Files** is for navigation: Favorites
-are specialized `SKILL.md` shortcuts, Workspace is a full lazy file browser, and
-Installed Agents remains specialized discovery for local `SKILL.md` and
-`AGENTS.md` files. **SKILL.md Skills** is the bottom
-Panel view for analysis, diagnostics, name conflicts, collision detection,
-portability, and resource graphs.
+**Sidebar vs. SKILL.md Skills:** the **SKILL.md INSPECTOR** sidebar is for
+navigation: **FAVORITES** contains specialized `SKILL.md` shortcuts, **WORKSPACE**
+is a full lazy file browser, and **INSTALLED AGENTS** remains specialized
+discovery for local `SKILL.md` and `AGENTS.md` files. **SKILL.md Skills** remains
+the bottom Panel view for analysis, diagnostics, name conflicts, collision
+detection, portability, and resource graphs.
 
 ## Diagnostic rules
 
@@ -205,7 +219,7 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | `skillMdInspector.severityOverrides` | `{}` | Override a diagnostic's severity by code, or `"off"` to disable it. |
 | `skillMdInspector.severity.allowSpecificationOverrides` | `false` | Allow the overrides above to downgrade or disable specification-level errors. |
 | `skillMdInspector.experimental.llmReview.enabled` | `false` | Reserved for future LLM review (inert). |
-| `skillMdInspector.navigator.additionalRoots` | `[]` | Extra bounded local roots to display after built-in agents in Agent Files. |
+| `skillMdInspector.navigator.additionalRoots` | `[]` | Extra bounded local roots to display after built-in agents in INSTALLED AGENTS. |
 
 Example additional root configuration:
 

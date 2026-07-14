@@ -4,8 +4,10 @@ import packageJson from '../package.json';
 describe('package manifest context menus and templates', () => {
   it('declares the SKILL.md Inspector submenu in editor and explorer contexts', () => {
     expect(packageJson.contributes.submenus).toContainEqual({ id: 'skillMdInspector/context', label: 'SKILL.md Inspector' });
-    expect(packageJson.contributes.menus['editor/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: 'resourceFilename == SKILL.md' }));
-    expect(packageJson.contributes.menus['explorer/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: 'resourceFilename == SKILL.md' }));
+    const activeWhen = 'resourceFilename == SKILL.md && activeViewlet == workbench.view.extension.skillMdInspector';
+    expect(packageJson.contributes.menus['editor/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: activeWhen }));
+    expect(packageJson.contributes.menus['explorer/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: activeWhen }));
+    expect(activeWhen).not.toContain('sideBarFocus');
   });
 
   it('places existing and template-management commands inside the submenu', () => {
@@ -21,6 +23,7 @@ describe('package manifest context menus and templates', () => {
       'skillMdInspector.refreshSkills',
       'skillMdInspector.openTemplateSettings',
       'skillMdInspector.resetTemplates',
+      'skillMdInspector.addToFavorites',
     ]));
   });
 
