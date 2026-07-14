@@ -14,8 +14,9 @@ describe('navigator pure modules', () => {
     const sources = resolveBuiltInAgentSources({ homeDir: '/home/me', env: { CODEX_HOME: '/tmp/codex' }, platform: 'linux' });
     expect(sources).toEqual(expect.arrayContaining([
       expect.objectContaining({ rootPath: '/tmp/codex', files: ['AGENTS.md'], recursive: false }),
-      expect.objectContaining({ rootPath: path.join('/home/me', '.agents', 'skills') }),
+      expect.objectContaining({ rootPath: path.join('/tmp/codex', 'skills'), files: ['SKILL.md'], recursive: true }),
       expect.objectContaining({ rootPath: '/etc/codex/skills' }),
+      expect.objectContaining({ rootPath: path.join('/home/me', '.claude'), files: ['CLAUDE.md'], recursive: false }),
       expect.objectContaining({ rootPath: path.join('/home/me', '.claude', 'skills') }),
       expect.objectContaining({ rootPath: path.join('/home/me', '.copilot', 'skills') }),
     ]));
@@ -78,8 +79,9 @@ describe('navigator manifest', () => {
     expect(packageJson.contributes.views.skillMdInspectorPanel[0].id).toBe('skillMdInspectorSkills');
     expect(packageJson.contributes.views).not.toHaveProperty('explorer');
     const commands = packageJson.contributes.commands.map((command) => command.command);
-    expect(commands).toEqual(expect.arrayContaining(['skillMdInspector.addToFavorites', 'skillMdInspector.removeFromFavorites', 'skillMdInspector.clearFavorites', 'skillMdInspector.refreshNavigator']));
+    expect(commands).toEqual(expect.arrayContaining(['skillMdInspector.addToFavorites', 'skillMdInspector.removeFromFavorites', 'skillMdInspector.clearFavorites', 'skillMdInspector.refreshNavigator', 'skillMdInspector.workspace.selectSkillsFolder']));
     expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshFavorites', when: 'view == skillMdInspectorFavorites' }));
+    expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.selectSkillsFolder', when: 'view == skillMdInspectorWorkspace' }));
     expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshWorkspace', when: 'view == skillMdInspectorWorkspace' }));
     expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshInstalledAgents', when: 'view == skillMdInspectorInstalledAgents' }));
     expect(packageJson.contributes.menus['view/item/context'].map((item) => 'command' in item ? item.command : undefined)).not.toContain('skillMdInspector.addToFavorites');
