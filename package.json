@@ -125,6 +125,92 @@
         "title": "Refresh Installed Agents",
         "category": "SKILL.md Inspector",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "skillMdInspector.workspace.newFile",
+        "title": "New File",
+        "category": "SKILL.md Inspector",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "skillMdInspector.workspace.newFolder",
+        "title": "New Folder",
+        "category": "SKILL.md Inspector",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "skillMdInspector.workspace.addFolders",
+        "title": "Add Folder to Workspace...",
+        "category": "SKILL.md Inspector",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "skillMdInspector.workspace.openFolderInNewWindow",
+        "title": "Open Folder in New Window...",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.removeFolder",
+        "title": "Remove Folder from Workspace",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.open",
+        "title": "Open",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.openToSide",
+        "title": "Open to the Side",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.rename",
+        "title": "Rename",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.delete",
+        "title": "Delete",
+        "category": "SKILL.md Inspector",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillMdInspector.workspace.copy",
+        "title": "Copy",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.cut",
+        "title": "Cut",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.paste",
+        "title": "Paste",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.copyPath",
+        "title": "Copy Path",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.copyRelativePath",
+        "title": "Copy Relative Path",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.workspace.openInTerminal",
+        "title": "Open in Integrated Terminal",
+        "category": "SKILL.md Inspector",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "skillMdInspector.workspace.refreshFolder",
+        "title": "Refresh",
+        "category": "SKILL.md Inspector",
+        "icon": "$(refresh)"
       }
     ],
     "views": {
@@ -170,14 +256,34 @@
           "group": "secondary"
         },
         {
-          "command": "skillMdInspector.refreshWorkspace",
-          "when": "view == skillMdInspectorWorkspace",
-          "group": "navigation"
-        },
-        {
           "command": "skillMdInspector.refreshInstalledAgents",
           "when": "view == skillMdInspectorInstalledAgents",
           "group": "navigation"
+        },
+        {
+          "command": "skillMdInspector.workspace.newFile",
+          "when": "view == skillMdInspectorWorkspace",
+          "group": "navigation@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.newFolder",
+          "when": "view == skillMdInspectorWorkspace",
+          "group": "navigation@2"
+        },
+        {
+          "command": "skillMdInspector.refreshWorkspace",
+          "when": "view == skillMdInspectorWorkspace",
+          "group": "navigation@3"
+        },
+        {
+          "command": "skillMdInspector.workspace.addFolders",
+          "when": "view == skillMdInspectorWorkspace",
+          "group": "secondary@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.openFolderInNewWindow",
+          "when": "view == skillMdInspectorWorkspace",
+          "group": "secondary@2"
         }
       ],
       "editor/context": [
@@ -249,11 +355,6 @@
       "view/item/context": [
         {
           "submenu": "skillMdInspector/context",
-          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
-          "group": "navigation"
-        },
-        {
-          "submenu": "skillMdInspector/context",
           "when": "view == skillMdInspectorFavorites && viewItem == skillMdInspector.favorite",
           "group": "navigation"
         },
@@ -266,6 +367,86 @@
           "command": "skillMdInspector.removeFromFavorites",
           "when": "view == skillMdInspectorFavorites && (viewItem == skillMdInspector.favorite || viewItem == skillMdInspector.missingFavorite)",
           "group": "favorites@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.open",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile)",
+          "group": "1_open@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.openToSide",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile)",
+          "group": "1_open@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.newFile",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory || (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile))",
+          "group": "2_create@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.newFolder",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory || (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile))",
+          "group": "2_create@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.openInTerminal",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory || (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile))",
+          "group": "3_terminal@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.cut",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile) || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceDirectory",
+          "group": "4_clipboard@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.copy",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile) || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceDirectory",
+          "group": "4_clipboard@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.paste",
+          "when": "view == skillMdInspectorWorkspace && skillMdInspector.workspaceClipboardHasItems && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory || viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile)",
+          "group": "4_clipboard@3"
+        },
+        {
+          "command": "skillMdInspector.workspace.copyPath",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile) || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceDirectory || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceRoot",
+          "group": "5_path@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.copyRelativePath",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile) || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceDirectory",
+          "group": "5_path@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.rename",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile) || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceDirectory",
+          "group": "6_manage@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.delete",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceFile || viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile || viewItem == skillMdInspector.agentsFile) || view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceDirectory",
+          "group": "6_manage@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.addFolders",
+          "when": "view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceRoot",
+          "group": "7_workspace@1"
+        },
+        {
+          "command": "skillMdInspector.workspace.removeFolder",
+          "when": "view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceRoot",
+          "group": "7_workspace@2"
+        },
+        {
+          "command": "skillMdInspector.workspace.refreshFolder",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory)",
+          "group": "8_refresh@1"
+        },
+        {
+          "submenu": "skillMdInspector/context",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
+          "group": "9_inspector@1"
         }
       ]
     },

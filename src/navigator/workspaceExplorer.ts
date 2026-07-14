@@ -48,6 +48,14 @@ export class WorkspaceExplorer implements vscode.Disposable {
     this.invalidate(parentUri(uri));
   }
 
+  getNodeForUri(uri: vscode.Uri): WorkspaceExplorerNode | undefined {
+    return this.nodeForUri(uri);
+  }
+
+  getRootForUri(uri: vscode.Uri): WorkspaceRootNode | undefined {
+    return this.getRoots().find((node) => node.uri.toString() === uri.toString());
+  }
+
   rebuildWatchers(): void {
     for (const watcher of this.watchers.values()) watcher.dispose();
     this.watchers.clear();

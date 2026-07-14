@@ -132,7 +132,10 @@ sidebar. The container has three independent Views instead of one combined
   does not control this browser. Selecting a file opens it with its original VS
   Code URI. Workspace files and directories keep normal VS Code resource behavior
   such as file icons, decorations, URI handling, and resource-aware commands from
-  VS Code or other extensions.
+  VS Code or other extensions. The View toolbar provides **New File**, **New
+  Folder**, **Refresh**, and VS Code's standard **Collapse All** action; the
+  overflow menu includes **Add Folder to Workspace...** and **Open Folder in New
+  Window...**.
 - **INSTALLED AGENTS** — supported local agent files discovered from bounded,
   declared roots without running agent executables or scanning your full home
   directory.
@@ -174,6 +177,61 @@ is a full lazy file browser, and **INSTALLED AGENTS** remains specialized
 discovery for local `SKILL.md` and `AGENTS.md` files. **SKILL.md Skills** remains
 the bottom Panel view for analysis, diagnostics, name conflicts, collision
 detection, portability, and resource graphs.
+
+
+### WORKSPACE file-management actions
+
+The **WORKSPACE** View reproduces the common Explorer workflow by using public VS
+Code APIs (`vscode.workspace.fs`, `vscode.workspace.updateWorkspaceFolders`, file
+pickers, input boxes, terminals, and documented `vscode.*` commands). It does not
+reuse VS Code's private Explorer implementation or attach the built-in
+`explorer/context` menu to the custom View.
+
+- Use the toolbar's **New File** and **New Folder** actions to create resources in
+  a selected folder, a selected file's parent folder, the only open workspace
+  folder, or a workspace folder chosen from a Quick Pick. Nested relative paths
+  such as `src/example.ts` are supported, but absolute paths and `..` traversal
+  are rejected.
+- Use **Add Folder to Workspace...** to select one or more folders in a single
+  dialog. Existing workspace folders and duplicate selections are ignored, and
+  new folders are appended to the current multi-root workspace in selection order.
+- Use **Open Folder in New Window...** to open a selected folder, workspace root,
+  or picked folder in a separate VS Code window without changing the current
+  workspace.
+- Right-click files and folders for Explorer-like actions: **Open**, **Open to
+  the Side**, **New File**, **New Folder**, **Cut**, **Copy**, **Paste**,
+  **Rename**, **Delete**, **Copy Path**, **Copy Relative Path**, **Open in
+  Integrated Terminal**, and targeted **Refresh**.
+- The WORKSPACE View supports multi-selection, so Ctrl/Cmd-click and Shift-click
+  selections can be copied, cut, opened, deleted, or have paths copied together.
+  Batch commands include the right-clicked item and preserve selection order where
+  practical.
+- **Copy**, **Cut**, and **Paste** use an extension-local resource clipboard that
+  stores URIs rather than file contents. Paste copies with
+  `vscode.workspace.fs.copy` and moves cut entries with `vscode.workspace.fs.rename`,
+  detects conflicts, and never overwrites without confirmation.
+- **Delete** moves files and folders to Trash through the active filesystem
+  provider. If Trash is not supported, the extension reports the failure instead
+  of silently performing permanent deletion.
+- **Remove Folder from Workspace** is available only on workspace roots and
+  removes the root from the current workspace without deleting anything from disk.
+- **Copy Path** copies `fsPath` for local `file:` resources and URI strings for
+  remote or virtual resources. **Copy Relative Path** uses VS Code's workspace
+  relative path handling.
+- **Open in Integrated Terminal** uses the selected directory, workspace root, or
+  file parent as the terminal working directory and preserves URI handling for
+  remote-capable terminal providers.
+- Mutating commands check `vscode.workspace.fs.isWritableFileSystem` first. A
+  read-only filesystem is rejected safely; providers with unknown writability are
+  attempted and reported with concise errors if they fail.
+
+Standard file operations and SKILL.md-specific operations are separated: ordinary
+file-management commands appear at the top level of the WORKSPACE context menu,
+while validation, template, report, description-improvement, and favorite actions
+for `SKILL.md` stay grouped under the **SKILL.md Inspector** submenu. Favorites,
+Installed Agents, and the bottom **SKILL.md Skills** analysis Panel retain their
+existing behavior; Installed Agents remains read-only except for opening and
+Inspector-specific actions.
 
 ## Diagnostic rules
 

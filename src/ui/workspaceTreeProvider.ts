@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { FAVORITES_KEY, restoreFavorites } from '../navigator/favoritesStore';
 import { parentUri, WorkspaceExplorer } from '../navigator/workspaceExplorer';
-import type { WorkspaceExplorerNode } from '../navigator/workspaceExplorerTypes';
+import type { WorkspaceExplorerNode, WorkspaceRootNode } from '../navigator/workspaceExplorerTypes';
 
 type WorkspaceNode = { type: 'message'; label: string } | WorkspaceExplorerNode;
 
@@ -15,6 +15,11 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceN
   }
 
   refresh(): void { this.workspaceExplorer.invalidate(); this.emitter.fire(undefined); }
+  invalidate(uri?: vscode.Uri): void { this.workspaceExplorer.invalidate(uri); }
+  invalidateParent(uri: vscode.Uri): void { this.workspaceExplorer.invalidateParent(uri); }
+  refreshNode(node: WorkspaceExplorerNode): void { this.emitter.fire(node); }
+  getNodeForUri(uri: vscode.Uri): WorkspaceExplorerNode | undefined { return this.workspaceExplorer.getNodeForUri(uri); }
+  getRootForUri(uri: vscode.Uri): WorkspaceRootNode | undefined { return this.workspaceExplorer.getRootForUri(uri); }
 
   getChildren(node?: WorkspaceNode): Thenable<WorkspaceNode[]> | WorkspaceNode[] {
     if (!node) {
