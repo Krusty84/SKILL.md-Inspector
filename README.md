@@ -185,27 +185,41 @@ The **WORKSPACE** View reproduces the common Explorer workflow by using public V
 Code APIs (`vscode.workspace.fs`, `vscode.workspace.updateWorkspaceFolders`, file
 pickers, input boxes, terminals, and documented `vscode.*` commands). It does not
 reuse VS Code's private Explorer implementation or attach the built-in
-`explorer/context` menu to the custom View.
+`explorer/context` menu to the custom View. Built-in compatibility actions are
+feature-detected during activation, so unsupported VS Code commands are hidden
+instead of failing the menu.
 
-- Use the toolbar's **New File** and **New Folder** actions to create resources in
-  a selected folder, a selected file's parent folder, the only open workspace
-  folder, or a workspace folder chosen from a Quick Pick. Nested relative paths
-  such as `src/example.ts` are supported, but absolute paths and `..` traversal
-  are rejected.
-- Use **Add Folder to Workspace...** to select one or more folders in a single
-  dialog. Existing workspace folders and duplicate selections are ignored, and
-  new folders are appended to the current multi-root workspace in selection order.
-- Use **Open Folder in New Window...** to open a selected folder, workspace root,
-  or picked folder in a separate VS Code window without changing the current
-  workspace.
-- Right-click files and folders for Explorer-like actions: **Open**, **Open to
-  the Side**, **New File**, **New Folder**, **Cut**, **Copy**, **Paste**,
-  **Rename**, **Delete**, **Copy Path**, **Copy Relative Path**, **Open in
-  Integrated Terminal**, and targeted **Refresh**.
-- The WORKSPACE View supports multi-selection, so Ctrl/Cmd-click and Shift-click
-  selections can be copied, cut, opened, deleted, or have paths copied together.
-  Batch commands include the right-clicked item and preserve selection order where
-  practical.
+- The View toolbar keeps the quick **New File**, **New Folder**, **Refresh**, and
+  VS Code **Collapse All** actions. Context-menu creation entries use Explorer
+  wording (**New File...** and **New Folder...**) and appear only on directories
+  and workspace roots, not on files. Nested relative paths such as
+  `src/example.ts` are supported, but absolute paths and `..` traversal are
+  rejected.
+- File context menus are Explorer-like: **Open to the Side**, **Open With...**,
+  the platform reveal action (**Reveal in File Explorer**, **Reveal in Finder**,
+  or **Open Containing Folder**) for local resources, **Open in Integrated
+  Terminal**, compare actions, **Open Timeline**, **Cut**, **Copy**, path-copy
+  actions, **Rename...**, and **Delete**.
+- Markdown-compatible files (`.md`, including `SKILL.md`) add **Open Preview**
+  and **Find File References** when VS Code's Markdown commands are available.
+  Selecting a file in the tree still opens the source document; preview is an
+  explicit context-menu action.
+- **Select for Compare** stores the selected file as the comparison source. After
+  a source is selected, file menus show **Compare with Selected**, which opens a
+  `vscode.diff` editor against the explicit WORKSPACE URI.
+- **Find in Folder...** appears on directories and workspace roots and opens VS
+  Code search restricted to the selected folder path, including multi-root
+  workspaces.
+- **Open in Images Preview** appears only when VS Code exposes the compatible
+  Images Preview command. It is offered for folders and common image/video files
+  such as `.png`, `.jpg`, `.gif`, `.webp`, `.svg`, `.mp4`, `.webm`, and `.mov`.
+- Folder menus contain **New File...**, **New Folder...**, reveal, optional
+  Images Preview, **Open in Integrated Terminal**, **Find in Folder...**,
+  **Cut**, **Copy**, **Paste** when the WORKSPACE clipboard has items, path-copy
+  actions, **Rename...**, and **Delete**. Workspace-root menus omit destructive
+  file actions such as **Cut**, **Copy**, **Rename...**, and **Delete**, while
+  keeping **Paste**, **Copy Path**, **Add Folder to Workspace...**, and
+  **Remove Folder from Workspace**.
 - **Copy**, **Cut**, and **Paste** use an extension-local resource clipboard that
   stores URIs rather than file contents. Paste copies with
   `vscode.workspace.fs.copy` and moves cut entries with `vscode.workspace.fs.rename`,
@@ -213,8 +227,6 @@ reuse VS Code's private Explorer implementation or attach the built-in
 - **Delete** moves files and folders to Trash through the active filesystem
   provider. If Trash is not supported, the extension reports the failure instead
   of silently performing permanent deletion.
-- **Remove Folder from Workspace** is available only on workspace roots and
-  removes the root from the current workspace without deleting anything from disk.
 - **Copy Path** copies `fsPath` for local `file:` resources and URI strings for
   remote or virtual resources. **Copy Relative Path** uses VS Code's workspace
   relative path handling.
@@ -225,13 +237,15 @@ reuse VS Code's private Explorer implementation or attach the built-in
   read-only filesystem is rejected safely; providers with unknown writability are
   attempted and reported with concise errors if they fail.
 
-Standard file operations and SKILL.md-specific operations are separated: ordinary
-file-management commands appear at the top level of the WORKSPACE context menu,
-while validation, template, report, description-improvement, and favorite actions
-for `SKILL.md` stay grouped under the **SKILL.md Inspector** submenu. Favorites,
-Installed Agents, and the bottom **SKILL.md Skills** analysis Panel retain their
-existing behavior; Installed Agents remains read-only except for opening and
-Inspector-specific actions.
+The extension intentionally does not reproduce Maven, Java-specific, Checkstyle,
+or arbitrary third-party Explorer contributions. Standard file operations and
+`SKILL.md`-specific operations are separated: ordinary file-management commands
+appear at the top level of the WORKSPACE context menu, while validation,
+template, report, description-improvement, and favorite actions for files named
+exactly `SKILL.md` stay grouped at the bottom under the **SKILL.md Inspector**
+submenu. Favorites, Installed Agents, and the bottom **SKILL.md Skills** analysis
+Panel retain their existing behavior; Installed Agents remains read-only except
+for opening and Inspector-specific actions.
 
 ## Diagnostic rules
 
