@@ -28,6 +28,7 @@
     "workspaceContains:**/SKILL.md",
     "onCommand:skillMdInspector.refreshNavigator",
     "onCommand:skillMdInspector.addToFavorites",
+    "onCommand:skillMdInspector.toggleFavorite",
     "onView:skillMdInspectorFavorites",
     "onView:skillMdInspectorWorkspace",
     "onView:skillMdInspectorInstalledAgents"
@@ -96,6 +97,12 @@
         "title": "Remove from Favorites",
         "category": "SKILL.md Inspector",
         "icon": "$(star-full)"
+      },
+      {
+        "command": "skillMdInspector.toggleFavorite",
+        "title": "Add or Remove Favorite",
+        "category": "SKILL.md Inspector",
+        "icon": "$(star)"
       },
       {
         "command": "skillMdInspector.clearFavorites",
@@ -419,30 +426,29 @@
           "group": "5_templates@2"
         },
         {
-          "command": "skillMdInspector.addToFavorites",
-          "group": "4_maintenance@2",
-          "when": "resourceFilename == SKILL.md && viewItem != skillMdInspector.favorite && viewItem != skillMdInspector.favoriteSkillFile"
-        },
-        {
-          "command": "skillMdInspector.removeFromFavorites",
-          "when": "resourceFilename == SKILL.md && (viewItem == skillMdInspector.favorite || viewItem == skillMdInspector.favoriteSkillFile)",
-          "group": "4_maintenance@3"
+          "command": "skillMdInspector.toggleFavorite",
+          "group": "4_maintenance@2"
         }
       ],
       "view/item/context": [
         {
-          "submenu": "skillMdInspector/context",
-          "when": "view == skillMdInspectorFavorites && viewItem == skillMdInspector.favorite",
-          "group": "navigation"
+          "submenu": "skillMdInspector/skillItemContext",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
+          "group": "9_inspector@10"
         },
         {
-          "submenu": "skillMdInspector/context",
-          "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.installedSkillFile || viewItem == skillMdInspector.favorite)",
-          "group": "navigation"
+          "submenu": "skillMdInspector/skillItemContext",
+          "when": "view == skillMdInspectorFavorites && viewItem == skillMdInspector.favoriteSkillFile",
+          "group": "9_inspector@10"
+        },
+        {
+          "submenu": "skillMdInspector/skillItemContext",
+          "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
+          "group": "9_inspector@10"
         },
         {
           "command": "skillMdInspector.removeFromFavorites",
-          "when": "view == skillMdInspectorFavorites && (viewItem == skillMdInspector.favorite || viewItem == skillMdInspector.missingFavorite)",
+          "when": "view == skillMdInspectorFavorites && viewItem == skillMdInspector.missingFavorite",
           "group": "favorites@2"
         },
         {
@@ -589,11 +595,6 @@
           "command": "skillMdInspector.workspace.removeFolder",
           "when": "view == skillMdInspectorWorkspace && viewItem == skillMdInspector.workspaceRoot",
           "group": "7_modification@40"
-        },
-        {
-          "submenu": "skillMdInspector/context",
-          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
-          "group": "9_inspector@10"
         }
       ],
       "commandPalette": [
@@ -656,6 +657,34 @@
         {
           "command": "skillMdInspector.workspace.revealInOS",
           "when": "false"
+        }
+      ],
+      "skillMdInspector/skillItemContext": [
+        {
+          "command": "skillMdInspector.validateCurrentSkill",
+          "group": "1_validation@1"
+        },
+        {
+          "command": "skillMdInspector.insertTemplate",
+          "group": "2_editing@1"
+        },
+        {
+          "command": "skillMdInspector.improveDescriptionLocally",
+          "group": "2_editing@2"
+        },
+        {
+          "command": "skillMdInspector.showSkillReport",
+          "group": "3_reports@1"
+        },
+        {
+          "command": "skillMdInspector.addToFavorites",
+          "when": "viewItem == skillMdInspector.skillFile",
+          "group": "4_favorites@10"
+        },
+        {
+          "command": "skillMdInspector.removeFromFavorites",
+          "when": "viewItem == skillMdInspector.favoriteSkillFile",
+          "group": "4_favorites@20"
         }
       ]
     },
@@ -922,6 +951,10 @@
     "submenus": [
       {
         "id": "skillMdInspector/context",
+        "label": "SKILL.md Inspector"
+      },
+      {
+        "id": "skillMdInspector/skillItemContext",
         "label": "SKILL.md Inspector"
       }
     ],

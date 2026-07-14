@@ -4,6 +4,7 @@ import packageJson from '../package.json';
 describe('package manifest context menus and templates', () => {
   it('declares the SKILL.md Inspector submenu in editor and explorer contexts', () => {
     expect(packageJson.contributes.submenus).toContainEqual({ id: 'skillMdInspector/context', label: 'SKILL.md Inspector' });
+    expect(packageJson.contributes.submenus).toContainEqual({ id: 'skillMdInspector/skillItemContext', label: 'SKILL.md Inspector' });
     const activeWhen = 'resourceFilename == SKILL.md && activeViewlet == workbench.view.extension.skillMdInspector';
     expect(packageJson.contributes.menus['editor/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: activeWhen }));
     expect(packageJson.contributes.menus['explorer/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: activeWhen }));
@@ -23,7 +24,7 @@ describe('package manifest context menus and templates', () => {
       'skillMdInspector.refreshSkills',
       'skillMdInspector.openTemplateSettings',
       'skillMdInspector.resetTemplates',
-      'skillMdInspector.addToFavorites',
+      'skillMdInspector.toggleFavorite',
     ]));
   });
 
@@ -69,7 +70,7 @@ describe('package manifest context menus and templates', () => {
       expect.objectContaining({ command: 'skillMdInspector.workspace.cut', group: '5_cutcopypaste@10' }),
       expect.objectContaining({ command: 'skillMdInspector.workspace.copyPath', group: '6_copypath@10' }),
       expect.objectContaining({ command: 'skillMdInspector.workspace.renameContext', group: '7_modification@10' }),
-      expect.objectContaining({ submenu: 'skillMdInspector/context', group: '9_inspector@10' }),
+      expect.objectContaining({ submenu: 'skillMdInspector/skillItemContext', group: '9_inspector@10' }),
     ]));
     expect(JSON.stringify(packageJson.contributes.menus['view/item/context'])).not.toContain('explorer/context');
     expect(JSON.stringify(workspaceContexts)).not.toMatch(/Maven|Java|Checkstyle/);
@@ -98,6 +99,27 @@ describe('package manifest context menus and templates', () => {
     expect(rootWhen('skillMdInspector.workspace.copyPath')).toContain('skillMdInspector.workspaceRoot');
     expect(rootWhen('skillMdInspector.workspace.renameContext')).toBe('');
     expect(rootWhen('skillMdInspector.workspace.delete')).toBe('');
+  });
+
+
+  it('declares dedicated SKILL.md tree item submenu conditions and contents', () => {
+    const viewItems = packageJson.contributes.menus['view/item/context'];
+    expect(viewItems).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/skillItemContext', when: 'view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)', group: '9_inspector@10' }));
+    expect(viewItems).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/skillItemContext', when: 'view == skillMdInspectorFavorites && viewItem == skillMdInspector.favoriteSkillFile', group: '9_inspector@10' }));
+    expect(viewItems).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/skillItemContext', when: 'view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)', group: '9_inspector@10' }));
+    expect(viewItems.filter((item) => item.submenu === 'skillMdInspector/skillItemContext').map((item) => item.when).join(' ')).not.toContain('activeViewlet');
+
+    const skillItemMenu = packageJson.contributes.menus['skillMdInspector/skillItemContext'];
+    expect(skillItemMenu).toEqual(expect.arrayContaining([
+      expect.objectContaining({ command: 'skillMdInspector.validateCurrentSkill' }),
+      expect.objectContaining({ command: 'skillMdInspector.insertTemplate' }),
+      expect.objectContaining({ command: 'skillMdInspector.improveDescriptionLocally' }),
+      expect.objectContaining({ command: 'skillMdInspector.showSkillReport' }),
+      expect.objectContaining({ command: 'skillMdInspector.addToFavorites', when: 'viewItem == skillMdInspector.skillFile' }),
+      expect.objectContaining({ command: 'skillMdInspector.removeFromFavorites', when: 'viewItem == skillMdInspector.favoriteSkillFile' }),
+    ]));
+    expect(skillItemMenu.some((item) => !item.when)).toBe(true);
+    expect(JSON.stringify(skillItemMenu)).not.toMatch(/canOpenWith|canOpenTimeline|canCompareFiles/);
   });
 
 });
