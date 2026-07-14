@@ -73,8 +73,8 @@ describe('navigator manifest', () => {
   it('declares containers, views, commands, menus, and additional roots schema', () => {
     expect(packageJson.contributes.viewsContainers.activitybar[0]).toMatchObject({ id: 'skillMdInspector', title: 'SKILL.md INSPECTOR', icon: 'media/skill-md-inspector.svg' });
     expect(packageJson.contributes.viewsContainers.panel[0]).toMatchObject({ id: 'skillMdInspectorPanel', icon: 'media/skill-md-inspector.svg' });
-    expect(packageJson.contributes.views.skillMdInspector.map((view) => view.id)).toEqual(['skillMdInspectorFavorites', 'skillMdInspectorWorkspace', 'skillMdInspectorInstalledAgents']);
-    expect(packageJson.contributes.views.skillMdInspector.map((view) => view.name)).toEqual(['FAVORITES', 'WORKSPACE', 'INSTALLED AGENTS']);
+    expect(packageJson.contributes.views.skillMdInspector.map((view) => view.id)).toEqual(['skillMdInspectorFavorites', 'skillMdInspectorWorkspace', 'skillMdInspectorInstalledAgents', 'skillMdInspectorOpenCodeSessions']);
+    expect(packageJson.contributes.views.skillMdInspector.map((view) => view.name)).toEqual(['FAVORITES', 'WORKSPACE', 'INSTALLED AGENTS', 'OPENCODE SESSIONS']);
     expect(packageJson.contributes.views.skillMdInspectorPanel[0].id).toBe('skillMdInspectorSkills');
     expect(packageJson.contributes.views).not.toHaveProperty('explorer');
     const commands = packageJson.contributes.commands.map((command) => command.command);
@@ -82,7 +82,7 @@ describe('navigator manifest', () => {
     expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshFavorites', when: 'view == skillMdInspectorFavorites' }));
     expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshWorkspace', when: 'view == skillMdInspectorWorkspace' }));
     expect(packageJson.contributes.menus['view/title']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshInstalledAgents', when: 'view == skillMdInspectorInstalledAgents' }));
-    expect(packageJson.contributes.menus['view/item/context'].map((item) => item.command)).not.toContain('skillMdInspector.addToFavorites');
+    expect(packageJson.contributes.menus['view/item/context'].map((item) => 'command' in item ? item.command : undefined)).not.toContain('skillMdInspector.addToFavorites');
     expect(packageJson.contributes.configuration.properties).toHaveProperty('skillMdInspector.navigator.additionalRoots');
   });
 });

@@ -34,7 +34,11 @@
     "onView:skillMdInspectorInstalledAgents",
     "onView:skillMdInspectorOpenCodeSessions",
     "onCommand:skillMdInspector.openCode.selectSessionsFolder",
-    "onCommand:skillMdInspector.openCode.openTrace"
+    "onCommand:skillMdInspector.openCode.openTrace",
+    "onCommand:skillMdInspector.openCode.openReport",
+    "onCommand:skillMdInspector.openCode.openRawJson",
+    "onCommand:skillMdInspector.openCode.clearSessionsFolder",
+    "onCommand:skillMdInspector.openCode.refreshSessions"
   ],
   "contributes": {
     "commands": [
@@ -370,18 +374,17 @@
           "id": "skillMdInspectorInstalledAgents",
           "name": "INSTALLED AGENTS",
           "contextualTitle": "SKILL.md INSPECTOR"
+        },
+        {
+          "id": "skillMdInspectorOpenCodeSessions",
+          "name": "OPENCODE SESSIONS",
+          "contextualTitle": "OpenCode Sessions"
         }
       ],
       "skillMdInspectorPanel": [
         {
           "id": "skillMdInspectorSkills",
           "name": "SKILL.md Skills"
-        }
-      ],
-      "skillMdInspectorOpenCode": [
-        {
-          "id": "skillMdInspectorOpenCodeSessions",
-          "name": "Sessions"
         }
       ]
     },
@@ -1109,13 +1112,6 @@
         {
           "id": "skillMdInspectorPanel",
           "title": "SKILL.md Inspector",
-          "icon": "media/skill-md-inspector.svg"
-        }
-      ],
-      "auxiliarybar": [
-        {
-          "id": "skillMdInspectorOpenCode",
-          "title": "OpenCode Sessions",
           "icon": "media/skill-md-inspector.svg"
         }
       ]
