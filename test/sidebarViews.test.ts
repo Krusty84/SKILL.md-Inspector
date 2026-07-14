@@ -19,7 +19,8 @@ describe('sidebar view contributions', () => {
     expect(packageJson.contributes.menus['view/item/context'].map((item) => item.command)).not.toContain('skillMdInspector.addToFavorites');
     expect((packageJson.contributes.menus['editor/context'] as { command?: string }[]).map((item) => item.command)).not.toContain('skillMdInspector.addToFavorites');
     expect((packageJson.contributes.menus['explorer/context'] as { command?: string }[]).map((item) => item.command)).not.toContain('skillMdInspector.addToFavorites');
-    expect(packageJson.contributes.menus['skillMdInspector/context']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.addToFavorites' }));
+    expect(packageJson.contributes.menus['skillMdInspector/skillItemContext']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.addToFavorites' }));
+    expect(packageJson.contributes.menus['skillMdInspector/context']).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.toggleFavorite' }));
   });
 
   it('scopes context submenus to SKILL.md files and the active Inspector container', () => {
@@ -28,6 +29,6 @@ describe('sidebar view contributions', () => {
     expect(packageJson.contributes.menus['explorer/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: expectedWhen }));
     expect(expectedWhen).not.toContain('sideBarFocus');
     expect(JSON.stringify(packageJson)).not.toContain('skillMdInspector.sidebarActive');
-    expect(packageJson.contributes.menus['view/item/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/context', when: 'view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)' }));
+    expect(packageJson.contributes.menus['view/item/context']).toContainEqual(expect.objectContaining({ submenu: 'skillMdInspector/skillItemContext', when: 'view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)' }));
   });
 });

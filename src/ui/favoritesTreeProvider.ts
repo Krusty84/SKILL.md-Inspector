@@ -30,7 +30,7 @@ export class FavoritesTreeProvider implements vscode.TreeDataProvider<FavoriteNo
     item.description = node.exists && node.fsPath ? path.dirname(node.fsPath) : 'Missing';
     item.tooltip = node.fsPath ?? node.uri;
     item.iconPath = new vscode.ThemeIcon(node.exists ? 'star-full' : 'warning');
-    item.contextValue = node.exists ? 'skillMdInspector.favorite' : 'skillMdInspector.missingFavorite';
+    item.contextValue = node.exists ? 'skillMdInspector.favoriteSkillFile' : 'skillMdInspector.missingFavorite';
     if (node.exists && node.fsPath) {
       const uri = vscode.Uri.file(node.fsPath);
       item.resourceUri = uri;

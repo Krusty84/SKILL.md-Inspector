@@ -56,7 +56,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     item.tooltip = `${file.absolutePath}\nSource: ${file.sourceLabel}`;
     item.iconPath = new vscode.ThemeIcon(file.fileName === 'SKILL.md' ? (favorite ? 'star-full' : 'tools') : 'book');
     item.command = { command: 'vscode.open', title: 'Open', arguments: [uri] };
-    item.contextValue = file.fileName === 'SKILL.md' ? (favorite ? 'skillMdInspector.favorite' : 'skillMdInspector.installedSkillFile') : 'skillMdInspector.installedAgentsFile';
+    item.contextValue = file.fileName === 'SKILL.md' ? (favorite ? 'skillMdInspector.favoriteSkillFile' : 'skillMdInspector.skillFile') : 'skillMdInspector.installedAgentsFile';
     return item;
   }
 

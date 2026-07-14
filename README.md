@@ -145,12 +145,15 @@ Because these are standard VS Code Views, **FAVORITES**, **WORKSPACE**, and
 or restored from the standard Views menu independently.
 
 Inspector-specific context actions are grouped under the **SKILL.md Inspector**
-submenu. **Add SKILL.md to Favorites** is no longer contributed as a standalone
-top-level context-menu item; it appears in that submenu for `SKILL.md` files.
-Already favorited `SKILL.md` entries can expose **Remove from Favorites** instead.
-The submenu is shown in editor and built-in Explorer context menus only while the
-**SKILL.md INSPECTOR** Activity Bar container is active. It remains available for
-relevant `SKILL.md` items inside the extension's own Views.
+submenu for exact `SKILL.md` resources. **Add SKILL.md to Favorites** is no
+longer contributed as a standalone top-level context-menu item; it appears in
+that submenu for non-favorited `SKILL.md` files in **WORKSPACE** and
+**INSTALLED AGENTS**. Already favorited `SKILL.md` entries in **FAVORITES**,
+**WORKSPACE**, and **INSTALLED AGENTS** show **Remove from Favorites** instead.
+Missing Favorites, `AGENTS.md`, ordinary files, directories, workspace roots,
+and agent group nodes do not receive the submenu. The submenu is shown in editor
+and built-in Explorer context menus only while the **SKILL.md INSPECTOR**
+Activity Bar container is active.
 
 Built-in local agent locations are:
 
@@ -166,10 +169,12 @@ Project-level agent folders such as `.agents/skills`, `.claude/skills`, and
 `.github/skills` are shown in **WORKSPACE**, not repeated under **INSTALLED
 AGENTS**.
 
-Use **Add SKILL.md to Favorites** from the **SKILL.md Inspector** submenu on an
-editor, Explorer item, or Inspector `SKILL.md` item. Use **Remove from Favorites**
-on a favorite or already-favorited Inspector item, and **Clear All Favorites**
-from the **FAVORITES** View title menu.
+Use **Add SKILL.md to Favorites** from the **SKILL.md Inspector** submenu on a
+non-favorited Inspector `SKILL.md` item. In the editor and built-in Explorer, use
+**Add or Remove Favorite** from the same submenu while the Inspector Activity Bar
+container is active. Use **Remove from Favorites** on a favorite or
+already-favorited Inspector item, and **Clear All Favorites** from the
+**FAVORITES** View title menu.
 
 **Sidebar vs. SKILL.md Skills:** the **SKILL.md INSPECTOR** sidebar is for
 navigation: **FAVORITES** contains specialized `SKILL.md` shortcuts, **WORKSPACE**
@@ -356,7 +361,7 @@ MIT
 
 ## Context menus and templates
 
-SKILL.md Inspector adds a grouped **SKILL.md Inspector** submenu when you right-click inside an open `SKILL.md` editor or right-click a `SKILL.md` file in the Explorer. The submenu groups validation, editing, reports, maintenance, and template-management commands while keeping the same Command Palette entries.
+SKILL.md Inspector adds a grouped **SKILL.md Inspector** submenu when you right-click an exact `SKILL.md` resource. The submenu appears in **FAVORITES**, **WORKSPACE**, and **INSTALLED AGENTS** for existing `SKILL.md` items, and in an open `SKILL.md` editor or the built-in Explorer only while the **SKILL.md INSPECTOR** Activity Bar container is active. Favorite state controls whether Inspector View items show **Add SKILL.md to Favorites** or **Remove from Favorites**; missing Favorites and `AGENTS.md` do not receive the submenu. The submenu groups validation, editing, reports, maintenance, and template-management commands while keeping the same Command Palette entries.
 
 ### Inserting bundled templates
 

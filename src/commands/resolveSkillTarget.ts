@@ -1,4 +1,3 @@
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { isSkillFile } from '../diagnostics/mapping';
 
@@ -9,21 +8,33 @@ export interface SkillTarget {
 }
 
 export function isSkillUri(uri: vscode.Uri): boolean {
-  return uri.scheme === 'file' && path.basename(uri.fsPath) === 'SKILL.md';
+  return uri.path.split('/').pop() === 'SKILL.md';
+}
+
+type SkillCommandTarget = vscode.Uri | { resourceUri?: vscode.Uri; uri?: vscode.Uri | string; file?: { absolutePath?: string } };
+
+export function resolveSkillUri(target?: SkillCommandTarget): vscode.Uri | undefined {
+  if (target instanceof vscode.Uri) return target;
+  if (target?.resourceUri) return target.resourceUri;
+  if (target?.uri instanceof vscode.Uri) return target.uri;
+  if (typeof target?.uri === 'string') return vscode.Uri.parse(target.uri);
+  if (target?.file?.absolutePath) return vscode.Uri.file(target.file.absolutePath);
+  return undefined;
 }
 
 export async function resolveSkillTarget(
-  uri: vscode.Uri | undefined,
+  uri: SkillCommandTarget | undefined,
   options: { requireEditor?: boolean; warningAction?: string } = {},
 ): Promise<SkillTarget | undefined> {
-  if (uri) {
-    if (!isSkillUri(uri)) {
+  const resolvedUri = resolveSkillUri(uri);
+  if (resolvedUri) {
+    if (!isSkillUri(resolvedUri)) {
       vscode.window.showWarningMessage('SKILL.md Inspector: select a SKILL.md file.');
       return undefined;
     }
-    const document = await vscode.workspace.openTextDocument(uri);
+    const document = await vscode.workspace.openTextDocument(resolvedUri);
     const editor = options.requireEditor ? await vscode.window.showTextDocument(document) : undefined;
-    return { uri, document, editor };
+    return { uri: resolvedUri, document, editor };
   }
 
   const editor = vscode.window.activeTextEditor;

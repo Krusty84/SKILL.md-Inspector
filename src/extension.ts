@@ -12,6 +12,7 @@ import { registerWorkspaceCommands } from './commands/workspace/registerWorkspac
 import { registerWorkspaceContextCommands } from './commands/workspace/registerWorkspaceContextCommands';
 import { createBuiltInCommandAdapter } from './commands/workspace/vscodeBuiltInCommandAdapter';
 import { addFavorite, FAVORITES_KEY, removeFavorite, restoreFavorites, updateFavoriteUri } from './navigator/favoritesStore';
+import { resolveSkillUri } from './commands/resolveSkillTarget';
 
 const CHANGE_DEBOUNCE_MS = 300;
 
@@ -39,8 +40,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   };
   updateFavoritesContext();
   const skillWatcher = vscode.workspace.createFileSystemWatcher('**/SKILL.md');
-  skillWatcher.onDidCreate((uri) => { treeProvider.refresh(); favoritesProvider.refresh(); workspaceProvider.onFilesCreatedOrDeleted([uri]); });
-  skillWatcher.onDidDelete((uri) => { treeProvider.refresh(); favoritesProvider.refresh(); workspaceProvider.onFilesCreatedOrDeleted([uri]); });
+  skillWatcher.onDidCreate((uri) => { treeProvider.refresh(); favoritesProvider.refresh(); workspaceProvider.onFilesCreatedOrDeleted([uri]); installedAgentsProvider.refresh(); });
+  skillWatcher.onDidDelete((uri) => { treeProvider.refresh(); favoritesProvider.refresh(); workspaceProvider.onFilesCreatedOrDeleted([uri]); installedAgentsProvider.refresh(); });
   const agentsWatcher = vscode.workspace.createFileSystemWatcher('**/AGENTS.md');
   agentsWatcher.onDidCreate((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
   agentsWatcher.onDidDelete((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
@@ -94,6 +95,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const uri = resolveFavoriteTarget(target);
       if (!uri) { return; }
       await context.globalState.update(FAVORITES_KEY, removeFavorite(restoreFavorites(context.globalState.get(FAVORITES_KEY)), uri.toString()));
+      updateFavoritesContext();
+      favoritesProvider.refresh();
+      workspaceProvider.refresh();
+      installedAgentsProvider.refresh();
+    }),
+    vscode.commands.registerCommand('skillMdInspector.toggleFavorite', async (target?: FavoriteCommandTarget) => {
+      const uri = resolveFavoriteTarget(target);
+      if (!uri || uri.path.split('/').pop() !== 'SKILL.md') {
+        void vscode.window.showWarningMessage('Only files named SKILL.md can be added to or removed from Favorites.');
+        return;
+      }
+      const current = restoreFavorites(context.globalState.get(FAVORITES_KEY));
+      const uriString = uri.toString();
+      const exists = current.some((entry) => entry.uri === uriString);
+      await context.globalState.update(FAVORITES_KEY, exists ? removeFavorite(current, uriString) : addFavorite(current, uriString).entries);
       updateFavoritesContext();
       favoritesProvider.refresh();
       workspaceProvider.refresh();
@@ -177,6 +193,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       updateFavoritesContext();
       favoritesProvider.refresh();
       workspaceProvider.onFilesRenamed(event.files);
+      installedAgentsProvider.refresh();
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('skillMdInspector')) {
@@ -212,20 +229,5 @@ export function deactivate(): void {
 type FavoriteCommandTarget = vscode.Uri | { resourceUri?: vscode.Uri; uri?: vscode.Uri | string; file?: { absolutePath?: string } };
 
 function resolveFavoriteTarget(target?: FavoriteCommandTarget): vscode.Uri | undefined {
-  if (target instanceof vscode.Uri) {
-    return target;
-  }
-  if (target?.resourceUri) {
-    return target.resourceUri;
-  }
-  if (target?.uri instanceof vscode.Uri) {
-    return target.uri;
-  }
-  if (typeof target?.uri === 'string') {
-    return vscode.Uri.parse(target.uri);
-  }
-  if (target?.file?.absolutePath) {
-    return vscode.Uri.file(target.file.absolutePath);
-  }
-  return vscode.window.activeTextEditor?.document.uri;
+  return resolveSkillUri(target) ?? vscode.window.activeTextEditor?.document.uri;
 }
