@@ -80,7 +80,7 @@ can execute.
 - **Skill Report** — a read-only webview summarizing the skill's status,
   diagnostic counts, referenced/unreferenced files, and the Trigger Quality
   breakdown.
-- **Activity Bar navigator** — a dedicated **SKILL.md Inspector** icon opens the **Agent Files** view for workspace files, installed local agent files, and Favorites.
+- **Activity Bar navigator** — a dedicated **SKILL.md Inspector** icon opens the **Agent Files** view with Favorites, an Explorer-like Workspace browser, and installed local agent files.
 - **Favorites** — add frequently inspected `SKILL.md` files from the editor, Explorer, or Agent Files navigator. Favorites persist locally across restarts and workspace changes; missing files stay visible with a warning until removed.
 - **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view now lives in the bottom Panel. It still lists every skill with its status icon, Trigger Quality score, error/warning counts, profile, and resource graph.
 - **Skill collision detection** — finds skills whose descriptions overlap using a
@@ -125,9 +125,12 @@ sections:
   Only files named exactly `SKILL.md` can be added. If a favorite is on a
   disconnected drive or was deleted, it remains visible as **Missing** and can be
   removed from its context menu.
-- **Workspace** — every open workspace folder, including multi-root workspaces,
-  with matching `SKILL.md` and `AGENTS.md` files discovered using the
-  `skillMdInspector.discovery.exclude` setting.
+- **Workspace** — an Explorer-like browser for every open workspace folder,
+  including multi-root and remote workspaces. Expand and collapse directories to
+  load their direct children lazily. All files are visible, subject only to VS
+  Code's standard `files.exclude` setting; `skillMdInspector.discovery.exclude`
+  does not control this browser. Selecting a file opens it with its original VS
+  Code URI, and `SKILL.md` files still support Favorites and Inspector commands.
 - **Installed Agents** — supported local agent files discovered from bounded,
   declared roots without running agent executables or scanning your full home
   directory.
@@ -151,8 +154,10 @@ Use **Add SKILL.md to Favorites** from an editor tab, Explorer item, or navigato
 navigator item, and **Clear All Favorites** from the Favorites section or view
 title menu.
 
-**Agent Files vs. SKILL.md Skills:** **Agent Files** is for navigation and local
-file discovery (`SKILL.md` and `AGENTS.md`). **SKILL.md Skills** is the bottom
+**Agent Files vs. SKILL.md Skills:** **Agent Files** is for navigation: Favorites
+are specialized `SKILL.md` shortcuts, Workspace is a full lazy file browser, and
+Installed Agents remains specialized discovery for local `SKILL.md` and
+`AGENTS.md` files. **SKILL.md Skills** is the bottom
 Panel view for analysis, diagnostics, name conflicts, collision detection,
 portability, and resource graphs.
 
