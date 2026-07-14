@@ -49,6 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     output,
+    navigatorProvider,
     navigatorView,
     vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
@@ -141,7 +142,7 @@ export function activate(context: vscode.ExtensionContext): void {
         provider.clear(document.uri);
       }
     }),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => navigatorProvider.refresh()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => navigatorProvider.onWorkspaceFoldersChanged()),
     vscode.workspace.onDidRenameFiles(async (event) => {
       let favorites = restoreFavorites(context.globalState.get(FAVORITES_KEY));
       for (const file of event.files) {
@@ -149,7 +150,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await context.globalState.update(FAVORITES_KEY, favorites);
       updateFavoritesContext();
-      navigatorProvider.refresh();
+      navigatorProvider.onFilesRenamed(event.files);
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('skillMdInspector')) {
