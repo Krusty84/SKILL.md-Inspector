@@ -1,3 +1,5 @@
+import type { SkillDiagnosticSeverity } from './SkillDiagnostic';
+
 export type SkillProfileId = 'generic' | 'vscode' | 'claude' | 'codex';
 
 /** Language mode for description heuristics: force English, or auto-detect. */
@@ -70,4 +72,12 @@ export interface SkillProfile {
   };
   /** Profile-specific frontmatter metadata rules. */
   metadata?: ProfileMetadataRules;
+  /**
+   * Per-code severity overrides (Task 85): map a diagnostic code to a severity,
+   * or to `'off'` to disable it. Specification-kind errors are protected unless
+   * `allowSpecificationOverrides` is set.
+   */
+  severityOverrides?: Record<string, SkillDiagnosticSeverity | 'off'>;
+  /** Allow `severityOverrides` to downgrade or disable specification-kind errors (Task 85). */
+  allowSpecificationOverrides?: boolean;
 }

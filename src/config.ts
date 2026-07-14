@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
 import type { SkillProfile, DescriptionLanguage, BodyStrictness } from './types/SkillProfile';
+import type { SkillDiagnosticSeverity } from './types/SkillDiagnostic';
 import type { CollisionWeights } from './types/Workspace';
 import type { CollisionOptions } from './workspace/detectSkillCollisions';
 import {
@@ -35,6 +36,9 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       descriptionMaxLength: cfg.get<number>('description.maxLength'),
       descriptionLanguage: cfg.get<DescriptionLanguage>('description.language'),
       bodyStrictness: cfg.get<BodyStrictness>('body.strictness'),
+      severityOverrides:
+        cfg.get<Record<string, SkillDiagnosticSeverity | 'off'>>('severityOverrides'),
+      allowSpecificationOverrides: cfg.get<boolean>('severity.allowSpecificationOverrides'),
     }),
     resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
     discoveryExclude: cfg.get<string[]>('discovery.exclude', [...DEFAULT_SKILL_DISCOVERY_EXCLUDES]),

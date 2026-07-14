@@ -149,6 +149,23 @@ describe('workspace discovery + analysis', () => {
     expect(entry.profileCompatibility.generic).toBe('pass');
   });
 
+  it('includes a machine-readable diagnostics summary in the index (Task 87)', () => {
+    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const index = buildSkillsIndex(analysis);
+    const broken = index.skills.find((s) => s.name === 'Broken Skill')!;
+    expect(broken.diagnostics.length).toBeGreaterThan(0);
+    for (const d of broken.diagnostics) {
+      expect(d).toHaveProperty('code');
+      expect(d).toHaveProperty('severity');
+      expect(d).toHaveProperty('kind');
+    }
+    // The invalid name on "Broken Skill" is classified as a specification error.
+    expect(broken.diagnostics.some((d) => d.kind === 'specification')).toBe(true);
+    // Deterministic: rebuilding yields the same diagnostics for the same skill.
+    const again = buildSkillsIndex(analysis).skills.find((s) => s.name === 'Broken Skill')!;
+    expect(again.diagnostics).toEqual(broken.diagnostics);
+  });
+
   it('stops analysis when cancellation is requested and marks the result partial (Task 64)', () => {
     const paths = discoverSkillPaths(root); // 3 skills
     const cancel = { isCancellationRequested: false };

@@ -4,6 +4,7 @@ import type {
   DescriptionLanguage,
   BodyStrictness,
 } from '../types/SkillProfile';
+import type { SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
 import { genericProfile } from './genericProfile';
 import { vscodeProfile } from './vscodeProfile';
 import { claudeProfile } from './claudeProfile';
@@ -23,6 +24,8 @@ export interface ProfileOverrides {
   descriptionMaxLength?: number;
   descriptionLanguage?: DescriptionLanguage;
   bodyStrictness?: BodyStrictness;
+  severityOverrides?: Record<string, SkillDiagnosticSeverity | 'off'>;
+  allowSpecificationOverrides?: boolean;
 }
 
 /**
@@ -46,6 +49,9 @@ export function resolveProfile(id: string, overrides: ProfileOverrides = {}): Sk
           sections: base.body.sections,
         }
       : base.body,
+    severityOverrides: { ...base.severityOverrides, ...overrides.severityOverrides },
+    allowSpecificationOverrides:
+      overrides.allowSpecificationOverrides ?? base.allowSpecificationOverrides,
   };
 }
 

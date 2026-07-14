@@ -1,6 +1,13 @@
 import type { SkillProfileId } from './SkillProfile';
-import type { SkillDiagnosticSeverity } from './SkillDiagnostic';
+import type { SkillDiagnosticSeverity, SkillDiagnosticKind } from './SkillDiagnostic';
 import type { TriggerQualityLabel } from './TriggerQuality';
+
+/** A compact diagnostic carried into the tree/report models and the exported index (Task 87). */
+export interface IndexDiagnostic {
+  code: string;
+  severity: SkillDiagnosticSeverity;
+  kind: SkillDiagnosticKind;
+}
 
 export type PortabilityStatus = 'pass' | 'warning' | 'fail';
 
@@ -52,6 +59,8 @@ export interface WorkspaceSkill {
   errors: number;
   warnings: number;
   information: number;
+  /** Every diagnostic (code, severity, kind), for the tree/report and index (Task 87). */
+  diagnostics: IndexDiagnostic[];
   profile: SkillProfileId;
   profileCompatibility: Record<SkillProfileId, PortabilityStatus>;
   portability: PortabilityEntry[];
@@ -131,6 +140,8 @@ export interface SkillsIndexEntry {
   triggerQualityScore: number;
   errors: number;
   warnings: number;
+  /** The machine-readable rule output: every diagnostic's code, severity, and kind (Task 87). */
+  diagnostics: IndexDiagnostic[];
   profileCompatibility: Record<string, PortabilityStatus>;
 }
 

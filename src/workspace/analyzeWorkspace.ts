@@ -78,6 +78,7 @@ export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
       triggerQualityScore: skill.triggerQualityScore,
       errors: skill.errors,
       warnings: skill.warnings,
+      diagnostics: skill.diagnostics,
       profileCompatibility: skill.profileCompatibility,
     })),
   };
@@ -113,6 +114,11 @@ function toWorkspaceSkill(
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
   const warnings = diagnostics.filter((d) => d.severity === 'warning').length;
   const information = diagnostics.filter((d) => d.severity === 'information').length;
+  const indexDiagnostics = diagnostics.map((d) => ({
+    code: d.code,
+    severity: d.severity,
+    kind: d.kind,
+  }));
   const resourceGraph = buildResourceGraph(document);
 
   const portability = evaluatePortability(document);
@@ -127,6 +133,7 @@ function toWorkspaceSkill(
     errors,
     warnings,
     information,
+    diagnostics: indexDiagnostics,
     profile: profile.id,
     profileCompatibility: toCompatibilityMap(portability),
     portability,

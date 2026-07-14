@@ -15,6 +15,7 @@ function analysis(): WorkspaceAnalysis {
         errors: 0,
         warnings: 1,
         information: 0,
+        diagnostics: [],
         profile: 'generic',
         profileCompatibility: { generic: 'pass', vscode: 'pass', claude: 'warning', codex: 'pass' },
         portability: [
