@@ -3,7 +3,7 @@ import { FAVORITES_KEY, restoreFavorites } from '../navigator/favoritesStore';
 import { parentUri, WorkspaceExplorer } from '../navigator/workspaceExplorer';
 import type { WorkspaceExplorerNode, WorkspaceRootNode } from '../navigator/workspaceExplorerTypes';
 
-type WorkspaceNode = { type: 'message'; label: string } | WorkspaceExplorerNode;
+type WorkspaceNode = WorkspaceExplorerNode;
 
 export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceNode>, vscode.Disposable {
   private readonly emitter = new vscode.EventEmitter<WorkspaceNode | undefined>();
@@ -22,16 +22,12 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceN
   getRootForUri(uri: vscode.Uri): WorkspaceRootNode | undefined { return this.workspaceExplorer.getRootForUri(uri); }
 
   getChildren(node?: WorkspaceNode): Thenable<WorkspaceNode[]> | WorkspaceNode[] {
-    if (!node) {
-      const roots = this.workspaceExplorer.getRoots();
-      return roots.length > 0 ? roots : [{ type: 'message', label: 'No workspace folder is open.' }];
-    }
+    if (!node) return this.workspaceExplorer.getRoots();
     if (node.type === 'workspaceRoot' || node.type === 'workspaceDirectory') return this.workspaceExplorer.getChildren(node);
     return [];
   }
 
   getTreeItem(node: WorkspaceNode): vscode.TreeItem {
-    if (node.type === 'message') return new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.None);
     if (node.type === 'workspaceRoot') {
       const item = new vscode.TreeItem(node.folder.name, vscode.TreeItemCollapsibleState.Collapsed);
       item.resourceUri = node.uri;
@@ -56,13 +52,13 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceN
     item.tooltip = node.uri.toString();
     item.command = { command: 'vscode.open', title: 'Open', arguments: [node.uri] };
     if (node.name === 'SKILL.md') item.contextValue = this.isFavoriteUri(node.uri) ? 'skillMdInspector.favoriteSkillFile' : 'skillMdInspector.skillFile';
-    else if (node.name === 'AGENTS.md') item.contextValue = 'skillMdInspector.agentsFile';
+    else if (node.name === 'AGENTS.md' || node.name === 'CLAUDE.md') item.contextValue = 'skillMdInspector.agentsFile';
     else item.contextValue = 'skillMdInspector.workspaceFile';
     return item;
   }
 
   getParent(node: WorkspaceNode): WorkspaceNode | undefined {
-    if (node.type === 'workspaceRoot' || node.type === 'message') return undefined;
+    if (node.type === 'workspaceRoot') return undefined;
     const parent = node.parentUri;
     const root = this.workspaceExplorer.getRoots().find((candidate) => candidate.uri.toString() === parent.toString());
     if (root) return root;
