@@ -5,7 +5,9 @@ import { registerCommands } from './commands';
 import { isSkillFile } from './diagnostics/mapping';
 import { readConfig } from './config';
 import { SkillTreeProvider } from './ui/skillTreeProvider';
-import { AgentFilesTreeProvider } from './ui/agentFilesTreeProvider';
+import { FavoritesTreeProvider } from './ui/favoritesTreeProvider';
+import { WorkspaceTreeProvider } from './ui/workspaceTreeProvider';
+import { InstalledAgentsTreeProvider } from './ui/installedAgentsTreeProvider';
 import { addFavorite, FAVORITES_KEY, removeFavorite, restoreFavorites, updateFavoriteUri } from './navigator/favoritesStore';
 
 const CHANGE_DEBOUNCE_MS = 300;
@@ -18,20 +20,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const treeProvider = new SkillTreeProvider();
   const output = vscode.window.createOutputChannel('SKILL.md Inspector');
-  const navigatorProvider = new AgentFilesTreeProvider(context, output);
-  const navigatorView = vscode.window.createTreeView('skillMdInspectorNavigator', { treeDataProvider: navigatorProvider });
+  const favoritesProvider = new FavoritesTreeProvider(context);
+  const workspaceProvider = new WorkspaceTreeProvider(context, output);
+  const installedAgentsProvider = new InstalledAgentsTreeProvider(context, output);
+  const favoritesView = vscode.window.createTreeView('skillMdInspectorFavorites', { treeDataProvider: favoritesProvider });
+  const workspaceView = vscode.window.createTreeView('skillMdInspectorWorkspace', { treeDataProvider: workspaceProvider });
+  const installedAgentsView = vscode.window.createTreeView('skillMdInspectorInstalledAgents', { treeDataProvider: installedAgentsProvider });
+  const refreshNavigator = (): void => { favoritesProvider.refresh(); workspaceProvider.refresh(); installedAgentsProvider.refresh(); };
   const updateFavoritesContext = (): void => {
     const favorites = restoreFavorites(context.globalState.get(FAVORITES_KEY));
     void vscode.commands.executeCommand('setContext', 'skillMdInspector.hasFavorites', favorites.length > 0);
   };
   updateFavoritesContext();
   const skillWatcher = vscode.workspace.createFileSystemWatcher('**/SKILL.md');
-  skillWatcher.onDidCreate(() => { treeProvider.refresh(); navigatorProvider.refresh(); });
-  skillWatcher.onDidDelete(() => { treeProvider.refresh(); navigatorProvider.refresh(); });
+  skillWatcher.onDidCreate((uri) => { treeProvider.refresh(); favoritesProvider.refresh(); workspaceProvider.onFilesCreatedOrDeleted([uri]); });
+  skillWatcher.onDidDelete((uri) => { treeProvider.refresh(); favoritesProvider.refresh(); workspaceProvider.onFilesCreatedOrDeleted([uri]); });
   const agentsWatcher = vscode.workspace.createFileSystemWatcher('**/AGENTS.md');
-  agentsWatcher.onDidCreate(() => navigatorProvider.refresh());
-  agentsWatcher.onDidDelete(() => navigatorProvider.refresh());
-  agentsWatcher.onDidChange(() => navigatorProvider.refresh());
+  agentsWatcher.onDidCreate((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
+  agentsWatcher.onDidDelete((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
+  agentsWatcher.onDidChange((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
 
   // Watch bundled resource files so adding/removing/renaming one refreshes the
   // tree and re-validates the owning skill (Task 60). Renames fire delete+create.
@@ -49,12 +56,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     output,
-    navigatorProvider,
-    navigatorView,
+    workspaceProvider,
+    favoritesView,
+    workspaceView,
+    installedAgentsView,
     vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
-    vscode.commands.registerCommand('skillMdInspector.refreshNavigator', () => navigatorProvider.refresh()),
-    vscode.commands.registerCommand('skillMdInspector.addToFavorites', async (target?: vscode.Uri | { resourceUri?: vscode.Uri; uri?: string }) => {
+    vscode.commands.registerCommand('skillMdInspector.refreshNavigator', refreshNavigator),
+    vscode.commands.registerCommand('skillMdInspector.refreshFavorites', () => favoritesProvider.refresh()),
+    vscode.commands.registerCommand('skillMdInspector.refreshWorkspace', () => workspaceProvider.refresh()),
+    vscode.commands.registerCommand('skillMdInspector.refreshInstalledAgents', () => installedAgentsProvider.refresh()),
+    vscode.commands.registerCommand('skillMdInspector.addToFavorites', async (target?: FavoriteCommandTarget) => {
       const uri = resolveFavoriteTarget(target);
       if (!uri || uri.path.split('/').pop() !== 'SKILL.md') {
         void vscode.window.showWarningMessage('Only files named SKILL.md can be added to Favorites.');
@@ -68,14 +80,18 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await context.globalState.update(FAVORITES_KEY, result.entries);
       updateFavoritesContext();
-      navigatorProvider.refresh();
+      favoritesProvider.refresh();
+      workspaceProvider.refresh();
+      installedAgentsProvider.refresh();
     }),
-    vscode.commands.registerCommand('skillMdInspector.removeFromFavorites', async (target?: vscode.Uri | { resourceUri?: vscode.Uri; uri?: string }) => {
+    vscode.commands.registerCommand('skillMdInspector.removeFromFavorites', async (target?: FavoriteCommandTarget) => {
       const uri = resolveFavoriteTarget(target);
       if (!uri) { return; }
       await context.globalState.update(FAVORITES_KEY, removeFavorite(restoreFavorites(context.globalState.get(FAVORITES_KEY)), uri.toString()));
       updateFavoritesContext();
-      navigatorProvider.refresh();
+      favoritesProvider.refresh();
+      workspaceProvider.refresh();
+      installedAgentsProvider.refresh();
     }),
     vscode.commands.registerCommand('skillMdInspector.clearFavorites', async () => {
       const current = restoreFavorites(context.globalState.get(FAVORITES_KEY));
@@ -84,7 +100,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (choice !== 'Clear Favorites') { return; }
       await context.globalState.update(FAVORITES_KEY, []);
       updateFavoritesContext();
-      navigatorProvider.refresh();
+      favoritesProvider.refresh();
+      workspaceProvider.refresh();
+      installedAgentsProvider.refresh();
     }),
     vscode.commands.registerCommand('skillMdInspector.openFavorite', async (uriString: string) => {
       const uri = vscode.Uri.parse(uriString);
@@ -134,7 +152,8 @@ export function activate(context: vscode.ExtensionContext): void {
           provider.validate(document);
         }
         treeProvider.refresh();
-        navigatorProvider.refresh();
+        favoritesProvider.refresh();
+        workspaceProvider.refresh();
       }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
@@ -142,7 +161,7 @@ export function activate(context: vscode.ExtensionContext): void {
         provider.clear(document.uri);
       }
     }),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => navigatorProvider.onWorkspaceFoldersChanged()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => workspaceProvider.onWorkspaceFoldersChanged()),
     vscode.workspace.onDidRenameFiles(async (event) => {
       let favorites = restoreFavorites(context.globalState.get(FAVORITES_KEY));
       for (const file of event.files) {
@@ -150,14 +169,17 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await context.globalState.update(FAVORITES_KEY, favorites);
       updateFavoritesContext();
-      navigatorProvider.onFilesRenamed(event.files);
+      favoritesProvider.refresh();
+      workspaceProvider.onFilesRenamed(event.files);
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('skillMdInspector')) {
         provider.clearResourceCache();
         revalidateVisible(provider);
         treeProvider.refresh();
-        navigatorProvider.refresh();
+        favoritesProvider.refresh();
+        workspaceProvider.refresh();
+        installedAgentsProvider.refresh();
       }
     }),
     new vscode.Disposable(() => {
@@ -181,15 +203,23 @@ export function deactivate(): void {
   // Disposables registered on the extension context are cleaned up by VS Code.
 }
 
-function resolveFavoriteTarget(target?: vscode.Uri | { resourceUri?: vscode.Uri; uri?: string }): vscode.Uri | undefined {
+type FavoriteCommandTarget = vscode.Uri | { resourceUri?: vscode.Uri; uri?: vscode.Uri | string; file?: { absolutePath?: string } };
+
+function resolveFavoriteTarget(target?: FavoriteCommandTarget): vscode.Uri | undefined {
   if (target instanceof vscode.Uri) {
     return target;
   }
   if (target?.resourceUri) {
     return target.resourceUri;
   }
-  if (target?.uri) {
+  if (target?.uri instanceof vscode.Uri) {
+    return target.uri;
+  }
+  if (typeof target?.uri === 'string') {
     return vscode.Uri.parse(target.uri);
+  }
+  if (target?.file?.absolutePath) {
+    return vscode.Uri.file(target.file.absolutePath);
   }
   return vscode.window.activeTextEditor?.document.uri;
 }
