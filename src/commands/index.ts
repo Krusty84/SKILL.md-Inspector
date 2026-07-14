@@ -7,6 +7,8 @@ import { showSkillReport } from './showSkillReport';
 import { improveDescriptionLocally } from './improveDescription';
 import { showWorkspaceReport } from './showWorkspaceReport';
 import { exportSkillsIndex } from './exportSkillsIndex';
+import { openTemplateSettings } from './openTemplateSettings';
+import { resetTemplates } from './resetTemplates';
 
 /** Registers all extension commands and ties their disposables to `context`. */
 export function registerCommands(
@@ -14,20 +16,30 @@ export function registerCommands(
   provider: DiagnosticsProvider,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('skillMdInspector.validateCurrentSkill', () =>
-      validateCurrentSkill(provider),
+    vscode.commands.registerCommand('skillMdInspector.validateCurrentSkill', (uri?: vscode.Uri) =>
+      validateCurrentSkill(provider, uri),
     ),
     vscode.commands.registerCommand('skillMdInspector.validateWorkspaceSkills', () =>
       validateWorkspaceSkills(provider),
     ),
-    vscode.commands.registerCommand('skillMdInspector.insertTemplate', () => insertTemplate()),
-    vscode.commands.registerCommand('skillMdInspector.showSkillReport', () => showSkillReport()),
-    vscode.commands.registerCommand('skillMdInspector.improveDescriptionLocally', () =>
-      improveDescriptionLocally(),
+    vscode.commands.registerCommand('skillMdInspector.insertTemplate', (uri?: vscode.Uri) =>
+      insertTemplate(uri),
+    ),
+    vscode.commands.registerCommand('skillMdInspector.showSkillReport', (uri?: vscode.Uri) =>
+      showSkillReport(uri),
+    ),
+    vscode.commands.registerCommand('skillMdInspector.improveDescriptionLocally', (uri?: vscode.Uri) =>
+      improveDescriptionLocally(uri),
     ),
     vscode.commands.registerCommand('skillMdInspector.showWorkspaceReport', () =>
       showWorkspaceReport(),
     ),
     vscode.commands.registerCommand('skillMdInspector.exportSkillsIndex', () => exportSkillsIndex()),
+    vscode.commands.registerCommand('skillMdInspector.openTemplateSettings', () =>
+      openTemplateSettings(),
+    ),
+    vscode.commands.registerCommand('skillMdInspector.resetTemplates', (uri?: vscode.Uri) =>
+      resetTemplates(uri),
+    ),
   );
 }
