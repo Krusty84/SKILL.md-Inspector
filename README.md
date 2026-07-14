@@ -439,11 +439,18 @@ opencode export <sessionID> > my-session.opencode-session.json
 
 Example workflow:
 
-1. Open the VS Code Secondary Side Bar (`View: Toggle Secondary Side Bar Visibility`).
-2. Open **OpenCode Sessions**.
-3. Run **SKILL.md Inspector: Select OpenCode Sessions Folder** and choose the folder containing exported JSON files.
-4. Select a discovered session to open the interactive trace explorer.
-5. Use the session context menu to open the static report or raw JSON.
+1. Open **SKILL.md Inspector** in the Activity Bar.
+2. Find the **OPENCODE SESSIONS** view.
+3. Optionally move the view with the view title context menu: **Move View** → **Secondary Side Bar**. VS Code exposes this as a user-controlled layout action; the extension does not directly contribute a custom Secondary Side Bar container.
+4. Run **SKILL.md Inspector: Select OpenCode Sessions Folder** and choose the folder containing exported JSON files.
+5. Select a discovered session to open the interactive trace explorer.
+6. Use the session context menu to open the static report or raw JSON.
+
+Selecting a sessions folder is optional for standalone exports. To open one JSON export directly, use the Command Palette:
+
+* **SKILL.md Inspector: Open OpenCode Session Trace** → select a session JSON file.
+* **SKILL.md Inspector: Open OpenCode Session Report** → select a session JSON file.
+* **SKILL.md Inspector: Open Raw OpenCode Session JSON** → select a session JSON file.
 
 ### Session discovery
 
@@ -461,7 +468,7 @@ Child sessions are nested under parent sessions when exported files in the selec
 
 ### Static OpenCode Session Report
 
-Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item to open a script-free, read-only report. It shows session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics, loaded skill calls, matching `SKILL.md` candidates, and an ordered trajectory. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
+Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item or the Command Palette to open a script-free, read-only report. It shows session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics, loaded skill calls, matching `SKILL.md` candidates, and an ordered trajectory. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
 
 ### Interactive OpenCode Session Trace Explorer
 

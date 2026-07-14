@@ -123,3 +123,69 @@ describe('package manifest context menus and templates', () => {
   });
 
 });
+
+describe('OpenCode manifest consistency', () => {
+  const contributes = packageJson.contributes;
+  const allViewIds = Object.values(contributes.views).flat().map((view) => view.id);
+  const commandIds = contributes.commands.map((command) => command.command);
+  const supportedBuiltInContainers = new Set(['explorer', 'scm', 'debug', 'test', 'extensions']);
+  const contributedContainers = new Set(Object.values(contributes.viewsContainers).flat().map((container) => container.id));
+
+  it('declares created tree views in contributes.views', () => {
+    expect(allViewIds).toEqual(expect.arrayContaining([
+      'skillMdInspectorFavorites',
+      'skillMdInspectorWorkspace',
+      'skillMdInspectorInstalledAgents',
+      'skillMdInspectorOpenCodeSessions',
+      'skillMdInspectorSkills',
+    ]));
+  });
+
+  it('uses only supported view container contribution locations and no auxiliarybar', () => {
+    expect(contributes.viewsContainers).not.toHaveProperty('auxiliarybar');
+    expect(Object.keys(contributes.viewsContainers).sort()).toEqual(['activitybar', 'panel']);
+    for (const containerId of Object.keys(contributes.views)) {
+      expect(contributedContainers.has(containerId) || supportedBuiltInContainers.has(containerId)).toBe(true);
+    }
+  });
+
+  it('declares the OpenCode sessions view under the SKILL.md Inspector activity bar container', () => {
+    expect(contributes.views.skillMdInspector).toContainEqual(expect.objectContaining({
+      id: 'skillMdInspectorOpenCodeSessions',
+      name: 'OPENCODE SESSIONS',
+      contextualTitle: 'OpenCode Sessions',
+    }));
+  });
+
+  it('declares all registered OpenCode commands', () => {
+    expect(commandIds).toEqual(expect.arrayContaining([
+      'skillMdInspector.openCode.selectSessionsFolder',
+      'skillMdInspector.openCode.clearSessionsFolder',
+      'skillMdInspector.openCode.refreshSessions',
+      'skillMdInspector.openCode.openTrace',
+      'skillMdInspector.openCode.openReport',
+      'skillMdInspector.openCode.openRawJson',
+      'skillMdInspector.openCode.revealInOS',
+      'skillMdInspector.openCode.copySessionId',
+      'skillMdInspector.openCode.copyFilePath',
+    ]));
+  });
+
+  it('references only declared commands from menus and view welcomes', () => {
+    const menuCommands = Object.values(contributes.menus).flat().map((item) => 'command' in item ? item.command : undefined).filter((command): command is string => typeof command === 'string');
+    expect(menuCommands.filter((command) => !commandIds.includes(command))).toEqual([]);
+    const welcomeCommands = contributes.viewsWelcome.flatMap((welcome) => [...welcome.contents.matchAll(/command:([^\)\s]+)/g)].map((match) => match[1]));
+    expect(welcomeCommands).toContain('skillMdInspector.openCode.selectSessionsFolder');
+    expect(welcomeCommands.filter((command) => !commandIds.includes(command))).toEqual([]);
+  });
+
+  it('activates for the OpenCode view and command palette entry points', () => {
+    expect(packageJson.activationEvents).toEqual(expect.arrayContaining([
+      'onView:skillMdInspectorOpenCodeSessions',
+      'onCommand:skillMdInspector.openCode.selectSessionsFolder',
+      'onCommand:skillMdInspector.openCode.openTrace',
+      'onCommand:skillMdInspector.openCode.openReport',
+      'onCommand:skillMdInspector.openCode.openRawJson',
+    ]));
+  });
+});
