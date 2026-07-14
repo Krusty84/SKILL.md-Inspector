@@ -48,13 +48,12 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   }
 
   private fileItem(file: DiscoveredFile, favorite: boolean): vscode.TreeItem {
-    const label = file.fileName === 'SKILL.md' ? path.basename(path.dirname(file.absolutePath)) : 'AGENTS.md';
+    const label = file.fileName === 'SKILL.md' ? path.basename(path.dirname(file.absolutePath)) : file.fileName;
     const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
     const uri = vscode.Uri.file(file.absolutePath);
     item.resourceUri = uri;
     item.description = file.relativePath;
     item.tooltip = `${file.absolutePath}\nSource: ${file.sourceLabel}`;
-    item.iconPath = new vscode.ThemeIcon(file.fileName === 'SKILL.md' ? (favorite ? 'star-full' : 'tools') : 'book');
     item.command = { command: 'vscode.open', title: 'Open', arguments: [uri] };
     item.contextValue = file.fileName === 'SKILL.md' ? (favorite ? 'skillMdInspector.favoriteSkillFile' : 'skillMdInspector.skillFile') : 'skillMdInspector.installedAgentsFile';
     return item;
