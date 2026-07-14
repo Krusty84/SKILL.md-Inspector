@@ -1,0 +1,5 @@
+import * as vscode from 'vscode';
+import { buildSessionViewModel } from '../opencode/buildSessionViewModel';
+import type { NormalizedOpenCodeSession } from '../opencode/model';
+import { renderOpenCodeSessionReportHtml } from './renderOpenCodeSessionReport';
+export class OpenCodeSessionReportPanel { private static current: OpenCodeSessionReportPanel | undefined; private constructor(private readonly panel: vscode.WebviewPanel) { panel.onDidDispose(() => { if (OpenCodeSessionReportPanel.current === this) OpenCodeSessionReportPanel.current = undefined; }); } static show(session: NormalizedOpenCodeSession): void { if (!this.current) this.current = new OpenCodeSessionReportPanel(vscode.window.createWebviewPanel('skillMdInspector.openCodeReport', 'OpenCode Session Report', vscode.ViewColumn.Beside, { enableScripts: false, retainContextWhenHidden: true })); this.current.panel.webview.html = renderOpenCodeSessionReportHtml(buildSessionViewModel(session), this.current.panel.webview.cspSource); this.current.panel.reveal(vscode.ViewColumn.Beside); } }

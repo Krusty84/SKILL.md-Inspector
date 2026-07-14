@@ -428,3 +428,64 @@ Complete `settings.json` example:
   ]
 }
 ```
+
+## OpenCode session reports and trace explorer
+
+SKILL.md Inspector can inspect local OpenCode `session.json` exports without invoking OpenCode, executing recorded commands, downloading resources, or sending telemetry. Export a session with:
+
+```bash
+opencode export <sessionID> > my-session.opencode-session.json
+```
+
+Example workflow:
+
+1. Open the VS Code Secondary Side Bar (`View: Toggle Secondary Side Bar Visibility`).
+2. Open **OpenCode Sessions**.
+3. Run **SKILL.md Inspector: Select OpenCode Sessions Folder** and choose the folder containing exported JSON files.
+4. Select a discovered session to open the interactive trace explorer.
+5. Use the session context menu to open the static report or raw JSON.
+
+### Session discovery
+
+The OpenCode Sessions view scans the selected folder recursively by default and considers only `.json` files whose root object contains an object `info` field and an array `messages` field. Invalid or unrelated JSON files are ignored and concise diagnostics are written to the SKILL.md Inspector output channel. The selected folder is persisted in workspace state when a workspace is open and global state otherwise. URI-based reads use VS Code workspace file-system APIs so local and supported remote file systems can be used.
+
+Discovery is bounded and configurable:
+
+* `skillMdInspector.openCode.maxSessionFileSizeMb` (default `25`)
+* `skillMdInspector.openCode.maxDiscoveredSessions` (default `1000`)
+* `skillMdInspector.openCode.maxPreviewCharacters` (default `20000`)
+* `skillMdInspector.openCode.scanRecursively` (default `true`)
+* `skillMdInspector.openCode.hideReasoningByDefault` (default `true`)
+
+Child sessions are nested under parent sessions when exported files in the selected folder include matching `info.parentID` metadata. Sessions are sorted by updated time with a filename fallback. The view watches JSON files in the configured folder and refreshes automatically when VS Code supports watching that location.
+
+### Static OpenCode Session Report
+
+Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item to open a script-free, read-only report. It shows session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics, loaded skill calls, matching `SKILL.md` candidates, and an ordered trajectory. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
+
+### Interactive OpenCode Session Trace Explorer
+
+Selecting a session opens an interactive three-pane explorer with:
+
+* an outline hierarchy for messages, steps, tools, skills, text, files, retries, compactions, and unknown parts;
+* a source-order timeline with timing bars when timestamps are available and untimed markers otherwise;
+* local filters for node kind, errors, skill-only mode, tool success hiding, reasoning hiding, and text search;
+* a details pane that lazily requests full node details from the extension host.
+
+The explorer is implemented with TypeScript, DOM APIs, CSS, and a local bundled script. It does not use a front-end framework, CDN assets, remote scripts, remote styles, `eval`, or inline event handlers.
+
+### Tolerant parser policy and supported concepts
+
+OpenCode exports are treated as an evolving internal format. The parser requires only a root object with object `info` and array `messages`; unknown message roles, part types, tool names, fields, and tool status strings are retained and displayed rather than causing import failure. Known concepts include user and assistant messages, text, reasoning, files, tools, skill tool calls, step boundaries, snapshots, patches, agents, retries, and compactions. Source array order is authoritative; timestamps are used only for durations and relative positioning when valid.
+
+Likely sanitized exports are detected through redaction markers such as `[redacted:` and `{ "redacted": "..." }`. Sanitized sessions remain inspectable, but reports warn that detailed trajectory analysis may be incomplete.
+
+### SKILL.md matching and temporal evidence
+
+When an OpenCode `skill` tool call includes `state.input.name`, the extension attempts to match it to discovered local `SKILL.md` files in supported workspace skill roots. Exact normalized frontmatter `name` matches are preferred. Reports distinguish no match, one match, and multiple ambiguous matches, and allow opening matching skills.
+
+Actions listed after a skill load are **temporal observations** within a heuristic segment: from that skill call until the next skill call in the same assistant message or the end of that assistant message. The extension does **not** claim that a skill caused a command, edit, file read, or rule compliance unless a future OpenCode evidence format explicitly records that relationship.
+
+### Privacy, offline behavior, and limitations
+
+All OpenCode inspection is local and deterministic. The extension does not execute recorded commands, does not invoke OpenCode, does not open URLs embedded in session data, and does not send telemetry. Large values are previewed with truncation markers and full details are requested lazily where practical. Known limitations: OpenCode has no separately versioned public export standard, some remote URI schemes may not support file watching or OS reveal actions, and temporal skill segments are evidence of ordering only—not causal attribution or proof of SKILL.md rule compliance.
