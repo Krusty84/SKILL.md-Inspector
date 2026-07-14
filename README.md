@@ -470,16 +470,66 @@ Child sessions are nested under parent sessions when exported files in the selec
 
 Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item or the Command Palette to open a script-free, read-only report. It shows session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics, loaded skill calls, matching `SKILL.md` candidates, and an ordered trajectory. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
 
-### Interactive OpenCode Session Trace Explorer
+### Interactive OpenCode Session execution graph
 
-Selecting a session opens an interactive three-pane explorer with:
+Selecting a session opens a deterministic directed execution graph. The default
+ELK layered layout runs left to right and can be switched to top to bottom.
+Cytoscape.js provides pan, mouse-wheel/trackpad zoom, selection, compound
+message and step nodes, and viewport controls. **Fit**, **Zoom in**, **Zoom
+out**, **Reset**, and **Center** are available in the toolbar. A navigator in
+the lower-right corner shows the overall graph and current viewport.
 
-* an outline hierarchy for messages, steps, tools, skills, text, files, retries, compactions, and unknown parts;
-* a source-order timeline with timing bars when timestamps are available and untimed markers otherwise;
-* local filters for node kind, errors, skill-only mode, tool success hiding, reasoning hiding, and text search;
-* a details pane that lazily requests full node details from the extension host.
+The graph has four modes:
 
-The explorer is implemented with TypeScript, DOM APIs, CSS, and a local bundled script. It does not use a front-end framework, CDN assets, remote scripts, remote styles, `eval`, or inline event handlers.
+* **Overview** shows messages, steps, skills, tools, errors, retries, subtasks,
+  agents, compactions, and unknown actionable parts. Text, reasoning, files,
+  patches, and snapshots are represented by aggregate counts.
+* **Skills** focuses on skill loads and the actions observed after each load.
+  Selecting a skill can isolate its temporal segment.
+* **Errors** focuses on failed actions, their immediate predecessors and
+  successors, retries, and local recovery context.
+* **Full** exposes supported secondary nodes, including text, reasoning, files,
+  patches, and snapshots.
+
+Messages and steps can be collapsed into aggregate nodes and expanded along the
+selected or searched path. Search matches labels, tool names, skill names,
+previews, statuses, and original part types without changing the underlying
+graph. Path controls can isolate predecessors, successors, a local path, a skill
+segment, or an error path. Selecting a node highlights its immediate neighbors
+and opens a resizable details drawer; full tool output, raw JSON, and matching
+skill details are still loaded lazily. The drawer also reuses the existing
+commands for opening a matching `SKILL.md`, its Skill Report, and the raw
+session.
+
+Semantic zoom keeps the graph readable: distant views reduce leaf nodes to
+compact marks and emphasize message aggregates, medium views show the normal
+execution structure, and close views add status, duration, and preview text.
+Keyboard controls include Tab, Enter, Escape, arrow-key node navigation, `+`,
+`-`, `0`, and `F`. An explicit accessible list presents the visible graph as
+normal buttons for screen readers and keyboard-only navigation.
+
+Graph edges have deliberately narrow meanings:
+
+* a solid directed edge is observed source-order execution;
+* a dotted message edge is the next top-level message in source order;
+* a dashed skill edge is an action observed after a skill load;
+* a branch edge connects a step to a subtask or agent;
+* retry and optional related-file edges have their own visual styles.
+
+**Dashed skill edges represent temporal observations only. The OpenCode export
+does not prove that a skill or a specific SKILL.md rule caused an action.**
+
+Sessions over 500 normalized nodes start with aggressive message/step
+collapsing, while skill- and error-relevant groups remain expanded when
+practical. Sessions over 1000 nodes start in an overview-only collapsed state.
+No nodes are discarded: aggregates remain expandable and Full mode remains
+available. Layout work runs in the browser webview, so it does not block the
+extension host, and superseded layout results are ignored.
+
+The graph is implemented with TypeScript, Cytoscape.js, cytoscape-elk, ELK,
+DOM APIs, and CSS. All dependencies are bundled locally into the webview. It
+does not use a front-end framework, CDN assets, remote scripts, remote styles,
+`eval`, untrusted HTML, or inline event handlers.
 
 ### Tolerant parser policy and supported concepts
 

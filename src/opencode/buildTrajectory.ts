@@ -43,7 +43,40 @@ function addAssistantParts(message: ParsedMessage, parent: TrajectoryNode, nodes
   for (const stepId of parent.children) { const step = nodes.find((n) => n.id === stepId); if (step) deriveParentTime(step, nodes); }
   return order;
 }
-function partToNode(part: ParsedPart, parentId: string, sourceOrder: number): TrajectoryNode { const label = part.kind === 'skill' ? `Skill: ${part.skillName ?? 'unknown'}` : part.kind === 'tool' ? `Tool: ${part.toolName ?? 'unknown'}` : part.kind === 'unknown' ? `Unknown: ${part.originalType ?? 'missing type'}` : part.kind; return { id: `${parentId}-part-${part.sourceOrder}`, kind: part.kind, parentId, sourceOrder, label, start: part.start, end: part.end, durationMs: safeDuration(part.start, part.end), status: part.status, toolName: part.toolName, skillName: part.skillName, children: [], preview: preview(part.text ?? part.raw.output ?? part.raw.error ?? part.raw, 500), rawReference: `${parentId}-part-${part.sourceOrder}`, originalType: part.originalType }; }
+function partToNode(part: ParsedPart, parentId: string, sourceOrder: number): TrajectoryNode { const label = part.kind === 'skill' ? `Skill: ${part.skillName ?? 'unknown'}` : part.kind === 'tool' ? toolLabel(part) : part.kind === 'unknown' ? `Unknown: ${part.originalType ?? 'missing type'}` : part.kind; return { id: `${parentId}-part-${part.sourceOrder}`, kind: part.kind, parentId, sourceOrder, label, start: part.start, end: part.end, durationMs: safeDuration(part.start, part.end), status: part.status, toolName: part.toolName, skillName: part.skillName, callId: part.callId, children: [], preview: preview(part.text ?? part.raw.output ?? part.raw.error ?? part.raw, 500), rawReference: `${parentId}-part-${part.sourceOrder}`, originalType: part.originalType }; }
+function toolLabel(part: ParsedPart): string { const name = part.toolName ?? 'unknown'; const detail = asString(getPath(part.raw, ['state','input','command'])) ?? asString(getPath(part.raw, ['state','input','path'])) ?? asString(getPath(part.raw, ['state','input','filePath'])); const short = detail && detail.length > 80 ? `${detail.slice(0, 79)}…` : detail; return short ? `${name}: ${short}` : name; }
 function deriveParentTime(node: TrajectoryNode, all: TrajectoryNode[]): void { const children = node.children.map((id) => all.find((n) => n.id === id)).filter((n): n is TrajectoryNode => !!n); const starts = children.map((n) => n.start).filter((n): n is number => n !== undefined); const ends = children.map((n) => n.end).filter((n): n is number => n !== undefined); node.start ??= starts.length ? Math.min(...starts) : undefined; node.end ??= ends.length ? Math.max(...ends) : undefined; node.durationMs ??= safeDuration(node.start, node.end); }
-function analyzeSkillUsage(nodes: TrajectoryNode[]): SkillLoadObservation[] { const result: SkillLoadObservation[] = []; const byParent = new Map<string, TrajectoryNode[]>(); for (const n of nodes) if (n.parentId) byParent.set(n.parentId, [...(byParent.get(n.parentId) ?? []), n]); for (const group of byParent.values()) { const ordered = group.sort((a,b) => a.sourceOrder - b.sourceOrder); for (let i=0;i<ordered.length;i++) { const n = ordered[i]; if (n.kind !== 'skill') continue; const following = ordered.slice(i+1); const next = following.findIndex((x) => x.kind === 'skill'); const segment = (next >= 0 ? following.slice(0,next) : following).map((x) => x.id); const actionSummary: Record<string, number> = {}; for (const id of segment) { const node = nodes.find((x) => x.id === id); const key = node?.toolName ?? node?.kind ?? 'other'; actionSummary[key] = (actionSummary[key] ?? 0) + 1; if (node?.status === 'error') actionSummary.errors = (actionSummary.errors ?? 0) + 1; } result.push({ skillName: n.skillName, partId: n.id, callId: undefined, messageId: n.parentId, status: n.status ?? 'unknown', start: n.start, end: n.end, followingNodeIds: segment, relationship: 'temporal', actionSummary, matchingSkills: [] }); } } return result; }
+function analyzeSkillUsage(nodes: TrajectoryNode[]): SkillLoadObservation[] {
+  const result: SkillLoadObservation[] = [];
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const actionKinds = new Set(['tool', 'subtask', 'agent', 'retry', 'file', 'patch', 'unknown']);
+  for (const message of nodes.filter((node) => node.kind === 'assistant-message')) {
+    const descendants: TrajectoryNode[] = [];
+    const visit = (nodeId: string): void => {
+      const node = nodeById.get(nodeId);
+      if (!node) return;
+      if (node.kind !== 'step') descendants.push(node);
+      for (const childId of node.children) visit(childId);
+    };
+    for (const childId of message.children) visit(childId);
+    const ordered = descendants.sort((a, b) => a.sourceOrder - b.sourceOrder);
+    for (let index = 0; index < ordered.length; index += 1) {
+      const skill = ordered[index];
+      if (skill.kind !== 'skill') continue;
+      const segment: TrajectoryNode[] = [];
+      for (const candidate of ordered.slice(index + 1)) {
+        if (candidate.kind === 'skill') break;
+        if (actionKinds.has(candidate.kind)) segment.push(candidate);
+      }
+      const actionSummary: Record<string, number> = {};
+      for (const action of segment) {
+        const key = action.toolName ?? action.kind;
+        actionSummary[key] = (actionSummary[key] ?? 0) + 1;
+        if (action.status === 'error') actionSummary.errors = (actionSummary.errors ?? 0) + 1;
+      }
+      result.push({ skillName: skill.skillName, partId: skill.id, callId: skill.callId, messageId: message.id, status: skill.status ?? 'unknown', start: skill.start, end: skill.end, followingNodeIds: segment.map((node) => node.id), relationship: 'temporal', actionSummary, matchingSkills: [] });
+    }
+  }
+  return result;
+}
 function calculateMetrics(session: ParsedOpenCodeSession, nodes: TrajectoryNode[], skills: SkillLoadObservation[], sessionDurationMs?: number): OpenCodeMetrics { const assistant = session.messages.filter((m) => m.role === 'assistant').length; const user = session.messages.filter((m) => m.role === 'user').length; return { messageCount: session.messages.length, userMessageCount: user, assistantMessageCount: assistant, stepCount: nodes.filter((n) => n.kind === 'step').length, toolCallCount: nodes.filter((n) => n.kind === 'tool' || n.kind === 'skill').length, toolErrorCount: nodes.filter((n) => (n.kind === 'tool' || n.kind === 'skill') && n.status === 'error').length, skillCallCount: skills.length, uniqueLoadedSkills: new Set(skills.map((s) => s.skillName).filter(Boolean)).size, retryCount: nodes.filter((n) => n.kind === 'retry').length, compactionCount: nodes.filter((n) => n.kind === 'compaction').length, unknownPartCount: nodes.filter((n) => n.kind === 'unknown').length, totalCost: asNumber(session.info.cost), inputTokens: asNumber(session.info.inputTokens), outputTokens: asNumber(session.info.outputTokens), reasoningTokens: asNumber(session.info.reasoningTokens), cacheReadTokens: asNumber(session.info.cacheReadTokens), cacheWriteTokens: asNumber(session.info.cacheWriteTokens), sessionDurationMs }; }
