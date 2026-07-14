@@ -23,7 +23,7 @@ network access, and no telemetry.
 2. Press **F5** (or Run and Debug → "Run Extension"). This builds `dist/` and
    opens a second window titled **[Extension Development Host]**.
 3. In *that* window, open the Command Palette (Ctrl/Cmd+Shift+P) and type
-   "SKILL.md Inspector" — the four commands appear there. Open a `SKILL.md`
+   "SKILL.md Inspector" — the commands appear there. Open a `SKILL.md`
    file (e.g. from `fixtures/`) to see diagnostics and quick fixes.
 
 **Option B — install it (to use in your normal window):**
@@ -38,14 +38,17 @@ can execute.
 
 ## Features
 
-- **Frontmatter validation** — reports missing, malformed, or not-at-top YAML
-  frontmatter.
+- **Frontmatter validation** — reports missing, malformed, not-at-top, or
+  duplicate-key YAML frontmatter.
 - **`name` rules** — required, string, ≤ 64 chars, lowercase/digits/hyphens
   only, no leading/trailing hyphen, and a warning when it does not match the
   parent skill folder.
 - **`description` rules** — required, string, ≤ 1024 chars, with quality
   warnings for descriptions that are too short, vague, missing an action verb,
   or missing a usage-trigger clause.
+- **Profile-specific metadata rules** — for the selected profile, flags Claude
+  reserved words and XML-like tags, checks VS Code / Codex field types, and
+  applies an unknown-key policy.
 - **Heuristic Trigger Quality Score (0–100)** — a *deterministic heuristic* for
   each `description` across seven weighted criteria (action verb, usage trigger,
   concrete artifact, boundary, front-loaded intent, low vagueness, good length),
@@ -65,7 +68,11 @@ can execute.
   `references/`, `scripts/`, `assets/`, or `templates/` that are never linked
   from `SKILL.md`.
 - **Body checks** — warns when there is no body, no examples section, or no
-  "When to use" section, and suggests boundaries and I/O documentation.
+  "When to use" section, and suggests boundaries and I/O documentation; advisory
+  strictness is configurable (`off` / `recommended` / `strict`).
+- **Diagnostic classification & overrides** — every diagnostic is classified as
+  specification, compatibility, security, or quality, and its severity can be
+  overridden or disabled by code (structural errors stay protected by default).
 - **Quick fixes** — convert a name to kebab-case, rename the parent folder,
   insert frontmatter / `name` / `description`, insert a body template, add a
   "Use when…" or "Do not use when…" clause, create a missing linked file, and
@@ -87,7 +94,11 @@ can execute.
   unreferenced, missing, remote, or absolute, and flags scripts, binaries, and
   large files.
 - **Export Skills Index** — writes `skills.index.json` describing every skill
-  (name, path, score, counts, profile compatibility).
+  (name, path, score, counts, profile compatibility, and a per-diagnostic
+  summary of code, severity, and kind).
+- **Workspace scanning** — validation, the workspace report, and the index run
+  with progress and can be cancelled; discovery skips dependency, build, and
+  vendored directories (configurable).
 
 ## Where skills are detected
 
@@ -132,11 +143,22 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | --- | --- | --- |
 | `skillMdInspector.validation.enabled` | `true` | Enable validation. |
 | `skillMdInspector.validation.runOnSave` | `true` | Re-validate on save. |
-| `skillMdInspector.profile` | `generic` | `generic` \| `vscode` \| `claude` \| `codex`. |
-| `skillMdInspector.description.minLength` | `40` | Minimum recommended description length. |
-| `skillMdInspector.description.maxLength` | `1024` | Maximum allowed description length. |
-| `skillMdInspector.name.maxLength` | `64` | Maximum allowed name length. |
-| `skillMdInspector.experimental.llmReview.enabled` | `false` | Reserved for future LLM review (inert in MVP1). |
+| `skillMdInspector.profile` | `generic` | Active profile: `generic` \| `vscode` \| `claude` \| `codex`. |
+| `skillMdInspector.name.maxLength` | `64` | Maximum allowed `name` length. |
+| `skillMdInspector.description.minLength` | `40` | Minimum recommended `description` length. |
+| `skillMdInspector.description.maxLength` | `1024` | Maximum allowed `description` length. |
+| `skillMdInspector.description.language` | `auto` | `en` forces English heuristics; `auto` marks a non-English description language-limited. |
+| `skillMdInspector.body.strictness` | `recommended` | Advisory body-section severity: `off` \| `recommended` (information) \| `strict` (warning). |
+| `skillMdInspector.resources.exclude` | `node_modules`, `.git`, `dist`, `out` | Globs excluded from resource discovery (replaces the defaults). |
+| `skillMdInspector.discovery.exclude` | above + `.vscode-test` | Globs of directories skipped when discovering `SKILL.md` files (replaces the defaults). |
+| `skillMdInspector.names.similarityThreshold` | `0.8` | Similarity (0–1) at/above which two different skill names are flagged as confusingly similar. |
+| `skillMdInspector.collision.threshold` | `0.4` | Composite similarity (0–1) at/above which two skills are reported as a potential collision. |
+| `skillMdInspector.collision.ngramSize` | `3` | Character n-gram size for the collision character-similarity metric. |
+| `skillMdInspector.collision.boundarySeparationWeight` | `0.5` | How strongly mutually-exclusive boundaries reduce the composite collision score (0–1). |
+| `skillMdInspector.collision.weights` | `0.3/0.3/0.2/0.2` | Relative weights (jaccard/cosine/charNgram/name) blended into the composite score; normalized at runtime. |
+| `skillMdInspector.severityOverrides` | `{}` | Override a diagnostic's severity by code, or `"off"` to disable it. |
+| `skillMdInspector.severity.allowSpecificationOverrides` | `false` | Allow the overrides above to downgrade or disable specification-level errors. |
+| `skillMdInspector.experimental.llmReview.enabled` | `false` | Reserved for future LLM review (inert). |
 
 ## Development
 
