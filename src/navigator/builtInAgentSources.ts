@@ -9,6 +9,7 @@ export interface BuiltInAgentContext {
 
 export function resolveBuiltInAgentSources(context: BuiltInAgentContext): AgentSource[] {
   const codexHome = context.env.CODEX_HOME?.trim() || path.join(context.homeDir, '.codex');
+  const claudeHome = path.join(context.homeDir, '.claude');
   const sources: AgentSource[] = [
     {
       id: 'codex-global', agentId: 'codex', agentLabel: 'Codex', groupLabel: 'Global Instructions',
@@ -16,11 +17,15 @@ export function resolveBuiltInAgentSources(context: BuiltInAgentContext): AgentS
     },
     {
       id: 'codex-user-skills', agentId: 'codex', agentLabel: 'Codex', groupLabel: 'User Skills',
-      rootPath: path.join(context.homeDir, '.agents', 'skills'), files: ['SKILL.md'], recursive: true,
+      rootPath: path.join(codexHome, 'skills'), files: ['SKILL.md'], recursive: true,
+    },
+    {
+      id: 'claude-global', agentId: 'claude-code', agentLabel: 'Claude Code', groupLabel: 'Global Instructions',
+      rootPath: claudeHome, files: ['CLAUDE.md'], recursive: false,
     },
     {
       id: 'claude-skills', agentId: 'claude-code', agentLabel: 'Claude Code', groupLabel: 'Skills',
-      rootPath: path.join(context.homeDir, '.claude', 'skills'), files: ['SKILL.md'], recursive: true,
+      rootPath: path.join(claudeHome, 'skills'), files: ['SKILL.md'], recursive: true,
     },
     {
       id: 'copilot-skills', agentId: 'github-copilot', agentLabel: 'GitHub Copilot', groupLabel: 'Skills',
