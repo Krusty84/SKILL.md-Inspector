@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { parentUri } from '../../navigator/workspaceExplorer';
 import type { WorkspaceExplorerNode } from '../../navigator/workspaceExplorerTypes';
 import type { WorkspaceTreeProvider } from '../../ui/workspaceTreeProvider';
+import { addFolders, selectSkillsFolder } from './addWorkspaceFolders';
 
 export type WorkspaceCommandTarget = WorkspaceExplorerNode | vscode.Uri | undefined;
 
@@ -16,6 +17,7 @@ export function registerWorkspaceCommands(context: vscode.ExtensionContext, deps
   context.subscriptions.push(
     vscode.commands.registerCommand('skillMdInspector.workspace.newFile', (target?: WorkspaceCommandTarget, selected?: WorkspaceExplorerNode[]) => newEntry(d, 'file', target, selected)),
     vscode.commands.registerCommand('skillMdInspector.workspace.newFolder', (target?: WorkspaceCommandTarget, selected?: WorkspaceExplorerNode[]) => newEntry(d, 'folder', target, selected)),
+    vscode.commands.registerCommand('skillMdInspector.workspace.selectSkillsFolder', () => selectSkillsFolder(d.output)),
     vscode.commands.registerCommand('skillMdInspector.workspace.addFolders', () => addFolders(d.output)),
     vscode.commands.registerCommand('skillMdInspector.workspace.openFolderInNewWindow', (target?: WorkspaceCommandTarget) => openFolderInNewWindow(d, target)),
     vscode.commands.registerCommand('skillMdInspector.workspace.removeFolder', (target?: WorkspaceCommandTarget) => removeFolder(d, target)),
@@ -83,19 +85,6 @@ async function newEntry(d: Deps, kind: 'file' | 'folder', target?: WorkspaceComm
     if (node) await d.view.reveal(node, { select: true });
     if (kind === 'file') await vscode.commands.executeCommand('vscode.open', parsed.uri);
   } catch (error) { report(d.output, `Unable to create ${kind} “${value}”`, error); }
-}
-
-async function addFolders(output: vscode.OutputChannel): Promise<void> {
-  const selected = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: true, openLabel: 'Add', title: 'Add Folders to Workspace' });
-  if (!selected) return;
-  const open = new Set((vscode.workspace.workspaceFolders ?? []).map((folder) => key(folder.uri)));
-  const seen = new Set<string>();
-  const folders = selected.filter((uri) => { const k = key(uri); if (open.has(k) || seen.has(k)) return false; seen.add(k); return true; });
-  if (folders.length === 0) { void vscode.window.showInformationMessage('All selected folders are already open in the workspace.'); return; }
-  try {
-    const ok = vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders?.length ?? 0, 0, ...folders.map((uri) => ({ uri })));
-    if (!ok) throw new Error('VS Code rejected the workspace folder update.');
-  } catch (error) { report(output, 'Unable to add folders to workspace', error); }
 }
 
 async function openFolderInNewWindow(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {

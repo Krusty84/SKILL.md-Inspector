@@ -24,7 +24,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceN
   getChildren(node?: WorkspaceNode): Thenable<WorkspaceNode[]> | WorkspaceNode[] {
     if (!node) {
       const roots = this.workspaceExplorer.getRoots();
-      return roots.length > 0 ? roots : [{ type: 'message', label: 'No workspace folder is open.' }];
+      return roots;
     }
     if (node.type === 'workspaceRoot' || node.type === 'workspaceDirectory') return this.workspaceExplorer.getChildren(node);
     return [];

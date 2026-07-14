@@ -1,4 +1,4 @@
-export type AgentFileName = 'SKILL.md' | 'AGENTS.md';
+export type AgentFileName = 'SKILL.md' | 'AGENTS.md' | 'CLAUDE.md';
 
 export interface AdditionalAgentRoot {
   id: string;

@@ -132,13 +132,15 @@ sidebar. The container has three independent Views instead of one combined
   does not control this browser. Selecting a file opens it with its original VS
   Code URI. Workspace files and directories keep normal VS Code resource behavior
   such as file icons, decorations, URI handling, and resource-aware commands from
-  VS Code or other extensions. The View toolbar provides **New File**, **New
-  Folder**, **Refresh**, and VS Code's standard **Collapse All** action; the
-  overflow menu includes **Add Folder to Workspace...** and **Open Folder in New
-  Window...**.
+  VS Code or other extensions. When no folder is open, the welcome action and the
+  first toolbar button provide **Select SKILLs Folder**. The toolbar also provides
+  **New File**, **New Folder**, **Refresh**, and VS Code's standard **Collapse
+  All** action; the overflow menu retains the multi-select **Add Folder to
+  Workspace...** command and **Open Folder in New Window...**.
 - **INSTALLED AGENTS** — supported local agent files discovered from bounded,
   declared roots without running agent executables or scanning your full home
-  directory.
+  directory. Installed file entries use the active VS Code file icon theme;
+  favorite state changes their context actions, not their icons.
 
 Because these are standard VS Code Views, **FAVORITES**, **WORKSPACE**, and
 **INSTALLED AGENTS** can each be collapsed, expanded, resized vertically, hidden,
@@ -150,7 +152,7 @@ longer contributed as a standalone top-level context-menu item; it appears in
 that submenu for non-favorited `SKILL.md` files in **WORKSPACE** and
 **INSTALLED AGENTS**. Already favorited `SKILL.md` entries in **FAVORITES**,
 **WORKSPACE**, and **INSTALLED AGENTS** show **Remove from Favorites** instead.
-Missing Favorites, `AGENTS.md`, ordinary files, directories, workspace roots,
+Missing Favorites, `AGENTS.md`, `CLAUDE.md`, ordinary files, directories, workspace roots,
 and agent group nodes do not receive the submenu. The submenu is shown in editor
 and built-in Explorer context menus only while the **SKILL.md INSPECTOR**
 Activity Bar container is active.
@@ -160,8 +162,10 @@ Built-in local agent locations are:
 | Agent | Files shown | Paths |
 | --- | --- | --- |
 | Codex | Global instructions | `$CODEX_HOME/AGENTS.md` when `CODEX_HOME` is set, otherwise `~/.codex/AGENTS.md` |
-| Codex | User skills | `~/.agents/skills/**/SKILL.md` |
+| Codex | Codex home skills | `$CODEX_HOME/skills/**/SKILL.md` when `CODEX_HOME` is set, otherwise `~/.codex/skills/**/SKILL.md` |
+| Codex | Compatible user skills | `~/.agents/skills/**/SKILL.md` |
 | Codex | Admin skills | `/etc/codex/skills/**/SKILL.md` on non-Windows systems when readable |
+| Claude Code | Global instructions | `~/.claude/CLAUDE.md` |
 | Claude Code | Skills | `~/.claude/skills/**/SKILL.md` |
 | GitHub Copilot | Skills | `~/.copilot/skills/**/SKILL.md` |
 
@@ -179,7 +183,7 @@ already-favorited Inspector item, and **Clear All Favorites** from the
 **Sidebar vs. SKILL.md Skills:** the **SKILL.md INSPECTOR** sidebar is for
 navigation: **FAVORITES** contains specialized `SKILL.md` shortcuts, **WORKSPACE**
 is a full lazy file browser, and **INSTALLED AGENTS** remains specialized
-discovery for local `SKILL.md` and `AGENTS.md` files. **SKILL.md Skills** remains
+discovery for local `SKILL.md`, `AGENTS.md`, and `CLAUDE.md` files. **SKILL.md Skills** remains
 the bottom Panel view for analysis, diagnostics, name conflicts, collision
 detection, portability, and resource graphs.
 
@@ -194,8 +198,10 @@ reuse VS Code's private Explorer implementation or attach the built-in
 feature-detected during activation, so unsupported VS Code commands are hidden
 instead of failing the menu.
 
-- The View toolbar keeps the quick **New File**, **New Folder**, **Refresh**, and
-  VS Code **Collapse All** actions. Context-menu creation entries use Explorer
+- The View toolbar starts with **Select SKILLs Folder** and keeps the quick **New
+  File**, **New Folder**, **Refresh**, and VS Code **Collapse All** actions. When
+  there are no workspace folders, the same selection command is the normal
+  welcome action. Context-menu creation entries use Explorer
   wording (**New File...** and **New Folder...**) and appear only on directories
   and workspace roots, not on files. Nested relative paths such as
   `src/example.ts` are supported, but absolute paths and `..` traversal are
@@ -307,7 +313,7 @@ Example additional root configuration:
       "id": "custom-agent",
       "label": "Custom Agent",
       "path": "~/.custom-agent",
-      "files": ["SKILL.md", "AGENTS.md"],
+      "files": ["SKILL.md", "AGENTS.md", "CLAUDE.md"],
       "recursive": true
     }
   ]

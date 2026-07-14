@@ -15,8 +15,16 @@ export function resolveBuiltInAgentSources(context: BuiltInAgentContext): AgentS
       rootPath: codexHome, files: ['AGENTS.md'], recursive: false,
     },
     {
+      id: 'codex-home-skills', agentId: 'codex', agentLabel: 'Codex', groupLabel: 'Codex Home Skills',
+      rootPath: path.join(codexHome, 'skills'), files: ['SKILL.md'], recursive: true,
+    },
+    {
       id: 'codex-user-skills', agentId: 'codex', agentLabel: 'Codex', groupLabel: 'User Skills',
       rootPath: path.join(context.homeDir, '.agents', 'skills'), files: ['SKILL.md'], recursive: true,
+    },
+    {
+      id: 'claude-global', agentId: 'claude-code', agentLabel: 'Claude Code', groupLabel: 'Global Instructions',
+      rootPath: path.join(context.homeDir, '.claude'), files: ['CLAUDE.md'], recursive: false,
     },
     {
       id: 'claude-skills', agentId: 'claude-code', agentLabel: 'Claude Code', groupLabel: 'Skills',
@@ -28,7 +36,7 @@ export function resolveBuiltInAgentSources(context: BuiltInAgentContext): AgentS
     },
   ];
   if (context.platform !== 'win32') {
-    sources.splice(2, 0, {
+    sources.splice(3, 0, {
       id: 'codex-admin-skills', agentId: 'codex', agentLabel: 'Codex', groupLabel: 'Admin Skills',
       rootPath: '/etc/codex/skills', files: ['SKILL.md'], recursive: true,
     });

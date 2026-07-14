@@ -31,6 +31,7 @@
     "onCommand:skillMdInspector.toggleFavorite",
     "onView:skillMdInspectorFavorites",
     "onView:skillMdInspectorWorkspace",
+    "onCommand:skillMdInspector.workspace.selectSkillsFolder",
     "onView:skillMdInspectorInstalledAgents",
     "onView:skillMdInspectorOpenCodeSessions",
     "onCommand:skillMdInspector.openCode.selectSessionsFolder",
@@ -139,6 +140,12 @@
         "title": "Refresh Installed Agents",
         "category": "SKILL.md Inspector",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "skillMdInspector.workspace.selectSkillsFolder",
+        "title": "Select SKILLs Folder",
+        "category": "SKILL.md Inspector",
+        "icon": "$(folder-opened)"
       },
       {
         "command": "skillMdInspector.workspace.newFile",
@@ -411,19 +418,24 @@
           "group": "navigation"
         },
         {
-          "command": "skillMdInspector.workspace.newFile",
+          "command": "skillMdInspector.workspace.selectSkillsFolder",
           "when": "view == skillMdInspectorWorkspace",
           "group": "navigation@1"
         },
         {
-          "command": "skillMdInspector.workspace.newFolder",
+          "command": "skillMdInspector.workspace.newFile",
           "when": "view == skillMdInspectorWorkspace",
           "group": "navigation@2"
         },
         {
-          "command": "skillMdInspector.refreshWorkspace",
+          "command": "skillMdInspector.workspace.newFolder",
           "when": "view == skillMdInspectorWorkspace",
           "group": "navigation@3"
+        },
+        {
+          "command": "skillMdInspector.refreshWorkspace",
+          "when": "view == skillMdInspectorWorkspace",
+          "group": "navigation@4"
         },
         {
           "command": "skillMdInspector.workspace.addFolders",
@@ -1045,7 +1057,8 @@
                   "type": "string",
                   "enum": [
                     "SKILL.md",
-                    "AGENTS.md"
+                    "AGENTS.md",
+                    "CLAUDE.md"
                   ]
                 }
               },
@@ -1117,6 +1130,11 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "skillMdInspectorWorkspace",
+        "contents": "No SKILLs folder is selected.\n\n[Select SKILLs Folder](command:skillMdInspector.workspace.selectSkillsFolder)",
+        "when": "workspaceFolderCount == 0"
+      },
       {
         "view": "skillMdInspectorOpenCodeSessions",
         "contents": "No OpenCode sessions folder is selected.\n\n[Select Sessions Folder](command:skillMdInspector.openCode.selectSessionsFolder)",

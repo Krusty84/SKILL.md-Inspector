@@ -1,6 +1,6 @@
 import type { AgentFileName, NormalizedAgentRoot } from './types';
 
-const SUPPORTED_FILES = new Set<AgentFileName>(['SKILL.md', 'AGENTS.md']);
+const SUPPORTED_FILES = new Set<AgentFileName>(['SKILL.md', 'AGENTS.md', 'CLAUDE.md']);
 
 export interface NormalizedRootsResult {
   roots: NormalizedAgentRoot[];
@@ -45,18 +45,19 @@ function nonEmpty(value: unknown): value is string {
 
 function normalizeFiles(value: unknown): AgentFileName[] | undefined {
   if (value === undefined) {
-    return ['SKILL.md', 'AGENTS.md'];
+    return ['SKILL.md', 'AGENTS.md', 'CLAUDE.md'];
   }
   if (!Array.isArray(value) || value.length === 0) {
     return undefined;
   }
   const files: AgentFileName[] = [];
   for (const file of value) {
-    if (file !== 'SKILL.md' && file !== 'AGENTS.md') {
+    if (!SUPPORTED_FILES.has(file as AgentFileName)) {
       return undefined;
     }
-    if (!files.includes(file)) {
-      files.push(file);
+    const supportedFile = file as AgentFileName;
+    if (!files.includes(supportedFile)) {
+      files.push(supportedFile);
     }
   }
   return files.filter((file) => SUPPORTED_FILES.has(file));

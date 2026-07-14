@@ -40,14 +40,16 @@ describe('package manifest context menus and templates', () => {
 
   it('declares Explorer-like WORKSPACE toolbar and context actions without reusing Explorer internals', () => {
     const viewTitle = packageJson.contributes.menus['view/title'];
-    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.newFile', when: 'view == skillMdInspectorWorkspace', group: 'navigation@1' }));
-    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.newFolder', when: 'view == skillMdInspectorWorkspace', group: 'navigation@2' }));
-    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshWorkspace', when: 'view == skillMdInspectorWorkspace', group: 'navigation@3' }));
+    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.selectSkillsFolder', when: 'view == skillMdInspectorWorkspace', group: 'navigation@1' }));
+    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.newFile', when: 'view == skillMdInspectorWorkspace', group: 'navigation@2' }));
+    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.workspace.newFolder', when: 'view == skillMdInspectorWorkspace', group: 'navigation@3' }));
+    expect(viewTitle).toContainEqual(expect.objectContaining({ command: 'skillMdInspector.refreshWorkspace', when: 'view == skillMdInspectorWorkspace', group: 'navigation@4' }));
 
     const commands = packageJson.contributes.commands.map((command) => command.command);
     expect(commands).toEqual(expect.arrayContaining([
       'skillMdInspector.workspace.newFile',
       'skillMdInspector.workspace.newFolder',
+      'skillMdInspector.workspace.selectSkillsFolder',
       'skillMdInspector.workspace.newFileContext',
       'skillMdInspector.workspace.newFolderContext',
       'skillMdInspector.workspace.openPreview',
@@ -74,6 +76,20 @@ describe('package manifest context menus and templates', () => {
     ]));
     expect(JSON.stringify(packageJson.contributes.menus['view/item/context'])).not.toContain('explorer/context');
     expect(JSON.stringify(workspaceContexts)).not.toMatch(/Maven|Java|Checkstyle/);
+  });
+
+  it('declares the Select SKILLs Folder command and WORKSPACE welcome action', () => {
+    expect(packageJson.contributes.commands).toContainEqual(expect.objectContaining({
+      command: 'skillMdInspector.workspace.selectSkillsFolder',
+      title: 'Select SKILLs Folder',
+      icon: '$(folder-opened)',
+    }));
+    expect(packageJson.activationEvents).toContain('onCommand:skillMdInspector.workspace.selectSkillsFolder');
+    expect(packageJson.contributes.viewsWelcome).toContainEqual({
+      view: 'skillMdInspectorWorkspace',
+      contents: 'No SKILLs folder is selected.\n\n[Select SKILLs Folder](command:skillMdInspector.workspace.selectSkillsFolder)',
+      when: 'workspaceFolderCount == 0',
+    });
   });
 
   it('keeps WORKSPACE file, folder, and root menus scoped like VS Code Explorer', () => {
