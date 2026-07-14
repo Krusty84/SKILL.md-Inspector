@@ -88,6 +88,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('skillMdInspector.refreshFavorites', () => favoritesProvider.refresh()),
     vscode.commands.registerCommand('skillMdInspector.refreshWorkspace', () => workspaceProvider.refresh()),
     vscode.commands.registerCommand('skillMdInspector.refreshInstalledAgents', () => installedAgentsProvider.refresh()),
+    vscode.commands.registerCommand('skillMdInspector.workspace.selectSkillsFolder', async () => {
+      const picked = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: 'Select SKILLs Folder',
+        title: 'Select SKILLs Folder',
+      });
+      const uri = picked?.[0];
+      if (!uri) return;
+      const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+      if (workspaceFolders.some((folder) => folder.uri.toString() === uri.toString())) {
+        void vscode.window.showInformationMessage('The selected SKILLs folder is already open in the workspace.');
+        return;
+      }
+      try {
+        const updated = vscode.workspace.updateWorkspaceFolders(workspaceFolders.length, 0, { uri });
+        if (!updated) throw new Error('VS Code rejected the workspace folder update.');
+      } catch (error) {
+        output.appendLine(`Unable to select SKILLs folder: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+        void vscode.window.showErrorMessage('Unable to add the selected SKILLs folder to the workspace.');
+      }
+    }),
     vscode.commands.registerCommand('skillMdInspector.addToFavorites', async (target?: FavoriteCommandTarget) => {
       const uri = resolveFavoriteTarget(target);
       if (!uri || uri.path.split('/').pop() !== 'SKILL.md') {
