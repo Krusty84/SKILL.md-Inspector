@@ -25,7 +25,10 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:markdown",
-    "workspaceContains:**/SKILL.md"
+    "workspaceContains:**/SKILL.md",
+    "onView:skillMdInspectorNavigator",
+    "onCommand:skillMdInspector.refreshNavigator",
+    "onCommand:skillMdInspector.addToFavorites"
   ],
   "contributes": {
     "commands": [
@@ -79,10 +82,39 @@
         "command": "skillMdInspector.resetTemplates",
         "title": "Reset Templates to Defaults",
         "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.addToFavorites",
+        "title": "Add SKILL.md to Favorites",
+        "category": "SKILL.md Inspector",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "skillMdInspector.removeFromFavorites",
+        "title": "Remove from Favorites",
+        "category": "SKILL.md Inspector",
+        "icon": "$(star-full)"
+      },
+      {
+        "command": "skillMdInspector.clearFavorites",
+        "title": "Clear All Favorites",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.refreshNavigator",
+        "title": "Refresh Agent Files",
+        "category": "SKILL.md Inspector",
+        "icon": "$(refresh)"
       }
     ],
     "views": {
-      "explorer": [
+      "skillMdInspector": [
+        {
+          "id": "skillMdInspectorNavigator",
+          "name": "Agent Files"
+        }
+      ],
+      "skillMdInspectorPanel": [
         {
           "id": "skillMdInspectorSkills",
           "name": "SKILL.md Skills"
@@ -95,6 +127,16 @@
           "command": "skillMdInspector.refreshSkills",
           "when": "view == skillMdInspectorSkills",
           "group": "navigation"
+        },
+        {
+          "command": "skillMdInspector.refreshNavigator",
+          "when": "view == skillMdInspectorNavigator",
+          "group": "navigation"
+        },
+        {
+          "command": "skillMdInspector.clearFavorites",
+          "when": "view == skillMdInspectorNavigator && skillMdInspector.hasFavorites",
+          "group": "secondary"
         }
       ],
       "editor/context": [
@@ -102,6 +144,11 @@
           "submenu": "skillMdInspector/context",
           "when": "resourceFilename == SKILL.md",
           "group": "navigation"
+        },
+        {
+          "command": "skillMdInspector.addToFavorites",
+          "when": "resourceFilename == SKILL.md",
+          "group": "navigation@1"
         }
       ],
       "explorer/context": [
@@ -109,6 +156,11 @@
           "submenu": "skillMdInspector/context",
           "when": "resourceFilename == SKILL.md",
           "group": "navigation"
+        },
+        {
+          "command": "skillMdInspector.addToFavorites",
+          "when": "resourceFilename == SKILL.md",
+          "group": "navigation@1"
         }
       ],
       "skillMdInspector/context": [
@@ -151,6 +203,27 @@
         {
           "command": "skillMdInspector.resetTemplates",
           "group": "5_templates@2"
+        },
+        {
+          "command": "skillMdInspector.addToFavorites",
+          "group": "4_maintenance@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "skillMdInspector.addToFavorites",
+          "when": "view == skillMdInspectorNavigator && viewItem == skillMdInspector.navigator.skillFile",
+          "group": "favorites@1"
+        },
+        {
+          "command": "skillMdInspector.removeFromFavorites",
+          "when": "view == skillMdInspectorNavigator && (viewItem == skillMdInspector.navigator.favorite || viewItem == skillMdInspector.navigator.missingFavorite)",
+          "group": "favorites@2"
+        },
+        {
+          "command": "skillMdInspector.clearFavorites",
+          "when": "view == skillMdInspectorNavigator && viewItem == skillMdInspector.navigator.section && skillMdInspector.hasFavorites",
+          "group": "favorites@3"
         }
       ]
     },
@@ -369,6 +442,48 @@
             },
             "additionalProperties": false
           }
+        },
+        "skillMdInspector.navigator.additionalRoots": {
+          "type": "array",
+          "default": [],
+          "description": "Additional local agent roots to show in the Agent Files navigator.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "path"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "SKILL.md",
+                    "AGENTS.md"
+                  ]
+                }
+              },
+              "recursive": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false
+          }
         }
       }
     },
@@ -377,7 +492,23 @@
         "id": "skillMdInspector/context",
         "label": "SKILL.md Inspector"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skillMdInspector",
+          "title": "SKILL.md Inspector",
+          "icon": "media/skill-md-inspector.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "skillMdInspectorPanel",
+          "title": "SKILL.md Inspector",
+          "icon": "media/skill-md-inspector.svg"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
