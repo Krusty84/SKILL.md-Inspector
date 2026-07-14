@@ -13,6 +13,9 @@ import { registerWorkspaceContextCommands } from './commands/workspace/registerW
 import { createBuiltInCommandAdapter } from './commands/workspace/vscodeBuiltInCommandAdapter';
 import { addFavorite, FAVORITES_KEY, removeFavorite, restoreFavorites, updateFavoriteUri } from './navigator/favoritesStore';
 import { resolveSkillUri } from './commands/resolveSkillTarget';
+import { OpenCodeSessionFolderStore } from './opencode/sessionFolderStore';
+import { OpenCodeSessionsTreeProvider } from './ui/openCodeSessionsTreeProvider';
+import { registerOpenCodeCommands } from './commands/opencode/registerOpenCodeCommands';
 
 const CHANGE_DEBOUNCE_MS = 300;
 
@@ -27,9 +30,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const favoritesProvider = new FavoritesTreeProvider(context);
   const workspaceProvider = new WorkspaceTreeProvider(context, output);
   const installedAgentsProvider = new InstalledAgentsTreeProvider(context, output);
+  const openCodeSessionFolderStore = new OpenCodeSessionFolderStore(context);
+  const openCodeSessionsProvider = new OpenCodeSessionsTreeProvider(openCodeSessionFolderStore, output, context);
   const favoritesView = vscode.window.createTreeView('skillMdInspectorFavorites', { treeDataProvider: favoritesProvider });
   const workspaceView = vscode.window.createTreeView('skillMdInspectorWorkspace', { treeDataProvider: workspaceProvider, canSelectMany: true, showCollapseAll: true });
   const installedAgentsView = vscode.window.createTreeView('skillMdInspectorInstalledAgents', { treeDataProvider: installedAgentsProvider });
+  const openCodeSessionsView = vscode.window.createTreeView('skillMdInspectorOpenCodeSessions', { treeDataProvider: openCodeSessionsProvider, showCollapseAll: true });
+  registerOpenCodeCommands(context, { provider: openCodeSessionsProvider, store: openCodeSessionFolderStore, output });
+  void openCodeSessionsProvider.refresh();
   registerWorkspaceCommands(context, { provider: workspaceProvider, view: workspaceView, output });
   const builtInCommandAdapter = await createBuiltInCommandAdapter(output);
   registerWorkspaceContextCommands(context, { provider: workspaceProvider, adapter: builtInCommandAdapter });
@@ -67,6 +75,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     favoritesView,
     workspaceView,
     installedAgentsView,
+    openCodeSessionsView,
+    openCodeSessionsProvider,
     vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
     vscode.commands.registerCommand('skillMdInspector.refreshNavigator', refreshNavigator),
@@ -203,6 +213,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         favoritesProvider.refresh();
         workspaceProvider.refresh();
         installedAgentsProvider.refresh();
+        void openCodeSessionsProvider.refresh();
       }
     }),
     new vscode.Disposable(() => {
