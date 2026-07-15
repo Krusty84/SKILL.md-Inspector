@@ -12,6 +12,15 @@ import type {
 
 const LARGE_SESSION_THRESHOLD = 500;
 const OVERVIEW_ONLY_THRESHOLD = 1000;
+export const TRACE_GRAPH_LABEL_LIMITS = {
+  action: 40,
+  skill: 44,
+  message: 56,
+  step: 48,
+  session: 56,
+  aggregate: 64,
+} as const;
+
 const ACTION_KINDS = new Set<NodeKind>(['skill', 'tool', 'subtask', 'agent', 'retry', 'compaction', 'unknown']);
 
 export function buildTraceGraphViewModel(session: NormalizedOpenCodeSession, hideReasoningByDefault = true): TraceGraphViewModel {
@@ -29,7 +38,7 @@ export function buildTraceGraphViewModel(session: NormalizedOpenCodeSession, hid
     edges,
     initialState: {
       mode: hideReasoningByDefault || large ? 'overview' : 'full',
-      direction: 'left-to-right',
+      direction: 'top-to-bottom',
       collapsedNodeIds: [...collapsedNodeIds],
     },
     large,
@@ -59,6 +68,8 @@ function toGraphNode(node: TrajectoryNode, sourceById: Map<string, TrajectoryNod
     parentId: node.parentId,
     kind: node.kind,
     label: node.label,
+    fullLabel: node.label,
+    displayLabel: truncateGraphLabel(node.label, maxLabelCharacters(node.kind)),
     description: node.description,
     preview: node.preview,
     sourceOrder: node.sourceOrder,
@@ -170,4 +181,25 @@ function bySourceOrder(a: TrajectoryNode, b: TrajectoryNode): number {
 
 function edgeOrder(edge: TraceGraphEdge, sourceById: Map<string, TrajectoryNode>): number {
   return sourceById.get(edge.source)?.sourceOrder ?? Number.MAX_SAFE_INTEGER;
+}
+
+
+function maxLabelCharacters(kind: NodeKind): number {
+  if (kind === 'skill') return TRACE_GRAPH_LABEL_LIMITS.skill;
+  if (kind === 'step') return TRACE_GRAPH_LABEL_LIMITS.step;
+  if (kind === 'session' || kind === 'user-message' || kind === 'assistant-message') return TRACE_GRAPH_LABEL_LIMITS.message;
+  return TRACE_GRAPH_LABEL_LIMITS.action;
+}
+
+export function truncateGraphLabel(value: string, maxCharacters: number): string {
+  if (maxCharacters <= 1) return value ? '…' : '';
+  const graphemes = splitGraphemes(value);
+  if (graphemes.length <= maxCharacters) return value;
+  return `${graphemes.slice(0, maxCharacters - 1).join('')}…`;
+}
+
+function splitGraphemes(value: string): string[] {
+  const Segmenter = Intl.Segmenter;
+  if (Segmenter) return [...new Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].map((segment) => segment.segment);
+  return Array.from(value);
 }

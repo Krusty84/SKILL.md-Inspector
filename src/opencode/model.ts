@@ -24,7 +24,7 @@ export type SkillLoadObservationViewModel = SkillLoadObservation;
 export interface NodeDetailsViewModel { nodeId: string; title: string; kind: NodeKind; fields: Array<{ label: string; value: string }>; json?: string; matchingSkills?: SkillCandidate[]; followingNodes?: CompactNodeViewModel[]; warning?: string }
 
 export type TraceGraphMode = 'overview' | 'skills' | 'errors' | 'full';
-export type TraceGraphDirection = 'left-to-right' | 'top-to-bottom';
+export type TraceGraphDirection = 'top-to-bottom' | 'left-to-right';
 export type TraceGraphEdgeKind = 'sequence' | 'message-transition' | 'temporal-after-skill' | 'subtask' | 'retry' | 'related-file';
 
 export interface TraceGraphAggregate {
@@ -44,6 +44,8 @@ export interface TraceGraphNode {
   parentId?: string;
   kind: NodeKind;
   label: string;
+  fullLabel: string;
+  displayLabel: string;
   description?: string;
   preview?: string;
   sourceOrder: number;

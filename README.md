@@ -483,7 +483,7 @@ Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree ite
 ### Interactive OpenCode Session execution graph
 
 Selecting a session opens a deterministic directed execution graph. The default
-ELK layered layout runs left to right and can be switched to top to bottom.
+ELK layered layout runs top to bottom and can be switched to left to right.
 Cytoscape.js provides pan, mouse-wheel/trackpad zoom, selection, compound
 message and step nodes, and viewport controls. **Fit**, **Zoom in**, **Zoom
 out**, **Reset**, and **Center** are available in the toolbar. A navigator in
@@ -502,7 +502,13 @@ The graph has four modes:
   patches, and snapshots.
 
 Messages and steps can be collapsed into aggregate nodes and expanded along the
-selected or searched path. Search matches labels, tool names, skill names,
+selected or searched path. Collapsed nodes display aggregate counts such as
+tools, skills, errors, text, and reasoning derived from the full underlying
+subtree. Right-clicking a graph node opens a local context menu: **Expand**
+reveals one direct hierarchy level, **Show contents** reveals the permitted
+subtree for the active graph mode, and **Hide contents** collapses the visible
+subtree back into the selected aggregate. Layout is recalculated after each
+progressive expansion while preserving the current viewport where practical. Search matches labels, tool names, skill names,
 previews, statuses, and original part types without changing the underlying
 graph. Path controls can isolate predecessors, successors, a local path, a skill
 segment, or an error path. Selecting a node highlights its immediate neighbors
@@ -510,6 +516,11 @@ and opens a resizable details drawer; full tool output, raw JSON, and matching
 skill details are still loaded lazily. The drawer also reuses the existing
 commands for opening a matching `SKILL.md`, its Skill Report, and the raw
 session.
+
+Graph labels are bounded for readability: long labels are truncated with a
+Unicode ellipsis inside the node, while full labels remain available in hover
+tooltips, keyboard focus/details, search, copying, and node-detail requests.
+Node widths stay bounded so labels do not drive unbounded graph geometry.
 
 Semantic zoom keeps the graph readable: distant views reduce leaf nodes to
 compact marks and emphasize message aggregates, medium views show the normal
@@ -533,7 +544,9 @@ Sessions over 500 normalized nodes start with aggressive message/step
 collapsing, while skill- and error-relevant groups remain expanded when
 practical. Sessions over 1000 nodes start in an overview-only collapsed state.
 No nodes are discarded: aggregates remain expandable and Full mode remains
-available. Layout work runs in the browser webview, so it does not block the
+available. The ELK layout includes node and label dimensions, compound padding,
+explicit layer/node/edge spacing, and a bounded overlap-safeguard relayout to
+avoid unrelated node or label overlap and reduce avoidable edge crossings. Layout work runs in the browser webview, so it does not block the
 extension host, and superseded layout results are ignored.
 
 The graph is implemented with TypeScript, Cytoscape.js, cytoscape-elk, ELK,

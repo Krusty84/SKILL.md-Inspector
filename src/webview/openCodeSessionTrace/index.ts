@@ -1,7 +1,7 @@
 import cytoscape from 'cytoscape';
 import elk from 'cytoscape-elk';
 import type { NodeDetailsViewModel, TraceGraphDirection, TraceGraphMode, TraceGraphNode, TraceGraphViewModel } from '../../opencode/model';
-import { buildVisibleTraceGraph, expandedCollapsedIdsForMode, relevantPathNodeIds, searchTraceGraph } from '../../opencode/traceGraphState';
+import { buildVisibleTraceGraph, createTraceGraphExpansionState, expandOneLevel, expandedCollapsedIdsForMode, findUnexpectedOverlaps, hideSubtree, relevantPathNodeIds, searchTraceGraph, showSubtree, traceGraphExpansionActions, type GraphRect, type TraceGraphExpansionState } from '../../opencode/traceGraphState';
 import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from './model';
 import './styles.css';
 
@@ -12,8 +12,8 @@ const vscode = acquireVsCodeApi();
 let model: TraceGraphViewModel | undefined;
 let cy: cytoscape.Core | undefined;
 let mode: TraceGraphMode = 'overview';
-let direction: TraceGraphDirection = 'left-to-right';
-let collapsed = new Set<string>();
+let direction: TraceGraphDirection = 'top-to-bottom';
+let expansion: TraceGraphExpansionState = createTraceGraphExpansionState();
 let selectedId: string | undefined;
 let searchMatches: string[] = [];
 let activeMatch = -1;
@@ -21,6 +21,29 @@ let isolation: Set<string> | undefined;
 let layoutGeneration = 0;
 let minimapFrame = 0;
 let semanticTimer: number | undefined;
+let preserveViewportOnNextLayout = false;
+let layoutFallbackUsed = false;
+
+export const NODE_DIMENSIONS = {
+  action: { width: 170, minHeight: 44, maxLabelCharacters: 40, textMaxWidth: 154 },
+  skill: { width: 190, minHeight: 48, maxLabelCharacters: 44, textMaxWidth: 170 },
+  message: { minWidth: 210, maxLabelCharacters: 56, textMaxWidth: 180 },
+  step: { minWidth: 190, maxLabelCharacters: 48, textMaxWidth: 168 },
+} as const;
+
+export const GRAPH_LAYOUT_SPACING = {
+  nodeNode: 40,
+  betweenLayers: 70,
+  edgeNode: 28,
+  edgeEdge: 18,
+  compoundPadding: 28,
+  compoundHeaderPadding: 34,
+  component: 80,
+} as const;
+
+const GRAPH_LAYOUT_FALLBACK_MULTIPLIER = 1.45;
+
+export function elkDirection(value: TraceGraphDirection): 'DOWN' | 'RIGHT' { return value === 'top-to-bottom' ? 'DOWN' : 'RIGHT'; }
 
 window.addEventListener('message', (event: MessageEvent<ExtensionToWebviewMessage>) => {
   const message = event.data;
@@ -34,12 +57,15 @@ function initialize(next: TraceGraphViewModel): void {
   model = next;
   mode = next.initialState.mode;
   direction = next.initialState.direction;
-  collapsed = new Set(next.initialState.collapsedNodeIds);
+  expansion = createTraceGraphExpansionState(next.initialState.collapsedNodeIds);
   selectedId = undefined;
   searchMatches = [];
   activeMatch = -1;
   isolation = undefined;
   layoutGeneration += 1;
+  layoutFallbackUsed = false;
+  closeContextMenu();
+  hideTooltip();
   document.body.textContent = '';
   buildShell();
   renderGraph();
@@ -90,10 +116,10 @@ function buildShell(): void {
   const layoutLabel = element('label', undefined, 'Layout');
   const layoutSelect = element('select') as HTMLSelectElement;
   layoutSelect.setAttribute('aria-label', 'Graph layout direction');
-  option(layoutSelect, 'left-to-right', 'Left to Right');
   option(layoutSelect, 'top-to-bottom', 'Top to Bottom');
+  option(layoutSelect, 'left-to-right', 'Left to Right');
   layoutSelect.value = direction;
-  layoutSelect.addEventListener('change', () => { direction = layoutSelect.value as TraceGraphDirection; runLayout(); });
+  layoutSelect.addEventListener('change', () => { direction = layoutSelect.value as TraceGraphDirection; runLayout(true); });
   layoutLabel.append(layoutSelect);
   layoutControls.append(layoutLabel);
   const viewport = element('div', 'control-group');
@@ -149,10 +175,15 @@ function buildShell(): void {
   minimap.height = 130;
   minimap.setAttribute('aria-label', 'Graph overview navigator');
   minimap.addEventListener('click', navigateFromMinimap);
+  const menu = element('div', 'graph-context-menu');
+  menu.id = 'graph-context-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  menu.addEventListener('keydown', handleContextMenuKeydown);
   const tooltip = element('div', 'graph-tooltip');
   tooltip.id = 'graph-tooltip';
   tooltip.hidden = true;
-  graphArea.append(graph, progress, minimap, tooltip);
+  graphArea.append(graph, progress, minimap, menu, tooltip);
 
   const drawer = element('aside', 'details-drawer');
   drawer.id = 'details-drawer';
@@ -181,7 +212,7 @@ function buildShell(): void {
 
 function renderGraph(): void {
   if (!model) return;
-  let visible = buildVisibleTraceGraph(model, mode, collapsed);
+  let visible = buildVisibleTraceGraph(model, mode, expansion);
   if (isolation) {
     visible = {
       nodes: visible.nodes.filter((node) => isolation!.has(node.id)),
@@ -203,8 +234,10 @@ function renderGraph(): void {
     boxSelectionEnabled: false,
   });
   cy.on('tap', 'node', (event) => selectNode((event.target as cytoscape.NodeSingular).id()));
+  cy.on('cxttap', 'node', (event) => openContextMenu(event.target as cytoscape.NodeSingular, event.renderedPosition ?? (event.target as cytoscape.NodeSingular).renderedPosition()));
   cy.on('mouseover', 'node', (event) => showTooltip(event.target as cytoscape.NodeSingular));
   cy.on('mouseout', 'node', hideTooltip);
+  cy.on('pan zoom', () => { closeContextMenu(); hideTooltip(); });
   cy.on('zoom', scheduleSemanticZoom);
   cy.on('render', scheduleMinimap);
   applySearchClasses();
@@ -213,7 +246,7 @@ function renderGraph(): void {
 }
 
 function nodeData(node: TraceGraphNode): Record<string, unknown> {
-  const isCollapsed = collapsed.has(node.id);
+  const isCollapsed = expansion.collapsedNodeIds.has(node.id);
   const aggregate = node.aggregate;
   const summary = aggregate ? [
     aggregate.tools ? `${aggregate.tools} tools` : '',
@@ -222,8 +255,10 @@ function nodeData(node: TraceGraphNode): Record<string, unknown> {
     aggregate.textParts ? `${aggregate.textParts} text` : '',
     aggregate.reasoningParts ? `${aggregate.reasoningParts} reasoning` : '',
   ].filter(Boolean).join(' · ') : '';
-  const near = [node.label, node.status, node.durationMs === undefined ? undefined : `${node.durationMs} ms`, truncate(node.preview, 60)].filter(Boolean).join('\n');
-  return { ...node, parent: node.parentId, label: isCollapsed && summary ? `${node.label}\n${summary}` : node.label, nearLabel: near, summaryLabel: summary ? `${node.label}\n${summary}` : node.label, collapsed: isCollapsed ? 'true' : 'false' };
+  const near = [node.fullLabel, node.status, node.durationMs === undefined ? undefined : `${node.durationMs} ms`, truncate(node.preview, 60)].filter(Boolean).join('\n');
+  const displaySummary = summary ? truncateGrapheme(summary, 64) : '';
+  const label = isCollapsed && displaySummary ? `${node.displayLabel}\n${displaySummary}` : node.displayLabel;
+  return { ...node, parent: isCollapsed ? undefined : node.parentId, label, displayLabel: label, fullLabel: node.fullLabel, nearLabel: near, summaryLabel: displaySummary ? `${node.displayLabel}\n${displaySummary}` : node.displayLabel, collapsed: isCollapsed ? 'true' : 'false' };
 }
 
 function graphStyles(): cytoscape.StylesheetStyle[] {
@@ -242,20 +277,20 @@ function graphStyles(): cytoscape.StylesheetStyle[] {
     findBorder: css('--vscode-editor-findMatchBorder', '#ff8f00'),
   };
   return [
-    { selector: 'node', style: { 'background-color': theme.background, 'border-color': theme.border, 'border-width': 1.5, color: theme.foreground, label: 'data(label)', 'font-family': css('--vscode-font-family', 'sans-serif'), 'font-size': '11px', 'text-wrap': 'wrap', 'text-max-width': '150px', 'text-valign': 'center', 'text-halign': 'center', width: '150px', height: '42px', padding: '8px', shape: 'round-rectangle' } },
-    { selector: ':parent', style: { 'background-opacity': 0.14, 'border-width': 1.5, 'text-valign': 'top', 'text-halign': 'center', padding: '22px', 'min-width': '180px', 'min-height': '80px' } },
-    { selector: 'node[kind = "session"]', style: { 'background-opacity': 0.06, 'border-style': 'dashed', padding: '34px' } },
+    { selector: 'node', style: { 'background-color': theme.background, 'border-color': theme.border, 'border-width': 1.5, color: theme.foreground, label: 'data(displayLabel)', 'font-family': css('--vscode-font-family', 'sans-serif'), 'font-size': '11px', 'text-wrap': 'ellipsis', 'text-max-width': `${NODE_DIMENSIONS.action.textMaxWidth}px`, 'text-overflow-wrap': 'anywhere', 'text-valign': 'center', 'text-halign': 'center', width: `${NODE_DIMENSIONS.action.width}px`, height: `${NODE_DIMENSIONS.action.minHeight}px`, padding: '8px', shape: 'round-rectangle' } },
+    { selector: ':parent', style: { 'background-opacity': 0.14, 'border-width': 1.5, 'text-valign': 'top', 'text-halign': 'center', padding: `${GRAPH_LAYOUT_SPACING.compoundPadding}px`, 'min-width': `${NODE_DIMENSIONS.message.minWidth}px`, 'min-height': '92px' } },
+    { selector: 'node[kind = "session"]', style: { 'background-opacity': 0.06, 'border-style': 'dashed', padding: `${GRAPH_LAYOUT_SPACING.compoundHeaderPadding}px` } },
     { selector: 'node[kind = "user-message"]', style: { 'border-color': theme.description, 'background-opacity': 0.12 } },
     { selector: 'node[kind = "assistant-message"]', style: { 'border-color': theme.focus, 'background-opacity': 0.1 } },
-    { selector: 'node[kind = "step"]', style: { 'border-style': 'dotted', 'background-opacity': 0.08, padding: '18px' } },
-    { selector: 'node[kind = "skill"]', style: { shape: 'hexagon', 'border-color': theme.yellow, 'border-width': 3, 'background-color': theme.background } },
+    { selector: 'node[kind = "step"]', style: { 'border-style': 'dotted', 'background-opacity': 0.08, padding: `${GRAPH_LAYOUT_SPACING.compoundPadding}px` } },
+    { selector: 'node[kind = "skill"]', style: { shape: 'hexagon', width: `${NODE_DIMENSIONS.skill.width}px`, height: `${NODE_DIMENSIONS.skill.minHeight}px`, 'text-max-width': `${NODE_DIMENSIONS.skill.textMaxWidth}px`, 'border-color': theme.yellow, 'border-width': 3, 'background-color': theme.background } },
     { selector: 'node[kind = "subtask"], node[kind = "agent"]', style: { shape: 'diamond', 'border-color': theme.purple } },
     { selector: 'node[kind = "retry"]', style: { shape: 'round-diamond', 'border-style': 'double', 'border-color': theme.orange } },
     { selector: 'node[kind = "compaction"]', style: { shape: 'barrel' } },
     { selector: 'node[kind = "unknown"]', style: { shape: 'tag', 'border-style': 'dashed', 'border-color': theme.warning } },
     { selector: 'node[status = "error"]', style: { 'border-color': theme.error, 'border-width': 4, shape: 'octagon' } },
-    { selector: 'node[collapsed = "true"]', style: { 'border-style': 'double', 'border-width': 3, width: 190, height: 62 } },
-    { selector: 'edge', style: { width: 2, 'line-color': theme.description, 'target-arrow-color': theme.description, 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', opacity: 0.7 } },
+    { selector: 'node[collapsed = "true"]', style: { 'border-style': 'double', 'border-width': 3, width: '210px', height: '68px', 'text-max-width': '178px' } },
+    { selector: 'edge', style: { width: 2, 'line-color': theme.description, 'target-arrow-color': theme.description, 'target-arrow-shape': 'triangle', 'curve-style': 'taxi', opacity: 0.7 } },
     { selector: 'edge.message-transition', style: { width: 1, 'line-style': 'dotted', opacity: 0.45 } },
     { selector: 'edge.temporal-after-skill', style: { 'line-style': 'dashed', 'line-color': theme.yellow, 'target-arrow-color': theme.yellow, opacity: 0.9 } },
     { selector: 'edge.subtask', style: { 'line-color': theme.purple, 'target-arrow-color': theme.purple, 'curve-style': 'taxi' } },
@@ -273,32 +308,53 @@ function graphStyles(): cytoscape.StylesheetStyle[] {
   ];
 }
 
-function runLayout(): void {
+function runLayout(fitAfterLayout = false): void {
   if (!cy) return;
   const generation = ++layoutGeneration;
+  closeContextMenu();
+  hideTooltip();
   const progress = document.getElementById('layout-progress');
+  const previousZoom = cy.zoom();
+  const previousPan = cy.pan();
   if (progress) progress.hidden = false;
   window.requestAnimationFrame(() => {
     if (!cy || generation !== layoutGeneration) return;
+    const spacingMultiplier = layoutFallbackUsed ? GRAPH_LAYOUT_FALLBACK_MULTIPLIER : 1;
     const layout = cy.layout({
       name: 'elk',
-      fit: true,
-      padding: 45,
+      fit: fitAfterLayout || !preserveViewportOnNextLayout,
+      padding: 55,
+      nodeDimensionsIncludeLabels: true,
       animate: false,
       elk: {
         algorithm: 'layered',
-        direction: direction === 'left-to-right' ? 'RIGHT' : 'DOWN',
-        'elk.spacing.nodeNode': 32,
-        'elk.layered.spacing.nodeNodeBetweenLayers': 72,
+        'elk.algorithm': 'layered',
+        direction: elkDirection(direction),
+        'elk.direction': elkDirection(direction),
+        'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+        'elk.spacing.nodeNode': String(Math.round(GRAPH_LAYOUT_SPACING.nodeNode * spacingMultiplier)),
+        'elk.layered.spacing.nodeNodeBetweenLayers': String(Math.round(GRAPH_LAYOUT_SPACING.betweenLayers * spacingMultiplier)),
+        'elk.spacing.edgeNode': String(Math.round(GRAPH_LAYOUT_SPACING.edgeNode * spacingMultiplier)),
+        'elk.spacing.edgeEdge': String(Math.round(GRAPH_LAYOUT_SPACING.edgeEdge * spacingMultiplier)),
+        'elk.spacing.componentComponent': String(Math.round(GRAPH_LAYOUT_SPACING.component * spacingMultiplier)),
+        'elk.padding': `[top=${GRAPH_LAYOUT_SPACING.compoundHeaderPadding + 8},left=${GRAPH_LAYOUT_SPACING.compoundPadding},bottom=${GRAPH_LAYOUT_SPACING.compoundPadding},right=${GRAPH_LAYOUT_SPACING.compoundPadding}]`,
+        'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+        'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+        'elk.edgeRouting': 'ORTHOGONAL',
         'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
       },
     } as cytoscape.LayoutOptions);
     layout.one('layoutstop', () => {
       if (generation !== layoutGeneration) return;
       if (progress) progress.hidden = true;
+      if (preserveViewportOnNextLayout && !fitAfterLayout) { cy!.zoom(previousZoom); cy!.pan(previousPan); }
+      const overlaps = collectUnexpectedOverlaps();
+      if (overlaps.length && !layoutFallbackUsed) { layoutFallbackUsed = true; preserveViewportOnNextLayout = true; runLayout(false); return; }
+      layoutFallbackUsed = false;
+      preserveViewportOnNextLayout = false;
       scheduleSemanticZoom();
       scheduleMinimap();
-      if (selectedId) centerSelected();
+      if (selectedId && fitAfterLayout) centerSelected();
     });
     layout.run();
   });
@@ -367,7 +423,7 @@ function setMode(next: TraceGraphMode): void {
   if (mode === next) return;
   mode = next;
   isolation = undefined;
-  if (model) collapsed = expandedCollapsedIdsForMode(model, next, collapsed);
+  if (model) expansion.collapsedNodeIds = expandedCollapsedIdsForMode(model, next, expansion.collapsedNodeIds);
   document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((control) => control.setAttribute('aria-pressed', String(control.dataset.mode === mode)));
   updateModeNotice();
   renderGraph();
@@ -386,7 +442,7 @@ function updateModeNotice(): void {
 
 function collapseAll(): void {
   if (!model) return;
-  collapsed = new Set(model.nodes.filter((node) => node.kind === 'user-message' || node.kind === 'assistant-message' || node.kind === 'step').map((node) => node.id));
+  expansion = createTraceGraphExpansionState(model.nodes.filter((node) => node.kind === 'user-message' || node.kind === 'assistant-message' || node.kind === 'step').map((node) => node.id));
   renderGraph();
 }
 
@@ -396,7 +452,7 @@ function expandRelevantPath(): void {
   if (!id) return;
   const byId = new Map(model.nodes.map((node) => [node.id, node]));
   let current = byId.get(id);
-  while (current) { collapsed.delete(current.id); current = current.parentId ? byId.get(current.parentId) : undefined; }
+  while (current) { expansion.collapsedNodeIds.delete(current.id); current = current.parentId ? byId.get(current.parentId) : undefined; }
   renderGraph();
 }
 
@@ -404,7 +460,8 @@ function toggleSelectedCollapse(): void {
   if (!model || !selectedId) return;
   const node = model.nodes.find((candidate) => candidate.id === selectedId);
   if (!node?.collapsible || node.kind === 'session') return;
-  if (collapsed.has(node.id)) collapsed.delete(node.id); else collapsed.add(node.id);
+  if (expansion.collapsedNodeIds.has(node.id)) expansion = expandOneLevel(expansion, node.id, model); else expansion = hideSubtree(expansion, node.id, model);
+  preserveViewportOnNextLayout = true;
   renderGraph();
 }
 
@@ -448,7 +505,7 @@ function focusSearchMatch(): void {
   let current = node;
   let needsRender = false;
   const byId = new Map(model.nodes.map((candidate) => [candidate.id, candidate]));
-  while (current) { if (collapsed.delete(current.id)) needsRender = true; current = current.parentId ? byId.get(current.parentId) : undefined; }
+  while (current) { if (expansion.collapsedNodeIds.delete(current.id)) needsRender = true; current = current.parentId ? byId.get(current.parentId) : undefined; }
   if (needsRender) renderGraph();
   else { applySearchClasses(); centerNode(id); }
 }
@@ -478,8 +535,9 @@ function closeDetails(): void {
 }
 
 function handleGraphKeydown(event: KeyboardEvent): void {
+  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) { event.preventDefault(); if (selectedId) { const node = cy?.getElementById(selectedId); if (node?.length) openContextMenu(node as cytoscape.NodeSingular, (node as cytoscape.NodeSingular).renderedPosition()); } return; }
   if (event.key === 'Enter') { event.preventDefault(); if (selectedId) toggleSelectedCollapse(); else { const first = cy?.nodes().filter(':childless').first(); if (first?.length) selectNode(first.id()); } }
-  else if (event.key === 'Escape') { event.preventDefault(); if (selectedId) closeDetails(); else clearIsolation(); }
+  else if (event.key === 'Escape') { event.preventDefault(); closeContextMenu(); hideTooltip(); if (selectedId) closeDetails(); else clearIsolation(); }
   else if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomBy(1.2); }
   else if (event.key === '-') { event.preventDefault(); zoomBy(0.8); }
   else if (event.key === '0') { event.preventDefault(); resetViewport(); }
@@ -576,13 +634,79 @@ function showTooltip(node: cytoscape.NodeSingular): void {
   const tooltip = document.getElementById('graph-tooltip');
   if (!tooltip) return;
   const position = node.renderedPosition();
-  tooltip.textContent = [node.data('label'), node.data('status'), node.data('durationMs') === undefined ? undefined : `${node.data('durationMs')} ms`, truncate(node.data('preview'), 180)].filter(Boolean).join(' · ');
-  tooltip.style.left = `${position.x + 18}px`;
-  tooltip.style.top = `${position.y + 18}px`;
+  tooltip.textContent = [node.data('fullLabel'), node.data('status'), node.data('durationMs') === undefined ? undefined : `${node.data('durationMs')} ms`, truncate(node.data('preview'), 180)].filter(Boolean).join(' · ');
+  positionFloatingElement(tooltip, position.x + 18, position.y + 18);
   tooltip.hidden = false;
 }
 
 function hideTooltip(): void { const tooltip = document.getElementById('graph-tooltip'); if (tooltip) tooltip.hidden = true; }
+
+
+function openContextMenu(node: cytoscape.NodeSingular, position: { x: number; y: number }): void {
+  if (!model) return;
+  selectNode(node.id());
+  const menu = document.getElementById('graph-context-menu');
+  if (!menu) return;
+  menu.textContent = '';
+  const actions = traceGraphExpansionActions(expansion, node.id(), model, mode);
+  const addItem = (label: string, action: () => void): void => {
+    const item = button(label, label, () => { closeContextMenu(); action(); });
+    item.setAttribute('role', 'menuitem');
+    menu.append(item);
+  };
+  if (actions.expand) addItem('Expand', () => { expansion = expandOneLevel(expansion, node.id(), model!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+  if (actions.showContents) addItem('Show contents', () => { expansion = showSubtree(expansion, node.id(), model!, mode); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+  if (actions.hideContents) addItem('Hide contents', () => { expansion = hideSubtree(expansion, node.id(), model!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+  if (menu.childElementCount) menu.append(element('div', 'menu-separator'));
+  addItem('Focus', () => centerNode(node.id()));
+  addItem('Show predecessors', () => isolate('predecessors'));
+  addItem('Show successors', () => isolate('successors'));
+  addItem('Isolate local path', () => isolate('local'));
+  if (node.data('kind') === 'skill') addItem('Isolate skill segment', () => isolate('skill'));
+  if (node.data('status') === 'error') addItem('Isolate error path', () => isolate('error'));
+  addItem('Open details', () => selectNode(node.id()));
+  menu.hidden = false;
+  positionFloatingElement(menu, position.x, position.y);
+  (menu.querySelector('[role=menuitem]') as HTMLElement | null)?.focus();
+}
+
+
+function handleContextMenuKeydown(event: KeyboardEvent): void {
+  const menu = document.getElementById('graph-context-menu');
+  if (!menu || menu.hidden) return;
+  const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role=menuitem]'));
+  const current = document.activeElement instanceof HTMLButtonElement ? items.indexOf(document.activeElement) : -1;
+  if (event.key === 'Escape') { event.preventDefault(); closeContextMenu(); return; }
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') return;
+  event.preventDefault();
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+  items[next]?.focus();
+}
+
+function closeContextMenu(): void { const menu = document.getElementById('graph-context-menu'); if (menu) menu.hidden = true; }
+
+function positionFloatingElement(target: HTMLElement, x: number, y: number): void {
+  target.style.left = `${Math.max(8, x)}px`;
+  target.style.top = `${Math.max(8, y)}px`;
+  window.requestAnimationFrame(() => {
+    const rect = target.getBoundingClientRect();
+    target.style.left = `${Math.max(8, Math.min(window.innerWidth - rect.width - 8, x))}px`;
+    target.style.top = `${Math.max(8, Math.min(window.innerHeight - rect.height - 8, y))}px`;
+  });
+}
+
+function collectUnexpectedOverlaps(): Array<{ first: string; second: string }> {
+  if (!cy) return [];
+  const rects: GraphRect[] = [];
+  cy.nodes().forEach((node) => {
+    const box = node.boundingBox({ includeLabels: true, includeOverlays: false });
+    rects.push({ id: node.id(), parentIds: node.parents().map((parent) => parent.id()), x1: box.x1, y1: box.y1, x2: box.x2, y2: box.y2 });
+  });
+  return findUnexpectedOverlaps(rects);
+}
+
+window.addEventListener('pointerdown', (event) => { const menu = document.getElementById('graph-context-menu'); if (menu && !menu.hidden && !menu.contains(event.target as Node)) closeContextMenu(); });
+window.addEventListener('blur', closeContextMenu);
 
 function startDrawerResize(event: PointerEvent): void {
   const drawer = document.getElementById('details-drawer');
@@ -621,7 +745,8 @@ function button(text: string, label: string, action: () => void): HTMLButtonElem
 
 function option(select: HTMLSelectElement, value: string, label: string): void { const item = element('option', undefined, label); item.value = value; select.append(item); }
 function capitalize(value: string): string { return value.charAt(0).toUpperCase() + value.slice(1); }
-function truncate(value: unknown, max: number): string | undefined { if (typeof value !== 'string') return undefined; return value.length > max ? `${value.slice(0, max - 1)}…` : value; }
+function truncate(value: unknown, max: number): string | undefined { if (typeof value !== 'string') return undefined; return truncateGrapheme(value, max); }
+function truncateGrapheme(value: string, max: number): string { const parts = Array.from(value); return parts.length > max ? `${parts.slice(0, max - 1).join('')}…` : value; }
 function css(name: string, fallback: string): string { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback; }
 function debounce(callback: () => void, delay: number): () => void { let timer: number | undefined; return () => { window.clearTimeout(timer); timer = window.setTimeout(callback, delay); }; }
 
