@@ -1,0 +1,66 @@
+{
+  "info": {
+    "id": "ses_sanitized",
+    "title": "Sanitized [redacted:title:001]",
+    "version": "1.2.3",
+    "model": {
+      "id": "fixture-model",
+      "providerID": "fixture-provider"
+    },
+    "time": {
+      "created": 3000,
+      "updated": 3300
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "id": "msg_sanitized_user",
+        "role": "user",
+        "time": {
+          "created": 3000
+        }
+      },
+      "parts": [
+        {
+          "id": "part_sanitized_text",
+          "type": "text",
+          "text": "[redacted:text:002]"
+        }
+      ]
+    },
+    {
+      "info": {
+        "id": "msg_sanitized_assistant",
+        "role": "assistant",
+        "time": {
+          "created": 3100,
+          "completed": 3300
+        }
+      },
+      "parts": [
+        {
+          "id": "part_sanitized_tool",
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_sanitized",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": {
+                "redacted": "path:003"
+              }
+            },
+            "output": {
+              "redacted": "output:004"
+            },
+            "time": {
+              "start": 3150,
+              "end": 3200
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

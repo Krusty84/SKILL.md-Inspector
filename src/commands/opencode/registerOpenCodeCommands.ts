@@ -23,7 +23,8 @@ export function registerOpenCodeCommands(context: vscode.ExtensionContext, deps:
       return undefined;
     }
     try {
-      return { uri, session: await loadOpenCodeSession(uri, readOpenCodeDiscoveryOptions().maxFileSizeBytes) };
+      const options = readOpenCodeDiscoveryOptions();
+      return { uri, session: await loadOpenCodeSession(uri, options.maxFileSizeBytes, { maxPreviewCharacters: options.maxPreviewCharacters }) };
     } catch (e) {
       deps.output.appendLine(`OpenCode load failed for ${uri.toString()}: ${e instanceof Error ? e.stack ?? e.message : String(e)}`);
       void vscode.window.showWarningMessage(String(e instanceof Error ? e.message : e));

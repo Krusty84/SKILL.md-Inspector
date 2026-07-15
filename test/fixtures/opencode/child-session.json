@@ -1,0 +1,17 @@
+{
+  "info": {
+    "id": "ses_child",
+    "parentID": "ses_parent",
+    "title": "Child fixture",
+    "version": "1.2.3",
+    "model": {
+      "id": "fixture-model",
+      "providerID": "fixture-provider"
+    },
+    "time": {
+      "created": 6100,
+      "updated": 6300
+    }
+  },
+  "messages": []
+}

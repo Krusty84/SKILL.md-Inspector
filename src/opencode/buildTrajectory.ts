@@ -1,51 +1,295 @@
-import type { NormalizedOpenCodeSession, OpenCodeMetrics, OpenCodeParseDiagnostic, ParsedOpenCodeSession, ParsedMessage, ParsedPart, SkillLoadObservation, TrajectoryNode } from './model';
+import type {
+  NormalizedOpenCodeSession,
+  NormalizeSessionOptions,
+  OpenCodeMetrics,
+  OpenCodeParseDiagnostic,
+  ParsedMessage,
+  ParsedOpenCodeSession,
+  ParsedPart,
+  SkillLoadObservation,
+  TrajectoryNode,
+} from './model';
 import { asNumber, asString, getPath, preview, safeDuration } from './util';
 
-export function normalizeSession(session: ParsedOpenCodeSession, diagnostics: OpenCodeParseDiagnostic[] = []): NormalizedOpenCodeSession {
+const DEFAULT_NORMALIZE_OPTIONS: NormalizeSessionOptions = { maxPreviewCharacters: 20000 };
+
+export function normalizeSession(
+  session: ParsedOpenCodeSession,
+  diagnostics: OpenCodeParseDiagnostic[] = [],
+  options: NormalizeSessionOptions = DEFAULT_NORMALIZE_OPTIONS,
+): NormalizedOpenCodeSession {
+  const normalizedDiagnostics = [...diagnostics];
+  const maxPreviewCharacters = validPreviewLimit(options.maxPreviewCharacters);
   const rawByReference = new Map<string, unknown>();
   const nodes: TrajectoryNode[] = [];
   const info = session.info;
   const id = asString(info.id) ?? asString(info.sessionID) ?? asString(info.sessionId);
   const title = asString(info.title) ?? asString(info.name) ?? id ?? 'OpenCode Session';
-  const created = asNumber(getPath(info, ['time','created'])) ?? asNumber(info.created);
-  const updated = asNumber(getPath(info, ['time','updated'])) ?? asNumber(info.updated);
-  const root: TrajectoryNode = { id: 'session', kind: 'session', sourceOrder: 0, label: title, start: created, end: updated, durationMs: safeDuration(created, updated), children: [], rawReference: 'session' };
-  nodes.push(root); rawByReference.set('session', session.raw);
+  const created = asNumber(getPath(info, ['time', 'created'])) ?? asNumber(info.created);
+  const updated = asNumber(getPath(info, ['time', 'updated'])) ?? asNumber(info.updated);
+  const root: TrajectoryNode = {
+    id: 'session',
+    kind: 'session',
+    sourceOrder: 0,
+    label: title,
+    start: created,
+    end: updated,
+    durationMs: safeDuration(created, updated),
+    children: [],
+    rawReference: 'session',
+  };
+  nodes.push(root);
+  rawByReference.set('session', session.raw);
+
   let order = 1;
   for (const message of session.messages) {
-    const messageNode = messageToNode(message, order++);
-    nodes.push(messageNode); root.children.push(messageNode.id); rawByReference.set(messageNode.rawReference!, message.raw);
-    if (message.role === 'assistant') order = addAssistantParts(message, messageNode, nodes, rawByReference, diagnostics, order);
-    else order = addFlatParts(message.parts, messageNode, nodes, rawByReference, order);
+    const messageNode = messageToNode(message, order++, maxPreviewCharacters);
+    nodes.push(messageNode);
+    root.children.push(messageNode.id);
+    rawByReference.set(messageNode.rawReference!, message.raw);
+    if (message.role === 'assistant') {
+      order = addAssistantParts(message, messageNode, nodes, rawByReference, normalizedDiagnostics, order, maxPreviewCharacters);
+    } else {
+      order = addFlatParts(message.parts, messageNode, nodes, rawByReference, order, maxPreviewCharacters);
+    }
     deriveParentTime(messageNode, nodes);
   }
+  deriveParentTime(root, nodes);
+
   const skills = analyzeSkillUsage(nodes);
   const metrics = calculateMetrics(session, nodes, skills, root.durationMs);
-  if (session.sanitization === 'likely-sanitized') diagnostics.push({ severity: 'warning', code: 'opencode.sanitized.likely', message: 'This export appears sanitized; detailed trajectory analysis may be incomplete.' });
-  return { id, parentId: asString(info.parentID) ?? asString(info.parentId), title, version: asString(info.version), model: asString(info.model) ?? asString(getPath(info, ['model','id'])), provider: asString(info.provider) ?? asString(getPath(info, ['provider','id'])), agent: asString(info.agent), created, updated, sanitization: session.sanitization, diagnostics, nodes, rootNodeId: root.id, rawByReference, messages: session.messages, metrics, skills };
+  if (session.sanitization === 'likely-sanitized') {
+    normalizedDiagnostics.push({ severity: 'warning', code: 'opencode.sanitized.likely', message: 'This export appears sanitized; detailed trajectory analysis may be incomplete.' });
+  }
+
+  const sessionModel = asString(getPath(info, ['model', 'id'])) ?? asString(info.model) ?? asString(info.modelID);
+  const sessionProvider = asString(getPath(info, ['model', 'providerID']))
+    ?? asString(info.provider)
+    ?? asString(info.providerID)
+    ?? asString(getPath(info, ['provider', 'id']));
+  return {
+    id,
+    parentId: asString(info.parentID) ?? asString(info.parentId),
+    title,
+    version: asString(info.version),
+    model: sessionModel ?? firstAssistantString(session.messages, [['modelID'], ['model', 'id']]),
+    provider: sessionProvider ?? firstAssistantString(session.messages, [['providerID'], ['model', 'providerID'], ['provider', 'id']]),
+    agent: asString(info.agent),
+    created,
+    updated,
+    sanitization: session.sanitization,
+    diagnostics: normalizedDiagnostics,
+    nodes,
+    rootNodeId: root.id,
+    rawByReference,
+    messages: session.messages,
+    metrics,
+    skills,
+  };
 }
 
-function messageToNode(message: ParsedMessage, sourceOrder: number): TrajectoryNode {
-  const start = asNumber(getPath(message.info, ['time','start'])) ?? asNumber(getPath(message.info, ['time','created']));
-  const end = asNumber(getPath(message.info, ['time','end'])) ?? asNumber(getPath(message.info, ['time','updated']));
-  return { id: `message-${message.sourceOrder}`, kind: message.role === 'assistant' ? 'assistant-message' : message.role === 'user' ? 'user-message' : 'unknown', parentId: 'session', sourceOrder, label: `${message.role === 'unknown' ? `Unknown (${message.originalRole ?? 'missing'})` : message.role} message`, start, end, durationMs: safeDuration(start, end), children: [], rawReference: `message-${message.sourceOrder}` };
+function validPreviewLimit(value: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_NORMALIZE_OPTIONS.maxPreviewCharacters;
 }
-function addFlatParts(parts: ParsedPart[], parent: TrajectoryNode, nodes: TrajectoryNode[], raw: Map<string, unknown>, order: number): number { for (const part of parts) { const n = partToNode(part, parent.id, order++); nodes.push(n); parent.children.push(n.id); raw.set(n.rawReference!, part.raw); } return order; }
-function addAssistantParts(message: ParsedMessage, parent: TrajectoryNode, nodes: TrajectoryNode[], raw: Map<string, unknown>, diagnostics: OpenCodeParseDiagnostic[], order: number): number {
-  let current: TrajectoryNode | undefined;
-  const ensureSynthetic = (): TrajectoryNode => { if (current) return current; current = { id: `${parent.id}-step-synthetic-${parent.children.length}`, kind: 'step', parentId: parent.id, sourceOrder: order++, label: 'Ungrouped step', description: 'Synthetic group for parts outside explicit step boundaries', children: [], synthetic: true }; nodes.push(current); parent.children.push(current.id); return current; };
-  for (const part of message.parts) {
-    if (part.originalType === 'step-start') { if (current && !current.synthetic) { current.incomplete = true; diagnostics.push({ severity: 'warning', code: 'opencode.step.repeatedStart', message: 'A step-start appeared before the previous step-finish.', path: part.id }); } current = { id: `${parent.id}-step-${part.sourceOrder}`, kind: 'step', parentId: parent.id, sourceOrder: order++, label: 'Step', start: part.start, children: [], rawReference: `${parent.id}-step-${part.sourceOrder}` }; nodes.push(current); parent.children.push(current.id); raw.set(current.rawReference!, part.raw); continue; }
-    if (part.originalType === 'step-finish') { if (!current || current.synthetic) diagnostics.push({ severity: 'warning', code: 'opencode.step.unmatchedFinish', message: 'A step-finish appeared without a matching step-start.', path: part.id }); else { current.end = part.end ?? part.start; current.durationMs = safeDuration(current.start, current.end); deriveParentTime(current, nodes); current = undefined; } continue; }
-    const step = ensureSynthetic(); const n = partToNode(part, step.id, order++); nodes.push(n); step.children.push(n.id); raw.set(n.rawReference!, part.raw);
+
+function messageToNode(message: ParsedMessage, sourceOrder: number, maxPreviewCharacters: number): TrajectoryNode {
+  const start = asNumber(getPath(message.info, ['time', 'created']))
+    ?? asNumber(getPath(message.info, ['time', 'start']))
+    ?? asNumber(message.info.created);
+  const end = asNumber(getPath(message.info, ['time', 'completed']))
+    ?? asNumber(getPath(message.info, ['time', 'end']))
+    ?? asNumber(getPath(message.info, ['time', 'updated']))
+    ?? asNumber(message.info.completed)
+    ?? asNumber(message.info.updated);
+  const error = message.role === 'assistant' ? assistantError(message) : undefined;
+  return {
+    id: `message-${message.sourceOrder}`,
+    kind: message.role === 'assistant' ? 'assistant-message' : message.role === 'user' ? 'user-message' : 'unknown',
+    parentId: 'session',
+    sourceOrder,
+    label: `${message.role === 'unknown' ? `Unknown (${message.originalRole ?? 'missing'})` : message.role} message`,
+    start,
+    end,
+    durationMs: safeDuration(start, end),
+    status: error === undefined ? undefined : 'error',
+    children: [],
+    preview: error === undefined ? undefined : previewAssistantError(error, maxPreviewCharacters),
+    rawReference: `message-${message.sourceOrder}`,
+  };
+}
+
+function addFlatParts(
+  parts: ParsedPart[],
+  parent: TrajectoryNode,
+  nodes: TrajectoryNode[],
+  raw: Map<string, unknown>,
+  order: number,
+  maxPreviewCharacters: number,
+): number {
+  for (const part of parts) {
+    const node = partToNode(part, parent.id, order++, maxPreviewCharacters);
+    nodes.push(node);
+    parent.children.push(node.id);
+    raw.set(node.rawReference!, part.raw);
   }
-  if (current && !current.synthetic) { current.incomplete = true; diagnostics.push({ severity: 'warning', code: 'opencode.step.unclosed', message: 'A step-start was not closed by a step-finish.' }); deriveParentTime(current, nodes); }
-  for (const stepId of parent.children) { const step = nodes.find((n) => n.id === stepId); if (step) deriveParentTime(step, nodes); }
   return order;
 }
-function partToNode(part: ParsedPart, parentId: string, sourceOrder: number): TrajectoryNode { const label = part.kind === 'skill' ? `Skill: ${part.skillName ?? 'unknown'}` : part.kind === 'tool' ? toolLabel(part) : part.kind === 'unknown' ? `Unknown: ${part.originalType ?? 'missing type'}` : part.kind; return { id: `${parentId}-part-${part.sourceOrder}`, kind: part.kind, parentId, sourceOrder, label, start: part.start, end: part.end, durationMs: safeDuration(part.start, part.end), status: part.status, toolName: part.toolName, skillName: part.skillName, callId: part.callId, children: [], preview: preview(part.text ?? part.raw.output ?? part.raw.error ?? part.raw, 500), rawReference: `${parentId}-part-${part.sourceOrder}`, originalType: part.originalType }; }
-function toolLabel(part: ParsedPart): string { const name = part.toolName ?? 'unknown'; const detail = asString(getPath(part.raw, ['state','input','command'])) ?? asString(getPath(part.raw, ['state','input','path'])) ?? asString(getPath(part.raw, ['state','input','filePath'])); const short = detail && detail.length > 80 ? `${detail.slice(0, 79)}…` : detail; return short ? `${name}: ${short}` : name; }
-function deriveParentTime(node: TrajectoryNode, all: TrajectoryNode[]): void { const children = node.children.map((id) => all.find((n) => n.id === id)).filter((n): n is TrajectoryNode => !!n); const starts = children.map((n) => n.start).filter((n): n is number => n !== undefined); const ends = children.map((n) => n.end).filter((n): n is number => n !== undefined); node.start ??= starts.length ? Math.min(...starts) : undefined; node.end ??= ends.length ? Math.max(...ends) : undefined; node.durationMs ??= safeDuration(node.start, node.end); }
+
+function addAssistantParts(
+  message: ParsedMessage,
+  parent: TrajectoryNode,
+  nodes: TrajectoryNode[],
+  raw: Map<string, unknown>,
+  diagnostics: OpenCodeParseDiagnostic[],
+  order: number,
+  maxPreviewCharacters: number,
+): number {
+  let current: TrajectoryNode | undefined;
+  const ensureSynthetic = (): TrajectoryNode => {
+    if (current) return current;
+    current = {
+      id: `${parent.id}-step-synthetic-${parent.children.length}`,
+      kind: 'step',
+      parentId: parent.id,
+      sourceOrder: order++,
+      label: 'Ungrouped step',
+      description: 'Synthetic group for parts outside explicit step boundaries',
+      children: [],
+      synthetic: true,
+    };
+    nodes.push(current);
+    parent.children.push(current.id);
+    return current;
+  };
+
+  for (const part of message.parts) {
+    if (part.originalType === 'step-start') {
+      if (current && !current.synthetic) {
+        current.incomplete = true;
+        diagnostics.push({ severity: 'warning', code: 'opencode.step.repeatedStart', message: 'A step-start appeared before the previous step-finish.', path: part.id });
+      }
+      current = {
+        id: `${parent.id}-step-${part.sourceOrder}`,
+        kind: 'step',
+        parentId: parent.id,
+        sourceOrder: order++,
+        label: 'Step',
+        start: part.start,
+        children: [],
+        rawReference: `${parent.id}-step-${part.sourceOrder}`,
+      };
+      nodes.push(current);
+      parent.children.push(current.id);
+      raw.set(current.rawReference!, part.raw);
+      continue;
+    }
+    if (part.originalType === 'step-finish') {
+      if (!current || current.synthetic) {
+        diagnostics.push({ severity: 'warning', code: 'opencode.step.unmatchedFinish', message: 'A step-finish appeared without a matching step-start.', path: part.id });
+      } else {
+        current.end = part.end ?? part.start;
+        current.durationMs = safeDuration(current.start, current.end);
+        deriveParentTime(current, nodes);
+        current = undefined;
+      }
+      continue;
+    }
+    const step = ensureSynthetic();
+    const node = partToNode(part, step.id, order++, maxPreviewCharacters);
+    nodes.push(node);
+    step.children.push(node.id);
+    raw.set(node.rawReference!, part.raw);
+  }
+
+  if (current && !current.synthetic) {
+    current.incomplete = true;
+    diagnostics.push({ severity: 'warning', code: 'opencode.step.unclosed', message: 'A step-start was not closed by a step-finish.' });
+    deriveParentTime(current, nodes);
+  }
+  for (const stepId of parent.children) {
+    const step = nodes.find((node) => node.id === stepId);
+    if (step) deriveParentTime(step, nodes);
+  }
+  return order;
+}
+
+function partToNode(part: ParsedPart, parentId: string, sourceOrder: number, maxPreviewCharacters: number): TrajectoryNode {
+  const label = part.kind === 'skill'
+    ? `Skill: ${part.skillName ?? 'unknown'}`
+    : part.kind === 'tool'
+      ? toolLabel(part)
+      : part.kind === 'unknown'
+        ? `Unknown: ${part.originalType ?? 'missing type'}`
+        : part.kind;
+  return {
+    id: `${parentId}-part-${part.sourceOrder}`,
+    kind: part.kind,
+    parentId,
+    sourceOrder,
+    label,
+    start: part.start,
+    end: part.end,
+    durationMs: safeDuration(part.start, part.end),
+    status: part.status,
+    toolName: part.toolName,
+    skillName: part.skillName,
+    callId: part.callId,
+    children: [],
+    preview: preview(partPreviewValue(part), maxPreviewCharacters),
+    rawReference: `${parentId}-part-${part.sourceOrder}`,
+    originalType: part.originalType,
+  };
+}
+
+function partPreviewValue(part: ParsedPart): unknown {
+  if ((part.kind === 'text' || part.kind === 'reasoning') && part.text !== undefined) return part.text;
+  const output = getPath(part.raw, ['state', 'output']);
+  if (output !== undefined) return output;
+  const error = getPath(part.raw, ['state', 'error']);
+  if (error !== undefined) return error;
+  const typeSpecific = firstDefined(part.raw, typeSpecificPreviewPaths(part));
+  return typeSpecific ?? part.raw;
+}
+
+function typeSpecificPreviewPaths(part: ParsedPart): string[][] {
+  switch (part.kind) {
+    case 'tool':
+    case 'skill':
+      return [['state', 'input']];
+    case 'retry':
+      return [['error'], ['message'], ['reason'], ['attempt']];
+    case 'file':
+      return [['filename'], ['filePath'], ['path'], ['url'], ['mime']];
+    case 'patch':
+      return [['files'], ['hash'], ['patch']];
+    case 'snapshot':
+      return [['snapshot'], ['hash']];
+    case 'agent':
+    case 'subtask':
+      return [['prompt'], ['description'], ['agent']];
+    default:
+      return [['value']];
+  }
+}
+
+function toolLabel(part: ParsedPart): string {
+  const name = part.toolName ?? 'unknown';
+  const detail = asString(getPath(part.raw, ['state', 'input', 'command']))
+    ?? asString(getPath(part.raw, ['state', 'input', 'path']))
+    ?? asString(getPath(part.raw, ['state', 'input', 'filePath']));
+  const short = detail && detail.length > 80 ? `${detail.slice(0, 79)}…` : detail;
+  return short ? `${name}: ${short}` : name;
+}
+
+function deriveParentTime(node: TrajectoryNode, all: TrajectoryNode[]): void {
+  const children = node.children.map((id) => all.find((candidate) => candidate.id === id)).filter((candidate): candidate is TrajectoryNode => !!candidate);
+  const starts = children.map((child) => child.start).filter((value): value is number => value !== undefined);
+  const ends = children.map((child) => child.end).filter((value): value is number => value !== undefined);
+  node.start ??= starts.length ? Math.min(...starts) : undefined;
+  node.end ??= ends.length ? Math.max(...ends) : undefined;
+  node.durationMs ??= safeDuration(node.start, node.end);
+}
+
 function analyzeSkillUsage(nodes: TrajectoryNode[]): SkillLoadObservation[] {
   const result: SkillLoadObservation[] = [];
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -74,9 +318,111 @@ function analyzeSkillUsage(nodes: TrajectoryNode[]): SkillLoadObservation[] {
         actionSummary[key] = (actionSummary[key] ?? 0) + 1;
         if (action.status === 'error') actionSummary.errors = (actionSummary.errors ?? 0) + 1;
       }
-      result.push({ skillName: skill.skillName, partId: skill.id, callId: skill.callId, messageId: message.id, status: skill.status ?? 'unknown', start: skill.start, end: skill.end, followingNodeIds: segment.map((node) => node.id), relationship: 'temporal', actionSummary, matchingSkills: [] });
+      result.push({
+        skillName: skill.skillName,
+        partId: skill.id,
+        callId: skill.callId,
+        messageId: message.id,
+        status: skill.status ?? 'unknown',
+        start: skill.start,
+        end: skill.end,
+        followingNodeIds: segment.map((node) => node.id),
+        relationship: 'temporal',
+        actionSummary,
+        matchingSkills: [],
+      });
     }
   }
   return result;
 }
-function calculateMetrics(session: ParsedOpenCodeSession, nodes: TrajectoryNode[], skills: SkillLoadObservation[], sessionDurationMs?: number): OpenCodeMetrics { const assistant = session.messages.filter((m) => m.role === 'assistant').length; const user = session.messages.filter((m) => m.role === 'user').length; return { messageCount: session.messages.length, userMessageCount: user, assistantMessageCount: assistant, stepCount: nodes.filter((n) => n.kind === 'step').length, toolCallCount: nodes.filter((n) => n.kind === 'tool' || n.kind === 'skill').length, toolErrorCount: nodes.filter((n) => (n.kind === 'tool' || n.kind === 'skill') && n.status === 'error').length, skillCallCount: skills.length, uniqueLoadedSkills: new Set(skills.map((s) => s.skillName).filter(Boolean)).size, retryCount: nodes.filter((n) => n.kind === 'retry').length, compactionCount: nodes.filter((n) => n.kind === 'compaction').length, unknownPartCount: nodes.filter((n) => n.kind === 'unknown').length, totalCost: asNumber(session.info.cost), inputTokens: asNumber(session.info.inputTokens), outputTokens: asNumber(session.info.outputTokens), reasoningTokens: asNumber(session.info.reasoningTokens), cacheReadTokens: asNumber(session.info.cacheReadTokens), cacheWriteTokens: asNumber(session.info.cacheWriteTokens), sessionDurationMs }; }
+
+function calculateMetrics(
+  session: ParsedOpenCodeSession,
+  nodes: TrajectoryNode[],
+  skills: SkillLoadObservation[],
+  sessionDurationMs?: number,
+): OpenCodeMetrics {
+  const assistant = session.messages.filter((message) => message.role === 'assistant').length;
+  const user = session.messages.filter((message) => message.role === 'user').length;
+  const toolErrorCount = nodes.filter((node) => (node.kind === 'tool' || node.kind === 'skill') && node.status === 'error').length;
+  const assistantErrorCount = session.messages.filter((message) => message.role === 'assistant' && assistantError(message) !== undefined).length;
+  return {
+    messageCount: session.messages.length,
+    userMessageCount: user,
+    assistantMessageCount: assistant,
+    stepCount: nodes.filter((node) => node.kind === 'step').length,
+    toolCallCount: nodes.filter((node) => node.kind === 'tool' || node.kind === 'skill').length,
+    toolErrorCount,
+    assistantErrorCount,
+    errorCount: toolErrorCount + assistantErrorCount,
+    skillCallCount: skills.length,
+    uniqueLoadedSkills: new Set(skills.map((skill) => skill.skillName).filter(Boolean)).size,
+    retryCount: nodes.filter((node) => node.kind === 'retry').length,
+    compactionCount: nodes.filter((node) => node.kind === 'compaction').length,
+    unknownPartCount: nodes.filter((node) => node.kind === 'unknown').length,
+    totalCost: sessionOrAssistantTotal(session, [['cost'], ['totalCost']]),
+    inputTokens: sessionOrAssistantTotal(session, [['tokens', 'input'], ['inputTokens']]),
+    outputTokens: sessionOrAssistantTotal(session, [['tokens', 'output'], ['outputTokens']]),
+    reasoningTokens: sessionOrAssistantTotal(session, [['tokens', 'reasoning'], ['reasoningTokens']]),
+    cacheReadTokens: sessionOrAssistantTotal(session, [['tokens', 'cache', 'read'], ['cacheReadTokens']]),
+    cacheWriteTokens: sessionOrAssistantTotal(session, [['tokens', 'cache', 'write'], ['cacheWriteTokens']]),
+    sessionDurationMs,
+  };
+}
+
+function sessionOrAssistantTotal(session: ParsedOpenCodeSession, paths: string[][]): number | undefined {
+  return firstNumber(session.info, paths) ?? sumAssistantNumbers(session.messages, paths);
+}
+
+function sumAssistantNumbers(messages: ParsedMessage[], paths: string[][]): number | undefined {
+  let found = false;
+  let total = 0;
+  for (const message of messages) {
+    if (message.role !== 'assistant') continue;
+    const value = firstNumber(message.info, paths);
+    if (value === undefined) continue;
+    found = true;
+    total += value;
+    if (!Number.isFinite(total)) return undefined;
+  }
+  return found ? total : undefined;
+}
+
+function firstNumber(root: Record<string, unknown>, paths: string[][]): number | undefined {
+  for (const path of paths) {
+    const value = asNumber(getPath(root, path));
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function firstAssistantString(messages: ParsedMessage[], paths: string[][]): string | undefined {
+  for (const message of messages) {
+    if (message.role !== 'assistant') continue;
+    for (const path of paths) {
+      const value = asString(getPath(message.info, path));
+      if (value !== undefined) return value;
+    }
+  }
+  return undefined;
+}
+
+function firstDefined(root: Record<string, unknown>, paths: string[][]): unknown {
+  for (const path of paths) {
+    const value = getPath(root, path);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function assistantError(message: ParsedMessage): unknown {
+  const error = message.info.error;
+  return error === undefined || error === null ? undefined : error;
+}
+
+function previewAssistantError(error: unknown, maxPreviewCharacters: number): string | undefined {
+  const name = asString(getPath(error, ['name']));
+  const message = asString(getPath(error, ['data', 'message'])) ?? asString(getPath(error, ['message']));
+  const summary = name && message ? `${name}: ${message}` : message ?? name ?? error;
+  return preview(summary, maxPreviewCharacters);
+}

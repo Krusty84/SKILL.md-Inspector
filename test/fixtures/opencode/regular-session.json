@@ -1,0 +1,147 @@
+{
+  "info": {
+    "id": "ses_regular",
+    "title": "Safe fixture session",
+    "version": "1.2.3",
+    "model": {
+      "id": "fixture-model",
+      "providerID": "fixture-provider",
+      "variant": "balanced"
+    },
+    "cost": 0.0123,
+    "tokens": {
+      "input": 120,
+      "output": 45,
+      "reasoning": 12,
+      "cache": {
+        "read": 30,
+        "write": 8
+      }
+    },
+    "time": {
+      "created": 1000,
+      "updated": 2400
+    },
+    "futureSessionField": {
+      "safe": true
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "id": "msg_user",
+        "sessionID": "ses_regular",
+        "role": "user",
+        "time": {
+          "created": 1000
+        }
+      },
+      "parts": [
+        {
+          "id": "part_user_text",
+          "type": "text",
+          "text": "Inspect the safe fixture.",
+          "time": {
+            "start": 1000,
+            "end": 1050
+          }
+        }
+      ]
+    },
+    {
+      "info": {
+        "id": "msg_assistant",
+        "sessionID": "ses_regular",
+        "role": "assistant",
+        "modelID": "fixture-message-model",
+        "providerID": "fixture-message-provider",
+        "cost": 0.0123,
+        "tokens": {
+          "input": 120,
+          "output": 45,
+          "reasoning": 12,
+          "cache": {
+            "read": 30,
+            "write": 8
+          }
+        },
+        "time": {
+          "created": 1100,
+          "completed": 2400
+        }
+      },
+      "parts": [
+        {
+          "id": "step_one_start",
+          "type": "step-start"
+        },
+        {
+          "id": "part_reasoning",
+          "type": "reasoning",
+          "text": "I will inspect only synthetic data.",
+          "time": {
+            "start": 1110,
+            "end": 1160
+          }
+        },
+        {
+          "id": "part_skill",
+          "type": "tool",
+          "tool": "skill",
+          "callID": "call_skill",
+          "state": {
+            "status": "completed",
+            "input": {
+              "name": "safe-review"
+            },
+            "output": "Loaded safe-review instructions.",
+            "time": {
+              "start": 1170,
+              "end": 1200
+            }
+          }
+        },
+        {
+          "id": "part_read",
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_read",
+          "state": {
+            "status": "completed",
+            "input": {
+              "filePath": "/safe/fixture.txt"
+            },
+            "output": "Safe fixture output",
+            "time": {
+              "start": 1210,
+              "end": 1300
+            }
+          }
+        },
+        {
+          "id": "part_text",
+          "type": "text",
+          "text": "The fixture is safe and complete.",
+          "time": {
+            "start": 1310,
+            "end": 1350
+          }
+        },
+        {
+          "id": "step_one_finish",
+          "type": "step-finish",
+          "reason": "tool-calls"
+        },
+        {
+          "id": "part_retry",
+          "type": "retry",
+          "attempt": 1,
+          "error": "Synthetic transient retry",
+          "time": {
+            "created": 1400
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "info": {
+    "id": "ses_tool_error",
+    "title": "Tool error fixture",
+    "model": {
+      "id": "fixture-model",
+      "providerID": "fixture-provider"
+    },
+    "time": {
+      "created": 4000,
+      "updated": 4300
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "id": "msg_tool_error",
+        "role": "assistant",
+        "time": {
+          "created": 4000,
+          "completed": 4300
+        }
+      },
+      "parts": [
+        {
+          "id": "part_tool_error",
+          "type": "tool",
+          "tool": "read",
+          "callID": "call_tool_error",
+          "state": {
+            "status": "error",
+            "input": {
+              "filePath": "/safe/missing.txt"
+            },
+            "error": "Synthetic file was not found",
+            "time": {
+              "start": 4100,
+              "end": 4200
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

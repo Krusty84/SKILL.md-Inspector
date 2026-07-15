@@ -42,7 +42,20 @@ function parsePart(value: unknown, messageIndex: number, partIndex: number, diag
   const status = asString(state?.status);
   if (type === 'tool' && status && !knownStatuses.has(status)) diagnostics.push({ severity: 'information', code: 'opencode.tool.status.unknown', message: `Unknown tool status: ${status}.`, path: `${path}.state.status` });
   const input = isRecord(state?.input) ? state.input : undefined;
-  return { id: asString(value.id) ?? asString(value.partID) ?? `message-${messageIndex}-part-${partIndex}`, kind, originalType: type, toolName: asString(value.tool), callId: asString(value.callID) ?? asString(value.callId), status, skillName: asString(input?.name), start: asNumber(getPath(value, ['time','start'])) ?? asNumber(getPath(state, ['time','start'])), end: status === 'completed' || status === 'error' ? (asNumber(getPath(value, ['time','end'])) ?? asNumber(getPath(state, ['time','end']))) : undefined, text: asString(value.text) ?? asString(value.content), raw: value, sourceOrder: partIndex };
+  return {
+    id: asString(value.id) ?? asString(value.partID) ?? `message-${messageIndex}-part-${partIndex}`,
+    kind,
+    originalType: type,
+    toolName: asString(value.tool),
+    callId: asString(value.callID) ?? asString(value.callId),
+    status,
+    skillName: asString(input?.name),
+    start: asNumber(getPath(value, ['time','start'])) ?? asNumber(getPath(state, ['time','start'])) ?? (type === 'retry' ? asNumber(getPath(value, ['time','created'])) : undefined),
+    end: asNumber(getPath(value, ['time','end'])) ?? asNumber(getPath(state, ['time','end'])),
+    text: asString(value.text) ?? asString(value.content),
+    raw: value,
+    sourceOrder: partIndex,
+  };
 }
 
 function warn(code: string, message: string, path: string): OpenCodeParseDiagnostic { return { severity: 'warning', code, message, path }; }

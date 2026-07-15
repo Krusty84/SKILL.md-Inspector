@@ -1,0 +1,36 @@
+{
+  "info": {
+    "id": "ses_assistant_error",
+    "title": "Assistant error fixture",
+    "model": {
+      "id": "fixture-model",
+      "providerID": "fixture-provider"
+    },
+    "time": {
+      "created": 5000,
+      "updated": 5300
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "id": "msg_assistant_error",
+        "role": "assistant",
+        "modelID": "fixture-model",
+        "providerID": "fixture-provider",
+        "error": {
+          "name": "APIError",
+          "data": {
+            "message": "Synthetic upstream failure",
+            "statusCode": 503
+          }
+        },
+        "time": {
+          "created": 5000,
+          "completed": 5300
+        }
+      },
+      "parts": []
+    }
+  ]
+}
