@@ -1,0 +1,59 @@
+{
+  "skillMdInspector.templates": [
+    {
+      "id": "quality-workflow",
+      "label": "Quality-focused workflow",
+      "description": "For production-quality, repeatable skills with clear scope, workflow, validation, and constraints.",
+      "frontmatter": [
+        "name: {{name}}",
+        "description: <Describe the action, usage trigger, expected result, and an important boundary.>"
+      ],
+      "body": [
+        "# {{title}}",
+        "",
+        "## Purpose",
+        "",
+        "<Summarize the repeatable outcome this skill helps produce.>",
+        "",
+        "## When to use",
+        "",
+        "- <Describe the task, context, or user request that should trigger this skill.>",
+        "",
+        "## When not to use",
+        "",
+        "- <Describe an important boundary or situation where another workflow is better.>",
+        "",
+        "## Inputs",
+        "",
+        "- <List the information, files, tools, or constraints needed before starting.>",
+        "",
+        "## Outputs",
+        "",
+        "- <Describe the expected deliverable, decision, or update produced by this skill.>",
+        "",
+        "## Workflow",
+        "",
+        "1. <Clarify the goal, scope, and acceptance criteria.>",
+        "2. <Inspect the relevant context and identify risks or dependencies.>",
+        "3. <Apply the repeatable steps needed to produce the output.>",
+        "4. <Review the result against the validation checklist.>",
+        "",
+        "## Validation",
+        "",
+        "- [ ] <Confirm the output matches the requested goal.>",
+        "- [ ] <Confirm important edge cases or boundaries were considered.>",
+        "- [ ] <Confirm the result is clear, reusable, and ready to hand off.>",
+        "",
+        "## Examples",
+        "",
+        "Request: <Ask for a production-ready workflow for a repeatable task.>",
+        "",
+        "Expected result: <A complete output with clear steps, validation, and constraints.>",
+        "",
+        "## Constraints",
+        "",
+        "- <List limits, safety rules, compatibility requirements, or assumptions.>"
+      ]
+    }
+  ]
+}
