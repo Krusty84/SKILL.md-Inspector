@@ -386,13 +386,15 @@ The command can insert into a new or empty `SKILL.md` at the start of the file. 
 
 ### Custom templates
 
-Configure `skillMdInspector.templates` in User, Workspace, or Workspace Folder settings. An unset or empty array uses the bundled templates. A non-empty array replaces the bundled catalog; bundled and custom templates are not merged. Template settings do not depend on `skillMdInspector.profile`, and changing validation profiles does not change available templates.
+Configure `skillMdInspector.templates` in User, Workspace, or Workspace Folder settings. You can paste the `skillMdInspector.templates` property into any of those settings scopes. An unset or empty array uses the bundled templates. **Warning:** a non-empty custom array replaces the bundled catalog; bundled and custom templates are not merged. Add multiple custom templates to the same array when you want more than one choice; they appear in the template picker in configured order. Template settings do not depend on `skillMdInspector.profile`, and changing validation profiles does not change available templates.
 
 Templates use line arrays instead of escaped `\n` strings. `frontmatter` contains YAML lines without `---` delimiters, and `body` contains Markdown lines. Empty strings represent blank lines. Frontmatter delimiters and one blank line before the body are generated automatically. The placeholders `{{name}}` and `{{title}}` are replaced throughout frontmatter and body; unknown placeholders are left unchanged. `{{name}}` is inferred from the parent folder as kebab-case, and `{{title}}` is a readable title derived from that name.
 
-Open **SKILL.md Inspector: Open Template Settings** to focus the setting in VS Code Settings. Use **SKILL.md Inspector: Reset Templates to Defaults** to remove an explicit User, Workspace, or Workspace Folder override and return to bundled templates. Resetting removes the setting; it does not copy bundled templates into `settings.json`.
+Open **SKILL.md Inspector: Open Template Settings** from the Command Palette to focus the setting in VS Code Settings, then paste or edit the template array. Use **SKILL.md Inspector: Reset Templates to Defaults** to remove an explicit User, Workspace, or Workspace Folder override and return to bundled templates. Resetting removes the setting; it does not copy bundled templates into `settings.json`.
 
-Complete `settings.json` example:
+A complete quality-focused settings example is available at [`examples/custom-template.settings.json`](examples/custom-template.settings.json). The inline example below is compact for quick reference; the repository example is copy-paste-ready and demonstrates a fuller production-quality skill structure.
+
+Compact `settings.json` example:
 
 ```json
 {
