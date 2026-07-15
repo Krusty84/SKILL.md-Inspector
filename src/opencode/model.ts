@@ -23,6 +23,14 @@ export interface CompactNodeViewModel { id: string; kind: NodeKind; parentId?: s
 export type SkillLoadObservationViewModel = SkillLoadObservation;
 export interface NodeDetailsViewModel { nodeId: string; title: string; kind: NodeKind; fields: Array<{ label: string; value: string }>; json?: string; matchingSkills?: SkillCandidate[]; followingNodes?: CompactNodeViewModel[]; warning?: string }
 
+export type TracePresentationMode = 'path' | 'execution';
+export type SessionPathNodeKind = 'request' | 'response' | 'assistant-turn' | 'agent' | 'subtask' | 'skill' | 'phase' | 'tool-group' | 'error' | 'retry' | 'unknown';
+export type SessionPathPhaseCategory = 'inspect' | 'search' | 'retrieve' | 'modify' | 'execute' | 'validate' | 'communicate' | 'other';
+export interface SessionPathNode { id: string; kind: SessionPathNodeKind; fullLabel: string; displayLabel: string; sourceNodeIds: string[]; firstSourceOrder: number; lastSourceOrder: number; assistantMessageId?: string; stepIds: string[]; phaseCategory?: SessionPathPhaseCategory; status?: string; actionCount: number; errorCount: number; retryCount: number; start?: number; end?: number; durationMs?: number; expandable: boolean; childIds: string[]; parentGroupId?: string; level: 0 | 1 | 2; aggregate?: { tools: number; skills: number; files: number; edits: number; errors: number; retries: number; sourceNodes: number } }
+export type SessionPathEdgeKind = 'sequence' | 'branch' | 'temporal-after-skill' | 'return';
+export interface SessionPathEdge { id: string; source: string; target: string; kind: SessionPathEdgeKind; temporalOnly?: boolean }
+export interface SessionPathViewModel { nodes: SessionPathNode[]; edges: SessionPathEdge[]; rootNodeIds: string[]; initialState: { collapsedNodeIds: string[]; focusNodeId?: string }; sourceNodeToPathNodeIds: Record<string, string[]> }
+
 export type TraceGraphMode = 'overview' | 'skills' | 'errors' | 'full';
 export type TraceGraphDirection = 'top-to-bottom' | 'left-to-right';
 export type TraceGraphEdgeKind = 'sequence' | 'message-transition' | 'temporal-after-skill' | 'subtask' | 'retry' | 'related-file';
@@ -74,6 +82,7 @@ export interface TraceGraphEdge {
 
 export interface TraceGraphViewModel {
   session: SessionHeaderViewModel;
+  path?: SessionPathViewModel;
   metrics: OpenCodeMetrics;
   diagnostics: OpenCodeParseDiagnostic[];
   nodes: TraceGraphNode[];

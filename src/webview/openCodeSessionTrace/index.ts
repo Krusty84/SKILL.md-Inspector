@@ -1,6 +1,7 @@
 import cytoscape from 'cytoscape';
 import elk from 'cytoscape-elk';
-import type { NodeDetailsViewModel, TraceGraphDirection, TraceGraphMode, TraceGraphNode, TraceGraphViewModel } from '../../opencode/model';
+import type { NodeDetailsViewModel, SessionPathNode, TraceGraphDirection, TraceGraphMode, TraceGraphNode, TraceGraphViewModel, TracePresentationMode } from '../../opencode/model';
+import { buildVisibleSessionPath, createSessionPathExpansionState, expandPathNodeOneLevel, hidePathNodeContents, pathFocusState, searchSessionPath, sessionPathExpansionActions, showPathNodeContents, type SessionPathExpansionState } from '../../opencode/sessionPathState';
 import { buildVisibleTraceGraph, createTraceGraphExpansionState, expandOneLevel, expandedCollapsedIdsForMode, findUnexpectedOverlaps, hideSubtree, relevantPathNodeIds, searchTraceGraph, showSubtree, traceGraphExpansionActions, type GraphRect, type TraceGraphExpansionState } from '../../opencode/traceGraphState';
 import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from './model';
 import './styles.css';
@@ -11,9 +12,11 @@ cytoscape.use(elk);
 const vscode = acquireVsCodeApi();
 let model: TraceGraphViewModel | undefined;
 let cy: cytoscape.Core | undefined;
+let presentation: TracePresentationMode = 'path';
 let mode: TraceGraphMode = 'overview';
 let direction: TraceGraphDirection = 'top-to-bottom';
 let expansion: TraceGraphExpansionState = createTraceGraphExpansionState();
+let pathExpansion: SessionPathExpansionState = createSessionPathExpansionState();
 let selectedId: string | undefined;
 let searchMatches: string[] = [];
 let activeMatch = -1;
@@ -49,6 +52,7 @@ window.addEventListener('message', (event: MessageEvent<ExtensionToWebviewMessag
   const message = event.data;
   if (message.type === 'initialize') initialize(message.model);
   else if (message.type === 'nodeDetails' && message.nodeId === selectedId) renderDetails(message.details);
+  else if (message.type === 'pathNodeDetails' && message.pathNodeId === selectedId) renderPathDetails(message.details);
   else if (message.type === 'showError') showStatus(message.message, true);
 });
 
@@ -58,6 +62,8 @@ function initialize(next: TraceGraphViewModel): void {
   mode = next.initialState.mode;
   direction = next.initialState.direction;
   expansion = createTraceGraphExpansionState(next.initialState.collapsedNodeIds);
+  pathExpansion = createSessionPathExpansionState(next.path?.initialState.collapsedNodeIds ?? []);
+  presentation = 'path';
   selectedId = undefined;
   searchMatches = [];
   activeMatch = -1;
@@ -92,8 +98,8 @@ function buildShell(): void {
   const search = element('div', 'search-controls');
   const searchInput = element('input') as HTMLInputElement;
   searchInput.type = 'search';
-  searchInput.placeholder = 'Search graph';
-  searchInput.setAttribute('aria-label', 'Search graph nodes');
+  searchInput.placeholder = 'Search trace';
+  searchInput.setAttribute('aria-label', 'Search visible trace nodes');
   searchInput.addEventListener('input', debounce(() => updateSearch(searchInput.value), 200));
   const previous = button('↑', 'Previous search match', () => moveSearch(-1));
   const next = button('↓', 'Next search match', () => moveSearch(1));
@@ -105,14 +111,21 @@ function buildShell(): void {
 
   const toolbar = element('nav', 'toolbar');
   toolbar.setAttribute('aria-label', 'Graph controls');
-  const modes = element('div', 'control-group modes');
+  const viewControls = element('div', 'control-group view-modes');
+  for (const value of ['path', 'execution'] as TracePresentationMode[]) {
+    const control = button(capitalize(value), `${capitalize(value)} view`, () => setPresentation(value));
+    control.dataset.presentation = value;
+    control.setAttribute('aria-pressed', String(value === presentation));
+    viewControls.append(control);
+  }
+  const modes = element('div', 'control-group modes execution-only');
   for (const value of ['overview', 'skills', 'errors', 'full'] as TraceGraphMode[]) {
     const control = button(capitalize(value), `${capitalize(value)} mode`, () => setMode(value));
     control.dataset.mode = value;
     control.setAttribute('aria-pressed', String(value === mode));
     modes.append(control);
   }
-  const layoutControls = element('div', 'control-group');
+  const layoutControls = element('div', 'control-group execution-only');
   const layoutLabel = element('label', undefined, 'Layout');
   const layoutSelect = element('select') as HTMLSelectElement;
   layoutSelect.setAttribute('aria-label', 'Graph layout direction');
@@ -130,13 +143,13 @@ function buildShell(): void {
     button('Reset', 'Reset zoom (0)', resetViewport),
     button('Center', 'Center selected node', centerSelected),
   );
-  const collapseControls = element('div', 'control-group');
+  const collapseControls = element('div', 'control-group execution-only');
   collapseControls.append(
     button('Toggle group', 'Collapse or expand selected message or step', toggleSelectedCollapse),
     button('Collapse all', 'Collapse all messages and steps', collapseAll),
     button('Expand path', 'Expand path to selected or active search result', expandRelevantPath),
   );
-  const pathControls = element('div', 'control-group path-controls');
+  const pathControls = element('div', 'control-group path-controls execution-only');
   pathControls.append(
     button('Predecessors', 'Show predecessors', () => isolate('predecessors')),
     button('Successors', 'Show successors', () => isolate('successors')),
@@ -148,7 +161,7 @@ function buildShell(): void {
   const fallback = button('Accessible list', 'Toggle accessible graph list', toggleAccessibleList);
   fallback.setAttribute('aria-expanded', 'false');
   fallback.id = 'accessible-toggle';
-  toolbar.append(modes, layoutControls, viewport, collapseControls, pathControls, fallback);
+  toolbar.append(viewControls, modes, layoutControls, viewport, collapseControls, pathControls, fallback);
   document.body.append(toolbar);
 
   const notice = element('div', 'notice');
@@ -158,12 +171,12 @@ function buildShell(): void {
 
   const workspace = element('main', 'workspace');
   const graphArea = element('section', 'graph-area');
-  graphArea.setAttribute('aria-label', 'Interactive directed execution graph');
+  graphArea.setAttribute('aria-label', 'Interactive directed session trace');
   const graph = element('div', 'graph');
   graph.id = 'graph';
   graph.tabIndex = 0;
   graph.setAttribute('role', 'application');
-  graph.setAttribute('aria-label', 'Execution graph. Use arrow keys to navigate nodes, Enter to select or collapse, plus and minus to zoom, 0 to reset, and F to fit.');
+  graph.setAttribute('aria-label', 'Session trace. Use arrow keys to navigate nodes, Enter to select or collapse, plus and minus to zoom, 0 to reset, and F to fit.');
   graph.addEventListener('keydown', handleGraphKeydown);
   const progress = element('div', 'layout-progress', 'Laying out graph…');
   progress.id = 'layout-progress';
@@ -212,6 +225,8 @@ function buildShell(): void {
 
 function renderGraph(): void {
   if (!model) return;
+  updatePresentationControls();
+  if (presentation === 'path' && model.path) { renderPathGraph(); return; }
   let visible = buildVisibleTraceGraph(model, mode, expansion);
   if (isolation) {
     visible = {
@@ -243,6 +258,44 @@ function renderGraph(): void {
   applySearchClasses();
   renderAccessibleList(visible.nodes);
   runLayout();
+}
+
+
+function renderPathGraph(): void {
+  if (!model?.path) return;
+  const visible = buildVisibleSessionPath(model.path, pathExpansion);
+  cy?.destroy();
+  const container = document.getElementById('graph');
+  if (!container) return;
+  cy = cytoscape({
+    container,
+    elements: [
+      ...visible.nodes.map((node) => ({ group: 'nodes' as const, data: pathNodeData(node) })),
+      ...visible.edges.map((edge) => ({ group: 'edges' as const, data: { ...edge }, classes: `path-edge ${edge.kind}` })),
+    ],
+    style: graphStyles(),
+    minZoom: 0.08,
+    maxZoom: 3.5,
+    boxSelectionEnabled: false,
+  });
+  cy.on('tap', 'node', (event) => selectNode((event.target as cytoscape.NodeSingular).id()));
+  cy.on('tap', (event) => { if (event.target === cy) clearPathFocus(); });
+  cy.on('cxttap', 'node', (event) => openContextMenu(event.target as cytoscape.NodeSingular, event.renderedPosition ?? (event.target as cytoscape.NodeSingular).renderedPosition()));
+  cy.on('mouseover', 'node', (event) => showTooltip(event.target as cytoscape.NodeSingular));
+  cy.on('mouseout', 'node', hideTooltip);
+  cy.on('pan zoom', () => { closeContextMenu(); hideTooltip(); });
+  cy.on('zoom', scheduleSemanticZoom);
+  cy.on('render', scheduleMinimap);
+  applyPathFocusClasses();
+  applySearchClasses();
+  renderAccessibleList(visible.nodes as unknown as TraceGraphNode[]);
+  runLayout();
+}
+
+function pathNodeData(node: SessionPathNode): Record<string, unknown> {
+  const label = node.displayLabel;
+  const near = [node.fullLabel, node.status, node.durationMs === undefined ? undefined : `${node.durationMs} ms`, `${node.actionCount} actions`].filter(Boolean).join('\n');
+  return { ...node, label, fullLabel: node.fullLabel, nearLabel: near, summaryLabel: label, sourceOrder: node.firstSourceOrder, collapsed: pathExpansion.collapsedNodeIds.has(node.id) ? 'true' : 'false', pathKind: node.kind };
 }
 
 function nodeData(node: TraceGraphNode): Record<string, unknown> {
@@ -291,11 +344,24 @@ function graphStyles(): cytoscape.StylesheetStyle[] {
     { selector: 'node[status = "error"]', style: { 'border-color': theme.error, 'border-width': 4, shape: 'octagon' } },
     { selector: 'node[collapsed = "true"]', style: { 'border-style': 'double', 'border-width': 3, width: '210px', height: '68px', 'text-max-width': '178px' } },
     { selector: 'edge', style: { width: 2, 'line-color': theme.description, 'target-arrow-color': theme.description, 'target-arrow-shape': 'triangle', 'curve-style': 'taxi', opacity: 0.7 } },
+    { selector: 'node[pathKind]', style: { shape: 'round-rectangle', width: '190px', height: '58px', 'text-max-width': '166px', 'border-width': 2.5 } },
+    { selector: 'node[pathKind = "request"], node[pathKind = "response"]', style: { shape: 'round-rectangle', width: '210px', height: '64px', 'border-color': theme.focus } },
+    { selector: 'node[pathKind = "skill"]', style: { shape: 'hexagon', 'border-color': theme.yellow, 'border-width': 3 } },
+    { selector: 'node[pathKind = "agent"]', style: { shape: 'ellipse', 'border-color': theme.purple } },
+    { selector: 'node[pathKind = "subtask"]', style: { shape: 'diamond', 'border-color': theme.purple } },
+    { selector: 'node[pathKind = "error"]', style: { shape: 'octagon', 'border-color': theme.error, 'border-width': 4 } },
+    { selector: 'node[pathKind = "retry"]', style: { shape: 'round-diamond', 'border-color': theme.orange, 'border-style': 'double' } },
+    { selector: 'node[pathKind = "unknown"]', style: { shape: 'tag', 'border-style': 'dashed', 'border-color': theme.warning } },
+    { selector: 'edge.path-edge', style: { width: 2, 'curve-style': 'bezier', opacity: 0.65 } },
     { selector: 'edge.message-transition', style: { width: 1, 'line-style': 'dotted', opacity: 0.45 } },
     { selector: 'edge.temporal-after-skill', style: { 'line-style': 'dashed', 'line-color': theme.yellow, 'target-arrow-color': theme.yellow, opacity: 0.9 } },
     { selector: 'edge.subtask', style: { 'line-color': theme.purple, 'target-arrow-color': theme.purple, 'curve-style': 'taxi' } },
     { selector: 'edge.retry', style: { 'line-color': theme.orange, 'target-arrow-color': theme.orange, 'curve-style': 'unbundled-bezier' } },
     { selector: 'edge.related-file', style: { 'line-style': 'dotted', opacity: 0.35 } },
+    { selector: '.path-focused', style: { 'overlay-color': theme.focus, 'overlay-opacity': 0.2, 'overlay-padding': 10, 'border-color': theme.focus, 'border-width': 5 } },
+    { selector: '.path-connected', style: { opacity: 0.95, 'overlay-color': theme.blue, 'overlay-opacity': 0.1, 'overlay-padding': 5 } },
+    { selector: '.path-context', style: { opacity: 0.28 } },
+    { selector: '.path-origin-member', style: { 'overlay-color': theme.yellow, 'overlay-opacity': 0.18, 'overlay-padding': 8 } },
     { selector: '.selected', style: { 'overlay-color': theme.focus, 'overlay-opacity': 0.18, 'overlay-padding': 8, 'border-color': theme.focus, 'border-width': 4 } },
     { selector: '.neighbor', style: { 'overlay-color': theme.blue, 'overlay-opacity': 0.12, 'overlay-padding': 5 } },
     { selector: '.search-match', style: { 'overlay-color': theme.findBorder, 'overlay-opacity': 0.28, 'overlay-padding': 7 } },
@@ -372,7 +438,25 @@ function selectNode(id: string): void {
   const content = document.getElementById('details-content');
   if (drawer) drawer.hidden = false;
   if (content) { content.textContent = ''; content.append(element('p', 'loading', 'Loading details…')); }
-  vscode.postMessage({ type: 'requestNodeDetails', nodeId: id });
+  if (presentation === 'path') { applyPathFocusClasses(); vscode.postMessage({ type: 'requestPathNodeDetails', pathNodeId: id }); }
+  else vscode.postMessage({ type: 'requestNodeDetails', nodeId: id });
+}
+
+function renderPathDetails(details: SessionPathNode): void {
+  const root = document.getElementById('details-content');
+  if (!root) return;
+  root.textContent = '';
+  const title = element('div', 'details-title');
+  title.append(element('h2', undefined, details.fullLabel), button('×', 'Close details', closeDetails));
+  root.append(title);
+  if (details.kind === 'skill') root.append(element('p', 'temporal-warning', 'Observed after skill load. This does not prove causation.'));
+  const fields = element('dl', 'detail-fields');
+  const rows: Array<[string, string | undefined]> = [['Kind', details.kind], ['Category', details.phaseCategory], ['Full label', details.fullLabel], ['Action count', String(details.actionCount)], ['Source-order range', `${details.firstSourceOrder}–${details.lastSourceOrder}`], ['Assistant message', details.assistantMessageId], ['Contributing steps', details.stepIds.join(', ')], ['Start', details.start === undefined ? undefined : String(details.start)], ['End', details.end === undefined ? undefined : String(details.end)], ['Duration', details.durationMs === undefined ? undefined : `${details.durationMs} ms`], ['Status', details.status], ['Error count', String(details.errorCount)], ['Retry count', String(details.retryCount)], ['Member source nodes', details.sourceNodeIds.join(', ')]];
+  for (const [label, value] of rows) if (value) fields.append(element('dt', undefined, label), element('dd', undefined, value));
+  root.append(fields);
+  const actions = element('div', 'drawer-actions');
+  actions.append(button('Expand', 'Expand path node', () => { if (model?.path) { pathExpansion = expandPathNodeOneLevel(pathExpansion, details.id, model.path); renderGraph(); } }), button('Show contents', 'Show path contents', () => { if (model?.path) { pathExpansion = showPathNodeContents(pathExpansion, details.id, model.path); renderGraph(); } }), button('Hide contents', 'Hide path contents', () => { if (model?.path) { pathExpansion = hidePathNodeContents(pathExpansion, details.id, model.path); renderGraph(); } }), button('Open in Execution', 'Open represented execution nodes', () => openPathNodeInExecution(details.id)), button('Open raw session', 'Open raw OpenCode session JSON', () => vscode.postMessage({ type: 'openRawSession' })), button('Copy summary', 'Copy selected path details', () => vscode.postMessage({ type: 'copyText', value: JSON.stringify(details, undefined, 2) })));
+  root.append(actions);
 }
 
 function renderDetails(details: NodeDetailsViewModel): void {
@@ -417,6 +501,19 @@ function renderDetails(details: NodeDetailsViewModel): void {
     disclosure.append(element('summary', undefined, 'Raw JSON'), element('pre', undefined, details.json));
     root.append(disclosure);
   }
+}
+
+function setPresentation(next: TracePresentationMode): void {
+  if (presentation === next) return;
+  presentation = next;
+  selectedId = undefined;
+  isolation = undefined;
+  renderGraph();
+}
+
+function updatePresentationControls(): void {
+  document.querySelectorAll<HTMLButtonElement>('[data-presentation]').forEach((control) => control.setAttribute('aria-pressed', String(control.dataset.presentation === presentation)));
+  document.querySelectorAll<HTMLElement>('.execution-only').forEach((control) => { control.hidden = presentation !== 'execution'; });
 }
 
 function setMode(next: TraceGraphMode): void {
@@ -482,7 +579,7 @@ function clearIsolation(): void {
 
 function updateSearch(query: string): void {
   if (!model) return;
-  searchMatches = searchTraceGraph(model, query);
+  searchMatches = presentation === 'path' && model.path ? searchSessionPath(model.path, query) : searchTraceGraph(model, query);
   activeMatch = searchMatches.length ? 0 : -1;
   const count = document.getElementById('match-count');
   if (count) count.textContent = `${searchMatches.length} ${searchMatches.length === 1 ? 'match' : 'matches'}`;
@@ -521,6 +618,47 @@ function applySearchClasses(): void {
   if (active.length) active.addClass('search-active');
 }
 
+
+function clearPathFocus(): void {
+  if (presentation !== 'path') return;
+  selectedId = undefined;
+  applyPathFocusClasses();
+  const drawer = document.getElementById('details-drawer');
+  if (drawer) drawer.hidden = true;
+}
+
+function applyPathFocusClasses(): void {
+  if (!cy || !model?.path || presentation !== 'path') return;
+  cy.elements().removeClass('path-focused path-connected path-context');
+  const focus = pathFocusState(model.path, selectedId);
+  if (!selectedId) return;
+  cy.elements().addClass('path-context');
+  for (const id of focus.connected) cy.getElementById(id).removeClass('path-context').addClass('path-connected');
+  for (const id of focus.focused) cy.getElementById(id).removeClass('path-context').addClass('path-focused');
+  cy.getElementById(selectedId).connectedEdges().removeClass('path-context').addClass('path-connected');
+}
+
+function openPathNodeInExecution(pathNodeId: string): void {
+  if (!model?.path) return;
+  const pathNode = model.path.nodes.find((node) => node.id === pathNodeId);
+  if (!pathNode?.sourceNodeIds.length) return;
+  presentation = 'execution';
+  isolation = undefined;
+  selectedId = pathNode.sourceNodeIds[0];
+  const byId = new Map(model.nodes.map((node) => [node.id, node]));
+  for (const sourceId of pathNode.sourceNodeIds) {
+    let current = byId.get(sourceId);
+    while (current) { expansion.collapsedNodeIds.delete(current.id); current = current.parentId ? byId.get(current.parentId) : undefined; }
+  }
+  renderGraph();
+  window.setTimeout(() => {
+    if (!cy) return;
+    for (const sourceId of pathNode.sourceNodeIds) cy.getElementById(sourceId).addClass('path-origin-member');
+    selectNode(pathNode.sourceNodeIds[0]);
+    centerNode(pathNode.sourceNodeIds[0]);
+  }, 0);
+}
+
 function fitGraph(): void { cy?.fit(undefined, 45); }
 function resetViewport(): void { if (!cy) return; cy.zoom(1); cy.center(); }
 function zoomBy(factor: number): void { if (!cy) return; cy.zoom({ level: Math.min(3.5, Math.max(0.08, cy.zoom() * factor)), renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } }); }
@@ -529,7 +667,7 @@ function centerNode(id: string): void { const node = cy?.getElementById(id); if 
 
 function closeDetails(): void {
   selectedId = undefined;
-  cy?.elements().removeClass('selected neighbor');
+  cy?.elements().removeClass('selected neighbor path-focused path-connected path-context');
   const drawer = document.getElementById('details-drawer');
   if (drawer) drawer.hidden = true;
 }
@@ -648,17 +786,24 @@ function openContextMenu(node: cytoscape.NodeSingular, position: { x: number; y:
   const menu = document.getElementById('graph-context-menu');
   if (!menu) return;
   menu.textContent = '';
-  const actions = traceGraphExpansionActions(expansion, node.id(), model, mode);
+  const actions = presentation === 'path' && model.path ? sessionPathExpansionActions(pathExpansion, node.id(), model.path) : traceGraphExpansionActions(expansion, node.id(), model, mode);
   const addItem = (label: string, action: () => void): void => {
     const item = button(label, label, () => { closeContextMenu(); action(); });
     item.setAttribute('role', 'menuitem');
     menu.append(item);
   };
-  if (actions.expand) addItem('Expand', () => { expansion = expandOneLevel(expansion, node.id(), model!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
-  if (actions.showContents) addItem('Show contents', () => { expansion = showSubtree(expansion, node.id(), model!, mode); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
-  if (actions.hideContents) addItem('Hide contents', () => { expansion = hideSubtree(expansion, node.id(), model!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+  if (presentation === 'path' && model.path) {
+    if (actions.expand) addItem('Expand', () => { pathExpansion = expandPathNodeOneLevel(pathExpansion, node.id(), model!.path!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+    if (actions.showContents) addItem('Show contents', () => { pathExpansion = showPathNodeContents(pathExpansion, node.id(), model!.path!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+    if (actions.hideContents) addItem('Hide contents', () => { pathExpansion = hidePathNodeContents(pathExpansion, node.id(), model!.path!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+  } else {
+    if (actions.expand) addItem('Expand', () => { expansion = expandOneLevel(expansion, node.id(), model!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+    if (actions.showContents) addItem('Show contents', () => { expansion = showSubtree(expansion, node.id(), model!, mode); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+    if (actions.hideContents) addItem('Hide contents', () => { expansion = hideSubtree(expansion, node.id(), model!); preserveViewportOnNextLayout = true; selectedId = node.id(); renderGraph(); });
+  }
   if (menu.childElementCount) menu.append(element('div', 'menu-separator'));
-  addItem('Focus', () => centerNode(node.id()));
+  addItem(presentation === 'path' ? 'Focus path' : 'Focus', () => { selectedId = node.id(); applyPathFocusClasses(); centerNode(node.id()); });
+  if (presentation === 'path') addItem('Open in Execution', () => openPathNodeInExecution(node.id()));
   addItem('Show predecessors', () => isolate('predecessors'));
   addItem('Show successors', () => isolate('successors'));
   addItem('Isolate local path', () => isolate('local'));

@@ -480,9 +480,35 @@ Child sessions are nested under parent sessions when exported files in the selec
 
 Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item or the Command Palette to open a script-free, read-only report. It shows session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics, loaded skill calls, matching `SKILL.md` candidates, and an ordered trajectory. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
 
-### Interactive OpenCode Session execution graph
+### Interactive OpenCode Session trace explorer
 
-Selecting a session opens a deterministic directed execution graph. The default
+Selecting a session opens the **Path** view by default. Path is a compact semantic route view that answers “what route did the agent take through the session?” The existing **Execution** view remains available for the detailed normalized graph that answers “what exact messages, steps, parts, and tool calls occurred inside that route?”
+
+The trace explorer hierarchy is:
+
+* **Path** — a sparse, top-to-bottom route summary with request, skill, phase, error, retry, and response nodes.
+* **Execution** — the detailed Cytoscape/ELK graph with Overview, Skills, Errors, and Full modes.
+
+Path node meanings are deterministic and local-only:
+
+* **Request**: a user-message boundary.
+* **Response**: meaningful assistant text.
+* **Skill**: an explicit OpenCode skill tool call.
+* **Agent** and **Subtask**: explicit agent/subtask parts in the export.
+* **Phase**: adjacent ordinary actions grouped by conservative semantic category.
+* **Error**: a failed action split out from successful phases.
+* **Retry**: an explicit retry event.
+* **Unknown**: an unsupported or unknown OpenCode part retained for inspection.
+
+Path phases group only contiguous actions within the same assistant message. The classifier uses deterministic tool-name and compact-command rules: read/open/view/list/glob/stat become **Inspect workspace**, grep/rg/find/search become **Search repository**, fetch/http/web/download/query/lookup become **Retrieve information**, edit/write/create/delete/move/rename/patch/apply_patch become **Modify files**, generic shell/command/run tools become **Run commands**, and conservative test/lint/typecheck/build/compile/validate/verify commands become **Validate changes**. Separated repeated phases remain separate nodes, and skill, agent, subtask, error, retry, user-message, and assistant-message boundaries force a split.
+
+Each phase has progressive drill-down: level 0 route phase, level 1 grouped operations such as `read × 5`, and level 2 original execution nodes. Hidden descendants are omitted from the Cytoscape element set and edges are remapped to visible aggregates, so hidden members do not reserve layout space. Search in Path mode checks visible and hidden path metadata and marks the containing aggregate until the user expands it. **Open in Execution** switches to the detailed graph, expands represented ancestors, selects the primary source node, and highlights all execution nodes represented by the Path aggregate.
+
+Path edges are stable-width curved directed sequence edges. Dashed skill-related edges are temporal observations only, not causal flow. Selecting a Path node gives it a focus border, keeps direct predecessors and successors emphasized, and dims unrelated context rather than removing it. Large sessions are compressed by contiguous semantic grouping while preserving source-node mappings and drill-down access to every normalized source node.
+
+**Path phases are deterministic summaries of observed source-order activity. They do not prove intent, planning, or causation. Dashed skill edges are temporal observations only.**
+
+When **Execution** is selected, the explorer shows a deterministic directed execution graph. The default
 ELK layered layout runs top to bottom and can be switched to left to right.
 Cytoscape.js provides pan, mouse-wheel/trackpad zoom, selection, compound
 message and step nodes, and viewport controls. **Fit**, **Zoom in**, **Zoom
