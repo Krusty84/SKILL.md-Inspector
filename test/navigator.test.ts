@@ -18,6 +18,8 @@ describe('navigator pure modules', () => {
       expect.objectContaining({ id: 'codex-home-skills', rootPath: '/tmp/codex/skills', files: ['SKILL.md'], recursive: true }),
       expect.objectContaining({ id: 'codex-user-skills', rootPath: path.join('/home/me', '.agents', 'skills') }),
       expect.objectContaining({ id: 'codex-admin-skills', rootPath: '/etc/codex/skills' }),
+      expect.objectContaining({ id: 'opencode-global', agentId: 'opencode', agentLabel: 'OpenCode', groupLabel: 'Global Instructions', rootPath: path.join('/home/me', '.config', 'opencode'), files: ['AGENTS.md'], recursive: false }),
+      expect.objectContaining({ id: 'opencode-skills', agentId: 'opencode', agentLabel: 'OpenCode', groupLabel: 'Skills', rootPath: path.join('/home/me', '.config', 'opencode', 'skills'), files: ['SKILL.md'], recursive: true }),
       expect.objectContaining({ id: 'claude-global', rootPath: path.join('/home/me', '.claude'), files: ['CLAUDE.md'], recursive: false }),
       expect.objectContaining({ id: 'claude-skills', rootPath: path.join('/home/me', '.claude', 'skills'), files: ['SKILL.md'], recursive: true }),
       expect.objectContaining({ rootPath: path.join('/home/me', '.copilot', 'skills') }),

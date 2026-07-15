@@ -167,6 +167,8 @@ Built-in local agent locations are:
 | Codex | Admin skills | `/etc/codex/skills/**/SKILL.md` on non-Windows systems when readable |
 | Claude Code | Global instructions | `~/.claude/CLAUDE.md` |
 | Claude Code | Skills | `~/.claude/skills/**/SKILL.md` |
+| OpenCode | Global instructions | `~/.config/opencode/AGENTS.md` |
+| OpenCode | Skills | `~/.config/opencode/skills/**/SKILL.md` |
 | GitHub Copilot | Skills | `~/.copilot/skills/**/SKILL.md` |
 
 Project-level agent folders such as `.agents/skills`, `.claude/skills`, and

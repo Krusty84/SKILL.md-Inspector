@@ -23,6 +23,14 @@ export function resolveBuiltInAgentSources(context: BuiltInAgentContext): AgentS
       rootPath: path.join(context.homeDir, '.agents', 'skills'), files: ['SKILL.md'], recursive: true,
     },
     {
+      id: 'opencode-global', agentId: 'opencode', agentLabel: 'OpenCode', groupLabel: 'Global Instructions',
+      rootPath: path.join(context.homeDir, '.config', 'opencode'), files: ['AGENTS.md'], recursive: false,
+    },
+    {
+      id: 'opencode-skills', agentId: 'opencode', agentLabel: 'OpenCode', groupLabel: 'Skills',
+      rootPath: path.join(context.homeDir, '.config', 'opencode', 'skills'), files: ['SKILL.md'], recursive: true,
+    },
+    {
       id: 'claude-global', agentId: 'claude-code', agentLabel: 'Claude Code', groupLabel: 'Global Instructions',
       rootPath: path.join(context.homeDir, '.claude'), files: ['CLAUDE.md'], recursive: false,
     },
