@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => ({}));
 
-import { buildTraceGraphViewModel } from '../../src/opencode/buildTraceGraphViewModel';
+import { buildTraceGraphViewModel, truncateGraphLabel } from '../../src/opencode/buildTraceGraphViewModel';
 import { normalizeSession } from '../../src/opencode/buildTrajectory';
 import type { NormalizedOpenCodeSession, OpenCodeMetrics, TrajectoryNode } from '../../src/opencode/model';
 import { parseSessionExport } from '../../src/opencode/parseSessionExport';
-import { buildVisibleTraceGraph, expandedCollapsedIdsForMode, searchTraceGraph } from '../../src/opencode/traceGraphState';
+import { buildVisibleTraceGraph, createTraceGraphExpansionState, expandOneLevel, expandedCollapsedIdsForMode, findUnexpectedOverlaps, hideSubtree, searchTraceGraph, showSubtree, traceGraphExpansionActions } from '../../src/opencode/traceGraphState';
 
 function normalizedFixture(): NormalizedOpenCodeSession {
   const parsed = parseSessionExport({
@@ -50,6 +50,8 @@ describe('trace graph model', () => {
     expect(new Set(edgeIds).size).toBe(edgeIds.length);
     const nodeIds = new Set(first.nodes.map((node) => node.id));
     expect(first.edges.every((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))).toBe(true);
+    expect(first.initialState.direction).toBe('top-to-bottom');
+    expect(first.nodes.every((node) => node.fullLabel === node.label && node.displayLabel.length <= node.fullLabel.length)).toBe(true);
     expect(first.nodes.some((node) => node.kind === 'unknown')).toBe(true);
     expect(first.nodes.some((node) => node.status === 'error')).toBe(true);
     expect(first.edges.some((edge) => edge.kind === 'retry')).toBe(true);
@@ -118,9 +120,70 @@ describe('trace graph model', () => {
     expect(searchTraceGraph(model, 'READ')).toHaveLength(1);
     expect(searchTraceGraph(model, 'code-review')).toHaveLength(1);
     expect(searchTraceGraph(model, 'mystery-action')).toHaveLength(1);
+    const long = model.nodes.find((node) => node.kind === 'tool')!;
+    long.displayLabel = 'hidden';
+    long.fullLabel = 'A uniquely searchable full label';
+    expect(searchTraceGraph(model, 'uniquely searchable')).toEqual([long.id]);
     const before = JSON.stringify(model);
     searchTraceGraph(model, 'error');
     expect(JSON.stringify(model)).toBe(before);
+  });
+
+
+  it('truncates display labels deterministically while preserving full labels', () => {
+    expect(truncateGraphLabel('short', 40)).toBe('short');
+    const value = 'Tool: execute an extremely long command with many arguments';
+    expect(truncateGraphLabel(value, 36)).toBe('Tool: execute an extremely long com…');
+    expect(truncateGraphLabel('🙂🙂🙂🙂', 3)).toBe('🙂🙂…');
+    expect(truncateGraphLabel('éééé', 3)).toBe('éé…');
+  });
+
+  it('supports progressive expansion state and context command availability', () => {
+    const model = buildTraceGraphViewModel(normalizedFixture());
+    const assistant = model.nodes.find((node) => node.kind === 'assistant-message' && node.aggregate?.skills)!;
+    let state = createTraceGraphExpansionState([assistant.id]);
+    expect(buildVisibleTraceGraph(model, 'overview', state).nodes.some((node) => node.parentId === assistant.id)).toBe(false);
+    expect(traceGraphExpansionActions(state, assistant.id, model, 'overview')).toMatchObject({ expand: true, showContents: true, hideContents: false });
+    state = expandOneLevel(state, assistant.id, model);
+    const oneLevel = buildVisibleTraceGraph(model, 'overview', state);
+    expect(oneLevel.nodes.some((node) => node.parentId === assistant.id)).toBe(true);
+    const step = model.nodes.find((node) => node.kind === 'step' && node.parentId === assistant.id)!;
+    state = hideSubtree(state, step.id, model);
+    expect(buildVisibleTraceGraph(model, 'overview', state).nodes.some((node) => node.parentId === step.id)).toBe(false);
+    expect(traceGraphExpansionActions(state, step.id, model, 'overview')).toMatchObject({ expand: true, showContents: true, hideContents: false });
+    state = showSubtree(state, assistant.id, model, 'overview');
+    const shown = buildVisibleTraceGraph(model, 'overview', state);
+    expect(shown.nodes.some((node) => node.parentId === step.id)).toBe(true);
+    expect(traceGraphExpansionActions(state, assistant.id, model, 'overview')).toMatchObject({ expand: false, showContents: false, hideContents: true });
+    const leaf = model.nodes.find((node) => node.kind === 'tool')!;
+    expect(traceGraphExpansionActions(state, leaf.id, model, 'overview')).toMatchObject({ expand: false, showContents: false, hideContents: false });
+  });
+
+  it('remaps hidden descendant edges without dangling or duplicate edges', () => {
+    const model = buildTraceGraphViewModel(normalizedFixture());
+    const assistant = model.nodes.find((node) => node.kind === 'assistant-message' && node.aggregate?.skills)!;
+    const collapsed = buildVisibleTraceGraph(model, 'overview', createTraceGraphExpansionState([assistant.id]));
+    const visibleIds = new Set(collapsed.nodes.map((node) => node.id));
+    expect(collapsed.edges.every((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target))).toBe(true);
+    expect(new Set(collapsed.edges.map((edge) => edge.id)).size).toBe(collapsed.edges.length);
+    const skills = buildVisibleTraceGraph(model, 'skills', createTraceGraphExpansionState());
+    expect(skills.edges.some((edge) => edge.temporalOnly)).toBe(true);
+  });
+
+  it('detects unexpected rectangle overlap while ignoring containment', () => {
+    expect(findUnexpectedOverlaps([
+      { id: 'a', parentIds: [], x1: 0, y1: 0, x2: 10, y2: 10 },
+      { id: 'b', parentIds: [], x1: 12, y1: 0, x2: 20, y2: 10 },
+    ])).toEqual([]);
+    expect(findUnexpectedOverlaps([
+      { id: 'a', parentIds: [], x1: 0, y1: 0, x2: 10, y2: 10 },
+      { id: 'b', parentIds: [], x1: 10, y1: 0, x2: 20, y2: 10 },
+    ])).toEqual([]);
+    expect(findUnexpectedOverlaps([
+      { id: 'parent', parentIds: [], x1: 0, y1: 0, x2: 20, y2: 20 },
+      { id: 'child', parentIds: ['parent'], x1: 5, y1: 5, x2: 10, y2: 10 },
+      { id: 'other', parentIds: [], x1: 8, y1: 8, x2: 15, y2: 15 },
+    ])).toEqual([{ first: 'parent', second: 'other' }, { first: 'child', second: 'other' }]);
   });
 
   it('honors the existing reasoning default without expanding large sessions', () => {
