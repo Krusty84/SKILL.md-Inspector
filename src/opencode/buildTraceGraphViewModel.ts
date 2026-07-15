@@ -9,6 +9,7 @@ import type {
   TraceGraphViewModel,
   TrajectoryNode,
 } from './model';
+import { buildSessionPathViewModel } from './buildSessionPathViewModel';
 
 const LARGE_SESSION_THRESHOLD = 500;
 const OVERVIEW_ONLY_THRESHOLD = 1000;
@@ -32,6 +33,7 @@ export function buildTraceGraphViewModel(session: NormalizedOpenCodeSession, hid
   const edges = buildEdges(session, sourceNodes, sourceById);
   return {
     session: sessionHeader(session),
+    path: buildSessionPathViewModel(session),
     metrics: session.metrics,
     diagnostics: session.diagnostics,
     nodes,
