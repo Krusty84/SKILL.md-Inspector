@@ -178,7 +178,6 @@ describe('OpenCode manifest consistency', () => {
       'skillMdInspector.openCode.selectSessionsFolder',
       'skillMdInspector.openCode.clearSessionsFolder',
       'skillMdInspector.openCode.refreshSessions',
-      'skillMdInspector.openCode.openTrace',
       'skillMdInspector.openCode.openReport',
       'skillMdInspector.openCode.openRawJson',
       'skillMdInspector.openCode.revealInOS',
@@ -199,7 +198,6 @@ describe('OpenCode manifest consistency', () => {
     expect(packageJson.activationEvents).toEqual(expect.arrayContaining([
       'onView:skillMdInspectorOpenCodeSessions',
       'onCommand:skillMdInspector.openCode.selectSessionsFolder',
-      'onCommand:skillMdInspector.openCode.openTrace',
       'onCommand:skillMdInspector.openCode.openReport',
       'onCommand:skillMdInspector.openCode.openRawJson',
     ]));

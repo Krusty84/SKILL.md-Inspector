@@ -439,7 +439,7 @@ Compact `settings.json` example:
 }
 ```
 
-## OpenCode session reports and trace explorer
+## OpenCode session reports
 
 SKILL.md Inspector can inspect local OpenCode `session.json` exports without invoking OpenCode, executing recorded commands, downloading resources, or sending telemetry. Export a session with:
 
@@ -453,12 +453,11 @@ Example workflow:
 2. Find the **OPENCODE SESSIONS** view.
 3. Optionally move the view with the view title context menu: **Move View** → **Secondary Side Bar**. VS Code exposes this as a user-controlled layout action; the extension does not directly contribute a custom Secondary Side Bar container.
 4. Run **SKILL.md Inspector: Select OpenCode Sessions Folder** and choose the folder containing exported JSON files.
-5. Select a discovered session to open the interactive trace explorer.
-6. Use the session context menu to open the static report or raw JSON.
+5. Select a discovered session. The static **OpenCode Session Report** opens.
+6. Use the session context menu to open the report or raw JSON explicitly.
 
 Selecting a sessions folder is optional for standalone exports. To open one JSON export directly, use the Command Palette:
 
-* **SKILL.md Inspector: Open OpenCode Session Trace** → select a session JSON file.
 * **SKILL.md Inspector: Open OpenCode Session Report** → select a session JSON file.
 * **SKILL.md Inspector: Open Raw OpenCode Session JSON** → select a session JSON file.
 
@@ -472,113 +471,12 @@ Discovery is bounded and configurable:
 * `skillMdInspector.openCode.maxDiscoveredSessions` (default `1000`)
 * `skillMdInspector.openCode.maxPreviewCharacters` (default `20000`)
 * `skillMdInspector.openCode.scanRecursively` (default `true`)
-* `skillMdInspector.openCode.hideReasoningByDefault` (default `true`)
 
 Child sessions are nested under parent sessions when exported files in the selected folder include matching `info.parentID` metadata. Sessions are sorted by updated time with a filename fallback. The view watches JSON files in the configured folder and refreshes automatically when VS Code supports watching that location.
 
 ### Static OpenCode Session Report
 
 Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item or the Command Palette to open a script-free, read-only report. It shows session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics, loaded skill calls, matching `SKILL.md` candidates, and an ordered trajectory. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
-
-### Interactive OpenCode Session trace explorer
-
-Selecting a session opens the **Path** view by default. Path is a compact semantic route view that answers “what route did the agent take through the session?” The existing **Execution** view remains available for the detailed normalized graph that answers “what exact messages, steps, parts, and tool calls occurred inside that route?”
-
-The trace explorer hierarchy is:
-
-* **Path** — a sparse, top-to-bottom route summary with request, skill, phase, error, retry, and response nodes.
-* **Execution** — the detailed Cytoscape/ELK graph with Overview, Skills, Errors, and Full modes.
-
-Path node meanings are deterministic and local-only:
-
-* **Request**: a user-message boundary.
-* **Response**: meaningful assistant text.
-* **Skill**: an explicit OpenCode skill tool call.
-* **Agent** and **Subtask**: explicit agent/subtask parts in the export.
-* **Phase**: adjacent ordinary actions grouped by conservative semantic category.
-* **Error**: a failed action split out from successful phases.
-* **Retry**: an explicit retry event.
-* **Unknown**: an unsupported or unknown OpenCode part retained for inspection.
-
-Path phases group only contiguous actions within the same assistant message. The classifier uses deterministic tool-name and compact-command rules: read/open/view/list/glob/stat become **Inspect workspace**, grep/rg/find/search become **Search repository**, fetch/http/web/download/query/lookup become **Retrieve information**, edit/write/create/delete/move/rename/patch/apply_patch become **Modify files**, generic shell/command/run tools become **Run commands**, and conservative test/lint/typecheck/build/compile/validate/verify commands become **Validate changes**. Separated repeated phases remain separate nodes, and skill, agent, subtask, error, retry, user-message, and assistant-message boundaries force a split.
-
-Each phase has progressive drill-down: level 0 route phase, level 1 grouped operations such as `read × 5`, and level 2 original execution nodes. Hidden descendants are omitted from the Cytoscape element set and edges are remapped to visible aggregates, so hidden members do not reserve layout space. Search in Path mode checks visible and hidden path metadata and marks the containing aggregate until the user expands it. **Open in Execution** switches to the detailed graph, expands represented ancestors, selects the primary source node, and highlights all execution nodes represented by the Path aggregate.
-
-Path edges are stable-width curved directed sequence edges. Dashed skill-related edges are temporal observations only, not causal flow. Selecting a Path node gives it a focus border, keeps direct predecessors and successors emphasized, and dims unrelated context rather than removing it. Large sessions are compressed by contiguous semantic grouping while preserving source-node mappings and drill-down access to every normalized source node.
-
-**Path phases are deterministic summaries of observed source-order activity. They do not prove intent, planning, or causation. Dashed skill edges are temporal observations only.**
-
-When **Execution** is selected, the explorer shows a deterministic directed execution graph. The default
-ELK layered layout runs top to bottom and can be switched to left to right.
-Cytoscape.js provides pan, mouse-wheel/trackpad zoom, selection, compound
-message and step nodes, and viewport controls. **Fit**, **Zoom in**, **Zoom
-out**, **Reset**, and **Center** are available in the toolbar. A navigator in
-the lower-right corner shows the overall graph and current viewport.
-
-The graph has four modes:
-
-* **Overview** shows messages, steps, skills, tools, errors, retries, subtasks,
-  agents, compactions, and unknown actionable parts. Text, reasoning, files,
-  patches, and snapshots are represented by aggregate counts.
-* **Skills** focuses on skill loads and the actions observed after each load.
-  Selecting a skill can isolate its temporal segment.
-* **Errors** focuses on failed actions, their immediate predecessors and
-  successors, retries, and local recovery context.
-* **Full** exposes supported secondary nodes, including text, reasoning, files,
-  patches, and snapshots.
-
-Messages and steps can be collapsed into aggregate nodes and expanded along the
-selected or searched path. Collapsed nodes display aggregate counts such as
-tools, skills, errors, text, and reasoning derived from the full underlying
-subtree. Right-clicking a graph node opens a local context menu: **Expand**
-reveals one direct hierarchy level, **Show contents** reveals the permitted
-subtree for the active graph mode, and **Hide contents** collapses the visible
-subtree back into the selected aggregate. Layout is recalculated after each
-progressive expansion while preserving the current viewport where practical. Search matches labels, tool names, skill names,
-previews, statuses, and original part types without changing the underlying
-graph. Path controls can isolate predecessors, successors, a local path, a skill
-segment, or an error path. Selecting a node highlights its immediate neighbors
-and opens a resizable details drawer; full tool output, raw JSON, and matching
-skill details are still loaded lazily. The drawer also reuses the existing
-commands for opening a matching `SKILL.md`, its Skill Report, and the raw
-session.
-
-Graph labels are bounded for readability: long labels are truncated with a
-Unicode ellipsis inside the node, while full labels remain available in hover
-tooltips, keyboard focus/details, search, copying, and node-detail requests.
-Node widths stay bounded so labels do not drive unbounded graph geometry.
-
-Semantic zoom keeps the graph readable: distant views reduce leaf nodes to
-compact marks and emphasize message aggregates, medium views show the normal
-execution structure, and close views add status, duration, and preview text.
-Keyboard controls include Tab, Enter, Escape, arrow-key node navigation, `+`,
-`-`, `0`, and `F`. An explicit accessible list presents the visible graph as
-normal buttons for screen readers and keyboard-only navigation.
-
-Graph edges have deliberately narrow meanings:
-
-* a solid directed edge is observed source-order execution;
-* a dotted message edge is the next top-level message in source order;
-* a dashed skill edge is an action observed after a skill load;
-* a branch edge connects a step to a subtask or agent;
-* retry and optional related-file edges have their own visual styles.
-
-**Dashed skill edges represent temporal observations only. The OpenCode export
-does not prove that a skill or a specific SKILL.md rule caused an action.**
-
-Sessions over 500 normalized nodes start with aggressive message/step
-collapsing, while skill- and error-relevant groups remain expanded when
-practical. Sessions over 1000 nodes start in an overview-only collapsed state.
-No nodes are discarded: aggregates remain expandable and Full mode remains
-available. The ELK layout includes node and label dimensions, compound padding,
-explicit layer/node/edge spacing, and a bounded overlap-safeguard relayout to
-avoid unrelated node or label overlap and reduce avoidable edge crossings. Layout work runs in the browser webview, so it does not block the
-extension host, and superseded layout results are ignored.
-
-The graph is implemented with TypeScript, Cytoscape.js, cytoscape-elk, ELK,
-DOM APIs, and CSS. All dependencies are bundled locally into the webview. It
-does not use a front-end framework, CDN assets, remote scripts, remote styles,
-`eval`, untrusted HTML, or inline event handlers.
 
 ### Tolerant parser policy and supported concepts
 
@@ -588,10 +486,10 @@ Likely sanitized exports are detected through redaction markers such as `[redact
 
 ### SKILL.md matching and temporal evidence
 
-When an OpenCode `skill` tool call includes `state.input.name`, the extension attempts to match it to discovered local `SKILL.md` files in supported workspace skill roots. Exact normalized frontmatter `name` matches are preferred. Reports distinguish no match, one match, and multiple ambiguous matches, and allow opening matching skills.
+When an OpenCode `skill` tool call includes `state.input.name`, the extension attempts to match it to discovered local `SKILL.md` files in supported workspace skill roots. Exact normalized frontmatter `name` matches are preferred. Reports distinguish no match, one match, and multiple ambiguous matches.
 
 Actions listed after a skill load are **temporal observations** within a heuristic segment: from that skill call until the next skill call in the same assistant message or the end of that assistant message. The extension does **not** claim that a skill caused a command, edit, file read, or rule compliance unless a future OpenCode evidence format explicitly records that relationship.
 
 ### Privacy, offline behavior, and limitations
 
-All OpenCode inspection is local and deterministic. The extension does not execute recorded commands, does not invoke OpenCode, does not open URLs embedded in session data, and does not send telemetry. Large values are previewed with truncation markers and full details are requested lazily where practical. Known limitations: OpenCode has no separately versioned public export standard, some remote URI schemes may not support file watching or OS reveal actions, and temporal skill segments are evidence of ordering only—not causal attribution or proof of SKILL.md rule compliance.
+All OpenCode inspection is local and deterministic. The extension does not execute recorded commands, does not invoke OpenCode, does not open URLs embedded in session data, and does not send telemetry. Large values are previewed with truncation markers. Known limitations: OpenCode has no separately versioned public export standard, some remote URI schemes may not support file watching or OS reveal actions, and temporal skill segments are evidence of ordering only—not causal attribution or proof of SKILL.md rule compliance.
