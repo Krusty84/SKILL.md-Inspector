@@ -3,7 +3,7 @@ vi.mock('vscode', () => ({ Uri: { file: (fsPath: string) => ({ fsPath, path: fsP
 import { parseSessionExport } from '../../src/opencode/parseSessionExport';
 import { normalizeSession } from '../../src/opencode/buildTrajectory';
 import { renderOpenCodeSessionReportHtml } from '../../src/ui/renderOpenCodeSessionReport';
-import { buildNodeDetails, buildSessionViewModel } from '../../src/opencode/buildSessionViewModel';
+import { buildSessionViewModel } from '../../src/opencode/buildSessionViewModel';
 import { buildSessionTree } from '../../src/opencode/sessionDiscovery';
 
 const base = { info: { id: 's1', title: 'Demo <script>', parentID: undefined, time: { created: 10, updated: 40 }, version: 'x', model: 'm' }, messages: [ { info: { role: 'assistant' }, parts: [ { type: 'step-start', time: { start: 10 } }, { type: 'tool', tool: 'skill', state: { status: 'completed', input: { name: 'code-review' }, time: { start: 11, end: 12 } } }, { type: 'tool', tool: 'bash', state: { status: 'completed', input: { command: 'npm test' }, time: { start: 13, end: 20 }, output: '<img src=x onerror=alert(1)>' } }, { type: 'mystery', value: 1 }, { type: 'step-finish', time: { end: 40 } } ] } ] };
@@ -50,20 +50,6 @@ describe('OpenCode renderer and tree helpers', () => {
     expect(html).toContain('&lt;script&gt;');
     expect(html).not.toContain('<script>alert');
     expect(html).toContain('temporal observations');
-  });
-  it('loads detailed tool and skill data lazily with structural context', () => {
-    const parsed = parseSessionExport(base);
-    const normalized = normalizeSession(parsed.session!, parsed.diagnostics);
-    const skill = normalized.nodes.find((node) => node.kind === 'skill')!;
-    const details = buildNodeDetails(normalized, skill.id)!;
-    expect(details.fields).toContainEqual({ label: 'Source order', value: skill.sourceOrder.toString() });
-    expect(details.fields).toContainEqual({ label: 'Parent message', value: 'assistant message' });
-    expect(details.fields).toContainEqual({ label: 'Parent step', value: 'Step' });
-    expect(details.warning).toBe('Actions observed after skill load. This does not prove causation.');
-    const tool = normalized.nodes.find((node) => node.toolName === 'bash')!;
-    const toolDetails = buildNodeDetails(normalized, tool.id)!;
-    expect(toolDetails.fields).toContainEqual({ label: 'Input', value: '{\n  "command": "npm test"\n}' });
-    expect(toolDetails.fields).toContainEqual({ label: 'Output', value: '<img src=x onerror=alert(1)>' });
   });
   it('nests child sessions under parents and sorts siblings', () => {
     const uri = (s: string) => ({ toString: () => s, path: s, scheme: 'file', fsPath: s }) as never;

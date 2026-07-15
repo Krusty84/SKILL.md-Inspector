@@ -178,7 +178,6 @@ describe('OpenCode manifest consistency', () => {
       'skillMdInspector.openCode.selectSessionsFolder',
       'skillMdInspector.openCode.clearSessionsFolder',
       'skillMdInspector.openCode.refreshSessions',
-      'skillMdInspector.openCode.openTrace',
       'skillMdInspector.openCode.openReport',
       'skillMdInspector.openCode.openRawJson',
       'skillMdInspector.openCode.revealInOS',
@@ -195,11 +194,22 @@ describe('OpenCode manifest consistency', () => {
     expect(welcomeCommands.filter((command) => !commandIds.includes(command))).toEqual([]);
   });
 
+
+
+  it('does not contribute the removed OpenCode graph trace command or graph dependencies', () => {
+    const removedCommand = ['skillMdInspector', 'openCode', 'openTrace'].join('.');
+    expect(commandIds).not.toContain(removedCommand);
+    expect(JSON.stringify(contributes.menus)).not.toContain(removedCommand);
+    expect(JSON.stringify(contributes.viewsWelcome)).not.toContain(removedCommand);
+    expect(packageJson.activationEvents).not.toContain(`onCommand:${removedCommand}`);
+    expect(packageJson.dependencies).not.toHaveProperty(['cyto', 'scape'].join(''));
+    expect(packageJson.dependencies).not.toHaveProperty(['cyto', 'scape-elk'].join(''));
+  });
+
   it('activates for the OpenCode view and command palette entry points', () => {
     expect(packageJson.activationEvents).toEqual(expect.arrayContaining([
       'onView:skillMdInspectorOpenCodeSessions',
       'onCommand:skillMdInspector.openCode.selectSessionsFolder',
-      'onCommand:skillMdInspector.openCode.openTrace',
       'onCommand:skillMdInspector.openCode.openReport',
       'onCommand:skillMdInspector.openCode.openRawJson',
     ]));
