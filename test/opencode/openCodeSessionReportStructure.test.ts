@@ -35,4 +35,27 @@ describe('OpenCode session report shell structure', () => {
   it('orders Skills immediately after Tools', () => {
     expect(source).toContain("['all','tools','skills','reasoning','errors','diffs','text','subtasks']");
   });
+
+  it('places explicit event toggle buttons after noninteractive event head content', () => {
+    expect(source).toContain("const head = el('div','event-head'); const content = el('div','event-head-content')");
+    expect(source).toContain("head.append(content); if (event.expandable) head.append(eventToggle(event, expanded)); body.append(head)");
+    expect(source).toContain("b.className = 'event-toggle'");
+    expect(source).toContain("b.dataset.action = action");
+    expect(source).toContain("b.dataset.eventId = event.id");
+    expect(source).toContain("b.setAttribute('aria-controls', `details-${event.id}`)");
+    expect(source).toContain("b.setAttribute('aria-expanded', String(presentation.expanded))");
+    expect(source).toContain("b.setAttribute('aria-label', presentation.ariaLabel)");
+    expect(source).toContain("icon.setAttribute('aria-hidden','true')");
+    expect(source).not.toContain('head.tabIndex = 0');
+    expect(source).not.toContain("head.dataset.action = event.expandable ? 'toggle-event' : ''");
+    expect(source).not.toContain("head.setAttribute('aria-expanded'");
+  });
+
+  it('styles event toggle placement without absolute positioning', () => {
+    expect(css).toMatch(/\.event-head\{[^}]*display:grid[^}]*grid-template-columns:minmax\(0,1fr\) auto[^}]*gap:\.5rem/s);
+    expect(css).toMatch(/\.event-head-content\{[^}]*min-width:0/s);
+    expect(css).toMatch(/\.event-toggle\{[^}]*width:1\.6rem[^}]*margin-left:auto[^}]*background:transparent/s);
+    expect(css).toMatch(/\.event-toggle\[aria-expanded=true\] \.event-toggle-icon\{[^}]*transform:rotate\(90deg\)/s);
+    expect(css).not.toMatch(/\.event-(?:head|toggle)[^{]*\{[^}]*position:absolute/s);
+  });
 });
