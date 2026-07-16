@@ -1,0 +1,1 @@
+export function eventTogglePresentation(expanded: boolean, eventName = 'event'): { ariaLabel: string; tooltip: string; expanded: boolean } { const safe = eventName.trim() || 'event'; const action = expanded ? 'Collapse' : 'Expand'; return { ariaLabel: `${action} ${safe} event`, tooltip: `${action} event`, expanded }; }
