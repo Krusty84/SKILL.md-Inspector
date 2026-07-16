@@ -58,7 +58,7 @@ describe('OpenCode graph removal guards', () => {
   it('defines only the extension build output', () => {
     const buildSource = fs.readFileSync(path.join(root, 'esbuild.js'), 'utf8');
     expect(buildSource).not.toContain(removedBrowserBundle);
-    expect([...buildSource.matchAll(/outfile:\s*'([^']+)'/g)].map((match) => match[1])).toEqual(['dist/extension.js']);
+    expect([...buildSource.matchAll(/outfile:\s*'([^']+)'/g)].map((match) => match[1])).toEqual(['dist/extension.js', 'dist/webview/openCodeSessionReport.js']);
   });
 
   it('has no imports of removed graph modules', () => {

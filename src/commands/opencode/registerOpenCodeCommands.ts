@@ -40,7 +40,7 @@ export function registerOpenCodeCommands(context: vscode.ExtensionContext, deps:
     }),
     vscode.commands.registerCommand('skillMdInspector.openCode.clearSessionsFolder', async () => { await deps.store.clear(); await deps.provider.refresh(); }),
     vscode.commands.registerCommand('skillMdInspector.openCode.refreshSessions', async () => deps.provider.refresh()),
-    vscode.commands.registerCommand('skillMdInspector.openCode.openReport', async (target?: OpenCodeSessionCommandTarget) => { const loaded = await load(target); if (loaded) OpenCodeSessionReportPanel.show(loaded.session); }),
+    vscode.commands.registerCommand('skillMdInspector.openCode.openReport', async (target?: OpenCodeSessionCommandTarget) => { const loaded = await load(target); if (loaded) OpenCodeSessionReportPanel.show(loaded.session, loaded.uri, context.extensionUri); }),
     vscode.commands.registerCommand('skillMdInspector.openCode.openRawJson', async (target?: OpenCodeSessionCommandTarget) => { const uri = await resolveOpenCodeSessionUri(target); if (uri) await vscode.commands.executeCommand('vscode.open', uri); }),
     vscode.commands.registerCommand('skillMdInspector.openCode.copySessionId', async (target?: OpenCodeSessionCommandTarget) => { const summary = target && typeof target === 'object' ? (target as { summary?: { id?: string } }).summary : undefined; if (summary?.id) await vscode.env.clipboard.writeText(summary.id); }),
     vscode.commands.registerCommand('skillMdInspector.openCode.copyFilePath', async (target?: OpenCodeSessionCommandTarget) => { const uri = getOpenCodeSessionUriFromTarget(target); if (uri) await vscode.env.clipboard.writeText(uri.fsPath || uri.toString()); }),

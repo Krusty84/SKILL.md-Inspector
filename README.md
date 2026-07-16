@@ -453,7 +453,7 @@ Example workflow:
 2. Find the **OPENCODE SESSIONS** view.
 3. Optionally move the view with the view title context menu: **Move View** → **Secondary Side Bar**. VS Code exposes this as a user-controlled layout action; the extension does not directly contribute a custom Secondary Side Bar container.
 4. Run **SKILL.md Inspector: Select OpenCode Sessions Folder** and choose the folder containing exported JSON files.
-5. Select a discovered session. The static **OpenCode Session Report** opens.
+5. Select a discovered session. The compact **OpenCode Session Report** timeline opens in a single reusable webview panel.
 6. Use the session context menu to open the report or raw JSON explicitly.
 
 Selecting a sessions folder is optional for standalone exports. To open one JSON export directly, use the Command Palette:
@@ -474,9 +474,21 @@ Discovery is bounded and configurable:
 
 Child sessions are nested under parent sessions when exported files in the selected folder include matching `info.parentID` metadata. Sessions are sorted by updated time with a filename fallback. The view watches JSON files in the configured folder and refreshes automatically when VS Code supports watching that location.
 
-### Static OpenCode Session Report
+### OpenCode Session Report timeline
 
-Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item or the Command Palette to open a script-free, read-only report. It shows a compatibility summary, expanded session metadata, OpenCode version, provider/model/agent fields, sanitization status, summary metrics, parser diagnostics grouped by severity, loaded skill calls, matching `SKILL.md` candidates, and messages with an ordered trajectory. Message and part details include tool state titles, input, output, errors, metadata, attachments, assistant errors, retry errors, file sources, session diffs, agent names, and subtask prompts/descriptions when present. Embedded URLs such as `share.url`, file URLs, and attachment URLs are displayed as text only and are not opened or linked. The report uses escaped text and a restrictive Content Security Policy; recorded tool output, errors, file paths, metadata, reasoning, and text are never rendered as raw HTML.
+Use **SKILL.md Inspector: Open OpenCode Session Report** from a session tree item or the Command Palette to open a single-view chronological timeline. The existing **OpenCode Session Report** webview panel is reused when another session is opened, so session navigation from the **OPENCODE SESSIONS** tree replaces the current report instead of creating a separate details view.
+
+The sticky report header summarizes the session title, session ID, agent, provider/model, OpenCode version, created/updated time, cost, deterministic token totals, cached share, duration, changed files, line additions/deletions, errors, and retries. Token totals are calculated as `inputTokens + outputTokens + reasoningTokens` when at least one component exists. Cached share is displayed only when `cacheReadTokens / (inputTokens + cacheReadTokens)` has a non-zero denominator and is labeled as a cached share rather than an official upstream cache-hit metric. Invalid, missing, negative, `NaN`, or infinite metric values are omitted.
+
+Below the header, filter chips show counts for **All**, **Tools**, **Reasoning**, **Errors**, **Diffs**, **Text**, and **Subtasks**. Filtering never mutates the underlying session model. The search box is debounced, combines with the active filter, searches normalized labels, tools, skills, statuses, previews, file paths, errors, subtasks, agent names, and call IDs, and highlights matches as text nodes. **Expand all** and **Collapse all** apply only to currently visible timeline events. Keyboard users can focus search with Ctrl/Cmd+F, clear it with Escape, toggle expandable events with Enter/Space, and move between visible event headers with Arrow Up/Down.
+
+The timeline is not a causal graph. Events remain ordered by the exported source sequence. Timestamps provide elapsed time and duration only. The elapsed-time column and rail show user messages, assistant responses, reasoning, tools, tool errors, retries, patches/diffs, subtasks/agents, compactions, and unknown future parts with distinct glyphs and labels. Long labels truncate within the event column, code and JSON previews scroll horizontally inside the row, and the layout adapts for narrow panels without hiding critical information.
+
+Expandable rows reveal details inline in the row that owns them. Tool and skill rows show bounded input, output, errors, metadata, attachments, call IDs, status, and temporal skill information; failed tools use readable structured error summaries rather than raw object strings. Reasoning starts collapsed, errors may start expanded, user/assistant text remains readable without expansion, patch rows show affected files and addition/deletion summaries with escaped bounded patch previews, subtasks show agent/model/command/child-session information when present, and compactions render as timeline markers. The report includes latency bars normalized against the session's 95th percentile event duration; exact duration text remains authoritative.
+
+The **Session details** control expands an inline section in the same webview containing the compatibility summary, reconstructed schema source commit, session metadata, change summary, diagnostics, sanitization warnings, loaded skills, and matching `SKILL.md` status. Actions observed after a skill load are temporal observations and do not prove that a SKILL.md rule caused an action.
+
+The initial webview payload intentionally excludes raw tool inputs, full outputs, patches, snapshots, metadata, and attachments. These details are loaded lazily when an event is expanded and are bounded by `skillMdInspector.openCode.maxPreviewCharacters`; “show all” style output still means the complete value only up to that configured hard limit, never an unbounded multi-megabyte payload. Embedded URLs, file URLs, and attachment URLs are displayed as text only and are not opened or linked. All report assets are local extension files, the Content Security Policy is restrictive, webview messages are validated by the extension host, and recorded commands are never executed.
 
 ### Tolerant parser policy and supported concepts
 
