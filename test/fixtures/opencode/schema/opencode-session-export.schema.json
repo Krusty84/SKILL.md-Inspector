@@ -1,0 +1,1731 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode:session-export:17544802c38a4d35834275526ccf38be1cdcfbf4",
+  "title": "OpenCode Session Export",
+  "description": "Reconstructed JSON Schema for the JSON emitted by `opencode export`. It is version-pinned to the OpenCode dev branch commit recorded in `x-opencode-source-commit`; it is not an upstream-published schema.",
+  "$comment": "Structural validation only. Cross-object ID equality and reference integrity must be checked separately.",
+  "x-opencode-source-repository": "anomalyco/opencode",
+  "x-opencode-source-branch": "dev",
+  "x-opencode-source-commit": "17544802c38a4d35834275526ccf38be1cdcfbf4",
+  "x-invariants": [
+    "messages[*].info.sessionID must equal info.id",
+    "messages[*].parts[*].sessionID must equal info.id",
+    "messages[*].parts[*].messageID must equal messages[*].info.id",
+    "assistant parentID should reference an existing message in the same session"
+  ],
+  "type": "object",
+  "properties": {
+    "info": {
+      "$ref": "#/$defs/SessionInfo"
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MessageWithParts"
+      }
+    }
+  },
+  "required": [
+    "info",
+    "messages"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "SessionID": {
+      "type": "string",
+      "pattern": "^ses",
+      "description": "OpenCode session identifier. The source implementation only checks the 'ses' prefix."
+    },
+    "MessageID": {
+      "type": "string",
+      "pattern": "^msg",
+      "description": "OpenCode message identifier. The source implementation only checks the 'msg' prefix."
+    },
+    "PartID": {
+      "type": "string",
+      "pattern": "^prt",
+      "description": "OpenCode part identifier. The source implementation only checks the 'prt' prefix."
+    },
+    "WorkspaceID": {
+      "type": "string",
+      "pattern": "^wrk",
+      "description": "OpenCode workspace identifier. The source implementation only checks the 'wrk' prefix."
+    },
+    "NonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "FiniteNumber": {
+      "type": "number",
+      "description": "A finite JSON number. JSON itself cannot encode NaN or Infinity."
+    },
+    "StringMapAny": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "StringMapString": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "StringMapBoolean": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "TokenCache": {
+      "type": "object",
+      "properties": {
+        "read": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "write": {
+          "$ref": "#/$defs/FiniteNumber"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "read",
+        "write"
+      ]
+    },
+    "Tokens": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "input": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "output": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "reasoning": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "cache": {
+          "$ref": "#/$defs/TokenCache"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "input",
+        "output",
+        "reasoning",
+        "cache"
+      ]
+    },
+    "FileDiff": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "patch": {
+          "type": "string"
+        },
+        "additions": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "deletions": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "status": {
+          "enum": [
+            "added",
+            "deleted",
+            "modified"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "additions",
+        "deletions"
+      ]
+    },
+    "PermissionRule": {
+      "type": "object",
+      "properties": {
+        "permission": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "allow",
+            "deny",
+            "ask"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "permission",
+        "pattern",
+        "action"
+      ]
+    },
+    "SessionSummary": {
+      "type": "object",
+      "properties": {
+        "additions": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "deletions": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "files": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "diffs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FileDiff"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "additions",
+        "deletions",
+        "files"
+      ]
+    },
+    "SessionTime": {
+      "type": "object",
+      "properties": {
+        "created": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        },
+        "updated": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        },
+        "compacting": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        },
+        "archived": {
+          "$ref": "#/$defs/FiniteNumber"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "created",
+        "updated"
+      ]
+    },
+    "SessionModel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "providerID": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "providerID"
+      ]
+    },
+    "SessionRevert": {
+      "type": "object",
+      "properties": {
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "partID": {
+          "$ref": "#/$defs/PartID"
+        },
+        "snapshot": {
+          "type": "string"
+        },
+        "diff": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "messageID"
+      ]
+    },
+    "SessionInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "projectID": {
+          "type": "string"
+        },
+        "workspaceID": {
+          "$ref": "#/$defs/WorkspaceID"
+        },
+        "directory": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "parentID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "summary": {
+          "$ref": "#/$defs/SessionSummary"
+        },
+        "cost": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "tokens": {
+          "$ref": "#/$defs/Tokens"
+        },
+        "share": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "model": {
+          "$ref": "#/$defs/SessionModel"
+        },
+        "version": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "time": {
+          "$ref": "#/$defs/SessionTime"
+        },
+        "permission": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PermissionRule"
+          }
+        },
+        "revert": {
+          "$ref": "#/$defs/SessionRevert"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "projectID",
+        "directory",
+        "title",
+        "version",
+        "time"
+      ]
+    },
+    "OutputFormatText": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "text"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ]
+    },
+    "OutputFormatJsonSchema": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "json_schema"
+        },
+        "schema": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "retryCount": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "schema"
+      ]
+    },
+    "OutputFormat": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/OutputFormatText"
+        },
+        {
+          "$ref": "#/$defs/OutputFormatJsonSchema"
+        }
+      ],
+      "x-discriminator": "type"
+    },
+    "SourceText": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "start": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "end": {
+          "$ref": "#/$defs/FiniteNumber"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "start",
+        "end"
+      ]
+    },
+    "Position": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        },
+        "character": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "line",
+        "character"
+      ]
+    },
+    "Range": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/Position"
+        },
+        "end": {
+          "$ref": "#/$defs/Position"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "FileSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "file"
+        },
+        "text": {
+          "$ref": "#/$defs/SourceText"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "text",
+        "path"
+      ]
+    },
+    "SymbolSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "symbol"
+        },
+        "text": {
+          "$ref": "#/$defs/SourceText"
+        },
+        "path": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/$defs/Range"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "text",
+        "path",
+        "range",
+        "name",
+        "kind"
+      ]
+    },
+    "ResourceSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "resource"
+        },
+        "text": {
+          "$ref": "#/$defs/SourceText"
+        },
+        "clientName": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "text",
+        "clientName",
+        "uri"
+      ]
+    },
+    "FilePartSource": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FileSource"
+        },
+        {
+          "$ref": "#/$defs/SymbolSource"
+        },
+        {
+          "$ref": "#/$defs/ResourceSource"
+        }
+      ],
+      "x-discriminator": "type"
+    },
+    "SnapshotPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "snapshot"
+        },
+        "snapshot": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "snapshot"
+      ]
+    },
+    "PatchPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "patch"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "hash",
+        "files"
+      ]
+    },
+    "TextPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "text"
+        },
+        "text": {
+          "type": "string"
+        },
+        "synthetic": {
+          "type": "boolean"
+        },
+        "ignored": {
+          "type": "boolean"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "end": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "start"
+          ]
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "text"
+      ]
+    },
+    "ReasoningPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "reasoning"
+        },
+        "text": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "end": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "start"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "text",
+        "time"
+      ]
+    },
+    "FilePart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "file"
+        },
+        "mime": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/FilePartSource"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "mime",
+        "url"
+      ]
+    },
+    "AgentPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "agent"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "start": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "end": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "start",
+            "end"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "name"
+      ]
+    },
+    "CompactionPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "compaction"
+        },
+        "auto": {
+          "type": "boolean"
+        },
+        "overflow": {
+          "type": "boolean"
+        },
+        "tail_start_id": {
+          "$ref": "#/$defs/MessageID"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "auto"
+      ]
+    },
+    "SubtaskPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "subtask"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "model": {
+          "type": "object",
+          "properties": {
+            "providerID": {
+              "type": "string"
+            },
+            "modelID": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "providerID",
+            "modelID"
+          ]
+        },
+        "command": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "prompt",
+        "description",
+        "agent"
+      ]
+    },
+    "APIError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "APIError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "statusCode": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "isRetryable": {
+              "type": "boolean"
+            },
+            "responseHeaders": {
+              "$ref": "#/$defs/StringMapString"
+            },
+            "responseBody": {
+              "type": "string"
+            },
+            "metadata": {
+              "$ref": "#/$defs/StringMapString"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message",
+            "isRetryable"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "ProviderAuthError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "ProviderAuthError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "providerID": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "providerID",
+            "message"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "UnknownError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "UnknownError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "ref": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "MessageOutputLengthError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "MessageOutputLengthError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "MessageAbortedError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "MessageAbortedError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "StructuredOutputError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "StructuredOutputError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "retries": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message",
+            "retries"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "ContextOverflowError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "ContextOverflowError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "responseBody": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "ContentFilterError": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "ContentFilterError"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    "AssistantError": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ProviderAuthError"
+        },
+        {
+          "$ref": "#/$defs/UnknownError"
+        },
+        {
+          "$ref": "#/$defs/MessageOutputLengthError"
+        },
+        {
+          "$ref": "#/$defs/MessageAbortedError"
+        },
+        {
+          "$ref": "#/$defs/StructuredOutputError"
+        },
+        {
+          "$ref": "#/$defs/ContextOverflowError"
+        },
+        {
+          "$ref": "#/$defs/ContentFilterError"
+        },
+        {
+          "$ref": "#/$defs/APIError"
+        }
+      ],
+      "x-discriminator": "name"
+    },
+    "RetryPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "retry"
+        },
+        "attempt": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        },
+        "error": {
+          "$ref": "#/$defs/APIError"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "created": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "created"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "attempt",
+        "error",
+        "time"
+      ]
+    },
+    "StepStartPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "step-start"
+        },
+        "snapshot": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type"
+      ]
+    },
+    "StepFinishPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "step-finish"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "snapshot": {
+          "type": "string"
+        },
+        "cost": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "tokens": {
+          "$ref": "#/$defs/Tokens"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "reason",
+        "cost",
+        "tokens"
+      ]
+    },
+    "ToolStatePending": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "pending"
+        },
+        "input": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "input",
+        "raw"
+      ]
+    },
+    "ToolStateRunning": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "running"
+        },
+        "input": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "title": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "start"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "input",
+        "time"
+      ]
+    },
+    "ToolStateCompleted": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "completed"
+        },
+        "input": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "output": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "end": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "compacted": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end"
+          ]
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FilePart"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "input",
+        "output",
+        "title",
+        "metadata",
+        "time"
+      ]
+    },
+    "ToolStateError": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "error"
+        },
+        "input": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "error": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "end": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "input",
+        "error",
+        "time"
+      ]
+    },
+    "ToolState": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ToolStatePending"
+        },
+        {
+          "$ref": "#/$defs/ToolStateRunning"
+        },
+        {
+          "$ref": "#/$defs/ToolStateCompleted"
+        },
+        {
+          "$ref": "#/$defs/ToolStateError"
+        }
+      ],
+      "x-discriminator": "status"
+    },
+    "ToolPart": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PartID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "messageID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "type": {
+          "const": "tool"
+        },
+        "callID": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/ToolState"
+        },
+        "metadata": {
+          "$ref": "#/$defs/StringMapAny"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "messageID",
+        "type",
+        "callID",
+        "tool",
+        "state"
+      ]
+    },
+    "Part": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TextPart"
+        },
+        {
+          "$ref": "#/$defs/SubtaskPart"
+        },
+        {
+          "$ref": "#/$defs/ReasoningPart"
+        },
+        {
+          "$ref": "#/$defs/FilePart"
+        },
+        {
+          "$ref": "#/$defs/ToolPart"
+        },
+        {
+          "$ref": "#/$defs/StepStartPart"
+        },
+        {
+          "$ref": "#/$defs/StepFinishPart"
+        },
+        {
+          "$ref": "#/$defs/SnapshotPart"
+        },
+        {
+          "$ref": "#/$defs/PatchPart"
+        },
+        {
+          "$ref": "#/$defs/AgentPart"
+        },
+        {
+          "$ref": "#/$defs/RetryPart"
+        },
+        {
+          "$ref": "#/$defs/CompactionPart"
+        }
+      ],
+      "x-discriminator": "type"
+    },
+    "UserMessage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "role": {
+          "const": "user"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "created": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "created"
+          ]
+        },
+        "format": {
+          "$ref": "#/$defs/OutputFormat"
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "diffs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/FileDiff"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "diffs"
+          ]
+        },
+        "agent": {
+          "type": "string"
+        },
+        "model": {
+          "type": "object",
+          "properties": {
+            "providerID": {
+              "type": "string"
+            },
+            "modelID": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "providerID",
+            "modelID"
+          ]
+        },
+        "system": {
+          "type": "string"
+        },
+        "tools": {
+          "$ref": "#/$defs/StringMapBoolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "role",
+        "time",
+        "agent",
+        "model"
+      ]
+    },
+    "AssistantMessage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "sessionID": {
+          "$ref": "#/$defs/SessionID"
+        },
+        "role": {
+          "const": "assistant"
+        },
+        "time": {
+          "type": "object",
+          "properties": {
+            "created": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            },
+            "completed": {
+              "$ref": "#/$defs/NonNegativeInteger"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "created"
+          ]
+        },
+        "error": {
+          "$ref": "#/$defs/AssistantError"
+        },
+        "parentID": {
+          "$ref": "#/$defs/MessageID"
+        },
+        "modelID": {
+          "type": "string"
+        },
+        "providerID": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "path": {
+          "type": "object",
+          "properties": {
+            "cwd": {
+              "type": "string"
+            },
+            "root": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "cwd",
+            "root"
+          ]
+        },
+        "summary": {
+          "type": "boolean"
+        },
+        "cost": {
+          "$ref": "#/$defs/FiniteNumber"
+        },
+        "tokens": {
+          "$ref": "#/$defs/Tokens"
+        },
+        "structured": {},
+        "variant": {
+          "type": "string"
+        },
+        "finish": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sessionID",
+        "role",
+        "time",
+        "parentID",
+        "modelID",
+        "providerID",
+        "mode",
+        "agent",
+        "path",
+        "cost",
+        "tokens"
+      ]
+    },
+    "MessageInfo": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/UserMessage"
+        },
+        {
+          "$ref": "#/$defs/AssistantMessage"
+        }
+      ],
+      "x-discriminator": "role"
+    },
+    "MessageWithParts": {
+      "type": "object",
+      "properties": {
+        "info": {
+          "$ref": "#/$defs/MessageInfo"
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Part"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "info",
+        "parts"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "info": {
+        "id": "ses_example",
+        "slug": "example-session",
+        "projectID": "project-example",
+        "directory": "/workspace/project",
+        "title": "Example session",
+        "version": "1.0.0",
+        "time": {
+          "created": 1750000000000,
+          "updated": 1750000001000
+        }
+      },
+      "messages": [
+        {
+          "info": {
+            "id": "msg_example",
+            "sessionID": "ses_example",
+            "role": "user",
+            "time": {
+              "created": 1750000000000
+            },
+            "agent": "build",
+            "model": {
+              "providerID": "openai",
+              "modelID": "example-model"
+            }
+          },
+          "parts": [
+            {
+              "id": "prt_example",
+              "sessionID": "ses_example",
+              "messageID": "msg_example",
+              "type": "text",
+              "text": "Hello"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

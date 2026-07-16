@@ -1,5 +1,6 @@
 import type { OpenCodeParseDiagnostic, ParsedMessage, ParsedOpenCodeSession, ParsedPart, ParseResult, MessageRole, NodeKind } from './model';
 import { detectSanitizedExport } from './detectSanitizedExport';
+import { validateSessionCompatibility } from './validateSessionCompatibility';
 import { asNumber, asString, getPath, isRecord } from './util';
 
 const knownParts = new Set(['text','subtask','reasoning','file','tool','step-start','step-finish','snapshot','patch','agent','retry','compaction']);
@@ -10,6 +11,7 @@ export function parseSessionExport(value: unknown): ParseResult {
   if (!isRecord(value)) return fatal('opencode.root.invalid', 'OpenCode export root must be an object.');
   if (!isRecord(value.info)) return fatal('opencode.info.invalid', 'OpenCode export info must be an object.', '$.info');
   if (!Array.isArray(value.messages)) return fatal('opencode.messages.invalid', 'OpenCode export messages must be an array.', '$.messages');
+  diagnostics.push(...validateSessionCompatibility(value));
   const messages: ParsedMessage[] = [];
   value.messages.forEach((messageValue, messageIndex) => {
     if (!isRecord(messageValue)) { diagnostics.push(warn('opencode.message.invalid', 'Message is not an object.', `$.messages[${messageIndex}]`)); return; }

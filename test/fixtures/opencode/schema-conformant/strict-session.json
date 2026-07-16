@@ -1,0 +1,312 @@
+{
+  "info": {
+    "id": "ses_schema",
+    "slug": "schema-session",
+    "projectID": "proj",
+    "workspaceID": "wrk_main",
+    "directory": "/repo",
+    "path": "/repo",
+    "title": "Schema Session",
+    "agent": "session-agent",
+    "model": {
+      "providerID": "session-provider",
+      "modelID": "session-model"
+    },
+    "version": "1.0.0",
+    "metadata": {
+      "safe": "value"
+    },
+    "share": {
+      "url": "https://example.invalid/share"
+    },
+    "summary": {
+      "files": 1,
+      "additions": 2,
+      "deletions": 1,
+      "diffs": [
+        {
+          "path": "src/a.ts",
+          "status": "modified",
+          "additions": 2,
+          "deletions": 1,
+          "patch": "@@ escaped patch @@"
+        }
+      ]
+    },
+    "time": {
+      "created": 0,
+      "updated": 100
+    },
+    "permission": [],
+    "revert": {
+      "messageID": "msg_user"
+    }
+  },
+  "messages": [
+    {
+      "info": {
+        "id": "msg_user",
+        "sessionID": "ses_schema",
+        "role": "user",
+        "time": {
+          "created": 0
+        },
+        "agent": "user-agent",
+        "model": {
+          "providerID": "user-provider",
+          "modelID": "user-model"
+        },
+        "format": {
+          "type": "text"
+        }
+      },
+      "parts": [
+        {
+          "id": "prt_user_text",
+          "sessionID": "ses_schema",
+          "messageID": "msg_user",
+          "type": "text",
+          "text": "hello"
+        }
+      ]
+    },
+    {
+      "info": {
+        "id": "msg_assistant",
+        "sessionID": "ses_schema",
+        "role": "assistant",
+        "time": {
+          "created": 1,
+          "completed": 10
+        },
+        "parentID": "msg_user",
+        "modelID": "assistant-model",
+        "providerID": "assistant-provider",
+        "mode": "build",
+        "agent": "assistant-agent",
+        "path": {
+          "cwd": "/repo",
+          "root": "/repo"
+        },
+        "summary": false,
+        "cost": 0.1,
+        "tokens": {
+          "input": 10,
+          "output": 5,
+          "reasoning": 1,
+          "cache": {
+            "read": 0,
+            "write": 0
+          }
+        },
+        "variant": "default",
+        "finish": "stop"
+      },
+      "parts": [
+        {
+          "id": "prt_step_start",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "step-start",
+          "time": {
+            "start": 1
+          }
+        },
+        {
+          "id": "prt_reasoning",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "reasoning",
+          "text": "hidden reasoning",
+          "time": {
+            "start": 2
+          }
+        },
+        {
+          "id": "prt_text",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "text",
+          "text": "assistant text"
+        },
+        {
+          "id": "prt_file",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "file",
+          "mime": "text/plain",
+          "filename": "a.txt",
+          "source": {
+            "type": "path",
+            "path": "/repo/a.txt"
+          }
+        },
+        {
+          "id": "prt_tool_skill",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "tool",
+          "callID": "call_skill",
+          "tool": "skill",
+          "state": {
+            "status": "completed",
+            "input": {
+              "name": "pdf-helper"
+            },
+            "output": "loaded",
+            "title": "Load skill",
+            "metadata": {
+              "ok": true
+            },
+            "time": {
+              "start": 3,
+              "end": 4
+            },
+            "attachments": [
+              {
+                "filename": "att.txt",
+                "mime": "text/plain",
+                "url": "https://example.invalid/att",
+                "source": {
+                  "type": "path",
+                  "path": "/tmp/att.txt"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "prt_tool_pending",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "tool",
+          "callID": "call_pending",
+          "tool": "read",
+          "state": {
+            "status": "pending",
+            "input": {
+              "path": "a"
+            },
+            "raw": {
+              "path": "a"
+            }
+          }
+        },
+        {
+          "id": "prt_tool_running",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "tool",
+          "callID": "call_running",
+          "tool": "bash",
+          "state": {
+            "status": "running",
+            "input": {
+              "command": "echo"
+            },
+            "time": {
+              "start": 5
+            }
+          }
+        },
+        {
+          "id": "prt_tool_error",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "tool",
+          "callID": "call_error",
+          "tool": "read",
+          "state": {
+            "status": "error",
+            "input": {
+              "path": "missing"
+            },
+            "error": "missing",
+            "time": {
+              "start": 6,
+              "end": 7
+            }
+          }
+        },
+        {
+          "id": "prt_snapshot",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "snapshot",
+          "snapshot": "snapshot data"
+        },
+        {
+          "id": "prt_patch",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "patch",
+          "hash": "abc",
+          "files": [
+            "a.txt"
+          ],
+          "patch": "diff --git"
+        },
+        {
+          "id": "prt_agent",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "agent",
+          "name": "reviewer",
+          "source": {
+            "value": "agent text",
+            "start": 1,
+            "end": 2
+          }
+        },
+        {
+          "id": "prt_subtask",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "subtask",
+          "prompt": "do it",
+          "description": "Review code",
+          "agent": "reviewer",
+          "model": "m",
+          "command": "review"
+        },
+        {
+          "id": "prt_retry",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "retry",
+          "attempt": 1,
+          "time": {
+            "created": 8
+          },
+          "error": {
+            "name": "APIError",
+            "data": {
+              "message": "request failed",
+              "statusCode": 503,
+              "isRetryable": true
+            }
+          }
+        },
+        {
+          "id": "prt_compaction",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "compaction",
+          "auto": true,
+          "overflow": false,
+          "tail_start_id": "msg_user"
+        },
+        {
+          "id": "prt_step_finish",
+          "sessionID": "ses_schema",
+          "messageID": "msg_assistant",
+          "type": "step-finish",
+          "time": {
+            "start": 9,
+            "end": 10
+          }
+        }
+      ]
+    }
+  ]
+}

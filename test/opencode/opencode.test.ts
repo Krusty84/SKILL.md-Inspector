@@ -311,3 +311,104 @@ describe('OpenCode static report', () => {
     expect(html).not.toContain('<script src=');
   });
 });
+
+describe('OpenCode schema compatibility diagnostics and report details', () => {
+  it('validates the pinned strict fixture shape used by tests without making runtime parsing strict', () => {
+    const schema = fixture('schema/opencode-session-export.schema.json');
+    const strict = fixture('schema-conformant/strict-session.json');
+    const parsed = parseSessionExport(strict);
+    const session = normalize(strict);
+
+    expect(isRecord(schema)).toBe(true);
+    expect(parsed.fatal).toBe(false);
+    expect(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'warning')).toHaveLength(0);
+    expect(parsed.session?.messages.flatMap((message) => message.parts.map((part) => part.originalType))).toEqual(expect.arrayContaining(['text','reasoning','file','tool','step-start','step-finish','snapshot','patch','agent','subtask','retry','compaction']));
+    expect(session.nodes.filter((node) => node.kind === 'tool' || node.kind === 'skill').map((node) => node.status).sort()).toEqual(['completed','error','pending','running']);
+  });
+
+  it('reports cross-object invariants, duplicate IDs, missing IDs, required fields, and noncanonical prefixes non-fatally', () => {
+    const root = mutableFixture('schema-conformant/strict-session.json');
+    const messages = fixtureMessages(root);
+    const info = fixtureInfo(root);
+    info.id = 'bad_session';
+    info.workspaceID = 'bad_workspace';
+    delete info.slug;
+    if (!isRecord(messages[0].info) || !isRecord(messages[1].info)) throw new Error('Fixture message shape changed.');
+    messages[0].info.id = 'bad_message';
+    delete messages[0].info.agent;
+    messages[1].info.id = 'bad_message';
+    messages[1].info.parentID = 'missing_parent';
+    const assistantParts = messages[1].parts;
+    if (!Array.isArray(assistantParts) || !isRecord(assistantParts[0]) || !isRecord(assistantParts[1]) || !isRecord(assistantParts[4])) throw new Error('Fixture part shape changed.');
+    assistantParts[0].id = 'bad_part';
+    assistantParts[1].id = 'bad_part';
+    assistantParts[1].sessionID = 'other_session';
+    assistantParts[1].messageID = 'other_message';
+    delete assistantParts[1].type;
+    assistantParts[4].callID = 'call_duplicate';
+    if (!isRecord(assistantParts[5])) throw new Error('Fixture tool shape changed.');
+    assistantParts[5].callID = 'call_duplicate';
+    if (isRecord(assistantParts[5].state)) delete assistantParts[5].state.input;
+    const parsed = parseSessionExport(root);
+    const codes = parsed.diagnostics.map((diagnostic) => diagnostic.code);
+
+    expect(parsed.fatal).toBe(false);
+    expect(parsed.session?.messages).toHaveLength(2);
+    expect(codes).toEqual(expect.arrayContaining(['opencode.id.sessionNoncanonical','opencode.id.workspaceNoncanonical','opencode.id.messageNoncanonical','opencode.id.messageDuplicate','opencode.invariant.assistantParentMissing','opencode.id.partNoncanonical','opencode.id.partDuplicate','opencode.invariant.partSessionIdMismatch','opencode.invariant.partMessageIdMismatch','opencode.id.toolCallDuplicate','opencode.required.string','opencode.required.present']));
+    expect(parsed.diagnostics.find((diagnostic) => diagnostic.code === 'opencode.invariant.partMessageIdMismatch' && diagnostic.message.includes('other_message'))?.path).toContain('parts[1].messageID');
+  });
+
+  it('reports assistant self-parent references and parser-synthesized missing IDs without dropping source order', () => {
+    const root = mutableFixture('schema-conformant/strict-session.json');
+    const messages = fixtureMessages(root);
+    if (!isRecord(messages[1].info)) throw new Error('Fixture message shape changed.');
+    messages[1].info.parentID = messages[1].info.id;
+    delete messages[1].info.id;
+    const parts = messages[1].parts;
+    if (!Array.isArray(parts) || !isRecord(parts[2])) throw new Error('Fixture part shape changed.');
+    delete parts[2].id;
+    const parsed = parseSessionExport(root);
+
+    expect(parsed.fatal).toBe(false);
+    expect(parsed.session?.messages.map((message) => message.sourceOrder)).toEqual([0, 1]);
+    expect(parsed.session?.messages[1]?.parts.map((part) => part.sourceOrder).slice(0, 4)).toEqual([0, 1, 2, 3]);
+    expect(parsed.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(expect.arrayContaining(['opencode.id.messageMissing','opencode.id.partMissing']));
+  });
+
+  it('renders compatibility, metadata, named agent, subtask, retry, attachments, diffs, zero timestamps, and escaped URL text', () => {
+    const root = mutableFixture('schema-conformant/strict-session.json');
+    fixtureInfo(root).share = { url: 'javascript:<script>alert(1)</script>' };
+    const html = renderOpenCodeSessionReportHtml(buildSessionViewModel(normalize(root, 40)), 'vscode-resource:');
+
+    expect(html).toContain('Compatibility summary');
+    expect(html).toContain('reconstructed compatibility reference');
+    expect(html).toContain('Schema Session');
+    expect(html).toContain('Share URL');
+    expect(html).toContain('javascript:&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('href="javascript:');
+    expect(html).toContain('Agent: reviewer');
+    expect(html).toContain('Subtask: Review code');
+    expect(html).toContain('APIError: request failed');
+    expect(html).toContain('Attachments');
+    expect(html).toContain('att.txt');
+    expect(html).toContain('Session change summary');
+    expect(html).toContain('src/a.ts');
+    expect(html).toContain('0 ms');
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('<img');
+    expect(html).toContain("default-src 'none'");
+  });
+
+  it('falls back to assistant then user agent while preserving explicit session agent and provider/model precedence', () => {
+    const root = mutableFixture('schema-conformant/strict-session.json');
+    expect(normalize(root).agent).toBe('session-agent');
+    delete fixtureInfo(root).agent;
+    expect(normalize(root).agent).toBe('assistant-agent');
+    const messages = fixtureMessages(root);
+    if (!isRecord(messages[1].info)) throw new Error('Fixture message shape changed.');
+    delete messages[1].info.agent;
+    expect(normalize(root).agent).toBe('user-agent');
+    expect(normalize(root).model).toBe('session-model');
+    expect(normalize(root).provider).toBe('session-provider');
+  });
+});
