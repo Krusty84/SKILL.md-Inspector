@@ -24,7 +24,7 @@ describe('OpenCode session report shell structure', () => {
 
   it('defines fixed-header control tooltips and removes the old details text button', () => {
     expect(source).toContain("role','tooltip'");
-    expect(source).toContain('Show tool calls, excluding skill calls');
+    expect(source).toContain('Show all tool calls, including skill calls');
     expect(source).toContain('Show skill calls only');
     expect(source).toContain('Show session details');
     expect(source).toContain('Hide session details');
