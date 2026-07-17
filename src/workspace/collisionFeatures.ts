@@ -4,13 +4,9 @@
  * (artifacts), and the clauses that say when it should / should not fire. Reuses
  * the quality-layer registries so the vocabulary stays a single source of truth.
  */
-import { normalizeVerbForm, normalizeContentToken, ACTION_VERB_BASES } from '../quality/wordForms';
+import { normalizeVerbForm, normalizeContentToken, buildVerbForms } from '../quality/wordForms';
+import { analyzeArtifactEvidence } from '../quality/descriptionHeuristics';
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from '../quality/dictionaries';
-import {
-  POSITIVE_TRIGGER_PHRASES,
-  NEGATIVE_BOUNDARY_PHRASES,
-  EXCLUSIVE_TRIGGER_PHRASES,
-} from '../quality/triggerPhrases';
 import { tokenizeContent } from './similarity';
 
 export interface SkillFeatures {
@@ -20,7 +16,6 @@ export interface SkillFeatures {
   negativeBoundaries: string[];
 }
 
-const POSITIVE_MARKERS = [...POSITIVE_TRIGGER_PHRASES, ...EXCLUSIVE_TRIGGER_PHRASES];
 const TERMINATOR = /[.;!?]/;
 
 /** All four feature lists for one description. */
@@ -28,8 +23,8 @@ export function extractFeatures(description: string, dictionaries: HeuristicDict
   return {
     capabilities: extractCapabilities(description, dictionaries),
     artifacts: extractArtifacts(description, dictionaries),
-    positiveTriggers: extractPositiveTriggers(description),
-    negativeBoundaries: extractNegativeBoundaries(description),
+    positiveTriggers: extractPositiveTriggers(description, dictionaries),
+    negativeBoundaries: extractNegativeBoundaries(description, dictionaries),
   };
 }
 
@@ -39,7 +34,7 @@ export function extractCapabilities(description: string, dictionaries: Heuristic
   const seen = new Set<string>();
   for (const token of contentWords(description)) {
     const base = normalizeVerbForm(token);
-    if ((ACTION_VERB_BASES.has(base) || dictionaries.actionVerbs.includes(base)) && !seen.has(base)) {
+    if (buildVerbForms(dictionaries.actionVerbs).forms.has(token) && !seen.has(base)) {
       seen.add(base);
       result.push(base);
     }
@@ -49,7 +44,6 @@ export function extractCapabilities(description: string, dictionaries: Heuristic
 
 /** Recognized artifacts/domain terms — single-word hints, acronyms, and multi-word phrases (Task 37). */
 export function extractArtifacts(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
-  const lower = description.toLowerCase();
   const result: string[] = [];
   const seen = new Set<string>();
   const add = (value: string): void => {
@@ -58,16 +52,16 @@ export function extractArtifacts(description: string, dictionaries: HeuristicDic
       result.push(value);
     }
   };
+  const evidence = analyzeArtifactEvidence(description, dictionaries);
+  for (const term of evidence.matchedTerms) add(term);
   for (const phrase of dictionaries.multiWordArtifacts) {
-    if (lower.includes(phrase)) {
-      add(phrase);
-    }
+    const words = phrase.split(' ');
+    const pattern = words.map((word, index) => `${word}${index === words.length - 1 ? 's?' : ''}`).join('\\s+');
+    if (new RegExp(`\\b${pattern}\\b`, 'i').test(description)) add(phrase);
   }
   for (const token of contentWords(description)) {
     const normalized = normalizeContentToken(token);
-    if (dictionaries.artifactHints.includes(normalized) || dictionaries.acronyms.includes(normalized)) {
-      add(normalized);
-    }
+    if (dictionaries.artifactHints.includes(normalized) && evidence.found) add(normalized);
   }
   return result;
 }
@@ -77,14 +71,14 @@ export function extractArtifacts(description: string, dictionaries: HeuristicDic
  * order (Task 38). Negative boundary clauses are removed first so their embedded
  * "use when" fragment is never captured as a positive trigger.
  */
-export function extractPositiveTriggers(description: string): string[] {
-  const withoutBoundaries = stripClauses(description, NEGATIVE_BOUNDARY_PHRASES);
-  return extractClauses(withoutBoundaries, POSITIVE_MARKERS);
+export function extractPositiveTriggers(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
+  const withoutBoundaries = stripClauses(description, dictionaries.negativeBoundaryPhrases);
+  return extractClauses(withoutBoundaries, [...dictionaries.positiveTriggerPhrases, ...dictionaries.exclusiveTriggerPhrases]);
 }
 
 /** Text following negative boundary markers ("Do not use for…") (Task 39). */
-export function extractNegativeBoundaries(description: string): string[] {
-  return extractClauses(description, NEGATIVE_BOUNDARY_PHRASES);
+export function extractNegativeBoundaries(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
+  return extractClauses(description, dictionaries.negativeBoundaryPhrases);
 }
 
 /**
@@ -92,9 +86,9 @@ export function extractNegativeBoundaries(description: string): string[] {
  * (0..1, Task 40): the mean fraction of each skill's positive domain that the
  * other skill explicitly excludes. Mutually-exclusive scopes approach 1.
  */
-export function boundarySeparation(a: string, b: string): number {
-  const excludedA = fractionExcluded(domainTokens(a), boundaryTokens(b));
-  const excludedB = fractionExcluded(domainTokens(b), boundaryTokens(a));
+export function boundarySeparation(a: string, b: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): number {
+  const excludedA = fractionExcluded(domainTokens(a, dictionaries), boundaryTokens(b, dictionaries));
+  const excludedB = fractionExcluded(domainTokens(b, dictionaries), boundaryTokens(a, dictionaries));
   return 0.5 * excludedA + 0.5 * excludedB;
 }
 
@@ -104,14 +98,14 @@ function contentWords(text: string): string[] {
 }
 
 /** Normalized content tokens with negative boundary clauses removed. */
-function domainTokens(description: string): Set<string> {
-  const withoutBoundaries = stripClauses(description, NEGATIVE_BOUNDARY_PHRASES);
+function domainTokens(description: string, dictionaries: HeuristicDictionaries): Set<string> {
+  const withoutBoundaries = stripClauses(description, dictionaries.negativeBoundaryPhrases);
   return new Set(tokenizeContent(withoutBoundaries).map(normalizeContentToken));
 }
 
 /** Normalized content tokens taken only from the negative boundary clauses. */
-function boundaryTokens(description: string): Set<string> {
-  const clauses = extractClauses(description, NEGATIVE_BOUNDARY_PHRASES).join(' ');
+function boundaryTokens(description: string, dictionaries: HeuristicDictionaries): Set<string> {
+  const clauses = extractClauses(description, dictionaries.negativeBoundaryPhrases).join(' ');
   return new Set(tokenizeContent(clauses).map(normalizeContentToken));
 }
 

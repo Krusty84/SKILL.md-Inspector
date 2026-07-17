@@ -111,3 +111,6 @@ Initial release: a deterministic linter for `SKILL.md` files.
 - Renamed the deterministic **Trigger Quality** result to **Static Description Quality** and `confidence` to heuristic `coverage`; it does not measure agent selection accuracy.
 - Folder/name mismatches in recognized `skills/<name>/SKILL.md` packages are specification errors.
 - Added offline static benchmark fixtures and a separate behavioral-trigger metrics framework.
+- Resolved heuristic dictionaries are now passed through description reports, local improvements, and collision feature extraction. Scope-clause evidence includes the selected source offset and clause text.
+- Added deterministic low-signal artifact evidence, separator-aware artifact matching, and uppercase protection for ambiguous acronyms such as CAN and STEP.
+- Skill reports now show independent instruction and resource authoring-quality results; these scores are never averaged with description discoverability.

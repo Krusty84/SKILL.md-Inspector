@@ -1,278 +1,92 @@
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
-import { ACTION_VERB_FORMS, singularize } from './wordForms';
-import {
-  POSITIVE_TRIGGER_PHRASES,
-  NEGATIVE_BOUNDARY_PHRASES,
-  EXCLUSIVE_TRIGGER_PHRASES,
-  RESTRICTIVE_BOUNDARY_PHRASES,
-} from './triggerPhrases';
+import { buildVerbForms, singularize } from './wordForms';
+import { RESTRICTIVE_BOUNDARY_PHRASES } from './triggerPhrases';
 
-export interface PhraseMatch {
-  found: boolean;
-  matched?: string;
-}
-
+export interface PhraseMatch { found: boolean; matched?: string; }
 export interface ScopeClauseAnalysis extends PhraseMatch {
-  markerFound: boolean;
-  contentFound: boolean;
-  contentTokens: string[];
-  vagueTokens: string[];
-  matchedPhrase?: string;
+  markerFound: boolean; contentFound: boolean; contentTokens: string[]; vagueTokens: string[];
+  matchedPhrase?: string; matchedOffset?: number; clauseText?: string;
 }
-
-export interface FrontLoadedIntentResult {
-  found: boolean;
-  pattern?: 'capability-first' | 'use-when-first' | 'when-asked-first';
-  matchedCapability?: string;
-  matchedObject?: string;
+export interface ArtifactEvidence {
+  found: boolean; strength: 'none' | 'supported-low-signal' | 'high-signal';
+  matchedTerms: string[]; supportingTerms: string[];
 }
-
+export interface FrontLoadedIntentResult { found: boolean; pattern?: 'capability-first' | 'use-when-first' | 'when-asked-first'; matchedCapability?: string; matchedObject?: string; }
 export interface DescriptionAnalysis {
-  raw: string;
-  trimmed: string;
-  length: number;
-  wordCount: number;
-  /** First ~12 words, lower-cased — used for the front-loaded-intent check. */
-  leadingText: string;
-  actionVerb: PhraseMatch;
-  positiveTriggerPhrase: PhraseMatch;
-  negativeBoundaryPhrase: PhraseMatch;
-  exclusiveTriggerPhrase: PhraseMatch;
-  concreteArtifact: boolean;
-  vagueTerms: string[];
-  triggerClause: ScopeClauseAnalysis;
-  boundaryClause: ScopeClauseAnalysis;
-  frontLoadedIntent: FrontLoadedIntentResult;
+  raw: string; trimmed: string; length: number; wordCount: number; leadingText: string;
+  actionVerb: PhraseMatch; positiveTriggerPhrase: PhraseMatch; negativeBoundaryPhrase: PhraseMatch; exclusiveTriggerPhrase: PhraseMatch;
+  concreteArtifact: boolean; artifactEvidence: ArtifactEvidence; vagueTerms: string[];
+  triggerClause: ScopeClauseAnalysis; boundaryClause: ScopeClauseAnalysis; frontLoadedIntent: FrontLoadedIntentResult;
 }
 
 export function analyzeDescription(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): DescriptionAnalysis {
-  const raw = description ?? '';
-  const trimmed = raw.trim();
-  const lower = trimmed.toLowerCase();
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  const tokens = tokenize(lower);
-
+  const raw = description ?? ''; const trimmed = raw.trim(); const tokens = tokenize(trimmed);
   const triggerClause = assessScopeClause(trimmed, 'trigger', dictionaries);
   const boundaryClause = assessScopeClause(trimmed, 'boundary', dictionaries);
-  return {
-    raw,
-    trimmed,
-    length: trimmed.length,
-    wordCount: words.length,
-    leadingText: words.slice(0, 12).join(' ').toLowerCase(),
-    actionVerb: matchVerb(tokens, dictionaries),
-    positiveTriggerPhrase: triggerClause,
-    negativeBoundaryPhrase: boundaryClause,
-    exclusiveTriggerPhrase: matchPhrase(lower, dictionaries.exclusiveTriggerPhrases),
-    concreteArtifact: hasConcreteArtifact(trimmed, tokens, dictionaries),
-    vagueTerms: findVagueTerms(lower, tokens, dictionaries),
-    triggerClause,
-    boundaryClause,
-    frontLoadedIntent: analyzeFrontLoadedIntent(trimmed),
-  };
+  const artifactEvidence = analyzeArtifactEvidence(trimmed, dictionaries);
+  return { raw, trimmed, length: trimmed.length, wordCount: trimmed.split(/\s+/).filter(Boolean).length, leadingText: trimmed.split(/\s+/).slice(0, 12).join(' ').toLowerCase(),
+    actionVerb: matchVerb(tokens, dictionaries), positiveTriggerPhrase: triggerClause, negativeBoundaryPhrase: boundaryClause,
+    exclusiveTriggerPhrase: matchPhrase(trimmed, dictionaries.exclusiveTriggerPhrases), concreteArtifact: artifactEvidence.found, artifactEvidence,
+    vagueTerms: findVagueTerms(trimmed, tokens, dictionaries), triggerClause, boundaryClause, frontLoadedIntent: analyzeFrontLoadedIntent(trimmed, dictionaries) };
 }
-
-export function hasActionVerb(description: string): PhraseMatch {
-  return matchVerb(tokenize(description.toLowerCase()));
+export function hasActionVerb(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return matchVerb(tokenize(description), dictionaries); }
+export function isFrontLoaded(leadingText: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): boolean { return analyzeFrontLoadedIntent(leadingText, dictionaries).found; }
+const FRONT_LOADED_FILLER = new Set(['this','skill','when','asked','the','user','for','from','with','and','help','needed','needs','that','them','they','you','your','any','all']);
+export function analyzeFrontLoadedIntent(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): FrontLoadedIntentResult {
+  const leading = description.split(/(?<=[.!?])\s+/)[0] ?? ''; const tokens = tokenize(leading); const forms = buildVerbForms(dictionaries.actionVerbs).forms;
+  const capability = tokens.find((token) => forms.has(token));
+  const object = tokens.find((token) => !forms.has(token) && token.length > 2 && !FRONT_LOADED_FILLER.has(token) && !dictionaries.vagueTerms.includes(token));
+  const concrete = analyzeArtifactEvidence(leading, dictionaries).found || Boolean(object && tokens.length >= 5);
+  const prefix = /^\s*use (?:this )?(?:skill )?when\b/i.test(leading) ? 'use-when-first' : /^\s*when asked to\b/i.test(leading) ? 'when-asked-first' : tokens.length > 0 && forms.has(tokens[0]) ? 'capability-first' : undefined;
+  return prefix && capability && concrete ? { found: true, pattern: prefix, matchedCapability: capability, matchedObject: object } : { found: false };
 }
-
-/**
- * Stricter front-loaded-intent check: the FIRST token must be an action verb and
- * a concrete artifact/object must follow it in the leading text. A verb anywhere
- * in the first 12 words, or a bare verb with no object, is too weak to pass.
- */
-export function isFrontLoaded(leadingText: string): boolean {
-  return analyzeFrontLoadedIntent(leadingText).found;
-}
-
-/** Filler tokens that can never serve as the "object" of a front-loaded capability. */
-const FRONT_LOADED_FILLER = new Set([
-  'this', 'skill', 'when', 'asked', 'the', 'user', 'for', 'from', 'with', 'and',
-  'help', 'needed', 'needs', 'that', 'them', 'they', 'you', 'your', 'any', 'all',
-]);
-
-/** Shared deterministic evidence used by both scoring and diagnostics. */
-export function analyzeFrontLoadedIntent(description: string): FrontLoadedIntentResult {
-  const leading = description.split(/(?<=[.!?])\s+/).slice(0, 1)[0] ?? '';
-  const tokens = tokenize(leading);
-  const capability = tokens.find((token) => ACTION_VERB_FORMS.has(token));
-  const object = tokens.find(
-    (token) =>
-      !ACTION_VERB_FORMS.has(token) &&
-      token.length > 2 &&
-      !FRONT_LOADED_FILLER.has(token) &&
-      !DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.includes(token),
-  );
-  const concrete = hasConcreteArtifact(leading, tokens) || Boolean(object && tokens.length >= 5);
-  if (/^\s*use (?:this )?(?:skill )?when\b/i.test(leading) && capability && concrete) {
-    return { found: true, pattern: 'use-when-first', matchedCapability: capability, matchedObject: object };
-  }
-  if (/^\s*when asked to\b/i.test(leading) && capability && concrete) {
-    return { found: true, pattern: 'when-asked-first', matchedCapability: capability, matchedObject: object };
-  }
-  if (tokens.length > 0 && ACTION_VERB_FORMS.has(tokens[0]) && concrete) {
-    return { found: true, pattern: 'capability-first', matchedCapability: tokens[0], matchedObject: object };
-  }
-  return { found: false };
-}
-
-export function hasPositiveTriggerPhrase(description: string): PhraseMatch {
-  const lower = description.toLowerCase();
-  const positive = matchPhrase(stripPhrases(lower, [...NEGATIVE_BOUNDARY_PHRASES, ...EXCLUSIVE_TRIGGER_PHRASES]), POSITIVE_TRIGGER_PHRASES);
-  if (positive.found) {
-    return positive;
-  }
-  // "only use when ..." is a positive trigger too, even though it also bounds scope.
-  return matchPhrase(lower, EXCLUSIVE_TRIGGER_PHRASES);
-}
-
-export function hasNegativeBoundaryPhrase(description: string): PhraseMatch {
-  return matchPhrase(description.toLowerCase(), NEGATIVE_BOUNDARY_PHRASES);
-}
-
-export function hasExclusiveTriggerPhrase(description: string): PhraseMatch {
-  return matchPhrase(description.toLowerCase(), EXCLUSIVE_TRIGGER_PHRASES);
-}
-
-/**
- * Removes every occurrence of the given phrases (whitespace-flexible, whole
- * words) so that fragments embedded in them — the "use when" inside
- * "do not use when", the "intended for" inside "not intended for" — cannot be
- * matched as standalone positive evidence afterwards.
- */
-function stripPhrases(lower: string, phrases: readonly string[]): string {
-  let stripped = lower;
-  for (const phrase of byLengthDescending(phrases)) {
-    stripped = stripped.replace(phraseRegex(phrase, 'gi'), ' ');
-  }
-  return stripped;
-}
-
-export function findVagueTerms(lower: string, tokens: string[] = tokenize(lower), dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
-  const found: string[] = [];
-  const forms = tokenForms(tokens);
-  for (const term of dictionaries.vagueTerms) {
-    if (term.includes(' ')) {
-      if (phraseRegex(term).test(lower)) {
-        found.push(term);
-      }
-    } else if (forms.has(term)) {
-      found.push(term);
-    }
-  }
-  return found;
-}
-
-function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch {
-  for (const token of tokens) {
-    if (ACTION_VERB_FORMS.has(token) || dictionaries.actionVerbs.includes(token)) {
-      return { found: true, matched: token };
-    }
-  }
-  return { found: false };
-}
-
-function matchPhrase(lower: string, phrases: readonly string[]): PhraseMatch {
-  for (const phrase of phrases) {
-    if (phraseRegex(phrase).test(lower)) {
-      return { found: true, matched: phrase };
-    }
-  }
-  return { found: false };
-}
-
-/** Words carried by scope markers themselves; never counted as clause content. */
-const CLAUSE_STOPWORDS = new Set([
-  'the', 'a', 'an', 'to', 'when', 'for', 'only', 'user', 'this', 'that',
-  'skill', 'of', 'in', 'on', 'with', 'and', 'or', 'is', 'are', 'it', 'its',
-  'you', 'your', 'be', 'as', 'by',
-]);
-
-/** Low-information tail tokens that do not make a scope clause meaningful. */
-const CLAUSE_VAGUE_TOKENS = new Set([
-  'needed', 'needs', 'necessary', 'appropriate', 'applicable', 'relevant',
-  'suitable', 'tasks', 'task', 'things', 'thing', 'stuff', 'other', 'others',
-  'anything', 'everything', 'something', 'general', 'various', 'work',
-  'help', 'helping', 'useful', 'asks', 'asked', 'wants', 'requests',
-]);
-
-/**
- * Finds a trigger/boundary marker and judges whether the clause after it
- * carries real scope content. Marker vocabulary comes from
- * `triggerPhrases.ts` (single source of truth); negative boundary phrases are
- * stripped from a sentence before trigger matching so a purely negative
- * sentence ("Not intended for X", "Do not use when Y") is never credited as a
- * positive trigger.
- */
+export function hasPositiveTriggerPhrase(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return assessScopeClause(description, 'trigger', dictionaries); }
+export function hasNegativeBoundaryPhrase(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return matchPhrase(description, dictionaries.negativeBoundaryPhrases); }
+export function hasExclusiveTriggerPhrase(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return matchPhrase(description, dictionaries.exclusiveTriggerPhrases); }
+export function findVagueTerms(text: string, tokens: string[] = tokenize(text), dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] { const forms = tokenForms(tokens); return [...dictionaries.vagueTerms].filter((term) => term.includes(' ') ? phraseRegex(term).test(text) : forms.has(term)).sort(); }
+function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries): PhraseMatch { const forms = buildVerbForms(dictionaries.actionVerbs).forms; const token = tokens.find((entry) => forms.has(entry)); return token ? { found: true, matched: token } : { found: false }; }
+function matchPhrase(text: string, phrases: readonly string[]): PhraseMatch { const matched = [...phrases].sort().find((phrase) => phraseRegex(phrase).test(text)); return matched ? { found: true, matched } : { found: false }; }
+const CLAUSE_STOPWORDS = new Set(['the','a','an','to','when','for','only','user','this','that','skill','of','in','on','with','and','or','is','are','it','its','you','your','be','as','by']);
+const CLAUSE_VAGUE_TOKENS = new Set(['needed','needs','necessary','appropriate','applicable','relevant','suitable','tasks','task','things','thing','stuff','other','others','anything','everything','something','general','various','work','help','helping','useful','asks','asked','wants','requests']);
+interface Candidate extends ScopeClauseAnalysis { marker: string; absoluteOffset: number; }
 export function assessScopeClause(description: string, kind: 'trigger' | 'boundary', dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): ScopeClauseAnalysis {
-  const markers = byLengthDescending(kind === 'trigger' ? [...dictionaries.positiveTriggerPhrases, ...dictionaries.exclusiveTriggerPhrases] : [...dictionaries.negativeBoundaryPhrases, ...RESTRICTIVE_BOUNDARY_PHRASES, ...dictionaries.exclusiveTriggerPhrases]);
-  let selected: ScopeClauseAnalysis | undefined;
-  const sentences = description.split(/(?<=[.!?])\s+|\n/);
-  for (const sentence of sentences) {
-    let lower = sentence.toLowerCase();
-    if (kind === 'trigger') {
-      // A negative clause cannot be evidence of a positive trigger.
-      lower = stripPhrases(lower, NEGATIVE_BOUNDARY_PHRASES);
-    }
-    for (const marker of markers) {
-      for (const match of lower.matchAll(phraseRegex(marker, 'gi'))) {
-        const tail = lower.slice(match.index! + match[0].length);
-        const tailTokens = tokenize(tail);
-        const contentTokens = tailTokens.filter((token) => !CLAUSE_STOPWORDS.has(token));
-        const vagueTokens = contentTokens.filter(
-          (token) => CLAUSE_VAGUE_TOKENS.has(token) || dictionaries.vagueTerms.includes(token),
-        );
-        const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token));
-        const contentFound = meaningful.length >= 2 || (meaningful.length === 1 && isConcreteToken(meaningful[0], dictionaries));
-        const candidate = { found: true, markerFound: true, contentFound, contentTokens, vagueTokens, matched: marker, matchedPhrase: marker };
-        if (!selected || (candidate.contentFound && !selected.contentFound)) selected = candidate;
-      }
-    }
+  const markers = [...new Set(kind === 'trigger' ? [...dictionaries.positiveTriggerPhrases, ...dictionaries.exclusiveTriggerPhrases] : [...dictionaries.negativeBoundaryPhrases, ...RESTRICTIVE_BOUNDARY_PHRASES, ...dictionaries.exclusiveTriggerPhrases])].sort();
+  const excluded = kind === 'trigger' ? [...dictionaries.negativeBoundaryPhrases, ...RESTRICTIVE_BOUNDARY_PHRASES] : [];
+  const occurrences: Array<{ marker: string; index: number; end: number }> = [];
+  for (const marker of markers) for (const match of description.matchAll(phraseRegex(marker, 'gi'))) {
+    const index = match.index ?? 0;
+    if (excluded.some((negative) => phraseRegex(negative, 'i').test(description.slice(Math.max(0, index - negative.length - 2), index + match[0].length)))) continue;
+    occurrences.push({ marker, index, end: index + match[0].length });
   }
-  return selected ?? { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
+  const candidates = occurrences.map((occurrence): Candidate => {
+    const nextMarker = occurrences.filter((other) => other.index > occurrence.index).map((other) => other.index).sort((a,b)=>a-b)[0] ?? Infinity;
+    const terminator = /(?:[!?;\n]|\.(?=\s|$))/.exec(description.slice(occurrence.end)); const end = Math.min(nextMarker, terminator ? occurrence.end + terminator.index : Infinity, description.length);
+    const clauseText = description.slice(occurrence.end, end).trim(); const contentTokens = tokenize(clauseText).filter((token) => !CLAUSE_STOPWORDS.has(token));
+    const vagueTokens = contentTokens.filter((token) => CLAUSE_VAGUE_TOKENS.has(token) || dictionaries.vagueTerms.includes(token));
+    const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token)); const contentFound = meaningful.length >= 2 || (meaningful.length === 1 && analyzeArtifactEvidence(meaningful[0], dictionaries).found);
+    return { found: true, markerFound: true, contentFound, contentTokens, vagueTokens, matched: occurrence.marker, matchedPhrase: occurrence.marker, matchedOffset: occurrence.index, clauseText, marker: occurrence.marker, absoluteOffset: occurrence.index };
+  }).sort((a,b) => Number(b.contentFound) - Number(a.contentFound) || a.absoluteOffset - b.absoluteOffset || a.marker.localeCompare(b.marker));
+  const selected = candidates[0]; return selected ?? { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
 }
-
+export function analyzeArtifactEvidence(text: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): ArtifactEvidence {
+  const tokens = tokenize(text); const forms = tokenForms(tokens); const normalized = normalizeSeparators(text);
+  const low = new Set(dictionaries.lowSignalArtifactTerms); const ambiguous = new Set(['can', 'step', 'pr', 'ci']);
+  const highTerms = dictionaries.artifactHints.filter((term) => !low.has(term) && (!ambiguous.has(term) || acronymMatches(text, term)));
+  const matchedTerms = highTerms.filter((term) => phraseMatchesNormalized(normalized, term) || forms.has(term));
+  const phraseTerms = dictionaries.multiWordArtifacts.filter((term) => phraseMatchesNormalized(normalized, term));
+  const acronymTerms = dictionaries.acronyms.filter((term) => acronymMatches(text, term));
+  matchedTerms.push(...phraseTerms, ...acronymTerms);
+  if (/\.[a-z0-9]{2,4}\b/i.test(text)) matchedTerms.push('file extension');
+  const unique = [...new Set(matchedTerms)].sort();
+  if (unique.length) return { found: true, strength: 'high-signal', matchedTerms: unique, supportingTerms: [] };
+  const lows = [...low].filter((term) => forms.has(term));
+  const supports = tokens.filter((token) => token.length > 2 && !low.has(token) && (dictionaries.acronyms.some((term) => term === token && acronymMatches(text, term)) || ['python','schema','vehicle','ecu','cad','api','configuration','telemetry','flight','json'].includes(token)));
+  return lows.length && supports.length ? { found: true, strength: 'supported-low-signal', matchedTerms: lows.sort(), supportingTerms: [...new Set(supports)].sort() } : { found: false, strength: 'none', matchedTerms: [], supportingTerms: [] };
+}
+function acronymMatches(text: string, term: string): boolean { const ambiguous = new Set(['can','step','pr','ci']); const re = new RegExp(`\\b${escapeRegex(term)}\\b`, 'gi'); const matches = [...text.matchAll(re)]; return matches.some((match) => !ambiguous.has(term.toLowerCase()) || match[0] === match[0].toUpperCase()); }
+function normalizeSeparators(text: string): string { return ` ${text.toLowerCase().replace(/[ _-]+/g, ' ').replace(/[^\p{L}\p{N} ]/gu, ' ')} `; }
+function phraseMatchesNormalized(text: string, phrase: string): boolean { return text.includes(` ${phrase.toLowerCase().replace(/[ _-]+/g, ' ')} `); }
 function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-/** Whole-word, whitespace-flexible matcher for a multi-word phrase. */
-function phraseRegex(phrase: string, flags = 'i'): RegExp {
-  return new RegExp(`\\b${phrase.split(' ').map(escapeRegex).join('\\s+')}\\b`, flags);
-}
-
-/** Longest phrases first, so "when the user needs" wins over "when the user". */
-function byLengthDescending(phrases: readonly string[]): string[] {
-  return [...phrases].sort((a, b) => b.length - a.length);
-}
-
-function isConcreteToken(token: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): boolean {
-  const forms = [token, singularize(token)];
-  return forms.some((form) => dictionaries.artifactHints.includes(form)) || dictionaries.acronyms.includes(token);
-}
-
-function hasConcreteArtifact(text: string, tokens: string[], dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): boolean {
-  const forms = tokenForms(tokens);
-  if (dictionaries.artifactHints.some((hint) => forms.has(hint)) || dictionaries.multiWordArtifacts.some((phrase) => phraseRegex(phrase).test(text))) {
-    return true; // artifact vocabulary
-  }
-  if (tokens.some((token) => dictionaries.acronyms.includes(token))) {
-    return true; // known acronym / technology (e.g. PDF, SQL, JSON)
-  }
-  // File extension like ".pdf". The broad "any run of uppercase letters"
-  // heuristic is intentionally gone — it flagged words like "IMPORTANT".
-  return /\.[a-z0-9]{2,4}\b/i.test(text);
-}
-
-export function tokenize(text: string): string[] {
-  // Unicode-aware so Cyrillic/accented/CJK words are preserved as tokens.
-  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-}
-
-/** Token set augmented with naive singular forms, for plural-insensitive matching. */
-function tokenForms(tokens: string[]): Set<string> {
-  const forms = new Set<string>();
-  for (const token of tokens) {
-    forms.add(token);
-    forms.add(singularize(token));
-  }
-  return forms;
-}
+function phraseRegex(phrase: string, flags = 'i'): RegExp { return new RegExp(`\\b${phrase.split(' ').map(escapeRegex).join('\\s+')}\\b`, flags); }
+export function tokenize(text: string): string[] { return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []; }
+function tokenForms(tokens: string[]): Set<string> { const forms = new Set<string>(); for (const token of tokens) { forms.add(token); forms.add(singularize(token)); } return forms; }

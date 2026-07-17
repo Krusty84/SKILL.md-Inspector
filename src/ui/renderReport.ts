@@ -75,6 +75,12 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   <h2>Trigger quality breakdown</h2>
   <ul>${q.findings.map(renderFinding).join('')}</ul>
 
+  <h2>Instruction authoring quality</h2>
+  ${renderAuthoring(report.authoringQuality.instructions)}
+  <h2>Resource authoring quality</h2>
+  ${renderAuthoring(report.authoringQuality.resources)}
+  <p class="note">Authoring quality is a separate structural hygiene measure and is not combined with description discoverability.</p>
+
   <h2>Referenced files</h2>
   ${renderFileList(report.referencedFiles, 'No referenced resource files.')}
 
@@ -96,6 +102,11 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
         ? { cls: 'no', glyph: '✗' }
         : { cls: 'partial', glyph: '◐' };
   return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(finding.criterion)}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
+}
+
+function renderAuthoring(result: SkillReport['authoringQuality']['instructions']): string {
+  const findings = result.findings.length === 0 ? '<p class="empty">No structural findings.</p>' : `<ul>${result.findings.map((finding) => `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}</span></li>`).join('')}</ul>`;
+  return `<p><strong>${result.score}/100 · ${escapeHtml(capitalize(result.label))}</strong></p>${findings}`;
 }
 
 function renderFileList(files: string[], emptyMessage: string): string {

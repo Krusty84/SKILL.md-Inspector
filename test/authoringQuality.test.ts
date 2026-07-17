@@ -38,7 +38,7 @@ describe('assessAuthoringQuality instructions', () => {
   it('labels a substantive body as good with score 100', () => {
     const result = assessAuthoringQuality(doc(GOOD_BODY));
     expect(result.instructions.score).toBe(100);
-    expect(result.instructions.label).toBe('good');
+    expect(result.instructions.label).toBe('excellent');
     expect(result.instructions.findings).toEqual([]);
   });
 
@@ -46,8 +46,8 @@ describe('assessAuthoringQuality instructions', () => {
     const result = assessAuthoringQuality(doc('   \n  '));
     expect(result.instructions.findings).toHaveLength(1);
     expect(result.instructions.findings[0].severity).toBe('major');
-    expect(result.instructions.score).toBe(60);
-    expect(result.instructions.label).toBe('needs-attention');
+    expect(result.instructions.score).toBe(20);
+    expect(result.instructions.label).toBe('poor');
   });
 
   it('flags a headings-only body as major', () => {
@@ -112,7 +112,7 @@ describe('assessAuthoringQuality resources', () => {
   it('scores clean resources as good', () => {
     const result = assessAuthoringQuality(doc(GOOD_BODY, [resource({})]));
     expect(result.resources.score).toBe(100);
-    expect(result.resources.label).toBe('good');
+    expect(result.resources.label).toBe('excellent');
   });
 
   it('penalizes an unreferenced script more than an unreferenced reference file', () => {

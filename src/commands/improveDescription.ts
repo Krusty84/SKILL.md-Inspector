@@ -25,6 +25,7 @@ export async function improveDescriptionLocally(uri?: Parameters<typeof resolveS
     minLength: config.profile.description.minLength,
     maxLength: config.profile.description.maxLength,
     weights: config.profile.description.weights,
+    dictionaries: config.heuristicDictionaries,
   });
 
   const choice = await vscode.window.showInformationMessage(

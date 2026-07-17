@@ -18,7 +18,7 @@ interface VerbForms {
   toBase: Map<string, string>;
 }
 
-function buildVerbForms(verbs: readonly string[]): VerbForms {
+export function buildVerbForms(verbs: readonly string[]): VerbForms {
   const forms = new Set<string>();
   const toBase = new Map<string, string>();
   const addForms = (base: string, surfaces: readonly string[]): void => {
