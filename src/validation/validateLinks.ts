@@ -1,8 +1,13 @@
 import * as fs from 'node:fs';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
-import type { SkillDocument } from '../types/SkillDocument';
-import { resolveRelativeLinkPath, cleanLinkTarget, isPathInsideDir } from '../parser/linkPaths';
+import type { SkillDocument, SkillResource } from '../types/SkillDocument';
+import {
+  resolveRelativeLinkPath,
+  cleanLinkTarget,
+  canonicalizeLocalPath,
+  isPathInsideDir,
+} from '../parser/linkPaths';
 import { diag } from './util';
 
 const SUSPICIOUS_EXTENSIONS = /\.(exe|sh|bat|ps1|scr|cmd|zip|dll)(\?|#|$)/i;
@@ -27,6 +32,7 @@ export function validateLinks(
   options: LinkValidationOptions = {},
 ): SkillDiagnostic[] {
   const diagnostics: SkillDiagnostic[] = [];
+  const caseMatcher = buildCaseMatcher(doc);
 
   for (const link of doc.links) {
     if (link.kind === 'remote') {
@@ -81,6 +87,22 @@ export function validateLinks(
       // Defer the on-disk existence and symlink-escape checks to full analysis.
       continue;
     }
+    // A link that matches a discovered resource except for letter case works on
+    // case-insensitive filesystems (macOS/Windows) and breaks on case-sensitive
+    // ones — report the mismatch instead of a missing/ok verdict either way.
+    const caseMatch = caseMatcher(canonicalizeLocalPath(doc.directory, link.raw));
+    if (caseMatch) {
+      diagnostics.push(
+        diag(
+          DiagnosticCode.LinkCaseMismatch,
+          'warning',
+          `Link case does not match the file on disk: ${cleanLinkTarget(link.raw)} vs ${caseMatch.relativePath}. Case-sensitive systems cannot resolve it.`,
+          link.range,
+          { data: { actualRelativePath: caseMatch.relativePath } },
+        ),
+      );
+      continue;
+    }
     if (!fileExists(target)) {
       diagnostics.push(
         diag(
@@ -125,6 +147,34 @@ function isSuspiciousRemote(url: string): boolean {
     return true;
   }
   return SUSPICIOUS_EXTENSIONS.test(url);
+}
+
+/**
+ * Maps a canonical link key to the single discovered resource it matches
+ * case-insensitively but not exactly. Exact matches and folded keys shared by
+ * several resources (genuinely ambiguous) yield nothing. Works purely on the
+ * discovered-resource set, so the verdict is identical on every platform.
+ */
+function buildCaseMatcher(doc: SkillDocument): (linkKey: string) => SkillResource | undefined {
+  const exact = new Set<string>();
+  const folded = new Map<string, SkillResource[]>();
+  for (const resource of doc.resources) {
+    const key = canonicalizeLocalPath(doc.directory, resource.absolutePath);
+    exact.add(key);
+    const bucket = folded.get(key.toLowerCase());
+    if (bucket) {
+      bucket.push(resource);
+    } else {
+      folded.set(key.toLowerCase(), [resource]);
+    }
+  }
+  return (linkKey) => {
+    if (exact.has(linkKey)) {
+      return undefined;
+    }
+    const bucket = folded.get(linkKey.toLowerCase());
+    return bucket && bucket.length === 1 ? bucket[0] : undefined;
+  };
 }
 
 function fileExists(target: string): boolean {

@@ -41,10 +41,27 @@ export function withResources(doc: SkillDocument, resources: SkillResource[]): S
       .filter((link) => link.kind === 'relative')
       .map((link) => canonicalizeLocalPath(doc.directory, link.raw)),
   );
-  const withFlags = resources.map((resource) => ({
-    ...resource,
-    referenced: referenced.has(canonicalizeLocalPath(doc.directory, resource.absolutePath)),
-  }));
+  // Case-folded fallback: a link differing from the on-disk name only by case
+  // resolves on case-insensitive filesystems, so the resource counts as
+  // referenced rather than "unreferenced" (validateLinks reports the mismatch
+  // itself). A folded key shared by several resources stays exact-match-only —
+  // the link is genuinely ambiguous then.
+  const foldedLinkKeys = new Set([...referenced].map((key) => key.toLowerCase()));
+  const foldedResourceCounts = new Map<string, number>();
+  for (const resource of resources) {
+    const folded = canonicalizeLocalPath(doc.directory, resource.absolutePath).toLowerCase();
+    foldedResourceCounts.set(folded, (foldedResourceCounts.get(folded) ?? 0) + 1);
+  }
+  const withFlags = resources.map((resource) => {
+    const key = canonicalizeLocalPath(doc.directory, resource.absolutePath);
+    const folded = key.toLowerCase();
+    return {
+      ...resource,
+      referenced:
+        referenced.has(key) ||
+        (foldedLinkKeys.has(folded) && foldedResourceCounts.get(folded) === 1),
+    };
+  });
   return { ...doc, resources: withFlags };
 }
 

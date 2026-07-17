@@ -40,6 +40,7 @@ export const DiagnosticCode = {
 
   // Markdown links
   LinkMissing: 'skill.link.missing',
+  LinkCaseMismatch: 'skill.link.caseMismatch',
   LinkAbsolute: 'skill.link.absolute',
   LinkRemoteSuspicious: 'skill.link.remoteSuspicious',
   LinkEscapesSkillRoot: 'skill.link.escapesRoot',
@@ -78,6 +79,7 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.DescriptionTooLong]: 'specification',
   [DiagnosticCode.LinkMissing]: 'specification',
   // Compatibility — valid, but a target profile is stricter or less portable.
+  [DiagnosticCode.LinkCaseMismatch]: 'compatibility',
   [DiagnosticCode.LinkAbsolute]: 'compatibility',
   [DiagnosticCode.MetadataReservedWord]: 'compatibility',
   [DiagnosticCode.MetadataXmlTag]: 'compatibility',
