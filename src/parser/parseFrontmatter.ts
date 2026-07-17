@@ -22,6 +22,17 @@ export interface FrontmatterParseResult {
 }
 
 const FENCE = '---';
+/** A later delimiter is frontmatter only when followed by a conservative YAML key. */
+function isPlausibleLaterFrontmatter(lines: string[], index: number): boolean {
+  if (lines[index] !== FENCE) return false;
+  for (let i = index + 1; i < lines.length; i++) {
+    if (lines[i] === FENCE) return false;
+    if (lines[i].trim() === '') continue;
+    return /^[A-Za-z][\w-]*\s*:/.test(lines[i]);
+  }
+  return false;
+}
+
 
 /** Split into logical lines while tolerating CRLF and a leading BOM. */
 function toLines(content: string): string[] {
@@ -44,11 +55,11 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   const lines = toLines(content);
   const errors: SkillParseError[] = [];
 
-  const firstLineIsFence = lines.length > 0 && lines[0].trim() === FENCE;
+  const firstLineIsFence = lines.length > 0 && lines[0] === FENCE;
 
   if (!firstLineIsFence) {
     // Look for a fence further down to tell "missing" from "not at top".
-    const fenceIndex = lines.findIndex((line) => line.trim() === FENCE);
+    const fenceIndex = lines.findIndex((_, index) => index > 0 && isPlausibleLaterFrontmatter(lines, index));
     const onlyBlankBefore =
       fenceIndex > 0 && lines.slice(0, fenceIndex).every((line) => line.trim() === '');
 
@@ -81,7 +92,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   }
 
   // The opening fence is line 0; find the closing fence.
-  const closingIndex = lines.findIndex((line, i) => i > 0 && line.trim() === FENCE);
+  const closingIndex = lines.findIndex((line, i) => i > 0 && line === FENCE);
 
   if (closingIndex === -1) {
     errors.push({

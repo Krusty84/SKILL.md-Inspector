@@ -4,6 +4,7 @@ import { runAllValidations } from '../validation';
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
 
 export interface SkillAnalysis {
   document: SkillDocument;
@@ -19,6 +20,8 @@ export interface AnalyzeSkillOptions {
   exclude?: readonly string[];
   /** Resource discovery function (full mode only); defaults to filesystem discovery. */
   discover?: (dir: string, exclude?: readonly string[]) => SkillResource[];
+  dictionaries?: HeuristicDictionaries;
+  resourceDirectories?: readonly string[];
 }
 
 /**
@@ -37,12 +40,12 @@ export function analyzeSkill(
   const parsed = parseSkillFile(filePath, content);
 
   if (options.mode === 'text-only') {
-    const diagnostics = runAllValidations(parsed, profile, { skipFilesystem: true });
+    const diagnostics = runAllValidations(parsed, profile, { skipFilesystem: true, dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
     return { document: parsed, diagnostics };
   }
 
   const discover = options.discover ?? discoverResources;
   const document = withResources(parsed, discover(parsed.directory, options.exclude));
-  const diagnostics = runAllValidations(document, profile);
+  const diagnostics = runAllValidations(document, profile, { dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
   return { document, diagnostics };
 }

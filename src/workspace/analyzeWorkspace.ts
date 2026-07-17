@@ -7,6 +7,7 @@ import { evaluatePortability, toCompatibilityMap } from './portability';
 import { detectCollisions } from './detectSkillCollisions';
 import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { WorkspaceAnalysis, WorkspaceSkill, SkillsIndex } from '../types/Workspace';
 
@@ -21,6 +22,8 @@ export interface WorkspaceAnalysisOptions {
   cancel?: CancellationSignal;
   /** Reports progress after each analyzed skill as (done, total). */
   onProgress?: (done: number, total: number) => void;
+  dictionaries?: HeuristicDictionaries;
+  resourceDirectories?: readonly string[];
 }
 
 /**
@@ -48,7 +51,7 @@ export function analyzeWorkspace(
       cancelled = true;
       break;
     }
-    const skill = toWorkspaceSkill(rootDir, skillPaths[i], profile, exclude);
+    const skill = toWorkspaceSkill(rootDir, skillPaths[i], profile, exclude, options);
     if (skill) {
       analyzed.push(skill);
     }
@@ -90,6 +93,7 @@ function toWorkspaceSkill(
   absolutePath: string,
   profile: SkillProfile,
   exclude?: readonly string[],
+  options: WorkspaceAnalysisOptions = {},
 ): WorkspaceSkill | undefined {
   let content: string;
   try {
@@ -98,7 +102,7 @@ function toWorkspaceSkill(
     return undefined;
   }
 
-  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, { exclude });
+  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, { exclude, dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
   const name =
     typeof document.frontmatter?.name === 'string' && document.frontmatter.name
       ? document.frontmatter.name
@@ -111,6 +115,7 @@ function toWorkspaceSkill(
     maxLength: profile.description.maxLength,
     language: profile.description.language,
     weights: profile.description.weights,
+    dictionaries: options.dictionaries,
   });
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
   const warnings = diagnostics.filter((d) => d.severity === 'warning').length;

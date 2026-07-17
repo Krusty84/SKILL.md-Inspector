@@ -188,3 +188,14 @@ describe('resource references detected in prose and code', () => {
     expect(validateResources(doc)).toHaveLength(0);
   });
 });
+
+describe('monitored resource directories', () => {
+  it('only warns under configured resource directories and normalizes paths', () => {
+    write('LICENSE'); write('README.md'); write('references/guide.md'); write('assets/logo.svg'); write('fixtures/example.txt');
+    const doc = withResources(skill('# Body'), discoverResources(dir));
+    const warned = validateResources(doc).map((d) => String(d.data?.relativePath));
+    expect(warned).toEqual(expect.arrayContaining(['references/guide.md', 'assets/logo.svg']));
+    expect(warned).not.toEqual(expect.arrayContaining(['LICENSE', 'README.md', 'fixtures/example.txt']));
+    expect(validateResources(doc, ['fixtures\\']).map((d) => String(d.data?.relativePath))).toEqual(['fixtures/example.txt']);
+  });
+});

@@ -34,7 +34,7 @@ export function computeWorkspaceAnalysis(
       config.resourceExclude,
       config.nameSimilarityThreshold,
       config.collision,
-      options,
+      { ...options, dictionaries: config.heuristicDictionaries, resourceDirectories: config.resourceDirectories },
     ),
   };
 }

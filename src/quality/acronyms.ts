@@ -16,7 +16,7 @@ export const KNOWN_ACRONYMS: ReadonlySet<string> = new Set([
   'sql',
   'sdk',
   'cli',
-  'pr',
+  'pr', 'bom', 'cad', 'cam', 'cae', 'step', 'stl', 'dxf', 'dwg', 'fea', 'cfd', 'can', 'dbc', 'ecu', 'ci', 'ndt', 'fmea', 'fem', 'python',
 ]);
 
 /** True when `value` is a known acronym/technology, ignoring case. */

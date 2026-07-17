@@ -8,10 +8,11 @@ import { diag, bodyTopRange } from './util';
  * linked from SKILL.md (brief §7.6). Requires resources to have been attached
  * with their `referenced` flags set (see `withResources`).
  */
-export function validateResources(doc: SkillDocument): SkillDiagnostic[] {
+export function validateResources(doc: SkillDocument, directories: readonly string[] = ['references', 'scripts', 'assets', 'templates']): SkillDiagnostic[] {
+  const normalized = directories.map(normalizeDirectory).filter((value): value is string => Boolean(value));
   const range = bodyTopRange(doc);
   return doc.resources
-    .filter((resource) => !resource.referenced)
+    .filter((resource) => !resource.referenced && normalized.some((dir) => resource.relativePath === dir || resource.relativePath.startsWith(`${dir}/`)))
     .map((resource) =>
       diag(
         DiagnosticCode.ResourceUnreferenced,
@@ -22,3 +23,6 @@ export function validateResources(doc: SkillDocument): SkillDiagnostic[] {
       ),
     );
 }
+
+export function normalizeResourceDirectory(value: string): string | undefined { return normalizeDirectory(value); }
+function normalizeDirectory(value: string): string | undefined { const normalized = value.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, ''); return normalized && !normalized.startsWith('/') && !/^[A-Za-z]:\//.test(normalized) && !normalized.split('/').includes('..') ? normalized : undefined; }

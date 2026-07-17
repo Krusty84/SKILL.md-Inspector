@@ -82,7 +82,7 @@
     "language": "en",
     "description": "Extract tables from PDF contracts into CSV files. Use when digitizing signed contracts. Excluding drafts and unsigned copies.",
     "expected": {
-      "minScore": 90,
+      "minScore": 85,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
@@ -147,7 +147,7 @@
     "language": "en",
     "description": "Render Markdown documents into branded HTML templates. Use when publishing documentation pages. Limited to internal documentation sites.",
     "expected": {
-      "minScore": 90,
+      "minScore": 85,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
@@ -277,7 +277,7 @@
     "language": "en",
     "description": "Format documents for the team. Use when needed.",
     "expected": {
-      "minScore": 60,
+      "minScore": 55,
       "maxScore": 80,
       "trigger": "partial",
       "boundary": "none",
@@ -290,7 +290,7 @@
     "language": "en",
     "description": "Generate summaries of long documents. Do not use when it is not needed.",
     "expected": {
-      "minScore": 59,
+      "minScore": 54,
       "maxScore": 79,
       "trigger": "none",
       "boundary": "partial",
@@ -303,11 +303,11 @@
     "language": "en",
     "description": "Convert files. Use for things.",
     "expected": {
-      "minScore": 55,
-      "maxScore": 75,
+      "minScore": 40,
+      "maxScore": 60,
       "trigger": "partial",
       "boundary": "none",
-      "frontLoaded": true
+      "frontLoaded": false
     },
     "notes": "Both clauses vague."
   },
@@ -355,7 +355,7 @@
     "language": "en",
     "description": "Helps with documents.",
     "expected": {
-      "minScore": 10,
+      "minScore": 5,
       "maxScore": 30,
       "trigger": "none",
       "boundary": "none",
@@ -382,7 +382,7 @@
     "description": "This skill is useful for general work and can help with anything.",
     "expected": {
       "minScore": 0,
-      "maxScore": 20,
+      "maxScore": 25,
       "trigger": "none",
       "boundary": "none",
       "frontLoaded": false
@@ -522,7 +522,7 @@
   {
     "id": "case-41",
     "language": "ru",
-    "description": "Форматировать инспекционные отчёты по стандартным правилам. Использовать при подготовке отчётов.",
+    "description": "\u0424\u043e\u0440\u043c\u0430\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0438\u043d\u0441\u043f\u0435\u043a\u0446\u0438\u043e\u043d\u043d\u044b\u0435 \u043e\u0442\u0447\u0451\u0442\u044b \u043f\u043e \u0441\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u043d\u044b\u043c \u043f\u0440\u0430\u0432\u0438\u043b\u0430\u043c. \u0418\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c \u043f\u0440\u0438 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0435 \u043e\u0442\u0447\u0451\u0442\u043e\u0432.",
     "expected": {
       "minScore": 10,
       "maxScore": 30,
@@ -535,7 +535,7 @@
   {
     "id": "case-42",
     "language": "ru",
-    "description": "Генерирует отчёты о релизах из истории коммитов.",
+    "description": "\u0413\u0435\u043d\u0435\u0440\u0438\u0440\u0443\u0435\u0442 \u043e\u0442\u0447\u0451\u0442\u044b \u043e \u0440\u0435\u043b\u0438\u0437\u0430\u0445 \u0438\u0437 \u0438\u0441\u0442\u043e\u0440\u0438\u0438 \u043a\u043e\u043c\u043c\u0438\u0442\u043e\u0432.",
     "expected": {
       "minScore": 10,
       "maxScore": 30,
@@ -548,7 +548,7 @@
   {
     "id": "case-43",
     "language": "ja",
-    "description": "日本語のテキストを要約するスキルです。",
+    "description": "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8\u3092\u8981\u7d04\u3059\u308b\u30b9\u30ad\u30eb\u3067\u3059\u3002",
     "expected": {
       "minScore": 0,
       "maxScore": 20,

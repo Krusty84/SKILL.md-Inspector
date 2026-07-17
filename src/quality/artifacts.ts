@@ -1,56 +1,6 @@
-/**
- * Registry of artifact / domain terms that signal the concrete subject a skill
- * operates on (brief §7.7). Single source of truth for both the description
- * heuristics and the workspace collision feature extractor. Matched
- * case-insensitively; extend these lists rather than re-introducing broad
- * "any noun" heuristics.
- */
-
-/** Single-word artifact/domain hints. */
+/** High-signal artifact and domain terms. Generic nouns intentionally live separately. */
 export const ARTIFACT_HINTS: readonly string[] = [
-  'report',
-  'document',
-  'file',
-  'code',
-  'api',
-  'table',
-  'data',
-  'config',
-  'configuration',
-  'schema',
-  'log',
-  'test',
-  'image',
-  'markdown',
-  'pdf',
-  'csv',
-  'json',
-  'yaml',
-  'diagram',
-  'template',
-  'manual',
-  'spreadsheet',
-  'contract',
-  'invoice',
-  'email',
-  'commit',
-  'changelog',
-  'release',
-  'component',
-  'query',
-  'database',
+  'report', 'api', 'table', 'config', 'configuration', 'schema', 'log', 'test', 'image', 'markdown', 'pdf', 'csv', 'json', 'yaml', 'diagram', 'template', 'manual', 'spreadsheet', 'contract', 'invoice', 'email', 'commit', 'changelog', 'release', 'query', 'database',
+  'drawing', 'assembly', 'part', 'component', 'model', 'mesh', 'geometry', 'bom', 'cad', 'cam', 'cae', 'step', 'stl', 'dxf', 'dwg', 'fea', 'cfd', 'simulation', 'load-case', 'stress', 'strain', 'vibration', 'spectrum', 'waveform', 'telemetry', 'can', 'dbc', 'ecu', 'avionics', 'airfoil', 'pipeline', 'workflow', 'migration', 'patch', 'diff', 'manufacturing', 'aircraft', 'vehicle', 'electronics', 'circuit', 'firmware', 'protocol',
 ];
-
-/**
- * Multi-word artifacts/domain phrases. Detected as substrings so a skill's
- * artifact features can carry compound objects like "inspection report".
- */
-export const MULTI_WORD_ARTIFACTS: readonly string[] = [
-  'inspection report',
-  'release notes',
-  'commit history',
-  'pull request',
-  'test suite',
-  'design document',
-  'api schema',
-];
+export const MULTI_WORD_ARTIFACTS: readonly string[] = ['inspection report', 'release notes', 'commit history', 'pull request', 'test suite', 'design document', 'api schema', 'maintenance manual', 'test plan', 'test report'];

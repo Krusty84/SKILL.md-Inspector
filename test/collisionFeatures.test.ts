@@ -23,7 +23,7 @@ describe('extractArtifacts (Task 37)', () => {
   it('detects single-word artifacts, acronyms, and multi-word phrases', () => {
     const artifacts = extractArtifacts('Format PDF inspection reports and CSV files.');
     expect(artifacts).toEqual(
-      expect.arrayContaining(['pdf', 'inspection report', 'report', 'csv', 'file']),
+      expect.arrayContaining(['pdf', 'inspection report', 'report', 'csv']),
     );
   });
 });

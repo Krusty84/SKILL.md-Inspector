@@ -514,3 +514,20 @@ All OpenCode inspection is local and deterministic. The extension does not execu
 ## Evaluation terminology and migration
 
 `Trigger Quality Score` has been renamed to **Static Description Quality Score**. Its `coverage` value describes the applicability and completeness of deterministic checks (language and available text), not probability, certainty, or agent agreement. The score is static and does **not** measure actual skill selection. Behavioral trigger precision, recall, specificity, F1, and stability are calculated separately from recorded provider decisions; they never affect validation or the static score. Run `npm run benchmark:static` for the curated offline corpus and `npm run test:eval` for metric tests.
+
+## Configurable heuristic dictionaries and resources
+
+`skillMdInspector.heuristics.dictionaries` adapts the deterministic description analysis without changing extension code. Each dictionary (`actionVerbs`, `vagueTerms`, `artifactHints`, `lowSignalArtifactTerms`, `multiWordArtifacts`, `acronyms`, `positiveTriggerPhrases`, `negativeBoundaryPhrases`, and `exclusiveTriggerPhrases`) accepts `add`, `remove`, and `replace`. Entries are trimmed, case-insensitive, and de-duplicated; invalid entries are ignored. `replace` supplies the complete effective dictionary; otherwise built-ins are used, then removals and additions are applied.
+
+```json
+{
+  "skillMdInspector.heuristics.dictionaries": {
+    "artifactHints": { "add": ["bearing", "gearbox"] },
+    "vagueTerms": { "add": ["magic"], "remove": ["simple"] },
+    "acronyms": { "replace": ["ndt", "fmea"] }
+  },
+  "skillMdInspector.resources.directories": ["references", "scripts", "assets", "templates", "fixtures"]
+}
+```
+
+`skillMdInspector.resources.directories` **replaces** the default monitored directories. Only files beneath these relative paths receive unreferenced-resource warnings; root files such as `README.md` and `LICENSE` remain discoverable but are not treated as forgotten bundled resources. Absolute paths and paths containing `..` are ignored.

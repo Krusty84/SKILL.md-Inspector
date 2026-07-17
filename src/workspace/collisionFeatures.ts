@@ -5,8 +5,7 @@
  * the quality-layer registries so the vocabulary stays a single source of truth.
  */
 import { normalizeVerbForm, normalizeContentToken, ACTION_VERB_BASES } from '../quality/wordForms';
-import { ARTIFACT_HINTS, MULTI_WORD_ARTIFACTS } from '../quality/artifacts';
-import { isKnownAcronym } from '../quality/acronyms';
+import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from '../quality/dictionaries';
 import {
   POSITIVE_TRIGGER_PHRASES,
   NEGATIVE_BOUNDARY_PHRASES,
@@ -21,27 +20,26 @@ export interface SkillFeatures {
   negativeBoundaries: string[];
 }
 
-const ARTIFACT_HINT_SET = new Set(ARTIFACT_HINTS);
 const POSITIVE_MARKERS = [...POSITIVE_TRIGGER_PHRASES, ...EXCLUSIVE_TRIGGER_PHRASES];
 const TERMINATOR = /[.;!?]/;
 
 /** All four feature lists for one description. */
-export function extractFeatures(description: string): SkillFeatures {
+export function extractFeatures(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): SkillFeatures {
   return {
-    capabilities: extractCapabilities(description),
-    artifacts: extractArtifacts(description),
+    capabilities: extractCapabilities(description, dictionaries),
+    artifacts: extractArtifacts(description, dictionaries),
     positiveTriggers: extractPositiveTriggers(description),
     negativeBoundaries: extractNegativeBoundaries(description),
   };
 }
 
 /** Recognized action verbs, normalized to their base form and de-duplicated (Task 36). */
-export function extractCapabilities(description: string): string[] {
+export function extractCapabilities(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
   const result: string[] = [];
   const seen = new Set<string>();
   for (const token of contentWords(description)) {
     const base = normalizeVerbForm(token);
-    if (ACTION_VERB_BASES.has(base) && !seen.has(base)) {
+    if ((ACTION_VERB_BASES.has(base) || dictionaries.actionVerbs.includes(base)) && !seen.has(base)) {
       seen.add(base);
       result.push(base);
     }
@@ -50,7 +48,7 @@ export function extractCapabilities(description: string): string[] {
 }
 
 /** Recognized artifacts/domain terms — single-word hints, acronyms, and multi-word phrases (Task 37). */
-export function extractArtifacts(description: string): string[] {
+export function extractArtifacts(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
   const lower = description.toLowerCase();
   const result: string[] = [];
   const seen = new Set<string>();
@@ -60,14 +58,14 @@ export function extractArtifacts(description: string): string[] {
       result.push(value);
     }
   };
-  for (const phrase of MULTI_WORD_ARTIFACTS) {
+  for (const phrase of dictionaries.multiWordArtifacts) {
     if (lower.includes(phrase)) {
       add(phrase);
     }
   }
   for (const token of contentWords(description)) {
     const normalized = normalizeContentToken(token);
-    if (ARTIFACT_HINT_SET.has(normalized) || isKnownAcronym(normalized)) {
+    if (dictionaries.artifactHints.includes(normalized) || dictionaries.acronyms.includes(normalized)) {
       add(normalized);
     }
   }

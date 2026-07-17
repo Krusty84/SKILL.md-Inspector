@@ -1083,6 +1083,48 @@
           "type": "boolean",
           "default": true,
           "description": "Scan the selected OpenCode sessions folder recursively."
+        },
+        "skillMdInspector.resources.directories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "references",
+            "scripts",
+            "assets",
+            "templates"
+          ],
+          "description": "Relative resource directories monitored for unreferenced bundled files. This replaces the default list; absolute paths and .. traversal are ignored."
+        },
+        "skillMdInspector.heuristics.dictionaries": {
+          "type": "object",
+          "default": {},
+          "description": "Custom deterministic heuristic dictionaries. Each dictionary supports add, remove, or replace arrays; matching is case-insensitive.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "add": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "remove": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "replace": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
         }
       }
     },
