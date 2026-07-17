@@ -4,9 +4,10 @@
  * (artifacts), and the clauses that say when it should / should not fire. Reuses
  * the quality-layer registries so the vocabulary stays a single source of truth.
  */
-import { normalizeVerbForm, normalizeContentToken, buildVerbForms } from '../quality/wordForms';
+import { normalizeContentToken, buildVerbForms } from '../quality/wordForms';
 import { analyzeArtifactEvidence } from '../quality/descriptionHeuristics';
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from '../quality/dictionaries';
+import { escapeRegex, phraseRegex } from '../quality/textMatch';
 import { tokenizeContent } from './similarity';
 
 export interface SkillFeatures {
@@ -32,9 +33,14 @@ export function extractFeatures(description: string, dictionaries: HeuristicDict
 export function extractCapabilities(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
   const result: string[] = [];
   const seen = new Set<string>();
+  const { forms, toBase } = buildVerbForms(dictionaries.actionVerbs);
   for (const token of contentWords(description)) {
-    const base = normalizeVerbForm(token);
-    if (buildVerbForms(dictionaries.actionVerbs).forms.has(token) && !seen.has(base)) {
+    if (!forms.has(token)) {
+      continue;
+    }
+    // Fold with the registry's own map so custom verbs normalize too.
+    const base = toBase.get(token) ?? token;
+    if (!seen.has(base)) {
       seen.add(base);
       result.push(base);
     }
@@ -56,7 +62,7 @@ export function extractArtifacts(description: string, dictionaries: HeuristicDic
   for (const term of evidence.matchedTerms) add(term);
   for (const phrase of dictionaries.multiWordArtifacts) {
     const words = phrase.split(' ');
-    const pattern = words.map((word, index) => `${word}${index === words.length - 1 ? 's?' : ''}`).join('\\s+');
+    const pattern = words.map((word, index) => `${escapeRegex(word)}${index === words.length - 1 ? 's?' : ''}`).join('\\s+');
     if (new RegExp(`\\b${pattern}\\b`, 'i').test(description)) add(phrase);
   }
   for (const token of contentWords(description)) {
@@ -122,18 +128,20 @@ function fractionExcluded(domain: Set<string>, boundary: Set<string>): number {
   return hits / domain.size;
 }
 
-/** Clause text after each marker occurrence, up to the next sentence terminator, in order. */
+/**
+ * Clause text after each marker occurrence, up to the next sentence terminator,
+ * in order. Markers match on word boundaries only — "do not use for" must not
+ * fire inside "do not use formatting".
+ */
 function extractClauses(text: string, markers: readonly string[]): string[] {
-  const lower = text.toLowerCase();
   const found: { at: number; text: string }[] = [];
   for (const marker of markers) {
-    let idx = lower.indexOf(marker);
-    while (idx !== -1) {
-      const clause = clauseAfter(text, idx + marker.length);
+    for (const match of text.matchAll(phraseRegex(marker, 'gi'))) {
+      const at = match.index ?? 0;
+      const clause = clauseAfter(text, at + match[0].length);
       if (clause) {
-        found.push({ at: idx, text: clause });
+        found.push({ at, text: clause });
       }
-      idx = lower.indexOf(marker, idx + marker.length);
     }
   }
   const seen = new Set<string>();
@@ -147,13 +155,16 @@ function extractClauses(text: string, markers: readonly string[]): string[] {
 function stripClauses(text: string, markers: readonly string[]): string {
   let result = text;
   for (const marker of markers) {
-    let idx = result.toLowerCase().indexOf(marker);
-    while (idx !== -1) {
-      const after = result.slice(idx + marker.length);
+    const re = phraseRegex(marker, 'i');
+    let match: RegExpExecArray | null;
+    // Non-global regex: each exec rescans from the start of the shrunken text,
+    // and every iteration removes at least the marker, so this terminates.
+    while ((match = re.exec(result)) !== null) {
+      const start = match.index;
+      const after = result.slice(start + match[0].length);
       const term = after.search(TERMINATOR);
-      const end = term === -1 ? result.length : idx + marker.length + term;
-      result = result.slice(0, idx) + result.slice(end);
-      idx = result.toLowerCase().indexOf(marker);
+      const end = term === -1 ? result.length : start + match[0].length + term;
+      result = result.slice(0, start) + result.slice(end);
     }
   }
   return result;

@@ -105,6 +105,26 @@ describe('detectCollisions metric stability (Task 34)', () => {
   });
 });
 
+describe('detectCollisions risk banding on the displayed similarity', () => {
+  it('bands risk from the rounded similarity (0.799 -> 0.80 -> High)', () => {
+    const onlyName = {
+      weights: { jaccard: 0, cosine: 0, charNgram: 0, nameSimilarity: 1 },
+      boundarySeparationWeight: 0,
+      threshold: 0.4,
+    };
+    // 201 substitutions over length 1000 → nameSimilarity 0.799, displayed 0.80.
+    const [collision] = detectCollisions(
+      [
+        { name: 'a'.repeat(1000), description: 'identical shared description text' },
+        { name: 'a'.repeat(799) + 'b'.repeat(201), description: 'identical shared description text' },
+      ],
+      onlyName,
+    );
+    expect(collision.similarity).toBe(0.8);
+    expect(collision.risk).toBe('High');
+  });
+});
+
 describe('detectCollisions boundary separation (Task 40)', () => {
   const a = { name: 'invoice-helper', description: 'Use for invoices. Do not use for manuals.' };
   const b = { name: 'manual-helper', description: 'Use for manuals. Do not use for invoices.' };

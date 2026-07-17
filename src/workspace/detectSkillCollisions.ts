@@ -49,8 +49,10 @@ export interface CollisionOptions {
  * Detects pairs of skills whose scope overlaps (brief §13.2). Each pair gets a
  * deterministic composite score blending token Jaccard, TF-IDF cosine, character
  * n-gram, and name similarity, reduced when the skills' negative boundaries
- * separate their scopes. The raw composite is compared to the threshold (rounding
- * is display-only); pairs at or above it are returned, highest similarity first.
+ * separate their scopes. The raw composite is compared to the threshold; the
+ * displayed similarity is rounded to two decimals and the risk band is derived
+ * from that same rounded value. Pairs at or above the threshold are returned,
+ * highest similarity first.
  */
 export function detectCollisions(
   skills: SkillDescriptor[],
@@ -81,11 +83,14 @@ export function detectCollisions(
       if (composite < threshold) {
         continue;
       }
-      const risk = riskFor(composite);
+      // Risk is banded on the same rounded value the report displays, so a
+      // composite of 0.797 can never render as "0.80 / Medium".
+      const similarity = round2(composite);
+      const risk = riskFor(similarity);
       collisions.push({
         a: skills[i].name,
         b: skills[j].name,
-        similarity: round2(composite),
+        similarity,
         metrics: roundMetrics(metrics),
         sharedTerms: sharedTerms(tokens[i], tokens[j]),
         risk,
