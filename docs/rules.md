@@ -133,6 +133,17 @@ A relative Markdown link points at a file that does not exist in the package.
 
 ## Compatibility (portability across agent profiles)
 
+### `skill.link.caseMismatch`
+
+**warning** · all profiles · auto-fix: no
+
+A relative link matches a bundled file except for letter case. It resolves on
+case-insensitive filesystems (macOS, Windows) but breaks on case-sensitive ones
+(Linux), so the skill is not portable as written.
+
+- Bad: `[guide](./References/Style-Guide.md)` when the file is `references/style-guide.md`.
+- Good: write the link with exactly the on-disk casing.
+
 ### `skill.link.absolute`
 
 **warning** · all profiles · auto-fix: no

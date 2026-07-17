@@ -107,6 +107,14 @@ describe('parseFrontmatter', () => {
     expect(result.frontmatter).toEqual({ name: 'second', description: 'd' });
   });
 
+  it('points the key range of a duplicated key at the last (effective) occurrence', () => {
+    const content = ['---', 'name: first', 'name: second', 'description: d', '---'].join('\n');
+    const result = parseFrontmatter(content);
+    // toJS() keeps `second`, so key-targeted diagnostics must underline line 2.
+    expect(result.frontmatterKeyRanges['name'].startLine).toBe(2);
+    expect(result.frontmatterKeyRanges['description'].startLine).toBe(3);
+  });
+
   it('reports a duplicate description key (Task 50)', () => {
     const content = ['---', 'name: n', 'description: a', 'description: b', '---'].join('\n');
     const result = parseFrontmatter(content);
@@ -115,6 +123,20 @@ describe('parseFrontmatter', () => {
 });
 
 describe('frontmatter fence regression cases', () => {
+  it('accepts fences with trailing whitespace', () => {
+    const content = ['---  ', 'name: demo', 'description: Demo text.', '--- ', '# Body'].join('\n');
+    const result = parseFrontmatter(content);
+    expect(result.errors).toHaveLength(0);
+    expect(result.frontmatter?.name).toBe('demo');
+    expect(result.bodyStartLine).toBe(4);
+    expect(result.body).toContain('# Body');
+  });
+
+  it('still rejects an indented opening fence', () => {
+    const content = ['  ---', 'name: x', '---'].join('\n');
+    expect(parseFrontmatter(content).errors[0].code).toBe(DiagnosticCode.FrontmatterMissing);
+  });
+
   it('does not close on indented literal or folded scalar delimiters', () => {
     for (const indicator of ['|', '>']) {
       const parsed = parseFrontmatter(`---\nname: demo\ndescription: ${indicator}\n  First line.\n  ---\n  Second line.\n---\n# Body`);

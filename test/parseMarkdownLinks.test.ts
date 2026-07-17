@@ -65,4 +65,25 @@ describe('parseMarkdownLinks resource-path detection', () => {
   it('does not double-count a markdown link as a prose mention', () => {
     expect(parseMarkdownLinks('See [guide](./references/guide.md).')).toHaveLength(1);
   });
+
+  it('does not double-count inline code inside a link', () => {
+    expect(parseMarkdownLinks('See [`scripts/run.js`](scripts/run.js).')).toHaveLength(1);
+  });
+});
+
+describe('parseMarkdownLinks reference-style definitions', () => {
+  it('extracts the definition target of a reference-style link', () => {
+    const body = ['See [the guide][g].', '', '[g]: references/missing.md'].join('\n');
+    const links = parseMarkdownLinks(body, 4);
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({ raw: 'references/missing.md', kind: 'relative' });
+    expect(links[0].range?.startLine).toBe(6); // body line 2 -> document line 6
+  });
+
+  it('ignores anchor and mailto definitions but keeps remote ones classified', () => {
+    expect(parseMarkdownLinks('[a]: #section\n\n[b]: mailto:x@y.com')).toHaveLength(0);
+    const remote = parseMarkdownLinks('[cdn]: https://example.com/lib.js');
+    expect(remote).toHaveLength(1);
+    expect(remote[0].kind).toBe('remote');
+  });
 });

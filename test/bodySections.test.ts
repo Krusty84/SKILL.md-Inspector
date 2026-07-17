@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { EXAMPLES_SECTION, IO_SECTION, matchesSection } from '../src/validation/bodySections';
+import {
+  EXAMPLES_SECTION,
+  IO_SECTION,
+  WHEN_TO_USE_SECTION,
+  matchesSection,
+} from '../src/validation/bodySections';
 
 describe('matchesSection (Task 54)', () => {
   it('matches whole-token and alias headings', () => {
@@ -13,5 +18,14 @@ describe('matchesSection (Task 54)', () => {
     expect(matchesSection('Counterexamples', EXAMPLES_SECTION)).toBe(false);
     // The classic false positive: "Formatting" must not match the I/O "format" keyword.
     expect(matchesSection('Formatting guide', IO_SECTION)).toBe(false);
+  });
+
+  it('matches alias phrases only on token boundaries', () => {
+    // "example usage" is a substring of "counterexample usage" but not token-aligned.
+    expect(matchesSection('Counterexample usage', EXAMPLES_SECTION)).toBe(false);
+    expect(matchesSection('Example usage notes', EXAMPLES_SECTION)).toBe(true);
+    // "use when" must not fire inside "use whenever".
+    expect(matchesSection('Use whenever possible', WHEN_TO_USE_SECTION)).toBe(false);
+    expect(matchesSection('Use when contributing', WHEN_TO_USE_SECTION)).toBe(true);
   });
 });

@@ -18,7 +18,13 @@ interface VerbForms {
   toBase: Map<string, string>;
 }
 
+const VERB_FORMS_CACHE = new WeakMap<readonly string[], VerbForms>();
+
 export function buildVerbForms(verbs: readonly string[]): VerbForms {
+  const cached = VERB_FORMS_CACHE.get(verbs);
+  if (cached) {
+    return cached;
+  }
   const forms = new Set<string>();
   const toBase = new Map<string, string>();
   const addForms = (base: string, surfaces: readonly string[]): void => {
@@ -29,14 +35,14 @@ export function buildVerbForms(verbs: readonly string[]): VerbForms {
       }
     }
   };
+  // Only the verbs actually in the registry are expanded — a profile that
+  // replaces or removes verbs is authoritative, irregular ones included.
   for (const verb of verbs) {
     addForms(verb, IRREGULAR_VERB_FORMS[verb] ?? inflect(verb));
   }
-  // Recognize every irregular verb, including ones not in ACTION_VERBS (write, read).
-  for (const verb of Object.keys(IRREGULAR_VERB_FORMS)) {
-    addForms(verb, IRREGULAR_VERB_FORMS[verb]);
-  }
-  return { forms, toBase };
+  const result = { forms, toBase };
+  VERB_FORMS_CACHE.set(verbs, result);
+  return result;
 }
 
 /** Produces base, third-person, gerund, and past forms of a regular verb. */
@@ -57,18 +63,17 @@ function inflect(verb: string): string[] {
   } else if (/[^aeiou]y$/.test(verb)) {
     forms.add(`${verb}ing`);
     forms.add(`${verb.slice(0, -1)}ied`);
-  } else {
-    forms.add(`${verb}ing`);
-    forms.add(`${verb}ed`);
-  }
-
-  // Consonant-doubling only for the known CVC action verbs that need it. A blind
-  // CVC rule wrongly doubles multisyllabic verbs (render -> renderring); prefer
-  // explicit membership over broad linguistic generation.
-  if (CVC_DOUBLING_VERBS.has(verb) && /[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
+  } else if (CVC_DOUBLING_VERBS.has(verb) && /[^aeiou][aeiou][^aeiouwxy]$/.test(verb)) {
+    // Consonant-doubling only for the known CVC action verbs that need it. A blind
+    // CVC rule wrongly doubles multisyllabic verbs (render -> renderring); prefer
+    // explicit membership over broad linguistic generation. The doubled forms
+    // replace the plain ones: "formating"/"formated" are misspellings, not forms.
     const doubled = verb + verb[verb.length - 1];
     forms.add(`${doubled}ing`);
     forms.add(`${doubled}ed`);
+  } else {
+    forms.add(`${verb}ing`);
+    forms.add(`${verb}ed`);
   }
 
   return [...forms];
@@ -95,7 +100,23 @@ export function normalizeVerbForm(token: string): string {
  * plurals; non-plural `-s` endings (analysis, status, class) and short words are
  * left alone so it never invents a stem like `analysi`.
  */
+/** Irregular plurals the suffix rules below would mangle (analyses → "analyse"). */
+const IRREGULAR_SINGULARS: Readonly<Record<string, string>> = {
+  analyses: 'analysis',
+  crises: 'crisis',
+  theses: 'thesis',
+  indices: 'index',
+  matrices: 'matrix',
+  series: 'series',
+  movies: 'movie',
+  buses: 'bus',
+};
+
 export function singularize(token: string): string {
+  const irregular = IRREGULAR_SINGULARS[token];
+  if (irregular) {
+    return irregular;
+  }
   if (token.length <= 3) {
     return token; // gas, bus, is
   }

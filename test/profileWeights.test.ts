@@ -41,6 +41,25 @@ describe('profile-dependent trigger-quality weights', () => {
     };
     const full =
       'Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.';
-    expect(computeStaticDescriptionQuality(full, { weights: doubled }).score).toBeCloseTo(100, 5);
+    expect(computeStaticDescriptionQuality(full, { weights: doubled }).score).toBe(100);
+  });
+
+  it('integerizes fractional normalized weights so findings sum to the score', () => {
+    const ones = {
+      actionVerb: 1,
+      triggerPhrase: 1,
+      concreteArtifact: 1,
+      boundary: 1,
+      frontLoaded: 1,
+      lowVagueness: 1,
+      goodLength: 1, // 100/7 is fractional for every criterion
+    };
+    const full =
+      'Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.';
+    const result = computeStaticDescriptionQuality(full, { weights: ones });
+    expect(result.score).toBe(100);
+    expect(result.findings.reduce((sum, f) => sum + f.pointsEarned, 0)).toBe(result.score);
+    expect(result.findings.reduce((sum, f) => sum + f.pointsPossible, 0)).toBe(100);
+    expect(result.findings.every((f) => Number.isInteger(f.pointsPossible))).toBe(true);
   });
 });

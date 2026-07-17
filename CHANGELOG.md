@@ -2,7 +2,53 @@
 
 ## Unreleased
 
+### Added
+
+- **`skill.link.caseMismatch`** (warning, compatibility): a relative link that
+  matches a bundled file except for letter case is reported with the on-disk
+  path — it resolves on macOS/Windows but breaks on case-sensitive systems.
+  The mismatched resource still counts as referenced, so no spurious
+  unreferenced-resource warning piles on.
+- Reference-style Markdown links (`[text][id]` with `[id]: references/file.md`)
+  are now extracted and validated: missing definition targets are reported and
+  existing ones count as referencing bundled resources.
+
 ### Fixed
+
+- **Scoring heuristics**: decimals and version numbers ("3.14", "1.20") no
+  longer count as a file-extension artifact; an uppercase ambiguous acronym as
+  the sole clause token ("Use for STEP.") earns full trigger credit like any
+  other acronym; hyphenated vague terms (`general-purpose`) are matchable
+  (the token path split them, so they could never fire); phrase markers match
+  typographic apostrophes ("Don’t use when ..." no longer leaks its inner
+  "use when" as a positive trigger).
+- **Weight normalization** integerizes custom weights to sum exactly 100
+  (largest-remainder), restoring the invariant that per-criterion points sum
+  to the published score; the good-length band no longer inverts when a
+  profile sets `minLength` above 500.
+- **Collision features**: trigger/boundary markers match on word boundaries —
+  "do not use for" no longer fires inside "do not use formatting", which
+  corrupted boundary separation and the composite collision score; custom
+  multi-word artifact phrases are regex-escaped ("c++ template" crashed);
+  capability extraction folds custom verbs with their own registry's
+  form→base map; collision risk is banded on the same rounded similarity the
+  report displays (no more "0.80 / Medium").
+- **Word forms**: custom action-verb `replace`/`remove` lists are authoritative
+  (irregular verbs were injected unconditionally; `write`/`read` joined the
+  default registry so default behavior is unchanged); the misspelled
+  single-consonant forms of CVC verbs (`formating`, `debuged`) are no longer
+  recognized; irregular plurals singularize correctly
+  (`analyses`→`analysis`, `series`, `movies`, `buses`); verb-form indexes are
+  memoized per registry.
+- **Parsing/validation**: inline code inside a link is no longer scanned twice
+  (duplicate diagnostics); body-section alias phrases match on token
+  boundaries ("Counterexample usage" no longer satisfies Examples); fenced-code
+  tracking pairs ``` with ``` and `~~~` with `~~~`; the placeholder scan covers
+  headings and ignores real HTML with attributes; frontmatter fences tolerate
+  trailing whitespace; duplicate-key ranges point at the last (effective)
+  occurrence.
+- `buildImprovedDescription` analyzes with the caller's custom dictionaries,
+  so a custom trigger phrase suppresses the appended "Use when ..." template.
 
 - **Trigger/boundary clause detection** now derives its marker vocabulary from
   the `triggerPhrases.ts` registries (single source of truth) instead of a

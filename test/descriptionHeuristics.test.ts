@@ -8,6 +8,7 @@ import {
   hasNegativeBoundaryPhrase,
   hasExclusiveTriggerPhrase,
 } from '../src/quality/descriptionHeuristics';
+import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
 
 describe('descriptionHeuristics', () => {
   it('detects action verbs across common inflections', () => {
@@ -56,6 +57,18 @@ describe('descriptionHeuristics', () => {
     expect(analyzeDescription('Make it GOOD.').concreteArtifact).toBe(false);
   });
 
+  it('does not treat decimals or version numbers as file extensions', () => {
+    expect(analyzeDescription('Compute pi to 3.14 precision.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Round totals to 0.50 increments.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Convert .md notes.').concreteArtifact).toBe(true);
+    expect(analyzeDescription('Unpack .7z archives.').concreteArtifact).toBe(true);
+  });
+
+  it('matches hyphenated vague terms as whole phrases', () => {
+    expect(analyzeDescription('A general-purpose helper for anything.').vagueTerms).toContain('general-purpose');
+    expect(analyzeDescription('The general approach works well here.').vagueTerms).toContain('general');
+  });
+
   it('tokenizes Latin, Cyrillic, accented, and CJK text', () => {
     expect(tokenize('Format reports')).toEqual(['format', 'reports']);
     expect(tokenize('Форматировать отчёт').length).toBe(2);
@@ -78,6 +91,26 @@ describe('descriptionHeuristics', () => {
     expect(hasActionVerb('refactorring the code').found).toBe(false);
   });
 
+  it('does not accept the single-consonant misspellings of CVC verbs', () => {
+    expect(hasActionVerb('Formating the report').found).toBe(false);
+    expect(hasActionVerb('Formated the report').found).toBe(false);
+    expect(hasActionVerb('Debuging the script').found).toBe(false);
+  });
+
+  it('scopes irregular verbs to the configured action-verb registry', () => {
+    const custom = resolveHeuristicDictionaries({ actionVerbs: { replace: ['convert'] } });
+    expect(hasActionVerb('Wrote the report', custom).found).toBe(false);
+    expect(hasActionVerb('Built the pipeline', custom).found).toBe(false);
+    expect(hasActionVerb('Converted the report', custom).found).toBe(true);
+  });
+
+  it('matches typographic apostrophes in boundary phrases', () => {
+    expect(hasNegativeBoundaryPhrase('Don’t use for legal transcripts.').found).toBe(true);
+    const analysis = analyzeDescription('Summarize meeting notes. Don’t use when drafting contracts.');
+    expect(analysis.triggerClause.markerFound).toBe(false); // inner "use when" must not leak
+    expect(analysis.boundaryClause.contentFound).toBe(true);
+  });
+
   it('front-loads only when a verb starts the text and an object follows', () => {
     expect(isFrontLoaded('format technical reports using company rules')).toBe(true);
     expect(isFrontLoaded('generates release notes from commit history')).toBe(true);
@@ -97,6 +130,12 @@ describe('scope-clause selection and artifact signal', () => {
     const analysis = analyzeDescription('Do not use when handling invoices. Use when processing PDF reports.');
     expect(analysis.triggerClause.contentFound).toBe(true);
     expect(analysis.triggerClause.contentTokens).toContain('pdf');
+  });
+
+  it('credits an uppercase ambiguous acronym as single-token clause content', () => {
+    expect(analyzeDescription('Validate assemblies. Use for STEP.').triggerClause.contentFound).toBe(true);
+    expect(analyzeDescription('Validate assemblies. Use for step.').triggerClause.contentFound).toBe(false);
+    expect(analyzeDescription('Validate assemblies. Use for SQL.').triggerClause.contentFound).toBe(true);
   });
 
   it('does not credit generic artifacts without supporting context', () => {

@@ -22,11 +22,17 @@ export interface FrontmatterParseResult {
 }
 
 const FENCE = '---';
+/**
+ * Fence check: exactly `---` up to trailing whitespace. Leading whitespace
+ * disqualifies on purpose — an indented `  ---` is YAML block content, not a
+ * fence.
+ */
+const isFence = (line: string): boolean => line.trimEnd() === FENCE;
 /** A later delimiter is frontmatter only when followed by a conservative YAML key. */
 function isPlausibleLaterFrontmatter(lines: string[], index: number): boolean {
-  if (lines[index] !== FENCE) return false;
+  if (!isFence(lines[index])) return false;
   for (let i = index + 1; i < lines.length; i++) {
-    if (lines[i] === FENCE) return false;
+    if (isFence(lines[i])) return false;
     if (lines[i].trim() === '') continue;
     return /^[A-Za-z][\w-]*\s*:/.test(lines[i]);
   }
@@ -55,7 +61,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   const lines = toLines(content);
   const errors: SkillParseError[] = [];
 
-  const firstLineIsFence = lines.length > 0 && lines[0] === FENCE;
+  const firstLineIsFence = lines.length > 0 && isFence(lines[0]);
 
   if (!firstLineIsFence) {
     // Look for a fence further down to tell "missing" from "not at top".
@@ -92,7 +98,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   }
 
   // The opening fence is line 0; find the closing fence.
-  const closingIndex = lines.findIndex((line, i) => i > 0 && line === FENCE);
+  const closingIndex = lines.findIndex((line, i) => i > 0 && isFence(line));
 
   if (closingIndex === -1) {
     errors.push({
@@ -139,14 +145,14 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   };
 
   // Top-level key ranges straight from the AST — nested keys never appear here.
+  // The last occurrence of a duplicate key wins, matching toJS() (last value
+  // wins), so key-targeted diagnostics point at the line that took effect.
   const frontmatterKeyRanges: Record<string, SkillDiagnosticRange> = {};
   if (isMap(doc.contents)) {
     for (const item of doc.contents.items) {
       if (isScalar(item.key) && item.key.range) {
         const name = String(item.key.value);
-        if (!(name in frontmatterKeyRanges)) {
-          frontmatterKeyRanges[name] = toRange(item.key.range[0], item.key.range[1]);
-        }
+        frontmatterKeyRanges[name] = toRange(item.key.range[0], item.key.range[1]);
       }
     }
   }

@@ -121,6 +121,56 @@ describe('validateLinks', () => {
   });
 });
 
+describe('reference-style definition links', () => {
+  it('errors when a definition target is missing', () => {
+    const codes = validateLinks(skill('See [the guide][g].\n\n[g]: references/missing.md')).map(
+      (d) => d.code,
+    );
+    expect(codes).toContain(DiagnosticCode.LinkMissing);
+  });
+
+  it('marks a resource referenced only via a definition', () => {
+    write('references/guide.md');
+    const doc = withResources(
+      skill('See [the guide][g].\n\n[g]: references/guide.md'),
+      discoverResources(dir),
+    );
+    expect(validateLinks(doc).map((d) => d.code)).not.toContain(DiagnosticCode.LinkMissing);
+    expect(validateResources(doc)).toHaveLength(0);
+  });
+});
+
+describe('link case mismatches', () => {
+  it('reports a case-mismatched link as LinkCaseMismatch, not LinkMissing', () => {
+    write('references/foo.md');
+    const doc = withResources(skill('See [f](./References/Foo.md).'), discoverResources(dir));
+    const diagnostics = validateLinks(doc);
+    const codes = diagnostics.map((d) => d.code);
+    expect(codes).toContain(DiagnosticCode.LinkCaseMismatch);
+    expect(codes).not.toContain(DiagnosticCode.LinkMissing);
+    const mismatch = diagnostics.find((d) => d.code === DiagnosticCode.LinkCaseMismatch);
+    expect(mismatch?.severity).toBe('warning');
+    expect(String(mismatch?.data?.actualRelativePath)).toBe('references/foo.md');
+    // The resource counts as referenced, so no unreferenced warning piles on.
+    expect(doc.resources.find((r) => r.relativePath === 'references/foo.md')?.referenced).toBe(
+      true,
+    );
+    expect(validateResources(doc)).toHaveLength(0);
+  });
+
+  it('falls back to LinkMissing when two resources differ only by case', () => {
+    write('references/a.md');
+    write('references/A.md');
+    if (fs.readdirSync(path.join(dir, 'references')).length < 2) {
+      return; // case-insensitive filesystem: the ambiguity cannot exist here
+    }
+    const doc = withResources(skill('See [f](./references/a.MD).'), discoverResources(dir));
+    const codes = validateLinks(doc).map((d) => d.code);
+    expect(codes).toContain(DiagnosticCode.LinkMissing);
+    expect(codes).not.toContain(DiagnosticCode.LinkCaseMismatch);
+  });
+});
+
 describe('discoverResources + validateResources', () => {
   it('warns about a resource that is never referenced', () => {
     write('references/style-guide.md');

@@ -1,7 +1,8 @@
 /**
- * Types for the Static Description Quality Score. Reserved for MVP2 — declared here so the
- * scoring module can attach without touching the rest of the model. Not
- * computed anywhere in MVP1.
+ * Types for the Static Description Quality Score, computed by
+ * `quality/staticDescriptionQuality.ts` and surfaced in the skill report,
+ * workspace analysis, and the exported skills index. Declared here so the
+ * scoring module can attach without touching the rest of the model.
  */
 export type StaticDescriptionQualityLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 

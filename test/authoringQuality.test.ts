@@ -69,6 +69,28 @@ describe('assessAuthoringQuality instructions', () => {
     expect(inCode.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
   });
 
+  it('treats a mismatched fence marker inside an open fence as fence content', () => {
+    // The ~~~ line must not close the backtick fence, so the TODO stays in code.
+    const mixed = assessAuthoringQuality(doc('# T\n\nProse here.\n\n```\n~~~\nTODO: inside the fence\n```\n'));
+    expect(mixed.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
+
+    const tilde = assessAuthoringQuality(doc('# T\n\nRun it.\n\n~~~\nTODO: sample\n~~~\n'));
+    expect(tilde.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
+  });
+
+  it('flags TODO placeholders in headings', () => {
+    const result = assessAuthoringQuality(doc('# T\n\nReal intro.\n\n## TODO: fill this in\n\nBody text.\n'));
+    expect(result.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(true);
+  });
+
+  it('does not mistake HTML tags with attributes for placeholders', () => {
+    const html = assessAuthoringQuality(doc('# T\n\nRenders an <input type="text"> element.\n'));
+    expect(html.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
+
+    const placeholder = assessAuthoringQuality(doc('# T\n\nWrite <input the file name> here.\n'));
+    expect(placeholder.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(true);
+  });
+
   it('flags an Examples section with no content', () => {
     const result = assessAuthoringQuality(doc('# T\n\nDo the work.\n\n## Examples\n\n## Notes\n\nSome notes.'));
     const examples = result.instructions.findings.find((f) => f.criterion === 'Examples');
