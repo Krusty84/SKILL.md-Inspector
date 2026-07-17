@@ -1,22 +1,21 @@
 import {
   analyzeDescription,
-  isFrontLoaded,
   type DescriptionAnalysis,
 } from './descriptionHeuristics';
 import { isProbablyNonEnglish } from './language';
 import type {
-  TriggerQualityResult,
-  TriggerQualityFinding,
-  TriggerQualityLabel,
-  TriggerQualityConfidence,
-} from '../types/TriggerQuality';
-import type { DescriptionLanguage, TriggerQualityWeights } from '../types/SkillProfile';
+  StaticDescriptionQualityResult,
+  StaticDescriptionQualityFinding,
+  StaticDescriptionQualityLabel,
+  HeuristicCoverage,
+} from '../types/StaticDescriptionQuality';
+import type { DescriptionLanguage, StaticDescriptionQualityWeights } from '../types/SkillProfile';
 
-export interface TriggerQualityOptions {
+export interface StaticDescriptionQualityOptions {
   minLength?: number;
   maxLength?: number;
   language?: DescriptionLanguage;
-  weights?: TriggerQualityWeights;
+  weights?: StaticDescriptionQualityWeights;
 }
 
 /** Points allotted to each criterion (brief §10.1). Sum = 100. */
@@ -33,33 +32,33 @@ export const CRITERION_POINTS = {
 /** Upper bound of the "good length" band; below `minLength` is penalized. */
 const GOOD_LENGTH_MAX = 500;
 
-/** Computes the 0–100 Trigger Quality Score for a raw description. */
-export function computeTriggerQuality(
+/** Computes the 0–100 Static Description Quality Score for a raw description. */
+export function computeStaticDescriptionQuality(
   description: string,
-  options: TriggerQualityOptions = {},
-): TriggerQualityResult {
+  options: StaticDescriptionQualityOptions = {},
+): StaticDescriptionQualityResult {
   return scoreAnalysis(analyzeDescription(description), options);
 }
 
 /** Scores an already-computed analysis (avoids re-analyzing the description). */
 export function scoreAnalysis(
   analysis: DescriptionAnalysis,
-  options: TriggerQualityOptions = {},
-): TriggerQualityResult {
+  options: StaticDescriptionQualityOptions = {},
+): StaticDescriptionQualityResult {
   const minLength = options.minLength ?? 40;
   const maxLength = options.maxLength ?? 1024;
   const language = options.language ?? 'auto';
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
   const weights = normalizeWeights(options.weights ?? CRITERION_POINTS);
 
-  const frontLoaded = isFrontLoaded(analysis.leadingText);
-  const boundary = analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found;
-  const boundaryMatch =
-    analysis.negativeBoundaryPhrase.matched ?? analysis.exclusiveTriggerPhrase.matched;
+  const frontLoaded = analysis.frontLoadedIntent.found;
+  const boundary = analysis.boundaryClause.contentFound;
+  const triggerPoints = clausePoints(analysis.triggerClause, weights.triggerPhrase);
+  const boundaryPoints = clausePoints(analysis.boundaryClause, weights.boundary);
   const vaguePoints = Math.max(0, weights.lowVagueness - 5 * analysis.vagueTerms.length);
   const lengthPoints = scoreLength(analysis.length, minLength, maxLength, weights.goodLength);
 
-  const findings: TriggerQualityFinding[] = [
+  const findings: StaticDescriptionQualityFinding[] = [
     finding(
       'Action verb / capability',
       analysis.actionVerb.found ? weights.actionVerb : 0,
@@ -71,12 +70,14 @@ export function scoreAnalysis(
     ),
     finding(
       'Usage trigger phrase',
-      analysis.positiveTriggerPhrase.found ? weights.triggerPhrase : 0,
+      triggerPoints,
       weights.triggerPhrase,
-      analysis.positiveTriggerPhrase.found
-        ? `Explains when to use the skill ("${analysis.positiveTriggerPhrase.matched}").`
-        : 'No usage trigger — add a clause like "Use when ...".',
-      analysis.positiveTriggerPhrase.found ? undefined : 'Add "Use when <context>".',
+      analysis.triggerClause.contentFound
+        ? `Explains when to use the skill ("${analysis.triggerClause.matchedPhrase}").`
+        : analysis.triggerClause.markerFound
+          ? 'Usage trigger is present, but its scope content is too vague.'
+          : 'No usage trigger — add a clause like "Use when ...".',
+      analysis.triggerClause.contentFound ? undefined : 'Add "Use when <context>".',
     ),
     finding(
       'Concrete artifact / domain',
@@ -89,12 +90,14 @@ export function scoreAnalysis(
     ),
     finding(
       'Boundary phrase',
-      boundary ? weights.boundary : 0,
+      boundaryPoints,
       weights.boundary,
       boundary
-        ? `Defines a boundary ("${boundaryMatch}").`
-        : 'No boundary — add "Do not use when ...".',
-      boundary ? undefined : 'Add "Do not use when <boundary>".',
+        ? `Defines a boundary ("${analysis.boundaryClause.matchedPhrase}").`
+        : analysis.boundaryClause.markerFound
+          ? 'Boundary marker is present, but its scope content is too vague.'
+          : 'No boundary — add "Do not use when ...".',
+      boundary ? undefined : 'Add a concrete excluded context after the boundary marker.',
     ),
     finding(
       'Front-loaded intent',
@@ -139,38 +142,36 @@ export function scoreAnalysis(
   }
 
   const score = findings.reduce((sum, f) => sum + f.pointsEarned, 0);
-  const { confidence, limitations } = assessConfidence(analysis, minLength, languageLimited);
+  const { coverage, limitations } = assessCoverage(analysis, minLength, languageLimited);
   return {
     score,
     label: labelFor(score),
     findings,
-    confidence,
+    coverage,
     limitations,
     ...(languageLimited ? { partial: true } : {}),
   };
 }
 
 /**
- * How much to trust the score (Task 79). Empty or non-English descriptions are
- * low confidence; a description below the recommended minimum is medium; a
- * sufficient English description is high. `limitations` explains any downgrade.
+ * Applicability of deterministic checks, not a probability or accuracy estimate.
  */
-function assessConfidence(
+function assessCoverage(
   analysis: DescriptionAnalysis,
   minLength: number,
   languageLimited: boolean,
-): { confidence: TriggerQualityConfidence; limitations: string[] } {
+): { coverage: HeuristicCoverage; limitations: string[] } {
   const limitations: string[] = [];
-  let confidence: TriggerQualityConfidence = 'high';
+  let coverage: HeuristicCoverage = 'high';
 
   if (analysis.trimmed.length === 0) {
     limitations.push(
       'The description is empty, so the score reflects only missing-field penalties.',
     );
-    return { confidence: 'low', limitations };
+    return { coverage: 'low', limitations };
   }
   if (languageLimited) {
-    confidence = 'low';
+    coverage = 'low';
     limitations.push(
       'The description does not appear to be English, so the semantic checks (action verb, trigger, vagueness) may be unreliable.',
     );
@@ -179,15 +180,23 @@ function assessConfidence(
     limitations.push(
       `The description is shorter than the recommended minimum (${minLength} characters), so some signals are weak.`,
     );
-    if (confidence === 'high') {
-      confidence = 'medium';
+    if (coverage === 'high') {
+      coverage = 'medium';
     }
   }
-  return { confidence, limitations };
+  return { coverage, limitations };
+}
+
+function clausePoints(
+  clause: DescriptionAnalysis['triggerClause'],
+  maxPoints: number,
+): number {
+  if (clause.contentFound) return maxPoints;
+  return clause.markerFound ? Math.round(maxPoints * 0.25) : 0;
 }
 
 /** Maps a score to its label band (brief §10.1). */
-export function labelFor(score: number): TriggerQualityLabel {
+export function labelFor(score: number): StaticDescriptionQualityLabel {
   if (score >= 90) return 'excellent';
   if (score >= 75) return 'good';
   if (score >= 60) return 'acceptable';
@@ -216,7 +225,7 @@ function scoreLength(
 }
 
 /** Scales criterion weights to sum to 100 (a no-op when they already do). */
-function normalizeWeights(weights: TriggerQualityWeights): TriggerQualityWeights {
+function normalizeWeights(weights: StaticDescriptionQualityWeights): StaticDescriptionQualityWeights {
   const total =
     weights.actionVerb +
     weights.triggerPhrase +
@@ -246,7 +255,7 @@ function finding(
   pointsPossible: number,
   message: string,
   suggestion?: string,
-): TriggerQualityFinding {
+): StaticDescriptionQualityFinding {
   return {
     criterion,
     pointsEarned,

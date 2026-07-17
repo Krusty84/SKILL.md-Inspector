@@ -49,10 +49,10 @@ can execute.
 - **Profile-specific metadata rules** — for the selected profile, flags Claude
   reserved words and XML-like tags, checks VS Code / Codex field types, and
   applies an unknown-key policy.
-- **Heuristic Trigger Quality Score (0–100)** — a *deterministic heuristic* for
+- **Heuristic Static Description Quality Score (0–100)** — a *deterministic heuristic* for
   each `description` across seven weighted criteria (action verb, usage trigger,
   concrete artifact, boundary, front-loaded intent, low vagueness, good length),
-  shown in the Skill Report with a per-criterion breakdown, a **confidence** level,
+  shown in the Skill Report with a per-criterion breakdown, a **heuristic coverage** level,
   and any analysis **limitations**. It estimates how discoverable a description is
   and **does not guarantee** that an agent will select the skill at runtime.
   Missing boundary and front-loaded-intent are surfaced as information diagnostics
@@ -78,11 +78,11 @@ can execute.
   "Use when…" or "Do not use when…" clause, create a missing linked file, and
   add a Markdown link to an unreferenced resource.
 - **Skill Report** — a read-only webview summarizing the skill's status,
-  diagnostic counts, referenced/unreferenced files, and the Trigger Quality
+  diagnostic counts, referenced/unreferenced files, and the Static Description Quality
   breakdown.
 - **Activity Bar navigator** — a dedicated **SKILL.md INSPECTOR** icon opens three independent Views: **FAVORITES**, **WORKSPACE**, and **INSTALLED AGENTS**.
 - **Favorites** — add frequently inspected `SKILL.md` files from the Inspector submenu in the editor, Explorer, or Inspector Views. Favorites persist locally across restarts and workspace changes; missing files stay visible with a warning until removed.
-- **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view remains separate in the bottom Panel. It still lists every skill with its status icon, Trigger Quality score, error/warning counts, profile, and resource graph.
+- **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view remains separate in the bottom Panel. It still lists every skill with its status icon, Static Description Quality score, error/warning counts, profile, and resource graph.
 - **Skill collision detection** — finds skills whose descriptions overlap using a
   composite of smoothed TF-IDF cosine, token Jaccard, character n-gram, and name
   similarity, with High/Medium/Low risk bands and a separate **confidence** in the
@@ -276,7 +276,7 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | Validate Current Skill | Validate the `SKILL.md` in the active editor. |
 | Validate Workspace Skills | Validate every `SKILL.md` in the workspace. |
 | Insert SKILL.md Template | Insert a starter template. |
-| Show Skill Report | Open the read-only report (incl. Trigger Quality) for the active skill. |
+| Show Skill Report | Open the read-only report (incl. Static Description Quality) for the active skill. |
 | Improve Description Locally | Suggest a better `description` (no LLM) and optionally apply it. |
 | Show Workspace Report | Open the workspace report: collision matrix, portability, resource graphs. |
 | Export Skills Index | Write `skills.index.json` for the workspace. |
@@ -355,7 +355,7 @@ API is confined to the adapter layer (`extension.ts`, `diagnostics/`,
 
 ## Roadmap
 
-- **MVP2 (done)** — a 0–100 Trigger Quality Score, front-loaded-intent and
+- **MVP2 (done)** — a 0–100 Static Description Quality Score, front-loaded-intent and
   boundary checks, and local description rewrite templates.
 - **MVP3 (done)** — workspace tree view, skill collision detection and matrix,
   portability report, resource graph, and `skills.index.json` export.
@@ -510,3 +510,7 @@ Actions listed after a skill load are **temporal observations** within a heurist
 ### Privacy, offline behavior, and limitations
 
 All OpenCode inspection is local and deterministic. The extension does not execute recorded commands, does not invoke OpenCode, does not open URLs embedded in session data, and does not send telemetry. Large values are previewed with truncation markers. Known limitations: OpenCode has no separately versioned public export standard, some remote URI schemes may not support file watching or OS reveal actions, and temporal skill segments are evidence of ordering only—not causal attribution or proof of SKILL.md rule compliance.
+
+## Evaluation terminology and migration
+
+`Trigger Quality Score` has been renamed to **Static Description Quality Score**. Its `coverage` value describes the applicability and completeness of deterministic checks (language and available text), not probability, certainty, or agent agreement. The score is static and does **not** measure actual skill selection. Behavioral trigger precision, recall, specificity, F1, and stability are calculated separately from recorded provider decisions; they never affect validation or the static score. Run `npm run benchmark:static` for the curated offline corpus and `npm run test:eval` for metric tests.

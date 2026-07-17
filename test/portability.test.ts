@@ -18,7 +18,7 @@ const CLEAN_BODY = [
 
 function docFrom(frontmatter: string[], body = CLEAN_BODY) {
   const content = ['---', ...frontmatter, '---', '', body].join('\n');
-  return parseSkillFile('/ws/skills/demo/SKILL.md', content);
+  return parseSkillFile('/ws/standalone/SKILL.md', content);
 }
 
 function entry(frontmatter: string[], profile: SkillProfileId, body?: string) {

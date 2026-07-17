@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
-import { computeTriggerQuality } from '../quality/triggerQualityScore';
+import { computeStaticDescriptionQuality } from '../quality/staticDescriptionQuality';
 import { buildResourceGraph } from './buildResourceGraph';
 import { evaluatePortability, toCompatibilityMap } from './portability';
 import { detectCollisions } from './detectSkillCollisions';
@@ -70,12 +70,13 @@ export function analyzeWorkspace(
 /** Builds the exportable index model (brief §13.6). */
 export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
   return {
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     skills: analysis.skills.map((skill) => ({
       name: skill.name,
       path: skill.path,
       description: skill.description,
-      triggerQualityScore: skill.triggerQualityScore,
+      staticDescriptionQuality: skill.staticDescriptionQuality,
       errors: skill.errors,
       warnings: skill.warnings,
       diagnostics: skill.diagnostics,
@@ -105,7 +106,7 @@ function toWorkspaceSkill(
   const description =
     typeof document.frontmatter?.description === 'string' ? document.frontmatter.description : '';
 
-  const triggerQuality = computeTriggerQuality(description, {
+  const staticDescriptionQuality = computeStaticDescriptionQuality(description, {
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
     language: profile.description.language,
@@ -128,8 +129,8 @@ function toWorkspaceSkill(
     path: toPosix(path.relative(rootDir, absolutePath)),
     absolutePath,
     description,
-    triggerQualityScore: triggerQuality.score,
-    triggerQualityLabel: triggerQuality.label,
+    staticDescriptionQuality: staticDescriptionQuality.score,
+    staticDescriptionQualityLabel: staticDescriptionQuality.label,
     errors,
     warnings,
     information,

@@ -66,7 +66,7 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
     diagnostics.push(
       diag(
         DiagnosticCode.NameFolderMismatch,
-        'warning',
+        'error',
         `\`name\` "${value}" does not match the parent folder "${folder}".`,
         range,
         { quickFixId: QuickFixId.RenameParentFolder, data: { expected: value, folder } },

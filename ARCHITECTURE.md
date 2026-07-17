@@ -20,7 +20,7 @@ The shipped extension is a single CommonJS bundle at `dist/extension.js`. VS Cod
 |   +-- llm/            # Inert provider interface reserved for future work
 |   +-- parser/         # YAML/Markdown AST parsing, link/path helpers, resource discovery + cache
 |   +-- profiles/       # Generic, VS Code, Claude, and Codex rule profiles + resolveProfile
-|   +-- quality/        # Description heuristics, Trigger Quality scoring, local rewrites
+|   +-- quality/        # Description heuristics, Static Description Quality scoring, local rewrites
 |   +-- types/          # Shared document, diagnostic, profile, quality, and workspace models
 |   +-- ui/             # Tree provider, report models, HTML renderers, and webviews
 |   +-- validation/     # Rule registry, per-rule validators, and the diagnostic pipeline
@@ -79,7 +79,7 @@ Every diagnostic is a tool-neutral `SkillDiagnostic` built by the `diag()` helpe
 
 ### Description Quality
 
-Description quality is a related but separate concern. `quality/` detects action verbs (including irregular and inflected forms), positive/negative/exclusive trigger phrases, concrete artifacts and acronyms, vague wording, and intent placement, using dictionary registries rather than open-ended heuristics. `computeTriggerQuality` turns those findings into a 0–100 score, a label, a confidence level, and a list of limitations (for example, a non-English or very short description scores low confidence). `buildImprovedDescription` produces deterministic suggestions by keeping the current wording and appending missing "Use when…" / "Do not use when…" clauses, or offering a template when the description scores poorly.
+Description quality is a related but separate concern. `quality/` detects action verbs (including irregular and inflected forms), positive/negative/exclusive trigger phrases, concrete artifacts and acronyms, vague wording, and intent placement, using dictionary registries rather than open-ended heuristics. `computeStaticDescriptionQuality` turns those findings into a 0–100 score, a label, a heuristic coverage level, and a list of limitations (for example, a non-English or very short description scores low coverage). `buildImprovedDescription` produces deterministic suggestions by keeping the current wording and appending missing "Use when…" / "Do not use when…" clauses, or offering a template when the description scores poorly.
 
 ### Profiles and Configuration
 
@@ -97,7 +97,7 @@ Command modules are thin handlers for these workflows: validate the active skill
 
 ### Workspace Analysis
 
-Workspace intelligence starts with `discoverSkillPaths`, which recursively scans a root directory, skipping any directory matching a configurable exclusion glob (dependency caches, VCS metadata, and build output by default) so scans do not descend into vendored or nested repositories. `analyzeWorkspace` analyzes each readable skill into a `WorkspaceSkill` record — diagnostic counts, a compact per-diagnostic summary (code, severity, kind), Trigger Quality, per-profile portability, and a resource graph. It checks a cancellation signal between files and reports progress; a cancelled scan is returned flagged as partial.
+Workspace intelligence starts with `discoverSkillPaths`, which recursively scans a root directory, skipping any directory matching a configurable exclusion glob (dependency caches, VCS metadata, and build output by default) so scans do not descend into vendored or nested repositories. `analyzeWorkspace` analyzes each readable skill into a `WorkspaceSkill` record — diagnostic counts, a compact per-diagnostic summary (code, severity, kind), Static Description Quality, per-profile portability, and a resource graph. It checks a cancellation signal between files and reports progress; a cancelled scan is returned flagged as partial.
 
 It then compares every pair of skill descriptions. Collision detection normalizes and tokenizes descriptions and blends four similarity metrics — token Jaccard, smoothed TF-IDF cosine, character n-gram, and name similarity — into a composite score, reduced when the two skills' negative boundaries separate their scopes. Pairs at or above the threshold are reported with a Low/Medium/High risk band and a separate confidence in the textual evidence. Name conflicts (identical names) and confusingly similar names are detected alongside.
 
@@ -107,7 +107,7 @@ Portability is evaluated per profile: profile-independent checks (frontmatter, l
 
 The Explorer tree, workspace report, and skills-index export share `computeWorkspaceAnalysis`, the VS Code-facing workspace-analysis entry point. The tree lazily computes and caches an analysis until a refresh-triggering event clears it.
 
-Report construction is separated from presentation: report-model modules convert analysis results into display models, renderer modules produce escaped HTML, and webview panel classes own one reusable, script-disabled panel per report type. The single-skill report shows validation counts and the Heuristic Trigger Quality breakdown with its confidence and limitations; the workspace report shows skill summaries, the collision matrix (with risk and confidence), profile portability, and resource graphs. Both label the Trigger Quality Score as a heuristic that does not guarantee runtime skill selection.
+Report construction is separated from presentation: report-model modules convert analysis results into display models, renderer modules produce escaped HTML, and webview panel classes own one reusable, script-disabled panel per report type. The single-skill report shows validation counts and the Static Description Quality breakdown with its coverage and limitations; the workspace report shows skill summaries, the collision matrix (with risk and confidence), profile portability, and resource graphs. Both label the Static Description Quality Score as a heuristic that does not guarantee runtime skill selection.
 
 ## Data Flow
 
@@ -124,7 +124,7 @@ Report construction is separated from presentation: report-model modules convert
 ### Per-Skill Report
 
 1. The command reads the active editor's unsaved text and runs `analyzeSkill` with the selected profile.
-2. `buildReportModel` adds diagnostic counts, referenced/unreferenced file lists, and the Trigger Quality result.
+2. `buildReportModel` adds diagnostic counts, referenced/unreferenced file lists, and the Static Description Quality result.
 3. The HTML renderer escapes and formats the model.
 4. `SkillReportPanel` displays it in a reusable, script-disabled webview.
 
@@ -146,7 +146,7 @@ Workspace analysis reads saved files from disk; unlike active-editor analysis, i
 - Profile rules, length limits, and overrides are resolved into one effective profile before analysis rather than read piecemeal in the core.
 - Typing uses a filesystem-free `text-only` pass; a resource cache and file watchers keep the full pass cheap and its inputs fresh.
 - Workspace analysis builds a complete in-memory result and shares it across tree, report, and export; portability is computed independently per profile.
-- Trigger Quality, collision risk, and portability are deterministic heuristics with explicit confidence, not semantic or execution-based guarantees. The `llm/` interface and experimental setting are inert placeholders.
+- Static Description Quality, collision risk, and portability are deterministic heuristics with explicit confidence, not semantic or execution-based guarantees. The `llm/` interface and experimental setting are inert placeholders.
 
 ## External Dependencies and Integrations
 
@@ -186,7 +186,7 @@ npm run build
 - Workspace analysis reads files from disk, so unsaved `SKILL.md` edits are visible to live diagnostics and the per-skill report but not to the tree, workspace report, collision analysis, or export.
 - Collision scores depend on the descriptions present in the analyzed corpus and indicate lexical overlap, not whether an agent will actually choose the wrong skill; each result carries a confidence in how much text backs it.
 - Portability checks are local heuristics; they do not execute skills in any agent environment. Remote links are classified syntactically but never fetched.
-- Similarity tokenization is ASCII-oriented and the quality heuristics are English-oriented; a non-English description is analyzed structurally and marked low confidence rather than scored semantically.
+- Similarity tokenization is ASCII-oriented and the quality heuristics are English-oriented; a non-English description is analyzed structurally and marked low coverage rather than scored semantically.
 - The experimental LLM review setting, provider interface, prompts directory, and providers directory are inert. No LLM-assisted review is currently implemented.
 
 ```

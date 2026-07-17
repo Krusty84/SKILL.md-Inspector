@@ -1,6 +1,6 @@
 import type { SkillProfileId } from './SkillProfile';
 import type { SkillDiagnosticSeverity, SkillDiagnosticKind } from './SkillDiagnostic';
-import type { TriggerQualityLabel } from './TriggerQuality';
+import type { StaticDescriptionQualityLabel } from './StaticDescriptionQuality';
 
 /** A compact diagnostic carried into the tree/report models and the exported index (Task 87). */
 export interface IndexDiagnostic {
@@ -54,8 +54,8 @@ export interface WorkspaceSkill {
   path: string;
   absolutePath: string;
   description: string;
-  triggerQualityScore: number;
-  triggerQualityLabel: TriggerQualityLabel;
+  staticDescriptionQuality: number;
+  staticDescriptionQualityLabel: StaticDescriptionQualityLabel;
   errors: number;
   warnings: number;
   information: number;
@@ -137,7 +137,7 @@ export interface SkillsIndexEntry {
   name: string;
   path: string;
   description: string;
-  triggerQualityScore: number;
+  staticDescriptionQuality: number;
   errors: number;
   warnings: number;
   /** The machine-readable rule output: every diagnostic's code, severity, and kind (Task 87). */
@@ -146,6 +146,8 @@ export interface SkillsIndexEntry {
 }
 
 export interface SkillsIndex {
+  /** Bumped for the Static Description Quality field rename. */
+  schemaVersion: 2;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }

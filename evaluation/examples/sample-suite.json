@@ -1,0 +1,106 @@
+{
+  "skill": "./SKILL.md",
+  "runsPerQuery": 3,
+  "queries": [
+    {
+      "id": "trigger-1",
+      "prompt": "Perform supported task 1",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-2",
+      "prompt": "Perform supported task 2",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-3",
+      "prompt": "Perform supported task 3",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-4",
+      "prompt": "Perform supported task 4",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-5",
+      "prompt": "Perform supported task 5",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-6",
+      "prompt": "Perform supported task 6",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-7",
+      "prompt": "Perform supported task 7",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-8",
+      "prompt": "Perform supported task 8",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-9",
+      "prompt": "Perform supported task 9",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "trigger-10",
+      "prompt": "Perform supported task 10",
+      "expected": "should-trigger"
+    },
+    {
+      "id": "near-miss-1",
+      "prompt": "Unrelated request 1",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-2",
+      "prompt": "Unrelated request 2",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-3",
+      "prompt": "Unrelated request 3",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-4",
+      "prompt": "Unrelated request 4",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-5",
+      "prompt": "Unrelated request 5",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-6",
+      "prompt": "Unrelated request 6",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-7",
+      "prompt": "Unrelated request 7",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-8",
+      "prompt": "Unrelated request 8",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-9",
+      "prompt": "Unrelated request 9",
+      "expected": "should-not-trigger"
+    },
+    {
+      "id": "near-miss-10",
+      "prompt": "Unrelated request 10",
+      "expected": "should-not-trigger"
+    }
+  ]
+}

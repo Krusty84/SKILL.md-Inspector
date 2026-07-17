@@ -13,6 +13,21 @@ export interface PhraseMatch {
   matched?: string;
 }
 
+export interface ScopeClauseAnalysis extends PhraseMatch {
+  markerFound: boolean;
+  contentFound: boolean;
+  contentTokens: string[];
+  vagueTokens: string[];
+  matchedPhrase?: string;
+}
+
+export interface FrontLoadedIntentResult {
+  found: boolean;
+  pattern?: 'capability-first' | 'use-when-first' | 'when-asked-first';
+  matchedCapability?: string;
+  matchedObject?: string;
+}
+
 export interface DescriptionAnalysis {
   raw: string;
   trimmed: string;
@@ -26,6 +41,9 @@ export interface DescriptionAnalysis {
   exclusiveTriggerPhrase: PhraseMatch;
   concreteArtifact: boolean;
   vagueTerms: string[];
+  triggerClause: ScopeClauseAnalysis;
+  boundaryClause: ScopeClauseAnalysis;
+  frontLoadedIntent: FrontLoadedIntentResult;
 }
 
 export function analyzeDescription(description: string): DescriptionAnalysis {
@@ -35,6 +53,8 @@ export function analyzeDescription(description: string): DescriptionAnalysis {
   const words = trimmed.split(/\s+/).filter(Boolean);
   const tokens = tokenize(lower);
 
+  const triggerClause = assessScopeClause(trimmed, 'trigger');
+  const boundaryClause = assessScopeClause(trimmed, 'boundary');
   return {
     raw,
     trimmed,
@@ -42,11 +62,14 @@ export function analyzeDescription(description: string): DescriptionAnalysis {
     wordCount: words.length,
     leadingText: words.slice(0, 12).join(' ').toLowerCase(),
     actionVerb: matchVerb(tokens),
-    positiveTriggerPhrase: hasPositiveTriggerPhrase(lower),
-    negativeBoundaryPhrase: hasNegativeBoundaryPhrase(lower),
-    exclusiveTriggerPhrase: hasExclusiveTriggerPhrase(lower),
+    positiveTriggerPhrase: triggerClause,
+    negativeBoundaryPhrase: boundaryClause,
+    exclusiveTriggerPhrase: matchPhrase(lower, EXCLUSIVE_TRIGGER_PHRASES),
     concreteArtifact: hasConcreteArtifact(trimmed, tokens),
     vagueTerms: findVagueTerms(lower, tokens),
+    triggerClause,
+    boundaryClause,
+    frontLoadedIntent: analyzeFrontLoadedIntent(trimmed),
   };
 }
 
@@ -60,11 +83,26 @@ export function hasActionVerb(description: string): PhraseMatch {
  * in the first 12 words, or a bare verb with no object, is too weak to pass.
  */
 export function isFrontLoaded(leadingText: string): boolean {
-  const tokens = tokenize(leadingText);
-  if (tokens.length === 0 || !ACTION_VERB_FORMS.has(tokens[0])) {
-    return false;
+  return analyzeFrontLoadedIntent(leadingText).found;
+}
+
+/** Shared deterministic evidence used by both scoring and diagnostics. */
+export function analyzeFrontLoadedIntent(description: string): FrontLoadedIntentResult {
+  const leading = description.split(/(?<=[.!?])\s+/).slice(0, 1)[0] ?? '';
+  const tokens = tokenize(leading);
+  const capability = tokens.find((token) => ACTION_VERB_FORMS.has(token));
+  const object = tokens.find((token) => !ACTION_VERB_FORMS.has(token) && token.length > 2 && !['this', 'skill', 'when', 'asked', 'the', 'user', 'for', 'from', 'with', 'and', 'help', 'needed'].includes(token));
+  const concrete = hasConcreteArtifact(leading, tokens) || Boolean(object && tokens.length >= 5);
+  if (/^\s*use (?:this )?skill when\b/i.test(leading) && capability && concrete) {
+    return { found: true, pattern: 'use-when-first', matchedCapability: capability, matchedObject: object };
   }
-  return hasConcreteArtifact(leadingText, tokens.slice(1));
+  if (/^\s*when asked to\b/i.test(leading) && capability && concrete) {
+    return { found: true, pattern: 'when-asked-first', matchedCapability: capability, matchedObject: object };
+  }
+  if (tokens.length > 0 && ACTION_VERB_FORMS.has(tokens[0]) && concrete) {
+    return { found: true, pattern: 'capability-first', matchedCapability: tokens[0], matchedObject: object };
+  }
+  return { found: false };
 }
 
 export function hasPositiveTriggerPhrase(description: string): PhraseMatch {
@@ -124,12 +162,37 @@ function matchVerb(tokens: string[]): PhraseMatch {
 
 function matchPhrase(lower: string, phrases: readonly string[]): PhraseMatch {
   for (const phrase of phrases) {
-    if (lower.includes(phrase)) {
+    if (new RegExp(`\\b${phrase.split(' ').map(escapeRegex).join('\\s+')}\\b`, 'i').test(lower)) {
       return { found: true, matched: phrase };
     }
   }
   return { found: false };
 }
+
+export function assessScopeClause(description: string, kind: 'trigger' | 'boundary'): ScopeClauseAnalysis {
+  const markers = kind === 'trigger'
+    ? ['use when', 'use for', 'when asked to', 'when the user needs', 'appropriate for', 'intended for']
+    : ['do not use when', 'do not use for', 'not intended for', 'exclude', 'excluding', 'limited to', 'only for', 'only use when', 'avoid when'];
+  const sentences = description.split(/(?<=[.!?])\s+|\n/);
+  for (const sentence of sentences) {
+    const lower = sentence.toLowerCase();
+    for (const marker of markers) {
+      const re = new RegExp(`\\b${marker.split(' ').map(escapeRegex).join('\\s+')}\\b`, 'i');
+      const match = re.exec(lower);
+      if (!match) continue;
+      // A negative clause cannot be evidence of a positive trigger.
+      if (kind === 'trigger' && /\b(?:do not|don't|not)\s+use\b/i.test(lower)) continue;
+      const tail = lower.slice((match.index ?? 0) + match[0].length);
+      const contentTokens = tokenize(tail).filter((token) => !['the', 'a', 'an', 'to', 'when', 'for', 'only', 'user'].includes(token));
+      const vagueTokens = contentTokens.filter((token) => ['needed', 'appropriate', 'tasks', 'things', 'other', 'anything', 'it'].includes(token));
+      const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token));
+      return { found: true, markerFound: true, contentFound: meaningful.length >= 2, contentTokens, vagueTokens, matched: marker, matchedPhrase: marker };
+    }
+  }
+  return { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
+}
+
+function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 function hasConcreteArtifact(text: string, tokens: string[]): boolean {
   const forms = tokenForms(tokens);

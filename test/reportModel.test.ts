@@ -23,7 +23,7 @@ function report(content: string) {
 }
 
 describe('buildReportModel', () => {
-  it('summarizes a well-formed skill as passing and includes a trigger quality score', () => {
+  it('summarizes a well-formed skill as passing and includes a static description quality score', () => {
     fs.mkdirSync(path.join(dir, 'references'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'references', 'guide.md'), '# Guide');
     const content = [
@@ -42,22 +42,22 @@ describe('buildReportModel', () => {
     expect(model.status).toBe('pass');
     expect(model.errorCount).toBe(0);
     expect(model.referencedFiles).toContain('references/guide.md');
-    expect(model.triggerQuality.score).toBeGreaterThanOrEqual(75);
-    expect(model.triggerQuality.findings).toHaveLength(7);
+    expect(model.staticDescriptionQuality.score).toBeGreaterThanOrEqual(75);
+    expect(model.staticDescriptionQuality.findings).toHaveLength(7);
     expect(
-      model.triggerQuality.findings.find((f) => f.criterion.startsWith('Action verb'))?.pointsEarned,
+      model.staticDescriptionQuality.findings.find((f) => f.criterion.startsWith('Action verb'))?.pointsEarned,
     ).toBe(20);
     expect(
       // Generic profile de-emphasizes the boundary criterion (weight 5).
-      model.triggerQuality.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned,
-    ).toBe(5);
+      model.staticDescriptionQuality.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned,
+    ).toBe(1);
   });
 
   it('marks a skill with errors as failing', () => {
     const model = report('---\nname: Bad Name\ndescription: Helps.\n---\n');
     expect(model.status).toBe('fail');
     expect(model.errorCount).toBeGreaterThan(0);
-    expect(model.triggerQuality.label).toBe('poor');
+    expect(model.staticDescriptionQuality.label).toBe('poor');
   });
 });
 
@@ -68,8 +68,8 @@ describe('renderReportHtml', () => {
     expect(html).toContain('Content-Security-Policy');
     expect(html).toContain('nonce-abc123');
     expect(html).toContain('demo');
-    expect(html).toContain('Trigger Quality');
-    expect(html).toContain(`${model.triggerQuality.score}`);
+    expect(html).toContain('Static Description Quality');
+    expect(html).toContain(`${model.staticDescriptionQuality.score}`);
   });
 
   it('escapes HTML in dynamic values to prevent injection', () => {

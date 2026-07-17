@@ -1,5 +1,5 @@
 import { analyzeDescription } from './descriptionHeuristics';
-import { computeTriggerQuality, type TriggerQualityOptions } from './triggerQualityScore';
+import { computeStaticDescriptionQuality, type StaticDescriptionQualityOptions } from './staticDescriptionQuality';
 
 /** The pattern used when there is nothing salvageable to build on (brief §10.5). */
 export const REWRITE_TEMPLATE =
@@ -13,10 +13,10 @@ export const REWRITE_TEMPLATE =
  */
 export function buildImprovedDescription(
   description: string,
-  options: TriggerQualityOptions = {},
+  options: StaticDescriptionQualityOptions = {},
 ): string {
   const analysis = analyzeDescription(description);
-  const result = computeTriggerQuality(description, options);
+  const result = computeStaticDescriptionQuality(description, options);
 
   if (analysis.trimmed === '' || result.label === 'poor') {
     return REWRITE_TEMPLATE;
@@ -39,9 +39,9 @@ export function buildImprovedDescription(
  */
 export function buildDescriptionSuggestions(
   description: string,
-  options: TriggerQualityOptions = {},
+  options: StaticDescriptionQualityOptions = {},
 ): string[] {
-  const result = computeTriggerQuality(description, options);
+  const result = computeStaticDescriptionQuality(description, options);
   return result.findings
     .filter((f) => f.pointsEarned < f.pointsPossible && f.suggestion)
     .map((f) => f.suggestion as string);

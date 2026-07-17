@@ -74,7 +74,7 @@ describe('workspace discovery + analysis', () => {
     const pdf = analysis.skills.find((s) => s.name === 'pdf-report-formatter');
     expect(pdf).toBeDefined();
     expect(pdf!.errors).toBe(0);
-    expect(pdf!.triggerQualityScore).toBeGreaterThan(0);
+    expect(pdf!.staticDescriptionQuality).toBeGreaterThan(0);
     expect(Object.keys(pdf!.profileCompatibility).sort()).toEqual([
       'claude',
       'codex',

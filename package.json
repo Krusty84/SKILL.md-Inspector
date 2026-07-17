@@ -879,14 +879,14 @@
           "default": 0.8,
           "minimum": 0,
           "maximum": 1,
-          "description": "Similarity (0\u20131) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
+          "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
         },
         "skillMdInspector.collision.threshold": {
           "type": "number",
           "default": 0.4,
           "minimum": 0,
           "maximum": 1,
-          "description": "Composite similarity (0\u20131) at or above which two skills are reported as a potential collision."
+          "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
         },
         "skillMdInspector.collision.ngramSize": {
           "type": "number",
@@ -1132,7 +1132,9 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:eval": "vitest run test/evaluation",
+    "benchmark:static": "vitest run test/benchmarks/staticDescriptionQuality.test.ts"
   },
   "dependencies": {
     "remark-parse": "^11.0.0",
