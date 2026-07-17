@@ -55,7 +55,12 @@ export function scoreAnalysis(
   const boundary = analysis.boundaryClause.contentFound;
   const triggerPoints = clausePoints(analysis.triggerClause, weights.triggerPhrase);
   const boundaryPoints = clausePoints(analysis.boundaryClause, weights.boundary);
-  const vaguePoints = Math.max(0, weights.lowVagueness - 5 * analysis.vagueTerms.length);
+  // Each vague term costs half the criterion's weight, so the penalty scales
+  // with custom profile weights instead of a hardcoded 5 points.
+  const vaguePoints = Math.max(
+    0,
+    Math.round(weights.lowVagueness - (weights.lowVagueness / 2) * analysis.vagueTerms.length),
+  );
   const lengthPoints = scoreLength(analysis.length, minLength, maxLength, weights.goodLength);
 
   const findings: StaticDescriptionQualityFinding[] = [
@@ -141,7 +146,11 @@ export function scoreAnalysis(
     );
   }
 
-  const score = findings.reduce((sum, f) => sum + f.pointsEarned, 0);
+  // Normalized weights can be fractional; keep the public score an integer in [0, 100].
+  const score = Math.max(
+    0,
+    Math.min(100, Math.round(findings.reduce((sum, f) => sum + f.pointsEarned, 0))),
+  );
   const { coverage, limitations } = assessCoverage(analysis, minLength, languageLimited);
   return {
     score,

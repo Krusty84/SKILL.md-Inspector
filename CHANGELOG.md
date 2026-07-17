@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Trigger/boundary clause detection** now derives its marker vocabulary from
+  the `triggerPhrases.ts` registries (single source of truth) instead of a
+  duplicated inline list. This fixes three scoring bugs: the canonical
+  "Use this skill when ..." and "Trigger when the user ..." forms earned no
+  trigger credit, and a purely negative sentence such as "Not intended for X"
+  was credited as a *positive* trigger.
+- Negative boundary phrases are stripped from a sentence before positive-trigger
+  matching, so no fragment embedded in a negation ("use when" inside
+  "do not use when", "intended for" inside "not intended for") can count as
+  positive evidence.
+- A scope clause whose tail names a single concrete artifact or acronym
+  ("Use for SQL.") now counts as meaningful content; the vague-tail and
+  stopword lists were expanded.
+- Plain "Use when ..." at the start of a description now satisfies the
+  front-loaded-intent check (previously only "Use this skill when ..." did),
+  and vague words can no longer serve as the front-loaded "object".
+- The vagueness penalty now scales with the configured criterion weight, and
+  the public score is always an integer clamped to 0–100 under custom weights.
+
+### Changed
+
+- **Authoring quality** findings now carry a severity (`major` / `moderate` /
+  `minor`) with weighted penalties, so an empty instruction body no longer
+  costs the same as one unreferenced asset file. Empty-section detection is
+  Markdown-aware (fenced code counts as content; a parent heading whose content
+  lives in subsections is not empty), an unreferenced bundled script is
+  reported as an undocumented script, and duplicate section headings are
+  flagged.
+- The static description benchmark corpus was re-curated: diverse hand-written
+  cases with narrow score bands (≤ 25 points) replace the formulaic 0–100
+  ranges, and the benchmark test now asserts the trigger, boundary,
+  front-loaded, and language-limited expectations it previously ignored.
+- Behavioral evaluation: suite loading rejects duplicate query ids and empty
+  prompts; metric aggregation rejects duplicate or extra recorded runs instead
+  of silently skewing counts.
+- Legacy `triggerQualityScore` test files were renamed to
+  `staticDescriptionQuality`, completing the terminology migration.
+
 ## 0.3.0 — MVP3 (Workspace Intelligence)
 
 ### Added

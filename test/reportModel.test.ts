@@ -48,9 +48,10 @@ describe('buildReportModel', () => {
       model.staticDescriptionQuality.findings.find((f) => f.criterion.startsWith('Action verb'))?.pointsEarned,
     ).toBe(20);
     expect(
-      // Generic profile de-emphasizes the boundary criterion (weight 5).
+      // Generic profile de-emphasizes the boundary criterion (weight 5); the
+      // single concrete artifact "contracts" earns the clause full credit.
       model.staticDescriptionQuality.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned,
-    ).toBe(1);
+    ).toBe(5);
   });
 
   it('marks a skill with errors as failing', () => {
