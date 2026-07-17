@@ -121,6 +121,25 @@ describe('validateLinks', () => {
   });
 });
 
+describe('reference-style definition links', () => {
+  it('errors when a definition target is missing', () => {
+    const codes = validateLinks(skill('See [the guide][g].\n\n[g]: references/missing.md')).map(
+      (d) => d.code,
+    );
+    expect(codes).toContain(DiagnosticCode.LinkMissing);
+  });
+
+  it('marks a resource referenced only via a definition', () => {
+    write('references/guide.md');
+    const doc = withResources(
+      skill('See [the guide][g].\n\n[g]: references/guide.md'),
+      discoverResources(dir),
+    );
+    expect(validateLinks(doc).map((d) => d.code)).not.toContain(DiagnosticCode.LinkMissing);
+    expect(validateResources(doc)).toHaveLength(0);
+  });
+});
+
 describe('discoverResources + validateResources', () => {
   it('warns about a resource that is never referenced', () => {
     write('references/style-guide.md');

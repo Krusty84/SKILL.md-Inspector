@@ -14,6 +14,8 @@ interface LinkLikeNode {
   url?: string;
   alt?: string | null;
   value?: string;
+  identifier?: string;
+  label?: string;
   children?: Array<{ type: string; value?: string; children?: unknown[] }>;
   position?: UnistPosition;
 }
@@ -55,11 +57,33 @@ export function parseMarkdownLinks(body: string, bodyStartLine = 0): SkillLink[]
       return;
     }
 
+    // Reference-style definitions (`[id]: references/file.md`) carry the target
+    // for every `[text][id]` / `[id]` reference in the body, so validating the
+    // definition validates them all. The range spans the whole definition line
+    // (mdast exposes no separate position for the URL).
+    if (node.type === 'definition') {
+      const url = (node.url ?? '').trim();
+      if (isIgnorableTarget(url)) {
+        return;
+      }
+      links.push({
+        raw: url,
+        text: node.label ?? node.identifier ?? '',
+        kind: classifyLink(url),
+        range: nodeRange(node, bodyStartLine),
+      });
+      return;
+    }
+
     // Resource paths written in prose, inline code, or fenced code blocks
-    // (brief §7.5). Skip a link/image's own text — the link is already captured.
+    // (brief §7.5). Skip a link/image's own text and inline code — the link is
+    // already captured, and scanning its children would duplicate it.
     if (node.type === 'text' || node.type === 'inlineCode' || node.type === 'code') {
       const parentType = (parent as { type?: string } | null | undefined)?.type;
-      if (node.type === 'text' && (parentType === 'link' || parentType === 'image')) {
+      if (
+        (node.type === 'text' || node.type === 'inlineCode') &&
+        (parentType === 'link' || parentType === 'image')
+      ) {
         return;
       }
       collectResourcePaths(node, bodyStartLine, links);

@@ -1,4 +1,5 @@
 import { DiagnosticCode } from '../types/DiagnosticCode';
+import { phraseRegex } from '../quality/textMatch';
 import type { BodySectionSpec } from '../types/SkillProfile';
 import type { SkillHeading } from '../parser/parseMarkdownHeadings';
 
@@ -55,7 +56,7 @@ export const DEFAULT_BODY_SECTIONS: BodySectionSpec[] = [
  */
 export function matchesSection(headingText: string, spec: BodySectionSpec): boolean {
   const normalized = headingText.toLowerCase().trim();
-  if (spec.phrases.some((phrase) => normalized === phrase || normalized.includes(phrase))) {
+  if (spec.phrases.some((phrase) => phraseRegex(phrase).test(normalized))) {
     return true;
   }
   const tokens = new Set(normalized.split(/[^a-z0-9]+/).filter(Boolean));

@@ -102,11 +102,14 @@ function assessInstructions(body: string): AuthoringFinding[] {
     });
   }
 
-  const proseOutsideCode = lines
-    .filter((line) => !line.inFence && !line.isHeading)
+  // Headings are included: "## TODO: fill this in" is a placeholder too. The
+  // angle-bracket form rejects '=' so real HTML with attributes
+  // (<input type="text">) is not mistaken for a template placeholder.
+  const textOutsideCode = lines
+    .filter((line) => !line.inFence)
     .map((line) => line.text)
     .join('\n');
-  if (/\bTODO\b|\bFIXME\b|<\s*(?:input|describe|placeholder)[^>]*>/i.test(proseOutsideCode)) {
+  if (/\bTODO\b|\bFIXME\b|<\s*(?:input|describe|placeholder)[^>=]*>/i.test(textOutsideCode)) {
     findings.push({
       criterion: 'Placeholders',
       severity: 'moderate',
@@ -192,23 +195,27 @@ interface ScannedLine {
 /** Single pass that tags each line with fence state and heading info. */
 function scanLines(body: string): ScannedLine[] {
   const result: ScannedLine[] = [];
-  let inFence = false;
+  // The marker that opened the current fence: a ``` block is only closed by ```
+  // and ~~~ only by ~~~, so a ~~~ line inside a backtick fence stays content.
+  // Leading whitespace is deliberately unrestricted — this line scanner has no
+  // container context, and fences nested in list items are indented 4+ columns.
+  let fence: '```' | '~~~' | null = null;
   for (const text of body.split('\n')) {
-    const isDelimiter = /^\s*(```|~~~)/.test(text);
-    if (isDelimiter && !inFence) {
-      inFence = true;
+    const delimiter = /^\s*(```|~~~)/.exec(text)?.[1] as '```' | '~~~' | undefined;
+    if (delimiter && fence === null) {
+      fence = delimiter;
       result.push({ text, inFence: true, isHeading: false });
       continue;
     }
-    if (isDelimiter && inFence) {
+    if (delimiter === fence && fence !== null) {
       result.push({ text, inFence: true, isHeading: false });
-      inFence = false;
+      fence = null;
       continue;
     }
-    const heading = inFence ? null : /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(text);
+    const heading = fence !== null ? null : /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(text);
     result.push({
       text,
-      inFence,
+      inFence: fence !== null,
       isHeading: Boolean(heading),
       ...(heading ? { headingTitle: heading[2], headingDepth: heading[1].length } : {}),
     });
