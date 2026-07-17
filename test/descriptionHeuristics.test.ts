@@ -57,6 +57,18 @@ describe('descriptionHeuristics', () => {
     expect(analyzeDescription('Make it GOOD.').concreteArtifact).toBe(false);
   });
 
+  it('does not treat decimals or version numbers as file extensions', () => {
+    expect(analyzeDescription('Compute pi to 3.14 precision.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Round totals to 0.50 increments.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Convert .md notes.').concreteArtifact).toBe(true);
+    expect(analyzeDescription('Unpack .7z archives.').concreteArtifact).toBe(true);
+  });
+
+  it('matches hyphenated vague terms as whole phrases', () => {
+    expect(analyzeDescription('A general-purpose helper for anything.').vagueTerms).toContain('general-purpose');
+    expect(analyzeDescription('The general approach works well here.').vagueTerms).toContain('general');
+  });
+
   it('tokenizes Latin, Cyrillic, accented, and CJK text', () => {
     expect(tokenize('Format reports')).toEqual(['format', 'reports']);
     expect(tokenize('Форматировать отчёт').length).toBe(2);
@@ -118,6 +130,12 @@ describe('scope-clause selection and artifact signal', () => {
     const analysis = analyzeDescription('Do not use when handling invoices. Use when processing PDF reports.');
     expect(analysis.triggerClause.contentFound).toBe(true);
     expect(analysis.triggerClause.contentTokens).toContain('pdf');
+  });
+
+  it('credits an uppercase ambiguous acronym as single-token clause content', () => {
+    expect(analyzeDescription('Validate assemblies. Use for STEP.').triggerClause.contentFound).toBe(true);
+    expect(analyzeDescription('Validate assemblies. Use for step.').triggerClause.contentFound).toBe(false);
+    expect(analyzeDescription('Validate assemblies. Use for SQL.').triggerClause.contentFound).toBe(true);
   });
 
   it('does not credit generic artifacts without supporting context', () => {

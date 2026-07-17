@@ -15,7 +15,7 @@ export function buildImprovedDescription(
   description: string,
   options: StaticDescriptionQualityOptions = {},
 ): string {
-  const analysis = analyzeDescription(description);
+  const analysis = analyzeDescription(description, options.dictionaries);
   const result = computeStaticDescriptionQuality(description, options);
 
   if (analysis.trimmed === '' || result.label === 'poor') {
@@ -24,10 +24,12 @@ export function buildImprovedDescription(
 
   const base = analysis.trimmed.replace(/[.\s]+$/, '');
   const parts = [`${base}.`];
-  if (!analysis.positiveTriggerPhrase.found) {
+  if (!analysis.triggerClause.markerFound) {
     parts.push('Use when <trigger context>.');
   }
-  if (!(analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found)) {
+  // Restrictive/exclusive markers ("limited to", "only use when") already bound
+  // the scope, so no explicit "Do not use when" clause is appended for them.
+  if (!analysis.boundaryClause.markerFound) {
     parts.push('Do not use when <boundary>.');
   }
   return parts.join(' ');

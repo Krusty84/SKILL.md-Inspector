@@ -49,6 +49,9 @@ export function scoreAnalysis(
 ): StaticDescriptionQualityResult {
   const minLength = options.minLength ?? 40;
   const maxLength = options.maxLength ?? 1024;
+  // A profile may recommend a minimum above the default band ceiling; the band
+  // must never invert ("aim for 600–500").
+  const goodLengthMax = Math.max(GOOD_LENGTH_MAX, minLength);
   const language = options.language ?? 'auto';
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
   const weights = normalizeWeights(options.weights ?? CRITERION_POINTS);
@@ -63,7 +66,7 @@ export function scoreAnalysis(
     0,
     Math.round(weights.lowVagueness - (weights.lowVagueness / 2) * analysis.vagueTerms.length),
   );
-  const lengthPoints = scoreLength(analysis.length, minLength, maxLength, weights.goodLength);
+  const lengthPoints = scoreLength(analysis.length, minLength, maxLength, weights.goodLength, goodLengthMax);
 
   const findings: StaticDescriptionQualityFinding[] = [
     finding(
@@ -130,10 +133,10 @@ export function scoreAnalysis(
       weights.goodLength,
       lengthPoints === weights.goodLength
         ? `Length is ${analysis.length} characters.`
-        : `Length is ${analysis.length} characters (aim for ${minLength}–${GOOD_LENGTH_MAX}).`,
+        : `Length is ${analysis.length} characters (aim for ${minLength}–${goodLengthMax}).`,
       lengthPoints === weights.goodLength
         ? undefined
-        : `Aim for roughly ${minLength}–${GOOD_LENGTH_MAX} characters.`,
+        : `Aim for roughly ${minLength}–${goodLengthMax} characters.`,
     ),
   ];
 
@@ -220,44 +223,62 @@ function scoreLength(
   minLength: number,
   maxLength: number,
   maxPoints: number,
+  goodLengthMax: number,
 ): number {
-  if (length >= minLength && length <= GOOD_LENGTH_MAX) {
+  if (length >= minLength && length <= goodLengthMax) {
     return maxPoints; // recommended range
   }
   if (length >= Math.floor(minLength * 0.6) && length < minLength) {
     return Math.round(maxPoints * 0.5); // slightly short
   }
-  if (length > GOOD_LENGTH_MAX && length <= maxLength) {
+  if (length > goodLengthMax && length <= maxLength) {
     // Graduated: a moderately long description beats a very long one.
-    const mid = GOOD_LENGTH_MAX + Math.floor((maxLength - GOOD_LENGTH_MAX) / 2);
+    const mid = goodLengthMax + Math.floor((maxLength - goodLengthMax) / 2);
     return length <= mid ? Math.round(maxPoints * 0.6) : Math.round(maxPoints * 0.3);
   }
   return 0; // far too short, or over the profile maximum
 }
 
-/** Scales criterion weights to sum to 100 (a no-op when they already do). */
+const WEIGHT_KEYS = [
+  'actionVerb',
+  'triggerPhrase',
+  'concreteArtifact',
+  'boundary',
+  'frontLoaded',
+  'lowVagueness',
+  'goodLength',
+] as const;
+
+/**
+ * Scales criterion weights to integers summing to exactly 100 (largest-remainder
+ * rounding; ties broken by criterion order). Integer weights keep every
+ * per-criterion point value an integer, which preserves the contract that the
+ * findings' `pointsEarned` sum to the score. Integer weight sets already summing
+ * to 100 map to themselves.
+ */
 function normalizeWeights(weights: StaticDescriptionQualityWeights): StaticDescriptionQualityWeights {
-  const total =
-    weights.actionVerb +
-    weights.triggerPhrase +
-    weights.concreteArtifact +
-    weights.boundary +
-    weights.frontLoaded +
-    weights.lowVagueness +
-    weights.goodLength;
-  if (total === 100 || total === 0) {
-    return weights;
+  const total = WEIGHT_KEYS.reduce((sum, key) => sum + weights[key], 0);
+  if (total <= 0) {
+    return weights; // degenerate profile: every criterion scores 0
   }
-  const factor = 100 / total;
-  return {
-    actionVerb: weights.actionVerb * factor,
-    triggerPhrase: weights.triggerPhrase * factor,
-    concreteArtifact: weights.concreteArtifact * factor,
-    boundary: weights.boundary * factor,
-    frontLoaded: weights.frontLoaded * factor,
-    lowVagueness: weights.lowVagueness * factor,
-    goodLength: weights.goodLength * factor,
-  };
+  const scaled = WEIGHT_KEYS.map((key) => (weights[key] * 100) / total);
+  const floored = scaled.map(Math.floor);
+  let remaining = 100 - floored.reduce((sum, value) => sum + value, 0);
+  const byRemainder = scaled
+    .map((value, index) => ({ index, remainder: value - floored[index] }))
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (const { index } of byRemainder) {
+    if (remaining <= 0) {
+      break;
+    }
+    floored[index] += 1;
+    remaining -= 1;
+  }
+  const normalized = {} as Record<(typeof WEIGHT_KEYS)[number], number>;
+  WEIGHT_KEYS.forEach((key, index) => {
+    normalized[key] = floored[index];
+  });
+  return normalized;
 }
 
 function finding(

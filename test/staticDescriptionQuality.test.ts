@@ -124,6 +124,16 @@ describe('computeStaticDescriptionQuality', () => {
     expect(good('x'.repeat(501))).toBeGreaterThan(good('x'.repeat(1000)));
     expect(good('x'.repeat(1100))).toBe(0); // over the 1024 maximum
   });
+
+  it('keeps the recommended band coherent when minLength exceeds the default ceiling', () => {
+    const atMin = computeStaticDescriptionQuality('x'.repeat(600), { minLength: 600, maxLength: 2048 });
+    expect(atMin.findings.find((f) => f.criterion === 'Good length')?.pointsEarned).toBe(10);
+
+    const short = computeStaticDescriptionQuality('x'.repeat(550), { minLength: 600, maxLength: 2048 });
+    const shortFinding = short.findings.find((f) => f.criterion === 'Good length')!;
+    expect(shortFinding.pointsEarned).toBe(5); // slightly short, not "over the ceiling"
+    expect(shortFinding.message).toContain('600–600'); // never an inverted "600–500" band
+  });
 });
 
 describe('computeStaticDescriptionQuality language support', () => {

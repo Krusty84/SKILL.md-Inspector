@@ -15,7 +15,7 @@ export interface ArtifactEvidence {
 export interface FrontLoadedIntentResult { found: boolean; pattern?: 'capability-first' | 'use-when-first' | 'when-asked-first'; matchedCapability?: string; matchedObject?: string; }
 export interface DescriptionAnalysis {
   raw: string; trimmed: string; length: number; wordCount: number; leadingText: string;
-  actionVerb: PhraseMatch; positiveTriggerPhrase: PhraseMatch; negativeBoundaryPhrase: PhraseMatch; exclusiveTriggerPhrase: PhraseMatch;
+  actionVerb: PhraseMatch; exclusiveTriggerPhrase: PhraseMatch;
   concreteArtifact: boolean; artifactEvidence: ArtifactEvidence; vagueTerms: string[];
   triggerClause: ScopeClauseAnalysis; boundaryClause: ScopeClauseAnalysis; frontLoadedIntent: FrontLoadedIntentResult;
 }
@@ -26,7 +26,7 @@ export function analyzeDescription(description: string, dictionaries: HeuristicD
   const boundaryClause = assessScopeClause(trimmed, 'boundary', dictionaries);
   const artifactEvidence = analyzeArtifactEvidence(trimmed, dictionaries);
   return { raw, trimmed, length: trimmed.length, wordCount: trimmed.split(/\s+/).filter(Boolean).length, leadingText: trimmed.split(/\s+/).slice(0, 12).join(' ').toLowerCase(),
-    actionVerb: matchVerb(tokens, dictionaries), positiveTriggerPhrase: triggerClause, negativeBoundaryPhrase: boundaryClause,
+    actionVerb: matchVerb(tokens, dictionaries),
     exclusiveTriggerPhrase: matchPhrase(trimmed, dictionaries.exclusiveTriggerPhrases), concreteArtifact: artifactEvidence.found, artifactEvidence,
     vagueTerms: findVagueTerms(trimmed, tokens, dictionaries), triggerClause, boundaryClause, frontLoadedIntent: analyzeFrontLoadedIntent(trimmed, dictionaries) };
 }
@@ -44,7 +44,7 @@ export function analyzeFrontLoadedIntent(description: string, dictionaries: Heur
 export function hasPositiveTriggerPhrase(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return assessScopeClause(description, 'trigger', dictionaries); }
 export function hasNegativeBoundaryPhrase(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return matchPhrase(description, dictionaries.negativeBoundaryPhrases); }
 export function hasExclusiveTriggerPhrase(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch { return matchPhrase(description, dictionaries.exclusiveTriggerPhrases); }
-export function findVagueTerms(text: string, tokens: string[] = tokenize(text), dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] { const forms = tokenForms(tokens); return [...dictionaries.vagueTerms].filter((term) => term.includes(' ') ? phraseRegex(term).test(text) : forms.has(term)).sort(); }
+export function findVagueTerms(text: string, tokens: string[] = tokenize(text), dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] { const forms = tokenForms(tokens); return [...dictionaries.vagueTerms].filter((term) => (/^[\p{L}\p{N}]+$/u.test(term) ? forms.has(term) : phraseRegex(term).test(text))).sort(); }
 function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries): PhraseMatch { const forms = buildVerbForms(dictionaries.actionVerbs).forms; const token = tokens.find((entry) => forms.has(entry)); return token ? { found: true, matched: token } : { found: false }; }
 function matchPhrase(text: string, phrases: readonly string[]): PhraseMatch { const matched = [...phrases].sort().find((phrase) => phraseRegex(phrase).test(text)); return matched ? { found: true, matched } : { found: false }; }
 const CLAUSE_STOPWORDS = new Set(['the','a','an','to','when','for','only','user','this','that','skill','of','in','on','with','and','or','is','are','it','its','you','your','be','as','by']);
@@ -62,9 +62,13 @@ export function assessScopeClause(description: string, kind: 'trigger' | 'bounda
   const candidates = occurrences.map((occurrence): Candidate => {
     const nextMarker = occurrences.filter((other) => other.index > occurrence.index).map((other) => other.index).sort((a,b)=>a-b)[0] ?? Infinity;
     const terminator = /(?:[!?;\n]|\.(?=\s|$))/.exec(description.slice(occurrence.end)); const end = Math.min(nextMarker, terminator ? occurrence.end + terminator.index : Infinity, description.length);
-    const clauseText = description.slice(occurrence.end, end).trim(); const contentTokens = tokenize(clauseText).filter((token) => !CLAUSE_STOPWORDS.has(token));
+    const clauseText = description.slice(occurrence.end, end).trim();
+    // Single-token evidence needs the original casing: ambiguous acronyms (STEP, CI)
+    // only count when written in uppercase, which tokenize() would erase.
+    const pairs = (clauseText.match(/[\p{L}\p{N}]+/gu) ?? []).map((raw) => ({ raw, lower: raw.toLowerCase() })).filter((pair) => !CLAUSE_STOPWORDS.has(pair.lower));
+    const contentTokens = pairs.map((pair) => pair.lower);
     const vagueTokens = contentTokens.filter((token) => CLAUSE_VAGUE_TOKENS.has(token) || dictionaries.vagueTerms.includes(token));
-    const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token)); const contentFound = meaningful.length >= 2 || (meaningful.length === 1 && analyzeArtifactEvidence(meaningful[0], dictionaries).found);
+    const meaningful = pairs.filter((pair) => !vagueTokens.includes(pair.lower)); const contentFound = meaningful.length >= 2 || (meaningful.length === 1 && analyzeArtifactEvidence(meaningful[0].raw, dictionaries).found);
     return { found: true, markerFound: true, contentFound, contentTokens, vagueTokens, matched: occurrence.marker, matchedPhrase: occurrence.marker, matchedOffset: occurrence.index, clauseText, marker: occurrence.marker, absoluteOffset: occurrence.index };
   }).sort((a,b) => Number(b.contentFound) - Number(a.contentFound) || a.absoluteOffset - b.absoluteOffset || a.marker.localeCompare(b.marker));
   const selected = candidates[0]; return selected ?? { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
@@ -77,7 +81,8 @@ export function analyzeArtifactEvidence(text: string, dictionaries: HeuristicDic
   const phraseTerms = dictionaries.multiWordArtifacts.filter((term) => phraseMatchesNormalized(normalized, term));
   const acronymTerms = dictionaries.acronyms.filter((term) => acronymMatches(text, term));
   matchedTerms.push(...phraseTerms, ...acronymTerms);
-  if (/\.[a-z0-9]{2,4}\b/i.test(text)) matchedTerms.push('file extension');
+  // A file extension needs at least one letter — "3.14" / "1.20" are numbers, not files.
+  if (/\.(?!\d+\b)[a-z0-9]{2,4}\b/i.test(text)) matchedTerms.push('file extension');
   const unique = [...new Set(matchedTerms)].sort();
   if (unique.length) return { found: true, strength: 'high-signal', matchedTerms: unique, supportingTerms: [] };
   const lows = [...low].filter((term) => forms.has(term));
