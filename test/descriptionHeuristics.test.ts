@@ -83,7 +83,7 @@ describe('descriptionHeuristics', () => {
     expect(isFrontLoaded('generates release notes from commit history')).toBe(true);
     expect(isFrontLoaded('format reports')).toBe(true);
     expect(isFrontLoaded('analyze log files')).toBe(true);
-    expect(isFrontLoaded('analyze when needed')).toBe(false); // verb, no object
+    expect(isFrontLoaded('analyze when needed')).toBe(false); // verb, no meaningful task
     expect(isFrontLoaded('analyze and help when needed')).toBe(false);
     expect(isFrontLoaded('a general utility for teams that can analyze many things')).toBe(false);
   });

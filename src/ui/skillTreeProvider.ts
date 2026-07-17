@@ -158,11 +158,11 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None,
     );
-    item.description = `TQ ${skill.triggerQualityScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
+    item.description = `SDQ ${skill.staticDescriptionQuality} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
     item.tooltip = new vscode.MarkdownString(
       [
         `**${skill.name}**  \n`,
-        `Heuristic Trigger Quality: ${skill.triggerQualityScore}/100 (${skill.triggerQualityLabel})  \n`,
+        `Heuristic Static Description Quality: ${skill.staticDescriptionQuality}/100 (${skill.staticDescriptionQualityLabel})  \n`,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
         `Portability: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}  \n`,
         `_Heuristic score — deterministic, and does not guarantee an agent will select this skill at runtime._`,

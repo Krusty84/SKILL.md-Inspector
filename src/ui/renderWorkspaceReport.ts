@@ -56,12 +56,12 @@ export function renderWorkspaceReportHtml(
 <body>
   <h1>Workspace Skill Report</h1>
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
-  <p class="note">Trigger Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
+  <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
 
   <h2>Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th>Name</th><th>Heuristic Trigger Quality</th><th>Errors</th><th>Warnings</th>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
+      <thead><tr><th>Name</th><th>Heuristic Static Description Quality</th><th>Errors</th><th>Warnings</th>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -83,7 +83,7 @@ export function renderWorkspaceReportHtml(
 
 function renderSkillRow(skill: WorkspaceSkill): string {
   const cells = PROFILES.map((profile) => statusCell(skill.profileCompatibility[profile])).join('');
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td>${skill.triggerQualityScore}/100 · ${skill.triggerQualityLabel}</td><td>${skill.errors}</td><td>${skill.warnings}</td>${cells}</tr>`;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td>${skill.staticDescriptionQuality}/100 · ${skill.staticDescriptionQualityLabel}</td><td>${skill.errors}</td><td>${skill.warnings}</td>${cells}</tr>`;
 }
 
 function renderCollisions(collisions: SkillCollision[]): string {

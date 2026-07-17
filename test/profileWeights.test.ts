@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTriggerQuality } from '../src/quality/triggerQualityScore';
+import { computeStaticDescriptionQuality } from '../src/quality/staticDescriptionQuality';
 import { genericProfile } from '../src/profiles/genericProfile';
 import { codexProfile } from '../src/profiles/codexProfile';
 import type { SkillProfile } from '../src/types/SkillProfile';
@@ -16,15 +16,15 @@ const opts = (p: SkillProfile) => ({
 
 describe('profile-dependent trigger-quality weights', () => {
   it('lets the generic profile reach excellent without a boundary', () => {
-    const result = computeTriggerQuality(NO_BOUNDARY, opts(genericProfile));
+    const result = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
     expect(result.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned).toBe(0);
     expect(result.score).toBeGreaterThanOrEqual(90);
     expect(result.label).toBe('excellent');
   });
 
   it('weights the missing boundary more heavily under codex', () => {
-    const generic = computeTriggerQuality(NO_BOUNDARY, opts(genericProfile));
-    const codex = computeTriggerQuality(NO_BOUNDARY, opts(codexProfile));
+    const generic = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
+    const codex = computeStaticDescriptionQuality(NO_BOUNDARY, opts(codexProfile));
     expect(codex.score).toBeLessThan(generic.score);
     expect(codex.label).not.toBe('excellent');
   });
@@ -41,6 +41,6 @@ describe('profile-dependent trigger-quality weights', () => {
     };
     const full =
       'Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.';
-    expect(computeTriggerQuality(full, { weights: doubled }).score).toBeCloseTo(100, 5);
+    expect(computeStaticDescriptionQuality(full, { weights: doubled }).score).toBeCloseTo(100, 5);
   });
 });

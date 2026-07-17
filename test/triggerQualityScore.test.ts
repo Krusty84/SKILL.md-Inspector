@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { computeTriggerQuality, labelFor } from '../src/quality/triggerQualityScore';
+import { computeStaticDescriptionQuality, labelFor } from '../src/quality/staticDescriptionQuality';
 
 const EXCELLENT =
   'Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.';
 
-describe('computeTriggerQuality', () => {
+describe('computeStaticDescriptionQuality', () => {
   it('gives full marks to a complete, trigger-friendly description', () => {
-    const result = computeTriggerQuality(EXCELLENT);
+    const result = computeStaticDescriptionQuality(EXCELLENT);
     expect(result.score).toBe(100);
     expect(result.label).toBe('excellent');
     expect(result.findings).toHaveLength(7);
@@ -16,13 +16,13 @@ describe('computeTriggerQuality', () => {
   });
 
   it('scores the vague example from the brief as poor', () => {
-    const result = computeTriggerQuality('Helps with documents.');
+    const result = computeStaticDescriptionQuality('Helps with documents.');
     expect(result.label).toBe('poor');
     expect(result.score).toBeLessThan(40);
   });
 
   it('awards points per criterion and never exceeds 100', () => {
-    const result = computeTriggerQuality('Format reports.');
+    const result = computeStaticDescriptionQuality('Format reports.');
     const verb = result.findings.find((f) => f.criterion.startsWith('Action verb'));
     const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
     expect(verb?.pointsEarned).toBe(20);
@@ -32,7 +32,7 @@ describe('computeTriggerQuality', () => {
   });
 
   it('does not award trigger points to a negative-only description', () => {
-    const result = computeTriggerQuality('Format reports. Do not use when handling PDFs.');
+    const result = computeStaticDescriptionQuality('Format reports. Do not use when handling PDFs.');
     const verb = result.findings.find((f) => f.criterion.startsWith('Action verb'));
     const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
     const boundary = result.findings.find((f) => f.criterion === 'Boundary phrase');
@@ -43,7 +43,7 @@ describe('computeTriggerQuality', () => {
 
   it('awards no artifact points for arbitrary uppercase words but still credits acronyms (Task 72)', () => {
     const artifactPoints = (desc: string): number =>
-      computeTriggerQuality(desc).findings.find((f) => f.criterion.startsWith('Concrete artifact'))!
+      computeStaticDescriptionQuality(desc).findings.find((f) => f.criterion.startsWith('Concrete artifact'))!
         .pointsEarned;
     // Regression: "any run of uppercase letters" used to count as a concrete artifact.
     expect(artifactPoints('Format IMPORTANT THINGS.')).toBe(0);
@@ -55,7 +55,7 @@ describe('computeTriggerQuality', () => {
   });
 
   it('awards both trigger and boundary points for "only use when"', () => {
-    const result = computeTriggerQuality(
+    const result = computeStaticDescriptionQuality(
       'Format release notes. Only use when preparing a tagged release.',
     );
     const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
@@ -65,13 +65,13 @@ describe('computeTriggerQuality', () => {
   });
 
   it('deducts for vague wording', () => {
-    const withVague = computeTriggerQuality('Format powerful reports. Use when needed.');
+    const withVague = computeStaticDescriptionQuality('Format powerful reports. Use when needed.');
     const vagueFinding = withVague.findings.find((f) => f.criterion === 'Low vagueness');
     expect(vagueFinding?.pointsEarned).toBe(5);
   });
 
   it('respects a configurable minimum length', () => {
-    const strict = computeTriggerQuality('Format inspection reports. Use when needed.', {
+    const strict = computeStaticDescriptionQuality('Format inspection reports. Use when needed.', {
       minLength: 200,
     });
     const lengthFinding = strict.findings.find((f) => f.criterion === 'Good length');
@@ -80,59 +80,59 @@ describe('computeTriggerQuality', () => {
 
   it('penalizes length gradually and zeroes out over the maximum', () => {
     const good = (text: string) =>
-      computeTriggerQuality(text).findings.find((f) => f.criterion === 'Good length')!.pointsEarned;
+      computeStaticDescriptionQuality(text).findings.find((f) => f.criterion === 'Good length')!.pointsEarned;
     expect(good('x'.repeat(501))).toBeGreaterThan(good('x'.repeat(1000)));
     expect(good('x'.repeat(1100))).toBe(0); // over the 1024 maximum
   });
 });
 
-describe('computeTriggerQuality language support', () => {
+describe('computeStaticDescriptionQuality language support', () => {
   const CYRILLIC = 'Форматировать инспекционные отчёты. Использовать когда нужно готовить.';
 
   it('flags a non-English description as partial in auto mode', () => {
-    const result = computeTriggerQuality(CYRILLIC, { language: 'auto' });
+    const result = computeStaticDescriptionQuality(CYRILLIC, { language: 'auto' });
     expect(result.partial).toBe(true);
     expect(result.findings.some((f) => f.criterion === 'Language support')).toBe(true);
   });
 
   it('does not flag English descriptions and keeps 7 findings', () => {
-    const result = computeTriggerQuality(EXCELLENT, { language: 'auto' });
+    const result = computeStaticDescriptionQuality(EXCELLENT, { language: 'auto' });
     expect(result.partial).toBeUndefined();
     expect(result.findings).toHaveLength(7);
   });
 
   it('forces English heuristics in "en" mode (no language finding)', () => {
-    const result = computeTriggerQuality(CYRILLIC, { language: 'en' });
+    const result = computeStaticDescriptionQuality(CYRILLIC, { language: 'en' });
     expect(result.partial).toBeUndefined();
     expect(result.findings.some((f) => f.criterion === 'Language support')).toBe(false);
   });
 });
 
-describe('computeTriggerQuality confidence (Task 79)', () => {
+describe('computeStaticDescriptionQuality coverage (Task 79)', () => {
   it('is high for a sufficient English description with no limitations', () => {
-    const result = computeTriggerQuality(EXCELLENT);
-    expect(result.confidence).toBe('high');
+    const result = computeStaticDescriptionQuality(EXCELLENT);
+    expect(result.coverage).toBe('high');
     expect(result.limitations).toEqual([]);
   });
 
   it('is low for a non-English description and lists a limitation', () => {
-    const result = computeTriggerQuality(
+    const result = computeStaticDescriptionQuality(
       'Форматировать инспекционные отчёты. Использовать когда нужно готовить.',
       { language: 'auto' },
     );
-    expect(result.confidence).toBe('low');
+    expect(result.coverage).toBe('low');
     expect(result.limitations.length).toBeGreaterThan(0);
   });
 
   it('is low for an empty description', () => {
-    const result = computeTriggerQuality('');
-    expect(result.confidence).toBe('low');
+    const result = computeStaticDescriptionQuality('');
+    expect(result.coverage).toBe('low');
     expect(result.limitations.length).toBeGreaterThan(0);
   });
 
   it('is medium for a short English description below the recommended minimum', () => {
-    const result = computeTriggerQuality('Format reports.');
-    expect(result.confidence).toBe('medium');
+    const result = computeStaticDescriptionQuality('Format reports.');
+    expect(result.coverage).toBe('medium');
     expect(result.limitations.some((l) => l.toLowerCase().includes('minimum'))).toBe(true);
   });
 });

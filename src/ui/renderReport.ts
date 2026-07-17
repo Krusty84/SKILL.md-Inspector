@@ -1,5 +1,5 @@
 import type { SkillReport } from './reportModel';
-import type { TriggerQualityFinding, TriggerQualityLabel } from '../types/TriggerQuality';
+import type { StaticDescriptionQualityFinding, StaticDescriptionQualityLabel } from '../types/StaticDescriptionQuality';
 
 export interface RenderOptions {
   nonce: string;
@@ -10,7 +10,7 @@ export interface RenderOptions {
 export function renderReportHtml(report: SkillReport, opts: RenderOptions): string {
   const statusClass = report.status === 'pass' ? 'ok' : 'fail';
   const statusLabel = report.status === 'pass' ? 'PASS' : 'FAIL';
-  const q = report.triggerQuality;
+  const q = report.staticDescriptionQuality;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -53,11 +53,11 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 <title>Skill Report</title>
 </head>
 <body>
-  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Heuristic Trigger Quality ${q.score}/100 · ${capitalize(q.label)}</span></h1>
+  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Heuristic Static Description Quality ${q.score}/100 · ${capitalize(q.label)}</span></h1>
   <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
   <div class="grid">
-    ${card('Heuristic Trigger Quality', `<span class="score">${q.score}<span class="max"> / 100</span></span>`)}
-    ${card('Confidence', `<span class="conf-${q.confidence}">${capitalize(q.confidence)}</span>`)}
+    ${card('Heuristic Static Description Quality', `<span class="score">${q.score}<span class="max"> / 100</span></span>`)}
+    ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
@@ -88,7 +88,7 @@ function card(label: string, value: string, valueClass = ''): string {
   return `<div class="card"><div class="label">${label}</div><div class="value ${valueClass}">${value}</div></div>`;
 }
 
-function renderFinding(finding: TriggerQualityFinding): string {
+function renderFinding(finding: StaticDescriptionQualityFinding): string {
   const state =
     finding.pointsEarned === finding.pointsPossible
       ? { cls: 'yes', glyph: '✓' }
@@ -105,7 +105,7 @@ function renderFileList(files: string[], emptyMessage: string): string {
   return `<ul>${files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join('')}</ul>`;
 }
 
-function scoreBadgeClass(label: TriggerQualityLabel): string {
+function scoreBadgeClass(label: StaticDescriptionQualityLabel): string {
   if (label === 'excellent' || label === 'good') return 'q-good';
   if (label === 'acceptable') return 'q-mid';
   return 'q-low';

@@ -1,8 +1,8 @@
 import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
-import type { TriggerQualityResult } from '../types/TriggerQuality';
-import { computeTriggerQuality } from '../quality/triggerQualityScore';
+import type { StaticDescriptionQualityResult } from '../types/StaticDescriptionQuality';
+import { computeStaticDescriptionQuality } from '../quality/staticDescriptionQuality';
 
 export interface SkillReport {
   name: string;
@@ -14,7 +14,7 @@ export interface SkillReport {
   informationCount: number;
   referencedFiles: string[];
   unreferencedFiles: string[];
-  triggerQuality: TriggerQualityResult;
+  staticDescriptionQuality: StaticDescriptionQualityResult;
 }
 
 /**
@@ -35,7 +35,7 @@ export function buildReportModel(
   const description =
     typeof doc.frontmatter?.description === 'string' ? doc.frontmatter.description : '';
 
-  const triggerQuality = computeTriggerQuality(description, {
+  const staticDescriptionQuality = computeStaticDescriptionQuality(description, {
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
     language: profile.description.language,
@@ -52,6 +52,6 @@ export function buildReportModel(
     informationCount,
     referencedFiles: doc.resources.filter((r) => r.referenced).map((r) => r.relativePath),
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
-    triggerQuality,
+    staticDescriptionQuality,
   };
 }

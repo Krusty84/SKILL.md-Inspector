@@ -2,7 +2,7 @@ import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
-import { analyzeDescription, hasActionVerb } from '../quality/descriptionHeuristics';
+import { analyzeDescription } from '../quality/descriptionHeuristics';
 import { diag, keyRange } from './util';
 
 export function validateDescription(
@@ -86,33 +86,37 @@ export function validateDescription(
     );
   }
 
-  if (!analysis.positiveTriggerPhrase.found) {
+  if (!analysis.triggerClause.contentFound) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNoTrigger,
         'warning',
-        '`description` does not explain when to use the skill. Add a trigger clause such as "Use when...".',
+        analysis.triggerClause.markerFound
+          ? '`description` has a trigger marker, but its scope content is too vague. State a concrete context.'
+          : '`description` does not explain when to use the skill. Add a trigger clause such as "Use when...".',
         range,
         { quickFixId: QuickFixId.InsertUseWhenClause },
       ),
     );
   }
 
-  // MVP2: boundary and front-loaded-intent checks explain lost Trigger Quality
+  // MVP2: boundary and front-loaded-intent checks explain lost Static Description Quality
   // points (brief §10.3 / §10.4). Information-level so they stay non-intrusive.
-  if (!(analysis.negativeBoundaryPhrase.found || analysis.exclusiveTriggerPhrase.found)) {
+  if (!analysis.boundaryClause.contentFound) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNoBoundary,
         'information',
-        '`description` does not define when NOT to use the skill. Add a boundary such as "Do not use when...".',
+        analysis.boundaryClause.markerFound
+          ? '`description` has a boundary marker, but its scope content is too vague. State a concrete excluded context.'
+          : '`description` does not define when NOT to use the skill. Add a boundary such as "Do not use when...".',
         range,
         { quickFixId: QuickFixId.InsertDoNotUseClause },
       ),
     );
   }
 
-  if (!hasActionVerb(analysis.leadingText).found) {
+  if (!analysis.frontLoadedIntent.found) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNotFrontLoaded,

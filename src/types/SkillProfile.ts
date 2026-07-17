@@ -39,8 +39,8 @@ export interface BodySectionSpec {
   phrases: string[];
 }
 
-/** Per-criterion weights for the Trigger Quality score. Expected to sum to 100. */
-export interface TriggerQualityWeights {
+/** Per-criterion weights for the Static Description Quality score. Expected to sum to 100. */
+export interface StaticDescriptionQualityWeights {
   actionVerb: number;
   triggerPhrase: number;
   concreteArtifact: number;
@@ -63,7 +63,7 @@ export interface SkillProfile {
     minLength: number;
     maxLength: number;
     language?: DescriptionLanguage;
-    weights?: TriggerQualityWeights;
+    weights?: StaticDescriptionQualityWeights;
   };
   /** Recommended body sections and how strictly to surface them (brief §7.4). */
   body?: {

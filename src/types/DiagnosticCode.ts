@@ -72,6 +72,7 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.NameType]: 'specification',
   [DiagnosticCode.NameTooLong]: 'specification',
   [DiagnosticCode.NameFormat]: 'specification',
+  [DiagnosticCode.NameFolderMismatch]: 'specification',
   [DiagnosticCode.DescriptionMissing]: 'specification',
   [DiagnosticCode.DescriptionType]: 'specification',
   [DiagnosticCode.DescriptionTooLong]: 'specification',
@@ -87,7 +88,6 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.LinkEscapesSkillRoot]: 'security',
   [DiagnosticCode.LinkRemoteSuspicious]: 'security',
   // Quality — discoverability recommendations.
-  [DiagnosticCode.NameFolderMismatch]: 'quality',
   [DiagnosticCode.DescriptionTooShort]: 'quality',
   [DiagnosticCode.DescriptionVague]: 'quality',
   [DiagnosticCode.DescriptionNoVerb]: 'quality',
