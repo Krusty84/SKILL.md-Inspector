@@ -146,7 +146,7 @@ Workspace analysis reads saved files from disk; unlike active-editor analysis, i
 - Profile rules, length limits, and overrides are resolved into one effective profile before analysis rather than read piecemeal in the core.
 - Typing uses a filesystem-free `text-only` pass; a resource cache and file watchers keep the full pass cheap and its inputs fresh.
 - Workspace analysis builds a complete in-memory result and shares it across tree, report, and export; portability is computed independently per profile.
-- Static Description Quality, collision risk, and portability are deterministic heuristics with explicit confidence, not semantic or execution-based guarantees. The `llm/` interface and experimental setting are inert placeholders.
+- Static Description Quality, collision risk, and portability are deterministic heuristics with explicit coverage and limitations (collision results additionally carry an evidence confidence), not semantic or execution-based guarantees. The `llm/` interface and experimental setting are inert placeholders.
 
 ## External Dependencies and Integrations
 
