@@ -189,7 +189,7 @@ describe('OpenCode manifest consistency', () => {
   it('references only declared commands from menus and view welcomes', () => {
     const menuCommands = Object.values(contributes.menus).flat().map((item) => 'command' in item ? item.command : undefined).filter((command): command is string => typeof command === 'string');
     expect(menuCommands.filter((command) => !commandIds.includes(command))).toEqual([]);
-    const welcomeCommands = contributes.viewsWelcome.flatMap((welcome) => [...welcome.contents.matchAll(/command:([^\)\s]+)/g)].map((match) => match[1]));
+    const welcomeCommands = contributes.viewsWelcome.flatMap((welcome) => [...welcome.contents.matchAll(/command:([^)\s]+)/g)].map((match) => match[1]));
     expect(welcomeCommands).toContain('skillMdInspector.openCode.selectSessionsFolder');
     expect(welcomeCommands.filter((command) => !commandIds.includes(command))).toEqual([]);
   });

@@ -2,781 +2,612 @@
   {
     "id": "case-01",
     "language": "en",
-    "description": "Generate release notes deliverables from validated source material. Use when preparing release notes work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Canonical complete description: verb, trigger, boundary, artifact, front-loaded."
   },
   {
     "id": "case-02",
     "language": "en",
-    "description": "Generate customer PDF reports deliverables from validated source material. Use when preparing customer PDF reports work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Use this skill when generating PDF reports from customer invoices. Do not use for scanned images.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Canonical \"Use this skill when ...\" form (regression: previously earned no trigger credit)."
   },
   {
     "id": "case-03",
     "language": "en",
-    "description": "Generate database migration plans deliverables from validated source material. Use when preparing database migration plans work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Generate release notes from merged pull requests. Use when drafting notes for a tagged release. Not intended for hotfix summaries.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete with \"not intended for\" boundary."
   },
   {
     "id": "case-04",
     "language": "en",
-    "description": "Generate incident timelines deliverables from validated source material. Use when preparing incident timelines work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Convert CSV exports to normalized JSON. Use when transforming tabular data files. Avoid when the input is a binary spreadsheet.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete with \"avoid when\" boundary."
   },
   {
     "id": "case-05",
     "language": "en",
-    "description": "Generate accessibility audits deliverables from validated source material. Use when preparing accessibility audits work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Summarize incident logs into a timeline document. Use when the user needs a post-incident review. Do not use for live monitoring.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete with \"when the user needs\" trigger."
   },
   {
     "id": "case-06",
     "language": "en",
-    "description": "Generate localization bundles deliverables from validated source material. Use when preparing localization bundles work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Validate API schemas against the company style guide. Only use when reviewing schema files before a release.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Exclusive \"only use when\" counts as trigger and boundary."
   },
   {
     "id": "case-07",
     "language": "en",
-    "description": "Generate security review checklists deliverables from validated source material. Use when preparing security review checklists work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Extract tables from PDF contracts into CSV files. Use when digitizing signed contracts. Excluding drafts and unsigned copies.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Restrictive \"excluding\" boundary."
   },
   {
     "id": "case-08",
     "language": "en",
-    "description": "Generate API compatibility matrices deliverables from validated source material. Use when preparing API compatibility matrices work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Migrate database schemas between PostgreSQL versions. Use when planning a version upgrade. Do not use for data backfills.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete, technology-specific."
   },
   {
     "id": "case-09",
     "language": "en",
-    "description": "Generate invoice reconciliation summaries deliverables from validated source material. Use when preparing invoice reconciliation summaries work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Review pull request diffs for style violations. Use when preparing a code review checklist. Not intended for security audits.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete, code-domain."
   },
   {
     "id": "case-10",
     "language": "en",
-    "description": "Generate pull request review briefs deliverables from validated source material. Use when preparing pull request review briefs work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Lint YAML configuration files for schema errors. Use when editing deployment configs. Do not use when the file is generated.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete, config-domain."
   },
   {
     "id": "case-11",
     "language": "en",
-    "description": "Generate deployment runbooks deliverables from validated source material. Use when preparing deployment runbooks work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Classify support emails by product area. Use when triaging the shared inbox. Do not use for outbound campaign email.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Complete, email-domain."
   },
   {
     "id": "case-12",
     "language": "en",
-    "description": "Generate compliance evidence packets deliverables from validated source material. Use when preparing compliance evidence packets work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Render Markdown documents into branded HTML templates. Use when publishing documentation pages. Limited to internal documentation sites.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Restrictive \"limited to\" boundary."
   },
   {
     "id": "case-13",
     "language": "en",
-    "description": "Generate test coverage reports deliverables from validated source material. Use when preparing test coverage reports work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Generate commit messages from staged changes. Use when writing a conventional commit.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 75,
+      "maxScore": 95,
       "trigger": "full",
-      "boundary": "full",
+      "boundary": "none",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Trigger but no boundary."
   },
   {
     "id": "case-14",
     "language": "en",
-    "description": "Generate architecture decision records deliverables from validated source material. Use when preparing architecture decision records work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Analyze web server logs for error spikes. Use when investigating an outage.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 75,
+      "maxScore": 95,
       "trigger": "full",
-      "boundary": "full",
+      "boundary": "none",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Trigger but no boundary."
   },
   {
     "id": "case-15",
     "language": "en",
-    "description": "Generate support handoff notes deliverables from validated source material. Use when preparing support handoff notes work for a release. Exclude exploratory drafts and unrelated requests.",
+    "description": "Trigger when the user asks to convert CSV files to JSON.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 65,
+      "maxScore": 85,
       "trigger": "full",
-      "boundary": "full",
-      "frontLoaded": true
+      "boundary": "none",
+      "frontLoaded": false
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Regression: \"trigger when the user ...\" phrasing must count as a trigger."
   },
   {
     "id": "case-16",
     "language": "en",
-    "description": "Help with tasks. Use when needed. Do not use when not needed.",
+    "description": "Create test fixtures for the billing API. Appropriate for integration test suites.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": false
+      "minScore": 75,
+      "maxScore": 95,
+      "trigger": "full",
+      "boundary": "none",
+      "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "\"Appropriate for\" trigger with concrete scope."
   },
   {
     "id": "case-17",
     "language": "en",
-    "description": "Use for tasks. Do not use for other things.",
+    "description": "Format reports. Use for SQL.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": false
+      "minScore": 70,
+      "maxScore": 90,
+      "trigger": "full",
+      "boundary": "none",
+      "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Short but concrete: single-acronym trigger tail counts as content."
   },
   {
     "id": "case-18",
     "language": "en",
-    "description": "Analyze data. Use when processing files. Do not use when not needed.",
+    "description": "When asked to summarize a design document, extract the decisions and open questions.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": false
+      "minScore": 75,
+      "maxScore": 95,
+      "trigger": "full",
+      "boundary": "none",
+      "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "\"When asked to\" front-loaded pattern."
   },
   {
     "id": "case-19",
     "language": "en",
-    "description": "Use this skill when generating release notes from commit history. Exclude untagged draft notes.",
+    "description": "Formats SQL queries for readability. Not intended for query optimization.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "full",
+      "minScore": 70,
+      "maxScore": 90,
+      "trigger": "none",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Regression: a negative sentence must not count as a positive trigger."
   },
   {
     "id": "case-20",
     "language": "en",
-    "description": "When asked to review a pull request, inspect the patch and unresolved comments. Avoid when only summarizing a repository.",
+    "description": "Normalize image assets for the docs site. Do not use when the image exceeds ten megabytes.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "full",
+      "minScore": 70,
+      "maxScore": 90,
+      "trigger": "none",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Boundary only."
   },
   {
     "id": "case-21",
     "language": "en",
-    "description": "Appropriate for reconciling telemetry anomalies in service traces. Excluding product roadmap decisions.",
+    "description": "Analyze logs. Use when appropriate for tasks.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "full",
-      "boundary": "full",
-      "frontLoaded": false
+      "minScore": 60,
+      "maxScore": 80,
+      "trigger": "partial",
+      "boundary": "none",
+      "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Trigger marker with vague tail earns only partial credit."
   },
   {
     "id": "case-22",
     "language": "en",
-    "description": "Intended for creating BIM clash summaries for construction coordination. Not intended for legal opinions.",
+    "description": "Format documents for the team. Use when needed.",
+    "expected": {
+      "minScore": 60,
+      "maxScore": 80,
+      "trigger": "partial",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Classic vague trigger."
+  },
+  {
+    "id": "case-23",
+    "language": "en",
+    "description": "Generate summaries of long documents. Do not use when it is not needed.",
+    "expected": {
+      "minScore": 59,
+      "maxScore": 79,
+      "trigger": "none",
+      "boundary": "partial",
+      "frontLoaded": true
+    },
+    "notes": "Boundary marker with vague tail."
+  },
+  {
+    "id": "case-24",
+    "language": "en",
+    "description": "Convert files. Use for things.",
+    "expected": {
+      "minScore": 55,
+      "maxScore": 75,
+      "trigger": "partial",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Both clauses vague."
+  },
+  {
+    "id": "case-25",
+    "language": "en",
+    "description": "Generate weekly status reports from the project tracker with grouped highlights.",
+    "expected": {
+      "minScore": 55,
+      "maxScore": 75,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Capability and artifact only."
+  },
+  {
+    "id": "case-26",
+    "language": "en",
+    "description": "Extract invoice totals from scanned PDF documents into a spreadsheet.",
+    "expected": {
+      "minScore": 55,
+      "maxScore": 75,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Capability and artifact only."
+  },
+  {
+    "id": "case-27",
+    "language": "en",
+    "description": "Debug failing CI pipelines by reading the job logs.",
+    "expected": {
+      "minScore": 55,
+      "maxScore": 75,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Capability and artifact, no scope clauses."
+  },
+  {
+    "id": "case-28",
+    "language": "en",
+    "description": "Helps with documents.",
+    "expected": {
+      "minScore": 10,
+      "maxScore": 30,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Vague example from the brief; should stay poor."
+  },
+  {
+    "id": "case-29",
+    "language": "en",
+    "description": "A powerful and smart assistant for various things.",
     "expected": {
       "minScore": 0,
+      "maxScore": 20,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Stacked vague wording, no verb."
+  },
+  {
+    "id": "case-30",
+    "language": "en",
+    "description": "This skill is useful for general work and can help with anything.",
+    "expected": {
+      "minScore": 0,
+      "maxScore": 20,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Maximally vague."
+  },
+  {
+    "id": "case-31",
+    "language": "en",
+    "description": "Makes everything better.",
+    "expected": {
+      "minScore": 0,
+      "maxScore": 20,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Vague, no artifact."
+  },
+  {
+    "id": "case-32",
+    "language": "en",
+    "description": "An assistant.",
+    "expected": {
+      "minScore": 0,
+      "maxScore": 15,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Near-empty."
+  },
+  {
+    "id": "case-33",
+    "language": "en",
+    "description": "Formats.",
+    "expected": {
+      "minScore": 20,
+      "maxScore": 40,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Far below minimum length."
+  },
+  {
+    "id": "case-34",
+    "language": "en",
+    "description": "Format reports.",
+    "expected": {
+      "minScore": 45,
+      "maxScore": 65,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Below recommended minimum, otherwise fine."
+  },
+  {
+    "id": "case-35",
+    "language": "en",
+    "description": "Generate customer-facing release notes from merged pull requests and linked tickets. Use when drafting the notes for a tagged release. Do not use for internal hotfix summaries. It cross-references every ticket and produces a grouped changelog section per component. It cross-references every ticket and produces a grouped changelog section per component. It cross-references every ticket and produces a grouped changelog section per component. It cross-references every ticket and produces a grouped changelog section per component. It cross-references every ticket and produces a grouped changelog section per component. It cross-references every ticket and produces a grouped changelog section per component. ",
+    "expected": {
+      "minScore": 86,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Over the 500-character comfortable band but under the profile maximum."
+  },
+  {
+    "id": "case-36",
+    "language": "en",
+    "description": "Generate customer-facing release notes. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. This sentence pads the description well past any reasonable maximum length so the length criterion must award zero points. ",
+    "expected": {
+      "minScore": 45,
+      "maxScore": 65,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Over the 1024-character profile maximum."
+  },
+  {
+    "id": "case-37",
+    "language": "en",
+    "description": "Format IMPORTANT THINGS. Use when working on updates.",
+    "expected": {
+      "minScore": 50,
+      "maxScore": 70,
+      "trigger": "full",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Uppercase words are not artifacts (regression)."
+  },
+  {
+    "id": "case-38",
+    "language": "en",
+    "description": "ONLY USE WHEN PREPARING A TAGGED RELEASE. FORMAT RELEASE NOTES.",
+    "expected": {
+      "minScore": 80,
       "maxScore": 100,
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": false
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-23",
-    "language": "ru",
-    "description": "Создавай отчёты по проверкам. Используй для подготовки отчётов. Не используй для юридических заключений.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "none",
-      "frontLoaded": false
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-24",
-    "language": "ru",
-    "description": "Помогает с задачами.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "none",
-      "frontLoaded": false
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-25",
-    "language": "other",
-    "description": "Générer des notes de version à partir des commits.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "none",
-      "frontLoaded": false
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-26",
-    "language": "other",
-    "description": "生成发布说明。",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "none",
-      "frontLoaded": false
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-27",
-    "language": "en",
-    "description": "Generate domain artifact 26 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-28",
-    "language": "en",
-    "description": "Generate domain artifact 27 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-29",
-    "language": "en",
-    "description": "Generate domain artifact 28 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-30",
-    "language": "en",
-    "description": "Generate domain artifact 29 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-31",
-    "language": "en",
-    "description": "Generate domain artifact 30 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-32",
-    "language": "en",
-    "description": "Generate domain artifact 31 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-33",
-    "language": "en",
-    "description": "Generate domain artifact 32 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-34",
-    "language": "en",
-    "description": "Generate domain artifact 33 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-35",
-    "language": "en",
-    "description": "Generate domain artifact 34 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-36",
-    "language": "en",
-    "description": "Generate domain artifact 35 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-37",
-    "language": "en",
-    "description": "Generate domain artifact 36 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-38",
-    "language": "en",
-    "description": "Generate domain artifact 37 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "All-caps input must still match phrases case-insensitively."
   },
   {
     "id": "case-39",
     "language": "en",
-    "description": "Generate domain artifact 38 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "description": "Use when converting .xlsx workbooks to .csv files. Do not use for .pdf exports.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
-      "trigger": "none",
+      "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "File extensions count as concrete artifacts."
   },
   {
     "id": "case-40",
     "language": "en",
-    "description": "Generate domain artifact 39 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "description": "convert markdown tables to csv. use when cleaning documentation. do not use for html tables.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
-      "trigger": "none",
+      "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "All lower-case still analyzable."
   },
   {
     "id": "case-41",
-    "language": "en",
-    "description": "Generate domain artifact 40 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "language": "ru",
+    "description": "Форматировать инспекционные отчёты по стандартным правилам. Использовать при подготовке отчётов.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 10,
+      "maxScore": 30,
       "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
+      "boundary": "none",
+      "frontLoaded": false
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Russian: analysis is language-limited; only structural scoring applies."
   },
   {
     "id": "case-42",
-    "language": "en",
-    "description": "Generate domain artifact 41 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "language": "ru",
+    "description": "Генерирует отчёты о релизах из истории коммитов.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 10,
+      "maxScore": 30,
       "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
+      "boundary": "none",
+      "frontLoaded": false
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Russian capability sentence."
   },
   {
     "id": "case-43",
-    "language": "en",
-    "description": "Generate domain artifact 42 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "language": "ja",
+    "description": "日本語のテキストを要約するスキルです。",
     "expected": {
       "minScore": 0,
-      "maxScore": 100,
+      "maxScore": 20,
       "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
+      "boundary": "none",
+      "frontLoaded": false
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "CJK text is language-limited."
   },
   {
     "id": "case-44",
     "language": "en",
-    "description": "Generate domain artifact 43 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "description": "Format release notes. Do not use when handling PDFs.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 70,
+      "maxScore": 90,
       "trigger": "none",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Negative clause must not leak into the trigger criterion."
   },
   {
     "id": "case-45",
     "language": "en",
-    "description": "Generate domain artifact 44 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "description": "Summarize meeting notes into action items. Don't use for legal transcripts.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 55,
+      "maxScore": 75,
       "trigger": "none",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Contraction form of the negative boundary."
   },
   {
     "id": "case-46",
     "language": "en",
-    "description": "Generate domain artifact 45 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "description": "Generate SQL migration scripts. Never use for production hotfixes. Use when preparing a scheduled schema change.",
     "expected": {
-      "minScore": 0,
+      "minScore": 90,
       "maxScore": 100,
-      "trigger": "none",
+      "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Both a \"never use for\" boundary and a real trigger."
   },
   {
     "id": "case-47",
     "language": "en",
-    "description": "Generate domain artifact 46 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
+    "description": "Not intended for anything specific.",
     "expected": {
-      "minScore": 0,
-      "maxScore": 100,
+      "minScore": 4,
+      "maxScore": 24,
       "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
+      "boundary": "partial",
+      "frontLoaded": false
     },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-48",
-    "language": "en",
-    "description": "Generate domain artifact 47 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-49",
-    "language": "en",
-    "description": "Generate domain artifact 48 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-50",
-    "language": "en",
-    "description": "Generate domain artifact 49 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-51",
-    "language": "en",
-    "description": "Generate domain artifact 50 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-52",
-    "language": "en",
-    "description": "Generate domain artifact 51 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-53",
-    "language": "en",
-    "description": "Generate domain artifact 52 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-54",
-    "language": "en",
-    "description": "Generate domain artifact 53 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-55",
-    "language": "en",
-    "description": "Generate domain artifact 54 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-56",
-    "language": "en",
-    "description": "Generate domain artifact 55 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-57",
-    "language": "en",
-    "description": "Generate domain artifact 56 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-58",
-    "language": "en",
-    "description": "Generate domain artifact 57 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-59",
-    "language": "en",
-    "description": "Generate domain artifact 58 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
-  },
-  {
-    "id": "case-60",
-    "language": "en",
-    "description": "Generate domain artifact 59 from source records. Use for a concrete operational review with evidence. Do not use for unrelated brainstorming.",
-    "expected": {
-      "minScore": 0,
-      "maxScore": 100,
-      "trigger": "none",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Curated static heuristic expectation; ranges deliberately tolerate weighting changes."
+    "notes": "Boundary marker with vague tail and nothing else."
   }
 ]

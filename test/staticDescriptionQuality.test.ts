@@ -54,6 +54,46 @@ describe('computeStaticDescriptionQuality', () => {
     );
   });
 
+  it('credits the canonical "Use this skill when ..." trigger form', () => {
+    const result = computeStaticDescriptionQuality(
+      'Generate PDF reports from customer invoices. Use this skill when preparing customer reports. Do not use for scanned images.',
+    );
+    const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
+    expect(trigger?.pointsEarned).toBe(20);
+    expect(result.score).toBe(100);
+  });
+
+  it('credits "Trigger when the user ..." as a usage trigger', () => {
+    const trigger = computeStaticDescriptionQuality(
+      'Trigger when the user asks to convert CSV files to JSON.',
+    ).findings.find((f) => f.criterion === 'Usage trigger phrase');
+    expect(trigger?.pointsEarned).toBe(20);
+  });
+
+  it('does not credit "Not intended for ..." as a positive trigger', () => {
+    const result = computeStaticDescriptionQuality(
+      'Formats SQL queries for readability. Not intended for query optimization.',
+    );
+    const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
+    const boundary = result.findings.find((f) => f.criterion === 'Boundary phrase');
+    expect(trigger?.pointsEarned).toBe(0);
+    expect(boundary?.pointsEarned).toBe(15);
+  });
+
+  it('accepts a single concrete artifact as trigger scope content ("Use for SQL.")', () => {
+    const trigger = computeStaticDescriptionQuality('Format reports. Use for SQL.').findings.find(
+      (f) => f.criterion === 'Usage trigger phrase',
+    );
+    expect(trigger?.pointsEarned).toBe(20);
+  });
+
+  it('gives only partial credit when the trigger scope is vague', () => {
+    const trigger = computeStaticDescriptionQuality(
+      'Analyze logs. Use when appropriate for tasks.',
+    ).findings.find((f) => f.criterion === 'Usage trigger phrase');
+    expect(trigger?.pointsEarned).toBe(5); // marker present, content too vague
+  });
+
   it('awards both trigger and boundary points for "only use when"', () => {
     const result = computeStaticDescriptionQuality(
       'Format release notes. Only use when preparing a tagged release.',

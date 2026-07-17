@@ -6,6 +6,8 @@ import {
   POSITIVE_TRIGGER_PHRASES,
   NEGATIVE_BOUNDARY_PHRASES,
   EXCLUSIVE_TRIGGER_PHRASES,
+  TRIGGER_SCOPE_MARKERS,
+  BOUNDARY_SCOPE_MARKERS,
 } from './triggerPhrases';
 
 export interface PhraseMatch {
@@ -86,14 +88,26 @@ export function isFrontLoaded(leadingText: string): boolean {
   return analyzeFrontLoadedIntent(leadingText).found;
 }
 
+/** Filler tokens that can never serve as the "object" of a front-loaded capability. */
+const FRONT_LOADED_FILLER = new Set([
+  'this', 'skill', 'when', 'asked', 'the', 'user', 'for', 'from', 'with', 'and',
+  'help', 'needed', 'needs', 'that', 'them', 'they', 'you', 'your', 'any', 'all',
+]);
+
 /** Shared deterministic evidence used by both scoring and diagnostics. */
 export function analyzeFrontLoadedIntent(description: string): FrontLoadedIntentResult {
   const leading = description.split(/(?<=[.!?])\s+/).slice(0, 1)[0] ?? '';
   const tokens = tokenize(leading);
   const capability = tokens.find((token) => ACTION_VERB_FORMS.has(token));
-  const object = tokens.find((token) => !ACTION_VERB_FORMS.has(token) && token.length > 2 && !['this', 'skill', 'when', 'asked', 'the', 'user', 'for', 'from', 'with', 'and', 'help', 'needed'].includes(token));
+  const object = tokens.find(
+    (token) =>
+      !ACTION_VERB_FORMS.has(token) &&
+      token.length > 2 &&
+      !FRONT_LOADED_FILLER.has(token) &&
+      !VAGUE_TERMS.includes(token),
+  );
   const concrete = hasConcreteArtifact(leading, tokens) || Boolean(object && tokens.length >= 5);
-  if (/^\s*use (?:this )?skill when\b/i.test(leading) && capability && concrete) {
+  if (/^\s*use (?:this )?(?:skill )?when\b/i.test(leading) && capability && concrete) {
     return { found: true, pattern: 'use-when-first', matchedCapability: capability, matchedObject: object };
   }
   if (/^\s*when asked to\b/i.test(leading) && capability && concrete) {
@@ -107,7 +121,7 @@ export function analyzeFrontLoadedIntent(description: string): FrontLoadedIntent
 
 export function hasPositiveTriggerPhrase(description: string): PhraseMatch {
   const lower = description.toLowerCase();
-  const positive = matchPhrase(stripBoundaryPhrases(lower), POSITIVE_TRIGGER_PHRASES);
+  const positive = matchPhrase(stripPhrases(lower, [...NEGATIVE_BOUNDARY_PHRASES, ...EXCLUSIVE_TRIGGER_PHRASES]), POSITIVE_TRIGGER_PHRASES);
   if (positive.found) {
     return positive;
   }
@@ -124,14 +138,15 @@ export function hasExclusiveTriggerPhrase(description: string): PhraseMatch {
 }
 
 /**
- * Removes negative and exclusive boundary phrases from the text so that the
- * "use when" fragment embedded in "do not use when" / "only use when" is not
- * counted as a standalone positive trigger.
+ * Removes every occurrence of the given phrases (whitespace-flexible, whole
+ * words) so that fragments embedded in them — the "use when" inside
+ * "do not use when", the "intended for" inside "not intended for" — cannot be
+ * matched as standalone positive evidence afterwards.
  */
-function stripBoundaryPhrases(lower: string): string {
+function stripPhrases(lower: string, phrases: readonly string[]): string {
   let stripped = lower;
-  for (const phrase of [...NEGATIVE_BOUNDARY_PHRASES, ...EXCLUSIVE_TRIGGER_PHRASES]) {
-    stripped = stripped.split(phrase).join(' ');
+  for (const phrase of byLengthDescending(phrases)) {
+    stripped = stripped.replace(phraseRegex(phrase, 'gi'), ' ');
   }
   return stripped;
 }
@@ -162,37 +177,81 @@ function matchVerb(tokens: string[]): PhraseMatch {
 
 function matchPhrase(lower: string, phrases: readonly string[]): PhraseMatch {
   for (const phrase of phrases) {
-    if (new RegExp(`\\b${phrase.split(' ').map(escapeRegex).join('\\s+')}\\b`, 'i').test(lower)) {
+    if (phraseRegex(phrase).test(lower)) {
       return { found: true, matched: phrase };
     }
   }
   return { found: false };
 }
 
+/** Words carried by scope markers themselves; never counted as clause content. */
+const CLAUSE_STOPWORDS = new Set([
+  'the', 'a', 'an', 'to', 'when', 'for', 'only', 'user', 'this', 'that',
+  'skill', 'of', 'in', 'on', 'with', 'and', 'or', 'is', 'are', 'it', 'its',
+  'you', 'your', 'be', 'as', 'by',
+]);
+
+/** Low-information tail tokens that do not make a scope clause meaningful. */
+const CLAUSE_VAGUE_TOKENS = new Set([
+  'needed', 'needs', 'necessary', 'appropriate', 'applicable', 'relevant',
+  'suitable', 'tasks', 'task', 'things', 'thing', 'stuff', 'other', 'others',
+  'anything', 'everything', 'something', 'general', 'various', 'work',
+  'help', 'helping', 'useful', 'asks', 'asked', 'wants', 'requests',
+]);
+
+/**
+ * Finds a trigger/boundary marker and judges whether the clause after it
+ * carries real scope content. Marker vocabulary comes from
+ * `triggerPhrases.ts` (single source of truth); negative boundary phrases are
+ * stripped from a sentence before trigger matching so a purely negative
+ * sentence ("Not intended for X", "Do not use when Y") is never credited as a
+ * positive trigger.
+ */
 export function assessScopeClause(description: string, kind: 'trigger' | 'boundary'): ScopeClauseAnalysis {
-  const markers = kind === 'trigger'
-    ? ['use when', 'use for', 'when asked to', 'when the user needs', 'appropriate for', 'intended for']
-    : ['do not use when', 'do not use for', 'not intended for', 'exclude', 'excluding', 'limited to', 'only for', 'only use when', 'avoid when'];
+  const markers = byLengthDescending(kind === 'trigger' ? TRIGGER_SCOPE_MARKERS : BOUNDARY_SCOPE_MARKERS);
   const sentences = description.split(/(?<=[.!?])\s+|\n/);
   for (const sentence of sentences) {
-    const lower = sentence.toLowerCase();
-    for (const marker of markers) {
-      const re = new RegExp(`\\b${marker.split(' ').map(escapeRegex).join('\\s+')}\\b`, 'i');
-      const match = re.exec(lower);
-      if (!match) continue;
+    let lower = sentence.toLowerCase();
+    if (kind === 'trigger') {
       // A negative clause cannot be evidence of a positive trigger.
-      if (kind === 'trigger' && /\b(?:do not|don't|not)\s+use\b/i.test(lower)) continue;
-      const tail = lower.slice((match.index ?? 0) + match[0].length);
-      const contentTokens = tokenize(tail).filter((token) => !['the', 'a', 'an', 'to', 'when', 'for', 'only', 'user'].includes(token));
-      const vagueTokens = contentTokens.filter((token) => ['needed', 'appropriate', 'tasks', 'things', 'other', 'anything', 'it'].includes(token));
+      lower = stripPhrases(lower, NEGATIVE_BOUNDARY_PHRASES);
+    }
+    for (const marker of markers) {
+      const match = phraseRegex(marker).exec(lower);
+      if (!match) continue;
+      const tail = lower.slice(match.index + match[0].length);
+      const tailTokens = tokenize(tail);
+      const contentTokens = tailTokens.filter((token) => !CLAUSE_STOPWORDS.has(token));
+      const vagueTokens = contentTokens.filter(
+        (token) => CLAUSE_VAGUE_TOKENS.has(token) || VAGUE_TERMS.includes(token),
+      );
       const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token));
-      return { found: true, markerFound: true, contentFound: meaningful.length >= 2, contentTokens, vagueTokens, matched: marker, matchedPhrase: marker };
+      // Two substantive tokens, or a single token that names a concrete
+      // artifact/technology ("Use for SQL."), count as real scope content.
+      const contentFound =
+        meaningful.length >= 2 || (meaningful.length === 1 && isConcreteToken(meaningful[0]));
+      return { found: true, markerFound: true, contentFound, contentTokens, vagueTokens, matched: marker, matchedPhrase: marker };
     }
   }
   return { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
 }
 
 function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+/** Whole-word, whitespace-flexible matcher for a multi-word phrase. */
+function phraseRegex(phrase: string, flags = 'i'): RegExp {
+  return new RegExp(`\\b${phrase.split(' ').map(escapeRegex).join('\\s+')}\\b`, flags);
+}
+
+/** Longest phrases first, so "when the user needs" wins over "when the user". */
+function byLengthDescending(phrases: readonly string[]): string[] {
+  return [...phrases].sort((a, b) => b.length - a.length);
+}
+
+function isConcreteToken(token: string): boolean {
+  const forms = [token, singularize(token)];
+  return forms.some((form) => ARTIFACT_HINTS.includes(form)) || isKnownAcronym(token);
+}
 
 function hasConcreteArtifact(text: string, tokens: string[]): boolean {
   const forms = tokenForms(tokens);
