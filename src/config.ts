@@ -12,6 +12,8 @@ import {
 } from './workspace/detectSkillCollisions';
 import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
 import { DEFAULT_SKILL_DISCOVERY_EXCLUDES } from './workspace/discoverSkills';
+import { resolveHeuristicDictionaries, type HeuristicDictionaries, type HeuristicDictionaryOverrides } from './quality/dictionaries';
+import { normalizeResourceDirectory } from './validation/validateResources';
 
 export interface InspectorConfig {
   enabled: boolean;
@@ -21,6 +23,8 @@ export interface InspectorConfig {
   discoveryExclude: string[];
   nameSimilarityThreshold: number;
   collision: CollisionOptions;
+  heuristicDictionaries: HeuristicDictionaries;
+  resourceDirectories: string[];
 }
 
 /** Reads `skillMdInspector.*` settings and resolves the effective profile. */
@@ -40,6 +44,8 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
         cfg.get<Record<string, SkillDiagnosticSeverity | 'off'>>('severityOverrides'),
       allowSpecificationOverrides: cfg.get<boolean>('severity.allowSpecificationOverrides'),
     }),
+    heuristicDictionaries: resolveHeuristicDictionaries(cfg.get<HeuristicDictionaryOverrides>('heuristics.dictionaries', {})),
+    resourceDirectories: (cfg.get<string[]>('resources.directories', ['references', 'scripts', 'assets', 'templates']) ?? []).map(normalizeResourceDirectory).filter((entry): entry is string => Boolean(entry)),
     resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
     discoveryExclude: cfg.get<string[]>('discovery.exclude', [...DEFAULT_SKILL_DISCOVERY_EXCLUDES]),
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),

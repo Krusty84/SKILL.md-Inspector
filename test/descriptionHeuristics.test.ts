@@ -88,3 +88,23 @@ describe('descriptionHeuristics', () => {
     expect(isFrontLoaded('a general utility for teams that can analyze many things')).toBe(false);
   });
 });
+
+describe('scope-clause selection and artifact signal', () => {
+  it('selects the earliest strongest marker across sentences, lines, and casing', () => {
+    expect(analyzeDescription('Use when needed. Use when processing PDF invoices.').triggerClause.contentFound).toBe(true);
+    expect(analyzeDescription('Use when processing PDF invoices. USE WHEN needed.').triggerClause.matched).toBe('use when');
+    expect(analyzeDescription('Do not use when needed.\nDo not use when processing legal contracts.').boundaryClause.contentFound).toBe(true);
+    const analysis = analyzeDescription('Do not use when handling invoices. Use when processing PDF reports.');
+    expect(analysis.triggerClause.contentFound).toBe(true);
+    expect(analysis.triggerClause.contentTokens).toContain('pdf');
+  });
+
+  it('does not credit generic artifacts without supporting context', () => {
+    expect(analyzeDescription('Process files when needed.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Handle data.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Work with code.').concreteArtifact).toBe(false);
+    expect(analyzeDescription('Validate STEP assemblies before CAD release.').concreteArtifact).toBe(true);
+    expect(analyzeDescription('Analyze CAN telemetry from vehicle ECUs.').concreteArtifact).toBe(true);
+    expect(analyzeDescription('Review Python code for API schema migrations.').concreteArtifact).toBe(true);
+  });
+});

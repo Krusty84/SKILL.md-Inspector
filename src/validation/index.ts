@@ -1,6 +1,7 @@
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { runRules } from './ruleRegistry';
 import { sortDiagnostics } from './util';
 import { validateFrontmatter } from './validateFrontmatter';
@@ -14,6 +15,8 @@ import { validateProfileMetadata } from './validateProfileMetadata';
 export interface RunValidationsOptions {
   /** Skip filesystem-dependent checks (linked-file existence, symlink escape). */
   skipFilesystem?: boolean;
+  dictionaries?: HeuristicDictionaries;
+  resourceDirectories?: readonly string[];
 }
 
 /**
@@ -27,7 +30,7 @@ export function runAllValidations(
   profile: SkillProfile,
   options: RunValidationsOptions = {},
 ): SkillDiagnostic[] {
-  const diagnostics = runRules({ doc, profile, skipFilesystem: options.skipFilesystem });
+  const diagnostics = runRules({ doc, profile, skipFilesystem: options.skipFilesystem, dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
   return sortDiagnostics(applyProfileOverrides(diagnostics, profile));
 }
 

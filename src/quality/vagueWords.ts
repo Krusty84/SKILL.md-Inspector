@@ -1,18 +1,2 @@
-/**
- * Words and phrases that signal a vague, low-signal description (brief §7.7).
- * Multi-word entries are matched as substrings; single words as whole tokens.
- */
-export const VAGUE_TERMS: readonly string[] = [
-  'help',
-  'useful',
-  'various',
-  'many things',
-  'general',
-  'stuff',
-  'anything',
-  'assistant',
-  'improves',
-  'better',
-  'smart',
-  'powerful',
-];
+/** Low-signal words and phrases. Single words are token matched; phrases use word boundaries. */
+export const VAGUE_TERMS: readonly string[] = ['help', 'helpful', 'useful', 'various', 'many things', 'common tasks', 'many tasks', 'different things', 'all kinds of', 'improve things', 'handle everything', 'work with', 'process stuff', 'best results', 'general', 'general-purpose', 'generic', 'flexible', 'easy', 'simple', 'stuff', 'anything', 'assistant', 'improves', 'better', 'smart', 'powerful', 'advanced', 'intelligent', 'robust', 'comprehensive'];

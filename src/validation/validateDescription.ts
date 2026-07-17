@@ -2,12 +2,14 @@ import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { analyzeDescription } from '../quality/descriptionHeuristics';
 import { diag, keyRange } from './util';
 
 export function validateDescription(
   doc: SkillDocument,
   profile: SkillProfile,
+  dictionaries?: HeuristicDictionaries,
 ): SkillDiagnostic[] {
   if (!doc.frontmatter) {
     return [];
@@ -38,7 +40,7 @@ export function validateDescription(
     ];
   }
 
-  const analysis = analyzeDescription(value);
+  const analysis = analyzeDescription(value, dictionaries);
   const diagnostics: SkillDiagnostic[] = [];
   const { minLength, maxLength } = profile.description;
 

@@ -1,5 +1,6 @@
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
 import type { SkillProfile, SkillProfileId } from '../types/SkillProfile';
 import { validateFrontmatter } from './validateFrontmatter';
 import { validateName } from './validateName';
@@ -15,6 +16,8 @@ export interface ValidationContext {
   profile: SkillProfile;
   /** Skip filesystem-dependent checks (linked-file existence, symlink escape). */
   skipFilesystem?: boolean;
+  dictionaries?: HeuristicDictionaries;
+  resourceDirectories?: readonly string[];
 }
 
 /**
@@ -34,9 +37,9 @@ export interface ValidationRule {
 export const VALIDATION_RULES: ValidationRule[] = [
   { id: 'frontmatter', run: ({ doc }) => validateFrontmatter(doc) },
   { id: 'name', run: ({ doc, profile }) => validateName(doc, profile) },
-  { id: 'description', run: ({ doc, profile }) => validateDescription(doc, profile) },
+  { id: 'description', run: ({ doc, profile, dictionaries }) => validateDescription(doc, profile, dictionaries) },
   { id: 'links', run: ({ doc, skipFilesystem }) => validateLinks(doc, { skipFilesystem }) },
-  { id: 'resources', run: ({ doc }) => validateResources(doc) },
+  { id: 'resources', run: ({ doc, resourceDirectories }) => validateResources(doc, resourceDirectories) },
   { id: 'body', run: ({ doc, profile }) => validateBody(doc, profile) },
   { id: 'profile-metadata', run: ({ doc, profile }) => validateProfileMetadata(doc, profile) },
 ];

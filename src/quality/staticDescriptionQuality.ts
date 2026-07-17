@@ -2,6 +2,7 @@ import {
   analyzeDescription,
   type DescriptionAnalysis,
 } from './descriptionHeuristics';
+import type { HeuristicDictionaries } from './dictionaries';
 import { isProbablyNonEnglish } from './language';
 import type {
   StaticDescriptionQualityResult,
@@ -16,6 +17,7 @@ export interface StaticDescriptionQualityOptions {
   maxLength?: number;
   language?: DescriptionLanguage;
   weights?: StaticDescriptionQualityWeights;
+  dictionaries?: HeuristicDictionaries;
 }
 
 /** Points allotted to each criterion (brief §10.1). Sum = 100. */
@@ -37,7 +39,7 @@ export function computeStaticDescriptionQuality(
   description: string,
   options: StaticDescriptionQualityOptions = {},
 ): StaticDescriptionQualityResult {
-  return scoreAnalysis(analyzeDescription(description), options);
+  return scoreAnalysis(analyzeDescription(description, options.dictionaries), options);
 }
 
 /** Scores an already-computed analysis (avoids re-analyzing the description). */

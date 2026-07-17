@@ -1,13 +1,10 @@
-import { VAGUE_TERMS } from './vagueWords';
-import { isKnownAcronym } from './acronyms';
+import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
 import { ACTION_VERB_FORMS, singularize } from './wordForms';
-import { ARTIFACT_HINTS } from './artifacts';
 import {
   POSITIVE_TRIGGER_PHRASES,
   NEGATIVE_BOUNDARY_PHRASES,
   EXCLUSIVE_TRIGGER_PHRASES,
-  TRIGGER_SCOPE_MARKERS,
-  BOUNDARY_SCOPE_MARKERS,
+  RESTRICTIVE_BOUNDARY_PHRASES,
 } from './triggerPhrases';
 
 export interface PhraseMatch {
@@ -48,27 +45,27 @@ export interface DescriptionAnalysis {
   frontLoadedIntent: FrontLoadedIntentResult;
 }
 
-export function analyzeDescription(description: string): DescriptionAnalysis {
+export function analyzeDescription(description: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): DescriptionAnalysis {
   const raw = description ?? '';
   const trimmed = raw.trim();
   const lower = trimmed.toLowerCase();
   const words = trimmed.split(/\s+/).filter(Boolean);
   const tokens = tokenize(lower);
 
-  const triggerClause = assessScopeClause(trimmed, 'trigger');
-  const boundaryClause = assessScopeClause(trimmed, 'boundary');
+  const triggerClause = assessScopeClause(trimmed, 'trigger', dictionaries);
+  const boundaryClause = assessScopeClause(trimmed, 'boundary', dictionaries);
   return {
     raw,
     trimmed,
     length: trimmed.length,
     wordCount: words.length,
     leadingText: words.slice(0, 12).join(' ').toLowerCase(),
-    actionVerb: matchVerb(tokens),
+    actionVerb: matchVerb(tokens, dictionaries),
     positiveTriggerPhrase: triggerClause,
     negativeBoundaryPhrase: boundaryClause,
-    exclusiveTriggerPhrase: matchPhrase(lower, EXCLUSIVE_TRIGGER_PHRASES),
-    concreteArtifact: hasConcreteArtifact(trimmed, tokens),
-    vagueTerms: findVagueTerms(lower, tokens),
+    exclusiveTriggerPhrase: matchPhrase(lower, dictionaries.exclusiveTriggerPhrases),
+    concreteArtifact: hasConcreteArtifact(trimmed, tokens, dictionaries),
+    vagueTerms: findVagueTerms(lower, tokens, dictionaries),
     triggerClause,
     boundaryClause,
     frontLoadedIntent: analyzeFrontLoadedIntent(trimmed),
@@ -104,7 +101,7 @@ export function analyzeFrontLoadedIntent(description: string): FrontLoadedIntent
       !ACTION_VERB_FORMS.has(token) &&
       token.length > 2 &&
       !FRONT_LOADED_FILLER.has(token) &&
-      !VAGUE_TERMS.includes(token),
+      !DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.includes(token),
   );
   const concrete = hasConcreteArtifact(leading, tokens) || Boolean(object && tokens.length >= 5);
   if (/^\s*use (?:this )?(?:skill )?when\b/i.test(leading) && capability && concrete) {
@@ -151,12 +148,12 @@ function stripPhrases(lower: string, phrases: readonly string[]): string {
   return stripped;
 }
 
-export function findVagueTerms(lower: string, tokens: string[] = tokenize(lower)): string[] {
+export function findVagueTerms(lower: string, tokens: string[] = tokenize(lower), dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): string[] {
   const found: string[] = [];
   const forms = tokenForms(tokens);
-  for (const term of VAGUE_TERMS) {
+  for (const term of dictionaries.vagueTerms) {
     if (term.includes(' ')) {
-      if (lower.includes(term)) {
+      if (phraseRegex(term).test(lower)) {
         found.push(term);
       }
     } else if (forms.has(term)) {
@@ -166,9 +163,9 @@ export function findVagueTerms(lower: string, tokens: string[] = tokenize(lower)
   return found;
 }
 
-function matchVerb(tokens: string[]): PhraseMatch {
+function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): PhraseMatch {
   for (const token of tokens) {
-    if (ACTION_VERB_FORMS.has(token)) {
+    if (ACTION_VERB_FORMS.has(token) || dictionaries.actionVerbs.includes(token)) {
       return { found: true, matched: token };
     }
   }
@@ -207,8 +204,9 @@ const CLAUSE_VAGUE_TOKENS = new Set([
  * sentence ("Not intended for X", "Do not use when Y") is never credited as a
  * positive trigger.
  */
-export function assessScopeClause(description: string, kind: 'trigger' | 'boundary'): ScopeClauseAnalysis {
-  const markers = byLengthDescending(kind === 'trigger' ? TRIGGER_SCOPE_MARKERS : BOUNDARY_SCOPE_MARKERS);
+export function assessScopeClause(description: string, kind: 'trigger' | 'boundary', dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): ScopeClauseAnalysis {
+  const markers = byLengthDescending(kind === 'trigger' ? [...dictionaries.positiveTriggerPhrases, ...dictionaries.exclusiveTriggerPhrases] : [...dictionaries.negativeBoundaryPhrases, ...RESTRICTIVE_BOUNDARY_PHRASES, ...dictionaries.exclusiveTriggerPhrases]);
+  let selected: ScopeClauseAnalysis | undefined;
   const sentences = description.split(/(?<=[.!?])\s+|\n/);
   for (const sentence of sentences) {
     let lower = sentence.toLowerCase();
@@ -217,23 +215,21 @@ export function assessScopeClause(description: string, kind: 'trigger' | 'bounda
       lower = stripPhrases(lower, NEGATIVE_BOUNDARY_PHRASES);
     }
     for (const marker of markers) {
-      const match = phraseRegex(marker).exec(lower);
-      if (!match) continue;
-      const tail = lower.slice(match.index + match[0].length);
-      const tailTokens = tokenize(tail);
-      const contentTokens = tailTokens.filter((token) => !CLAUSE_STOPWORDS.has(token));
-      const vagueTokens = contentTokens.filter(
-        (token) => CLAUSE_VAGUE_TOKENS.has(token) || VAGUE_TERMS.includes(token),
-      );
-      const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token));
-      // Two substantive tokens, or a single token that names a concrete
-      // artifact/technology ("Use for SQL."), count as real scope content.
-      const contentFound =
-        meaningful.length >= 2 || (meaningful.length === 1 && isConcreteToken(meaningful[0]));
-      return { found: true, markerFound: true, contentFound, contentTokens, vagueTokens, matched: marker, matchedPhrase: marker };
+      for (const match of lower.matchAll(phraseRegex(marker, 'gi'))) {
+        const tail = lower.slice(match.index! + match[0].length);
+        const tailTokens = tokenize(tail);
+        const contentTokens = tailTokens.filter((token) => !CLAUSE_STOPWORDS.has(token));
+        const vagueTokens = contentTokens.filter(
+          (token) => CLAUSE_VAGUE_TOKENS.has(token) || dictionaries.vagueTerms.includes(token),
+        );
+        const meaningful = contentTokens.filter((token) => !vagueTokens.includes(token));
+        const contentFound = meaningful.length >= 2 || (meaningful.length === 1 && isConcreteToken(meaningful[0], dictionaries));
+        const candidate = { found: true, markerFound: true, contentFound, contentTokens, vagueTokens, matched: marker, matchedPhrase: marker };
+        if (!selected || (candidate.contentFound && !selected.contentFound)) selected = candidate;
+      }
     }
   }
-  return { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
+  return selected ?? { found: false, markerFound: false, contentFound: false, contentTokens: [], vagueTokens: [] };
 }
 
 function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -248,17 +244,17 @@ function byLengthDescending(phrases: readonly string[]): string[] {
   return [...phrases].sort((a, b) => b.length - a.length);
 }
 
-function isConcreteToken(token: string): boolean {
+function isConcreteToken(token: string, dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): boolean {
   const forms = [token, singularize(token)];
-  return forms.some((form) => ARTIFACT_HINTS.includes(form)) || isKnownAcronym(token);
+  return forms.some((form) => dictionaries.artifactHints.includes(form)) || dictionaries.acronyms.includes(token);
 }
 
-function hasConcreteArtifact(text: string, tokens: string[]): boolean {
+function hasConcreteArtifact(text: string, tokens: string[], dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES): boolean {
   const forms = tokenForms(tokens);
-  if (ARTIFACT_HINTS.some((hint) => forms.has(hint))) {
+  if (dictionaries.artifactHints.some((hint) => forms.has(hint)) || dictionaries.multiWordArtifacts.some((phrase) => phraseRegex(phrase).test(text))) {
     return true; // artifact vocabulary
   }
-  if (tokens.some((token) => isKnownAcronym(token))) {
+  if (tokens.some((token) => dictionaries.acronyms.includes(token))) {
     return true; // known acronym / technology (e.g. PDF, SQL, JSON)
   }
   // File extension like ".pdf". The broad "any run of uppercase letters"
