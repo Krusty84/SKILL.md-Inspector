@@ -2,6 +2,8 @@ import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { StaticDescriptionQualityResult } from '../types/StaticDescriptionQuality';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
+import { assessAuthoringQuality, type SkillAuthoringQuality } from '../authoring/authoringQuality';
 import { computeStaticDescriptionQuality } from '../quality/staticDescriptionQuality';
 
 export interface SkillReport {
@@ -15,6 +17,8 @@ export interface SkillReport {
   referencedFiles: string[];
   unreferencedFiles: string[];
   staticDescriptionQuality: StaticDescriptionQualityResult;
+  /** Separate structural authoring dimension; it is never averaged into description quality. */
+  authoringQuality: SkillAuthoringQuality;
 }
 
 /**
@@ -26,6 +30,7 @@ export function buildReportModel(
   doc: SkillDocument,
   diagnostics: SkillDiagnostic[],
   profile: SkillProfile,
+  dictionaries?: HeuristicDictionaries,
 ): SkillReport {
   const errorCount = diagnostics.filter((d) => d.severity === 'error').length;
   const warningCount = diagnostics.filter((d) => d.severity === 'warning').length;
@@ -40,6 +45,7 @@ export function buildReportModel(
     maxLength: profile.description.maxLength,
     language: profile.description.language,
     weights: profile.description.weights,
+    dictionaries,
   });
 
   return {
@@ -53,5 +59,6 @@ export function buildReportModel(
     referencedFiles: doc.resources.filter((r) => r.referenced).map((r) => r.relativePath),
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
     staticDescriptionQuality,
+    authoringQuality: assessAuthoringQuality(doc),
   };
 }

@@ -15,6 +15,12 @@ import { DEFAULT_SKILL_DISCOVERY_EXCLUDES } from './workspace/discoverSkills';
 import { resolveHeuristicDictionaries, type HeuristicDictionaries, type HeuristicDictionaryOverrides } from './quality/dictionaries';
 import { normalizeResourceDirectory } from './validation/validateResources';
 
+export interface AnalysisContext {
+  profile: SkillProfile;
+  dictionaries: HeuristicDictionaries;
+  resourceDirectories: readonly string[];
+}
+
 export interface InspectorConfig {
   enabled: boolean;
   runOnSave: boolean;
@@ -28,6 +34,10 @@ export interface InspectorConfig {
 }
 
 /** Reads `skillMdInspector.*` settings and resolves the effective profile. */
+export function analysisContextFromConfig(config: Pick<InspectorConfig, 'profile' | 'heuristicDictionaries' | 'resourceDirectories'>): AnalysisContext {
+  return { profile: config.profile, dictionaries: config.heuristicDictionaries, resourceDirectories: config.resourceDirectories };
+}
+
 export function readConfig(scope?: vscode.Uri): InspectorConfig {
   const cfg = vscode.workspace.getConfiguration('skillMdInspector', scope);
   const profileId = cfg.get<string>('profile', 'generic');

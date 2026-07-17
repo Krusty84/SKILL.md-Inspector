@@ -1,6 +1,6 @@
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 
-export type AuthoringLabel = 'good' | 'needs-attention';
+export type AuthoringLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 
 export type AuthoringSeverity = 'major' | 'moderate' | 'minor';
 
@@ -34,7 +34,7 @@ export interface SkillAuthoringQuality {
  * unreferenced asset file.
  */
 const SEVERITY_PENALTY: Record<AuthoringSeverity, number> = {
-  major: 40,
+  major: 80,
   moderate: 20,
   minor: 10,
 };
@@ -58,12 +58,22 @@ export function assessAuthoringQuality(doc: SkillDocument): SkillAuthoringQualit
 }
 
 function toResult(findings: AuthoringFinding[]): InstructionQualityResult {
-  const penalty = findings.reduce((sum, f) => sum + SEVERITY_PENALTY[f.severity], 0);
-  return {
-    score: Math.max(0, 100 - penalty),
-    label: findings.length > 0 ? 'needs-attention' : 'good',
-    findings,
-  };
+  // Repeated housekeeping findings are grouped by severity, with a cap per class.
+  const penalties = new Map<AuthoringSeverity, number>();
+  for (const finding of findings) {
+    const cap = finding.severity === 'minor' ? 30 : finding.severity === 'moderate' ? 50 : 80;
+    penalties.set(finding.severity, Math.min(cap, (penalties.get(finding.severity) ?? 0) + SEVERITY_PENALTY[finding.severity]));
+  }
+  const score = Math.max(0, 100 - [...penalties.values()].reduce((sum, value) => sum + value, 0));
+  return { score, label: authoringLabelFor(score), findings };
+}
+
+function authoringLabelFor(score: number): AuthoringLabel {
+  if (score >= 90) return 'excellent';
+  if (score >= 75) return 'good';
+  if (score >= 60) return 'acceptable';
+  if (score >= 30) return 'weak';
+  return 'poor';
 }
 
 function assessInstructions(body: string): AuthoringFinding[] {
@@ -133,7 +143,7 @@ function assessInstructions(body: string): AuthoringFinding[] {
     findings.push({
       criterion: 'Length',
       severity: 'moderate',
-      message: `Body exceeds ${MAX_BODY_LINES} lines.`,
+      message: `Body exceeds ${MAX_BODY_LINES} lines, creating a maintainability risk.`,
       suggestion: 'Move detailed material into referenced resource files.',
     });
   }

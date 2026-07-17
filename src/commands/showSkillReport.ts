@@ -18,6 +18,6 @@ export async function showSkillReport(uri?: Parameters<typeof resolveSkillTarget
     config.profile,
     { exclude: config.resourceExclude },
   );
-  const report = buildReportModel(document, diagnostics, config.profile);
+  const report = buildReportModel(document, diagnostics, config.profile, config.heuristicDictionaries);
   SkillReportPanel.show(report);
 }
