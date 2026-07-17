@@ -8,6 +8,7 @@ import {
   hasNegativeBoundaryPhrase,
   hasExclusiveTriggerPhrase,
 } from '../src/quality/descriptionHeuristics';
+import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
 
 describe('descriptionHeuristics', () => {
   it('detects action verbs across common inflections', () => {
@@ -76,6 +77,26 @@ describe('descriptionHeuristics', () => {
     expect(hasActionVerb('rendering the template').found).toBe(true); // correct form
     expect(hasActionVerb('renderring the template').found).toBe(false); // invalid doubled form
     expect(hasActionVerb('refactorring the code').found).toBe(false);
+  });
+
+  it('does not accept the single-consonant misspellings of CVC verbs', () => {
+    expect(hasActionVerb('Formating the report').found).toBe(false);
+    expect(hasActionVerb('Formated the report').found).toBe(false);
+    expect(hasActionVerb('Debuging the script').found).toBe(false);
+  });
+
+  it('scopes irregular verbs to the configured action-verb registry', () => {
+    const custom = resolveHeuristicDictionaries({ actionVerbs: { replace: ['convert'] } });
+    expect(hasActionVerb('Wrote the report', custom).found).toBe(false);
+    expect(hasActionVerb('Built the pipeline', custom).found).toBe(false);
+    expect(hasActionVerb('Converted the report', custom).found).toBe(true);
+  });
+
+  it('matches typographic apostrophes in boundary phrases', () => {
+    expect(hasNegativeBoundaryPhrase('Don’t use for legal transcripts.').found).toBe(true);
+    const analysis = analyzeDescription('Summarize meeting notes. Don’t use when drafting contracts.');
+    expect(analysis.triggerClause.markerFound).toBe(false); // inner "use when" must not leak
+    expect(analysis.boundaryClause.contentFound).toBe(true);
   });
 
   it('front-loads only when a verb starts the text and an object follows', () => {

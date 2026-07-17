@@ -1,4 +1,5 @@
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
+import { escapeRegex, phraseRegex } from './textMatch';
 import { buildVerbForms, singularize } from './wordForms';
 import { RESTRICTIVE_BOUNDARY_PHRASES } from './triggerPhrases';
 
@@ -86,7 +87,5 @@ export function analyzeArtifactEvidence(text: string, dictionaries: HeuristicDic
 function acronymMatches(text: string, term: string): boolean { const ambiguous = new Set(['can','step','pr','ci']); const re = new RegExp(`\\b${escapeRegex(term)}\\b`, 'gi'); const matches = [...text.matchAll(re)]; return matches.some((match) => !ambiguous.has(term.toLowerCase()) || match[0] === match[0].toUpperCase()); }
 function normalizeSeparators(text: string): string { return ` ${text.toLowerCase().replace(/[ _-]+/g, ' ').replace(/[^\p{L}\p{N} ]/gu, ' ')} `; }
 function phraseMatchesNormalized(text: string, phrase: string): boolean { return text.includes(` ${phrase.toLowerCase().replace(/[ _-]+/g, ' ')} `); }
-function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-function phraseRegex(phrase: string, flags = 'i'): RegExp { return new RegExp(`\\b${phrase.split(' ').map(escapeRegex).join('\\s+')}\\b`, flags); }
 export function tokenize(text: string): string[] { return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []; }
 function tokenForms(tokens: string[]): Set<string> { const forms = new Set<string>(); for (const token of tokens) { forms.add(token); forms.add(singularize(token)); } return forms; }

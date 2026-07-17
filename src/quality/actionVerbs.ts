@@ -22,8 +22,11 @@ export const ACTION_VERBS: readonly string[] = [
   'classify',
   'normalize',
   'calculate',
-  // Common additional capability verbs seen in real skills.
+  // Common additional capability verbs seen in real skills. The irregular
+  // verbs (write, read, build) inflect via IRREGULAR_VERB_FORMS.
   'build',
+  'write',
+  'read',
   'render',
   'parse',
   'lint',
