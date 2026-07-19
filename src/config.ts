@@ -39,6 +39,8 @@ export interface InspectorConfig {
   heuristicDictionaries: HeuristicDictionaries;
   configurationWarnings: readonly ConfigurationWarning[];
   resourceDirectories: string[];
+  onlineCheckEnabled: boolean;
+  onlineCheckMaxConcurrency: number;
 }
 
 export interface ConfigurationWarning {
@@ -66,6 +68,10 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
   return {
     enabled: cfg.get<boolean>('validation.enabled', true),
     runOnSave: cfg.get<boolean>('validation.runOnSave', true),
+    onlineCheckEnabled: cfg.get<boolean>('links.onlineCheck.enabled', false),
+    onlineCheckMaxConcurrency: clampOnlineCheckConcurrency(
+      cfg.get<number>('links.onlineCheck.maxConcurrency', 4),
+    ),
     profile: resolveProfile(profileId, {
       nameMaxLength: cfg.get<number>('name.maxLength'),
       descriptionMinLength: cfg.get<number>('description.minLength'),
@@ -108,6 +114,10 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
       },
     },
   };
+}
+
+function clampOnlineCheckConcurrency(value: number): number {
+  return Math.min(10, Math.max(1, Math.trunc(value) || 4));
 }
 
 function readVisibleDictionaryValues(

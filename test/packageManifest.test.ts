@@ -54,6 +54,23 @@ describe('package manifest context menus and templates', () => {
     expect(commands).toContain('skillMdInspector.resetTemplates');
   });
 
+  it('keeps online link checks opt-in and globally bounded per operation', () => {
+    const properties = packageJson.contributes.configuration.properties;
+    expect(properties['skillMdInspector.links.onlineCheck.enabled']).toMatchObject({
+      type: 'boolean',
+      default: false,
+    });
+    expect(properties['skillMdInspector.links.onlineCheck.enabled'].description).toContain(
+      'sends HTTP requests',
+    );
+    expect(properties['skillMdInspector.links.onlineCheck.maxConcurrency']).toMatchObject({
+      type: 'integer',
+      default: 4,
+      minimum: 1,
+      maximum: 10,
+    });
+  });
+
   it('declares Explorer-like WORKSPACE toolbar and context actions without reusing Explorer internals', () => {
     const viewTitle = packageJson.contributes.menus['view/title'];
     expect(viewTitle).toContainEqual(

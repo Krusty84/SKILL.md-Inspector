@@ -3,6 +3,9 @@ import { analyzeSkill, type SkillAnalysis, type AnalysisMode } from '../analysis
 import { ResourceCache } from '../parser/resourceCache';
 import { readConfig } from '../config';
 import { isSkillFile, toVscodeDiagnostic } from './mapping';
+import { augmentWithRemoteDiagnostics } from '../online/augmentRemoteDiagnostics';
+import { RemoteLinkCheckSession, type RemoteLinkDependencies } from '../online/remoteLinkChecker';
+import { nodeRemoteLinkDependencies } from '../online/nodeRemoteLinkDependencies';
 
 /**
  * Owns the diagnostic collection and runs the deterministic pipeline against
@@ -13,8 +16,10 @@ import { isSkillFile, toVscodeDiagnostic } from './mapping';
 export class DiagnosticsProvider implements vscode.Disposable {
   private readonly collection: vscode.DiagnosticCollection;
   private readonly resourceCache = new ResourceCache();
+  private readonly requests = new Map<string, ValidationRequest>();
+  private nextRequestId = 0;
 
-  constructor() {
+  constructor(private readonly remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies) {
     this.collection = vscode.languages.createDiagnosticCollection('skillMdInspector');
   }
 
@@ -24,10 +29,15 @@ export class DiagnosticsProvider implements vscode.Disposable {
    * whole pipeline. Returns the analysis, or undefined when the document is not a
    * SKILL.md or validation is disabled.
    */
-  validate(document: vscode.TextDocument, mode: AnalysisMode = 'full'): SkillAnalysis | undefined {
+  async validate(
+    document: vscode.TextDocument,
+    mode: AnalysisMode = 'full',
+    sharedSession?: RemoteLinkCheckSession,
+  ): Promise<SkillAnalysis | undefined> {
     if (!isSkillFile(document)) {
       return undefined;
     }
+    const request = this.beginRequest(document);
     const config = readConfig(document.uri);
     if (!config.enabled) {
       this.collection.delete(document.uri);
@@ -45,7 +55,36 @@ export class DiagnosticsProvider implements vscode.Disposable {
       document.uri,
       analysis.diagnostics.map((d) => toVscodeDiagnostic(d, document)),
     );
-    return analysis;
+    if (mode === 'text-only' || !config.onlineCheckEnabled) {
+      return analysis;
+    }
+
+    const session =
+      sharedSession ??
+      new RemoteLinkCheckSession(this.remoteDependencies, {
+        maxConcurrency: config.onlineCheckMaxConcurrency,
+        cancellation: request.cancellation,
+      });
+    try {
+      const augmented = await augmentWithRemoteDiagnostics(
+        analysis,
+        config.profile,
+        true,
+        session,
+      );
+      if (!this.isCurrent(document, request)) {
+        return undefined;
+      }
+      this.collection.set(
+        document.uri,
+        augmented.diagnostics.map((diagnostic) => toVscodeDiagnostic(diagnostic, document)),
+      );
+      return augmented;
+    } finally {
+      if (!sharedSession) {
+        session.dispose();
+      }
+    }
   }
 
   /** Invalidates cached resources for the skill directory containing `filePath`. */
@@ -70,26 +109,94 @@ export class DiagnosticsProvider implements vscode.Disposable {
     const files = await vscode.workspace.findFiles('**/SKILL.md', '**/node_modules/**');
     const total = files.length;
     let processed = 0;
-    for (const uri of files) {
-      if (token?.isCancellationRequested) {
-        return { processed, total, cancelled: true };
+    const rootScope = vscode.workspace.workspaceFolders?.[0]?.uri;
+    const operationConfig = readConfig(rootScope);
+    const session = new RemoteLinkCheckSession(this.remoteDependencies, {
+      maxConcurrency: operationConfig.onlineCheckMaxConcurrency,
+      cancellation: token,
+    });
+    try {
+      const validations: Array<Promise<void>> = [];
+      for (const uri of files) {
+        if (token?.isCancellationRequested) {
+          break;
+        }
+        const document = await vscode.workspace.openTextDocument(uri);
+        validations.push(
+          this.validate(document, 'full', session).then(() => {
+            processed += 1;
+            progress?.report({
+              message: `${processed}/${total}`,
+              increment: total > 0 ? 100 / total : 0,
+            });
+          }),
+        );
       }
-      const document = await vscode.workspace.openTextDocument(uri);
-      this.validate(document);
-      processed += 1;
-      progress?.report({
-        message: `${processed}/${total}`,
-        increment: total > 0 ? 100 / total : 0,
-      });
+      await Promise.all(validations);
+      return { processed, total, cancelled: token?.isCancellationRequested === true };
+    } finally {
+      session.dispose();
     }
-    return { processed, total, cancelled: false };
   }
 
   clear(uri: vscode.Uri): void {
+    this.cancelRequest(uri.toString());
     this.collection.delete(uri);
   }
 
   dispose(): void {
+    for (const request of this.requests.values()) {
+      request.cancellation.cancel();
+    }
+    this.requests.clear();
     this.collection.dispose();
+  }
+
+  private beginRequest(document: vscode.TextDocument): ValidationRequest {
+    const key = document.uri.toString();
+    this.cancelRequest(key);
+    const request: ValidationRequest = {
+      id: ++this.nextRequestId,
+      version: document.version,
+      cancellation: new MutableCancellationSignal(),
+    };
+    this.requests.set(key, request);
+    return request;
+  }
+
+  private isCurrent(document: vscode.TextDocument, request: ValidationRequest): boolean {
+    return (
+      !request.cancellation.isCancellationRequested &&
+      document.version === request.version &&
+      this.requests.get(document.uri.toString())?.id === request.id
+    );
+  }
+
+  private cancelRequest(key: string): void {
+    this.requests.get(key)?.cancellation.cancel();
+    this.requests.delete(key);
+  }
+}
+
+interface ValidationRequest {
+  id: number;
+  version: number;
+  cancellation: MutableCancellationSignal;
+}
+
+class MutableCancellationSignal {
+  isCancellationRequested = false;
+  private readonly listeners = new Set<() => void>();
+
+  onCancellationRequested(listener: () => void): { dispose(): void } {
+    this.listeners.add(listener);
+    return { dispose: () => this.listeners.delete(listener) };
+  }
+
+  cancel(): void {
+    if (this.isCancellationRequested) return;
+    this.isCancellationRequested = true;
+    for (const listener of this.listeners) listener();
+    this.listeners.clear();
   }
 }

@@ -3,10 +3,14 @@ import { analysisContextFromConfig, readConfig } from '../config';
 import { buildReportModel } from '../ui/reportModel';
 import { SkillReportPanel } from '../ui/skillReportWebview';
 import { resolveSkillTarget } from './resolveSkillTarget';
+import { RemoteLinkCheckSession, type RemoteLinkDependencies } from '../online/remoteLinkChecker';
+import { nodeRemoteLinkDependencies } from '../online/nodeRemoteLinkDependencies';
+import { augmentWithRemoteDiagnostics } from '../online/augmentRemoteDiagnostics';
 
 /** Command: build and show the read-only Skill Report for the active SKILL.md. */
 export async function showSkillReport(
   uri?: Parameters<typeof resolveSkillTarget>[0],
+  remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
 ): Promise<void> {
   const target = await resolveSkillTarget(uri, { warningAction: 'show its report' });
   if (!target) {
@@ -15,7 +19,7 @@ export async function showSkillReport(
 
   const config = readConfig(target.document.uri);
   const analysisContext = analysisContextFromConfig(config);
-  const { document, diagnostics, tokenUsage } = analyzeSkill(
+  let analysis = analyzeSkill(
     target.document.uri.fsPath,
     target.document.getText(),
     analysisContext.profile,
@@ -25,6 +29,22 @@ export async function showSkillReport(
       resourceDirectories: analysisContext.resourceDirectories,
     },
   );
+  if (config.onlineCheckEnabled) {
+    const session = new RemoteLinkCheckSession(remoteDependencies, {
+      maxConcurrency: config.onlineCheckMaxConcurrency,
+    });
+    try {
+      analysis = await augmentWithRemoteDiagnostics(
+        analysis,
+        analysisContext.profile,
+        true,
+        session,
+      );
+    } finally {
+      session.dispose();
+    }
+  }
+  const { document, diagnostics, tokenUsage } = analysis;
   const report = buildReportModel(
     document,
     diagnostics,

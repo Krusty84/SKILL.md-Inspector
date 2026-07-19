@@ -4,6 +4,13 @@
 
 ### Added
 
+- Opt-in remote-link availability checks for VS Code full-validation flows, reports,
+  and index export. Checks use `HEAD` with minimal `GET` fallback, safe manual
+  redirects, per-operation deduplication and concurrency limits, cancellation and
+  stale-editor protection, and an injected DNS/HTTP boundary for offline tests.
+  SSRF protection rejects non-public or mixed DNS destinations and connects only to
+  the validated address. New diagnostics are `skill.link.remoteUnavailable`,
+  `skill.link.remoteCheckFailed`, and `skill.link.remoteCheckBlocked`.
 - **`skill.link.caseMismatch`** (warning, compatibility): a relative link that
   matches a bundled file except for letter case is reported with the on-disk
   path — it resolves on macOS/Windows but breaks on case-sensitive systems.

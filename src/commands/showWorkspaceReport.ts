@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { computeWorkspaceAnalysis } from '../analysis/workspaceAnalysis';
+import { computeWorkspaceAnalysisOnline } from '../analysis/workspaceAnalysis';
 import { WorkspaceReportPanel } from '../ui/workspaceReportWebview';
 
 /** Command: open the workspace report (collisions, portability, resources). */
@@ -11,16 +11,14 @@ export async function showWorkspaceReport(): Promise<void> {
       cancellable: true,
     },
     (progress, token) =>
-      Promise.resolve(
-        computeWorkspaceAnalysis({
-          cancel: token,
-          onProgress: (done, total) =>
-            progress.report({
-              message: `${done}/${total}`,
-              increment: total > 0 ? 100 / total : 0,
-            }),
-        }),
-      ),
+      computeWorkspaceAnalysisOnline({
+        cancel: token,
+        onProgress: (done, total) =>
+          progress.report({
+            message: `${done}/${total}`,
+            increment: total > 0 ? 100 / total : 0,
+          }),
+      }),
   );
 
   if (!result) {

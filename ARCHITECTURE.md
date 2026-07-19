@@ -19,10 +19,12 @@ testable in Node and prevents validation rules from editing user files directly.
 Some of these modules still use Node filesystem APIs, so they are host-independent
 but not universally filesystem-independent.
 
-All analysis is local and deterministic. Remote links are classified but are not
-fetched. The extension does not execute skills, agent binaries, or commands recorded
-in OpenCode exports. `src/llm/` contains an unused provider boundary; there is no
-runtime LLM integration.
+The canonical analysis pipeline is local, synchronous, and deterministic. An
+opt-in VS Code-facing augmentation can check remote-link availability after full
+analysis; it never participates in `analyzeSkill`, text-only validation, code
+actions, portability evaluation, or OpenCode matching. The extension does not
+execute skills, agent binaries, or commands recorded in OpenCode exports.
+`src/llm/` contains an unused provider boundary; there is no runtime LLM integration.
 
 ## Repository Structure
 
@@ -37,6 +39,7 @@ runtime LLM integration.
 |   |-- evaluation/     # Offline behavioral-evaluation library
 |   |-- llm/            # Provider interface without an implementation
 |   |-- navigator/      # Favorites and filesystem navigation models
+|   |-- online/         # Optional SSRF-safe remote-link augmentation
 |   |-- opencode/       # OpenCode discovery, parsing, and normalization
 |   |-- parser/         # Frontmatter, Markdown, links, and resources
 |   |-- profiles/       # Generic, VS Code, Claude, and Codex policies
@@ -136,6 +139,21 @@ diagnostic collection and caches resource discovery. `src/codeActions/` converts
 diagnostic quick-fix metadata into `WorkspaceEdit` operations. The validation layer
 only describes potential edits; it never applies them.
 
+Optional online checking is a separate asynchronous phase in `src/online/`.
+`RemoteLinkCheckSession` consumes parsed remote links, deduplicates normalized URLs,
+and owns one operation-wide concurrency limiter. Before each initial request and
+redirect it validates URL syntax and scheme, resolves every address, rejects any
+non-public result, and passes one validated address to an injected transport. The
+Node transport connects directly to that address, preserves the original hostname
+for `Host` and TLS SNI, and revalidates the connected peer before sending HTTP.
+DNS and transport interfaces are replaced by deterministic fakes in tests.
+
+The diagnostics provider publishes the static result first, then replaces it with
+the merged result only if the document version and validation request are still
+current. Changes, closes, and newer validations cancel or invalidate older work.
+Severity overrides and the existing stable diagnostic sort are applied to online
+diagnostics at the merge boundary.
+
 ### Configuration, profiles, and dictionaries
 
 `src/config.ts` reads effective `skillMdInspector.*` settings for a resource URI. It
@@ -146,9 +164,9 @@ resolves one of four profiles from `src/profiles/`:
 - `claude` for Claude-oriented constraints;
 - `codex` for Codex-oriented metadata and instruction expectations.
 
-The resolved analysis context contains the profile, resource directories, discovery
-and resource exclusions, collision settings, severity policy, and heuristic
-dictionaries.
+The resolved configuration contains the profile, resource directories, discovery
+and resource exclusions, collision settings, severity policy, heuristic
+dictionaries, and the opt-in online-check flag and operation-wide concurrency limit.
 
 `src/quality/defaultHeuristicDictionaries.json` is the canonical data source for
 action verbs, artifacts, trigger and boundary phrases, vague language, morphology,
@@ -179,7 +197,11 @@ an explicit `not-scored` state instead of treating the result as zero.
 `src/analysis/workspaceAnalysis.ts` is the VS Code-facing entry point shared by the
 Skills panel, workspace report, and index export. It selects the first workspace
 folder, resolves configuration, discovers saved `SKILL.md` files, and calls the
-VS Code-independent analyzer in `src/workspace/analyzeWorkspace.ts`.
+VS Code-independent analyzer in `src/workspace/analyzeWorkspace.ts`. The Skills
+panel continues to use the synchronous offline result. Report and index commands
+use an asynchronous wrapper that optionally merges online diagnostics through one
+shared checker session, preserving deduplication and the concurrency bound across
+the whole workspace operation.
 
 For each readable skill, workspace analysis records diagnostics, quality results,
 profile compatibility, and a resource graph. After individual records exist, it
@@ -271,9 +293,11 @@ repository supplies no production provider or UI for this subsystem.
    text before validation.
 5. The validation registry consumes the shared metrics and returns normalized
    diagnostics.
-6. The adapter maps those diagnostics to VS Code ranges and replaces the document's
-   diagnostic collection entry.
-7. If requested, the code-action provider maps quick-fix metadata to editor or
+6. The adapter maps the static diagnostics to VS Code ranges and replaces the
+   document's diagnostic collection entry.
+7. For a full run with online checking enabled, a separate asynchronous session
+   checks eligible HTTP(S) links and merges results only if the request is current.
+8. If requested, the code-action provider maps quick-fix metadata to editor or
    filesystem edits.
 
 ### Workspace analysis
@@ -283,7 +307,9 @@ repository supplies no production provider or UI for this subsystem.
 2. `analyzeWorkspace` runs full analysis for each readable skill, checking
    cancellation between files.
 3. Cross-skill name and description comparisons run after per-skill analysis.
-4. The resulting model is consumed by the Skills panel, workspace report, or index
+4. The report/index path optionally augments per-skill diagnostics through one
+   shared remote-check session; the Skills panel remains offline.
+5. The resulting model is consumed by the Skills panel, workspace report, or index
    exporter.
 
 ### Configuration refresh
@@ -312,6 +338,9 @@ repository supplies no production provider or UI for this subsystem.
   fixes, while code-action providers decide how to mutate VS Code resources.
 - **Separate fast and complete analysis.** Keystroke validation remains
   filesystem-free; explicit and saved-file workflows perform full checks.
+- **Keep network access outside the core.** `analyzeSkill` remains synchronous and
+  deterministic; optional HTTP checks are injected, cancellable augmentation used
+  only by VS Code-facing full-validation flows.
 - **Keep signals independent.** Validation, quality, collisions, portability, and
   behavioral evaluation answer different questions and are not collapsed into a
   single architectural guarantee.
@@ -331,13 +360,16 @@ Production dependencies are deliberately small:
 - the VS Code Extension API supplies lifecycle, configuration, diagnostics, state,
   commands, filesystem URIs, trees, editors, and webviews;
 - Node `fs`, `path`, and `os` support local discovery and path handling;
+- Node `dns`, `net`, `tls`, `http`, and `https` implement the optional direct,
+  validated-address remote-link transport without ambient proxy discovery;
 - `yaml` supplies source-aware frontmatter parsing;
 - `unified`, `remark-parse`, and `unist-util-visit` supply Markdown traversal.
 - `js-tiktoken/lite` plus the bundled `o200k_base` rank table supplies exact offline
   tokenization without loading the full encoding catalog.
 
-There is no runtime network service, telemetry service, agent integration, or
-subprocess-based discovery. OpenCode support is file import only.
+There is no telemetry service, agent integration, or subprocess-based discovery.
+Network access is limited to explicitly enabled remote-link checks. OpenCode support
+is file import only.
 
 Development dependencies include TypeScript, esbuild, Vitest, `fast-check`, ESLint,
 Prettier, and VS Code type definitions.
@@ -386,8 +418,9 @@ script.
   fresh full scan but do not receive equivalent watcher coverage.
 - Description heuristics and similarity tokenization are primarily English- and
   ASCII-oriented. Non-English input receives limited heuristic coverage.
-- Collision and portability checks do not execute skills in an agent. Remote links
-  are never fetched.
+- Collision and portability checks do not execute skills in an agent. Optional
+  remote-link checks establish availability only; they do not inspect or trust
+  response content, and network failures remain indeterminate.
 - Installed-agent discovery is bounded to known or configured local roots and can
   miss unsupported layouts.
 - OpenCode compatibility is based on a reconstructed, pinned schema. Sanitization,

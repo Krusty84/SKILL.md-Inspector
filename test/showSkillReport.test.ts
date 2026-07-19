@@ -11,6 +11,7 @@ const hoisted = vi.hoisted(() => ({
   content: '',
   filePath: '',
   report: undefined as SkillReport | undefined,
+  onlineEnabled: false,
 }));
 
 vi.mock('vscode', () => ({
@@ -22,6 +23,9 @@ vi.mock('vscode', () => ({
         }
         if (key === 'resources.directories') {
           return ['playbooks'];
+        }
+        if (key === 'links.onlineCheck.enabled') {
+          return hoisted.onlineEnabled;
         }
         return fallback;
       }),
@@ -67,6 +71,7 @@ beforeEach(() => {
   hoisted.filePath = path.join(dir, 'SKILL.md');
   hoisted.analysis = undefined;
   hoisted.report = undefined;
+  hoisted.onlineEnabled = false;
 });
 
 afterEach(() => {
@@ -114,5 +119,33 @@ describe('showSkillReport', () => {
       diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length,
     );
     expect(report?.unreferencedFiles).toContain('playbooks/guide.md');
+  });
+
+  it('includes online diagnostics in the full skill report when enabled', async () => {
+    hoisted.onlineEnabled = true;
+    hoisted.content = [
+      '---',
+      'name: demo',
+      'description: Frobnicate widgets. Use when widget settings drift. Do not use for invoices.',
+      '---',
+      '',
+      '[docs](https://example.com/missing)',
+    ].join('\n');
+
+    await showSkillReport(undefined, {
+      dns: {
+        resolve: async () => [{ address: '93.184.216.34', family: 4 }],
+      },
+      transport: {
+        request: async ({ address }) => ({
+          statusCode: 404,
+          connectedAddress: address,
+        }),
+      },
+    });
+
+    expect(hoisted.report?.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      DiagnosticCode.LinkRemoteUnavailable,
+    );
   });
 });

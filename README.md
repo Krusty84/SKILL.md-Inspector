@@ -5,13 +5,16 @@ Agent Skills. It validates every file named exactly `SKILL.md`, explains problem
 the editor, evaluates description and instruction quality, and analyzes collections
 of skills for collisions and portability issues.
 
-All analysis is local and deterministic. The extension does not call an LLM, fetch
-links, run agent executables, send telemetry, or require network access at runtime.
+Core analysis is local and deterministic. The extension does not call an LLM, run
+agent executables, or send telemetry. Optional remote-link availability checking is
+disabled by default and is the only validation feature that sends network requests.
 
 ## Features
 
 - **Validate skills as you edit** — check YAML frontmatter, names, descriptions,
   Markdown links, bundled resources, body structure, and profile-specific metadata.
+- **Check remote links when explicitly enabled** — augment full validation with
+  SSRF-protected HTTP availability checks while keeping typing and core analysis offline.
 - **Fix common problems quickly** — insert required fields or a complete template,
   convert names to kebab-case, add trigger and boundary clauses, create missing
   linked files, and reference untracked resources.
@@ -167,6 +170,8 @@ Open VS Code Settings and search for `SKILL.md Inspector`. Common settings inclu
 | ---------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
 | `skillMdInspector.validation.enabled`    | `true`                                         | Enable editor validation.                                      |
 | `skillMdInspector.validation.runOnSave`  | `true`                                         | Run full validation on save.                                   |
+| `skillMdInspector.links.onlineCheck.enabled` | `false`                                    | Send HTTP requests during full validation to check referenced URLs. |
+| `skillMdInspector.links.onlineCheck.maxConcurrency` | `4`                                   | Limit concurrent checks across one complete validation operation (1–10). |
 | `skillMdInspector.profile`               | `generic`                                      | Select the active format profile.                              |
 | `skillMdInspector.description.language`  | `auto`                                         | Use English heuristics or detect limited non-English coverage. |
 | `skillMdInspector.body.strictness`       | `recommended`                                  | Disable, inform, or warn on advisory body sections.            |
@@ -228,7 +233,21 @@ flows, and constraints, see [ARCHITECTURE.md](ARCHITECTURE.md). Release history 
 
 ## Privacy and limitations
 
-- Analysis is offline; remote links are classified but not fetched.
+- Core analysis, validation while typing, code actions, portability evaluation, and
+  OpenCode skill matching are offline. Remote links still receive the static
+  `skill.link.remoteSuspicious` diagnostic whether online checking is enabled or not.
+- Enabling `skillMdInspector.links.onlineCheck.enabled` sends `HEAD` requests, and
+  minimal range `GET` requests when required, to HTTP(S) URLs referenced by
+  `SKILL.md`. Those servers can observe the request, source IP address, timing, and
+  user-agent. Redirect destinations are also contacted after validation.
+- Online checks accept `2xx` and `403`, follow at most five safe redirects, use an
+  approximately ten-second per-request timeout, and report network/DNS/TLS failures
+  as indeterminate rather than definitely broken. Availability at check time does
+  not guarantee future availability or safe content.
+- The checker rejects credentials, local-only hosts, non-public IP addresses,
+  mixed public/private DNS answers, HTTPS-to-HTTP redirects, and unsafe redirect
+  targets. It connects directly to a validated address and does not use ambient
+  proxy configuration; restrictive networks may therefore produce check failures.
 - Workspace aggregate analysis currently uses only the first workspace folder.
 - Full skill analysis depends partly on local Node filesystem APIs, so remote or
   virtual workspaces are not uniformly supported.

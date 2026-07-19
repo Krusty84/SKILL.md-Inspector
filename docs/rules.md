@@ -177,6 +177,26 @@ An absolute local path is not portable to another machine.
 - Bad: `[x](/Users/me/notes.md)`
 - Good: `[x](./references/notes.md)`
 
+### `skill.link.remoteUnavailable`
+
+**warning** · all profiles · auto-fix: no · online check only
+
+An enabled online check reached a terminal HTTP response that indicates the link is
+unavailable. Terminal `4xx` responses other than `403`, and all terminal `5xx`
+responses, produce this diagnostic. The message includes the terminal status.
+
+- Unavailable: `404`, `410`, or `500`.
+- Accepted without this diagnostic: any `2xx`, direct `403`, or a safe redirect
+  chain ending in `2xx` or `403`.
+
+### `skill.link.remoteCheckFailed`
+
+**information** · all profiles · auto-fix: no · online check only
+
+The checker could not determine availability because of a timeout, DNS, connection,
+or TLS failure; an invalid redirect; a redirect loop; or more than five redirects.
+This diagnostic does not claim that the link is broken.
+
 ### `skill.metadata.reservedWord`
 
 **warning** · claude · auto-fix: no
@@ -235,6 +255,19 @@ executable/archive extensions are flagged as suspicious.
 
 - Bad: `[run](http://example.com/run.exe)`
 - Good: `[doc](https://example.com/guide)` — or bundle the material in the package.
+
+This static diagnostic is unchanged by online checking and is emitted even when
+online checking is disabled.
+
+### `skill.link.remoteCheckBlocked`
+
+**warning** · all profiles · auto-fix: no · online check only
+
+The URL was not requested because it failed SSRF safety validation. Examples include
+embedded credentials, malformed or local-only hosts, direct non-public addresses,
+mixed public/private DNS answers, redirects to prohibited destinations, and
+HTTPS-to-HTTP redirects. Initial targets and every redirect are validated before a
+connection is attempted.
 
 ---
 

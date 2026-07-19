@@ -82,6 +82,18 @@ function applyProfileOverrides(
   return result;
 }
 
+/** Applies profile overrides to asynchronous additions, then performs the same stable sort. */
+export function mergeDiagnostics(
+  staticDiagnostics: SkillDiagnostic[],
+  additionalDiagnostics: SkillDiagnostic[],
+  profile: SkillProfile,
+): SkillDiagnostic[] {
+  return sortDiagnostics([
+    ...staticDiagnostics,
+    ...applyProfileOverrides(additionalDiagnostics, profile),
+  ]);
+}
+
 export {
   validateFrontmatter,
   validateName,

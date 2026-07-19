@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { computeWorkspaceAnalysis } from '../analysis/workspaceAnalysis';
+import { computeWorkspaceAnalysisOnline } from '../analysis/workspaceAnalysis';
 import { buildSkillsIndex } from '../workspace/analyzeWorkspace';
 
 /** Command: write skills.index.json for the workspace (brief §13.6). */
@@ -12,16 +12,14 @@ export async function exportSkillsIndex(): Promise<void> {
       cancellable: true,
     },
     (progress, token) =>
-      Promise.resolve(
-        computeWorkspaceAnalysis({
-          cancel: token,
-          onProgress: (done, total) =>
-            progress.report({
-              message: `${done}/${total}`,
-              increment: total > 0 ? 100 / total : 0,
-            }),
-        }),
-      ),
+      computeWorkspaceAnalysisOnline({
+        cancel: token,
+        onProgress: (done, total) =>
+          progress.report({
+            message: `${done}/${total}`,
+            increment: total > 0 ? 100 / total : 0,
+          }),
+      }),
   );
 
   if (!result) {

@@ -817,6 +817,18 @@
           "default": true,
           "description": "Re-run validation whenever a SKILL.md file is saved."
         },
+        "skillMdInspector.links.onlineCheck.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Check remote-link availability during full validation. Enabling this sends HTTP requests to URLs referenced by SKILL.md files."
+        },
+        "skillMdInspector.links.onlineCheck.maxConcurrency": {
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Maximum number of concurrent remote-link requests across one complete validation operation."
+        },
         "skillMdInspector.profile": {
           "type": "string",
           "default": "generic",

@@ -12,7 +12,7 @@ export async function validateCurrentSkill(
     return;
   }
 
-  const analysis = provider.validate(target.document);
+  const analysis = await provider.validate(target.document);
   if (!analysis) {
     vscode.window.showInformationMessage('SKILL.md Inspector: validation is disabled in settings.');
     return;

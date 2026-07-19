@@ -286,18 +286,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       setTimeout(() => {
         pending.delete(key);
         // While typing, run the filesystem-free pipeline (Tasks 57/58).
-        provider.validate(document, 'text-only');
+        void provider.validate(document, 'text-only');
       }, CHANGE_DEBOUNCE_MS),
     );
   };
 
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument((document) => provider.validate(document)),
+    vscode.workspace.onDidOpenTextDocument((document) => void provider.validate(document)),
     vscode.workspace.onDidChangeTextDocument((event) => scheduleValidate(event.document)),
     vscode.workspace.onDidSaveTextDocument((document) => {
       if (isSkillFile(document)) {
         if (readConfig(document.uri).runOnSave) {
-          provider.validate(document);
+          void provider.validate(document);
         }
         treeProvider.refresh();
         favoritesProvider.refresh();
@@ -351,7 +351,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 function revalidateVisible(provider: DiagnosticsProvider): void {
   for (const editor of vscode.window.visibleTextEditors) {
-    provider.validate(editor.document);
+    void provider.validate(editor.document);
   }
 }
 

@@ -46,6 +46,9 @@ export const DiagnosticCode = {
   LinkCaseMismatch: 'skill.link.caseMismatch',
   LinkAbsolute: 'skill.link.absolute',
   LinkRemoteSuspicious: 'skill.link.remoteSuspicious',
+  LinkRemoteUnavailable: 'skill.link.remoteUnavailable',
+  LinkRemoteCheckFailed: 'skill.link.remoteCheckFailed',
+  LinkRemoteCheckBlocked: 'skill.link.remoteCheckBlocked',
   LinkEscapesSkillRoot: 'skill.link.escapesRoot',
 
   // Resources
@@ -91,6 +94,8 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   // Compatibility — valid, but a target profile is stricter or less portable.
   [DiagnosticCode.LinkCaseMismatch]: 'compatibility',
   [DiagnosticCode.LinkAbsolute]: 'compatibility',
+  [DiagnosticCode.LinkRemoteUnavailable]: 'compatibility',
+  [DiagnosticCode.LinkRemoteCheckFailed]: 'compatibility',
   [DiagnosticCode.MetadataReservedWord]: 'compatibility',
   [DiagnosticCode.MetadataXmlTag]: 'compatibility',
   [DiagnosticCode.MetadataFieldType]: 'compatibility',
@@ -99,6 +104,7 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   // Security — a risky reference.
   [DiagnosticCode.LinkEscapesSkillRoot]: 'security',
   [DiagnosticCode.LinkRemoteSuspicious]: 'security',
+  [DiagnosticCode.LinkRemoteCheckBlocked]: 'security',
   // Quality — discoverability recommendations.
   [DiagnosticCode.DescriptionTooShort]: 'quality',
   [DiagnosticCode.DescriptionTooVerbose]: 'quality',
