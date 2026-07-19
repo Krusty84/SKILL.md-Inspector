@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
 import { computeStaticDescriptionQuality } from '../quality/staticDescriptionQuality';
+import { assessAuthoringQuality } from '../authoring/authoringQuality';
 import { buildResourceGraph } from './buildResourceGraph';
 import { evaluatePortability, toCompatibilityMap } from './portability';
 import { detectCollisions } from './detectSkillCollisions';
@@ -62,6 +63,7 @@ export function analyzeWorkspace(
   const collisions = detectCollisions(
     skills.map((skill) => ({ name: skill.name, description: skill.description })),
     collisionOptions,
+    options.dictionaries,
   );
   const named = skills.map((skill) => ({ name: skill.name, path: skill.path }));
   const nameConflicts = detectNameConflicts(named);
@@ -73,15 +75,18 @@ export function analyzeWorkspace(
 /** Builds the exportable index model (brief §13.6). */
 export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     skills: analysis.skills.map((skill) => ({
       name: skill.name,
       path: skill.path,
       description: skill.description,
+      validationStatus: skill.validationStatus,
       staticDescriptionQuality: skill.staticDescriptionQuality,
+      authoringQuality: skill.authoringQuality,
       errors: skill.errors,
       warnings: skill.warnings,
+      information: skill.information,
       diagnostics: skill.diagnostics,
       profileCompatibility: skill.profileCompatibility,
     })),
@@ -102,7 +107,11 @@ function toWorkspaceSkill(
     return undefined;
   }
 
-  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, { exclude, dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
+  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, {
+    exclude,
+    dictionaries: options.dictionaries,
+    resourceDirectories: options.resourceDirectories,
+  });
   const name =
     typeof document.frontmatter?.name === 'string' && document.frontmatter.name
       ? document.frontmatter.name
@@ -120,22 +129,25 @@ function toWorkspaceSkill(
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
   const warnings = diagnostics.filter((d) => d.severity === 'warning').length;
   const information = diagnostics.filter((d) => d.severity === 'information').length;
+  const validationStatus = errors > 0 ? 'fail' : warnings > 0 ? 'warning' : 'pass';
   const indexDiagnostics = diagnostics.map((d) => ({
     code: d.code,
     severity: d.severity,
     kind: d.kind,
   }));
   const resourceGraph = buildResourceGraph(document);
+  const authoringQuality = assessAuthoringQuality(document);
 
-  const portability = evaluatePortability(document);
+  const portability = evaluatePortability(document, options.dictionaries);
 
   return {
     name,
     path: toPosix(path.relative(rootDir, absolutePath)),
     absolutePath,
     description,
-    staticDescriptionQuality: staticDescriptionQuality.score,
-    staticDescriptionQualityLabel: staticDescriptionQuality.label,
+    validationStatus,
+    staticDescriptionQuality,
+    authoringQuality,
     errors,
     warnings,
     information,

@@ -39,7 +39,6 @@ function isPlausibleLaterFrontmatter(lines: string[], index: number): boolean {
   return false;
 }
 
-
 /** Split into logical lines while tolerating CRLF and a leading BOM. */
 function toLines(content: string): string[] {
   const bom = String.fromCharCode(0xfeff);
@@ -65,7 +64,9 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
 
   if (!firstLineIsFence) {
     // Look for a fence further down to tell "missing" from "not at top".
-    const fenceIndex = lines.findIndex((_, index) => index > 0 && isPlausibleLaterFrontmatter(lines, index));
+    const fenceIndex = lines.findIndex(
+      (_, index) => index > 0 && isPlausibleLaterFrontmatter(lines, index),
+    );
     const onlyBlankBefore =
       fenceIndex > 0 && lines.slice(0, fenceIndex).every((line) => line.trim() === '');
 

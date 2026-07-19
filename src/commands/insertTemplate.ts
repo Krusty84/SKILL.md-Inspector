@@ -1,11 +1,17 @@
 import * as vscode from 'vscode';
 import { resolveTemplates } from '../templates/resolveTemplates';
-import { inferSkillNameFromPath, renderTemplate, titleFromSkillName } from '../templates/renderTemplate';
+import {
+  inferSkillNameFromPath,
+  renderTemplate,
+  titleFromSkillName,
+} from '../templates/renderTemplate';
 import type { SkillTemplateDefinition } from '../templates/types';
 import { resolveSkillTarget } from './resolveSkillTarget';
 
 /** Command: insert a starter SKILL.md template into the active or selected editor. */
-export async function insertTemplate(uri?: Parameters<typeof resolveSkillTarget>[0]): Promise<void> {
+export async function insertTemplate(
+  uri?: Parameters<typeof resolveSkillTarget>[0],
+): Promise<void> {
   const target = await resolveSkillTarget(uri, {
     requireEditor: true,
     warningAction: 'insert the SKILL.md template',

@@ -40,12 +40,19 @@ export function analyzeSkill(
   const parsed = parseSkillFile(filePath, content);
 
   if (options.mode === 'text-only') {
-    const diagnostics = runAllValidations(parsed, profile, { skipFilesystem: true, dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
+    const diagnostics = runAllValidations(parsed, profile, {
+      skipFilesystem: true,
+      dictionaries: options.dictionaries,
+      resourceDirectories: options.resourceDirectories,
+    });
     return { document: parsed, diagnostics };
   }
 
   const discover = options.discover ?? discoverResources;
   const document = withResources(parsed, discover(parsed.directory, options.exclude));
-  const diagnostics = runAllValidations(document, profile, { dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
+  const diagnostics = runAllValidations(document, profile, {
+    dictionaries: options.dictionaries,
+    resourceDirectories: options.resourceDirectories,
+  });
   return { document, diagnostics };
 }

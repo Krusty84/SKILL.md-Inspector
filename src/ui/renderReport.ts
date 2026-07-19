@@ -1,5 +1,8 @@
 import type { SkillReport } from './reportModel';
-import type { StaticDescriptionQualityFinding, StaticDescriptionQualityLabel } from '../types/StaticDescriptionQuality';
+import type {
+  StaticDescriptionQualityFinding,
+  StaticDescriptionQualityLabel,
+} from '../types/StaticDescriptionQuality';
 
 export interface RenderOptions {
   nonce: string;
@@ -8,9 +11,16 @@ export interface RenderOptions {
 
 /** Renders the skill report as a self-contained, theme-aware HTML document. */
 export function renderReportHtml(report: SkillReport, opts: RenderOptions): string {
-  const statusClass = report.status === 'pass' ? 'ok' : 'fail';
-  const statusLabel = report.status === 'pass' ? 'PASS' : 'FAIL';
+  const statusClass =
+    report.status === 'pass' ? 'ok' : report.status === 'warning' ? 'warning' : 'fail';
+  const statusLabel =
+    report.status === 'pass'
+      ? 'VALID'
+      : report.status === 'warning'
+        ? 'VALID WITH WARNINGS'
+        : 'INVALID';
   const q = report.staticDescriptionQuality;
+  const instructions = report.authoringQuality.instructions;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -24,6 +34,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; margin-top: 2rem; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 0.35rem; }
   .badge { font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 999px; }
   .badge.ok, .badge.q-good { background: var(--vscode-testing-iconPassed, #3fb950); color: #06210c; }
+  .badge.warning { background: var(--vscode-editorWarning-foreground, #cca700); color: #241f00; }
   .badge.fail, .badge.q-low { background: var(--vscode-errorForeground, #f14c4c); color: #2b0606; }
   .badge.q-mid { background: var(--vscode-editorWarning-foreground, #cca700); color: #241f00; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
@@ -44,19 +55,26 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   code { font-family: var(--vscode-editor-font-family, monospace); background: var(--vscode-textCodeBlock-background); padding: 0.05rem 0.3rem; border-radius: 3px; }
   .empty { opacity: 0.6; font-style: italic; }
   .note { opacity: 0.7; font-size: 0.85rem; margin: 0.35rem 0 0; }
+  .adjustments { margin-top: 1rem; padding: 0.7rem 0.85rem; border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700); background: var(--vscode-textBlockQuote-background); font-size: 0.9rem; }
+  .adjustments p { margin: 0.25rem 0; }
+  .adjustments ul { list-style: disc; padding-left: 1.2rem; margin-bottom: 0; }
   .limitations { margin-top: 1rem; font-size: 0.9rem; }
   .limitations ul { list-style: disc; padding-left: 1.2rem; }
   .conf-high { color: var(--vscode-testing-iconPassed, #3fb950); }
   .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
   .conf-low { color: var(--vscode-errorForeground, #f14c4c); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border-bottom: 1px solid var(--vscode-panel-border); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+  th { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }
 </style>
 <title>Skill Report</title>
 </head>
 <body>
-  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Heuristic Static Description Quality ${q.score}/100 · ${capitalize(q.label)}</span></h1>
+  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Heuristic Static Description Quality ${q.adjustedScore}/100 · ${escapeHtml(capitalize(q.label))}</span></h1>
   <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
   <div class="grid">
-    ${card('Heuristic Static Description Quality', `<span class="score">${q.score}<span class="max"> / 100</span></span>`)}
+    ${card('Adjusted Static Description Quality', `<span class="score">${q.adjustedScore}<span class="max"> / 100</span></span>`)}
+    ${card('Instruction authoring quality', `${instructions.score}/100 · ${escapeHtml(capitalize(instructions.label))}`)}
     ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
@@ -64,13 +82,17 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     ${card('Warnings', String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
     ${card('Information', String(report.informationCount))}
   </div>
+  ${renderGradeLimitations(q)}
   ${
     q.limitations.length > 0
-      ? `<div class="limitations"><strong>Limitations</strong><ul>${q.limitations
+      ? `<div class="limitations"><strong>Heuristic coverage limitations</strong><ul>${q.limitations
           .map((l) => `<li>${escapeHtml(l)}</li>`)
           .join('')}</ul></div>`
       : ''
   }
+
+  <h2>Validation findings</h2>
+  ${renderDiagnostics(report.diagnostics)}
 
   <h2>Trigger quality breakdown</h2>
   <ul>${q.findings.map(renderFinding).join('')}</ul>
@@ -90,6 +112,23 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 </html>`;
 }
 
+function renderGradeLimitations(quality: SkillReport['staticDescriptionQuality']): string {
+  if (quality.gradeLimitations.length === 0) {
+    return '';
+  }
+  const scoreSummary =
+    quality.rawScore !== quality.adjustedScore
+      ? `<p>Raw criterion score: <strong>${quality.rawScore}/100</strong>. Adjusted score after ceilings: <strong>${quality.adjustedScore}/100</strong>.</p>`
+      : '';
+  const limitations = quality.gradeLimitations
+    .map(
+      (limitation) =>
+        `<li><code>${escapeHtml(limitation.code)}</code> — ceiling: ${limitation.ceiling}/100. ${escapeHtml(limitation.reason)}</li>`,
+    )
+    .join('');
+  return `<div class="adjustments"><strong>Grade limitations and score adjustments</strong>${scoreSummary}<ul>${limitations}</ul></div>`;
+}
+
 function card(label: string, value: string, valueClass = ''): string {
   return `<div class="card"><div class="label">${label}</div><div class="value ${valueClass}">${value}</div></div>`;
 }
@@ -104,8 +143,28 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
   return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(finding.criterion)}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
 }
 
+function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
+  if (diagnostics.length === 0) {
+    return '<p class="empty">No validation findings.</p>';
+  }
+  return `<table><thead><tr><th>Severity</th><th>Diagnostic code</th><th>Message</th></tr></thead><tbody>${diagnostics
+    .map(
+      (diagnostic) =>
+        `<tr><td>${escapeHtml(capitalize(diagnostic.severity))}</td><td><code>${escapeHtml(diagnostic.code)}</code></td><td>${escapeHtml(diagnostic.message)}</td></tr>`,
+    )
+    .join('')}</tbody></table>`;
+}
+
 function renderAuthoring(result: SkillReport['authoringQuality']['instructions']): string {
-  const findings = result.findings.length === 0 ? '<p class="empty">No structural findings.</p>' : `<ul>${result.findings.map((finding) => `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}</span></li>`).join('')}</ul>`;
+  const findings =
+    result.findings.length === 0
+      ? '<p class="empty">No structural findings.</p>'
+      : `<ul>${result.findings
+          .map(
+            (finding) =>
+              `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}<br /><span class="msg">Suggestion: ${escapeHtml(finding.suggestion)}</span></span></li>`,
+          )
+          .join('')}</ul>`;
   return `<p><strong>${result.score}/100 · ${escapeHtml(capitalize(result.label))}</strong></p>${findings}`;
 }
 

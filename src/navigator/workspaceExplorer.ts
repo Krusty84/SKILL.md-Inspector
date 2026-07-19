@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
 import { createWorkspaceExcludeMatcher } from './workspaceExcludes';
 import { compareWorkspaceNodes, isDirectoryType } from './workspaceSorting';
-import type { WorkspaceContainerNode, WorkspaceExplorerNode, WorkspaceRootNode } from './workspaceExplorerTypes';
+import type {
+  WorkspaceContainerNode,
+  WorkspaceExplorerNode,
+  WorkspaceRootNode,
+} from './workspaceExplorerTypes';
 
 export class WorkspaceExplorer implements vscode.Disposable {
   private readonly cache = new Map<string, WorkspaceExplorerNode[]>();
@@ -9,12 +13,20 @@ export class WorkspaceExplorer implements vscode.Disposable {
   private readonly pendingRefreshes = new Map<string, WorkspaceExplorerNode | undefined>();
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(private readonly output: vscode.OutputChannel, private readonly emitter?: { fire(data: WorkspaceExplorerNode | undefined): void }) {
+  constructor(
+    private readonly output: vscode.OutputChannel,
+    private readonly emitter?: { fire(data: WorkspaceExplorerNode | undefined): void },
+  ) {
     this.rebuildWatchers();
   }
 
   getRoots(): WorkspaceRootNode[] {
-    return (vscode.workspace.workspaceFolders ?? []).map((folder) => ({ type: 'workspaceRoot', id: `workspace-root:${folder.uri.toString()}`, folder, uri: folder.uri }));
+    return (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      type: 'workspaceRoot',
+      id: `workspace-root:${folder.uri.toString()}`,
+      folder,
+      uri: folder.uri,
+    }));
   }
 
   async getChildren(node: WorkspaceContainerNode): Promise<WorkspaceExplorerNode[]> {
@@ -22,7 +34,9 @@ export class WorkspaceExplorer implements vscode.Disposable {
     const cached = this.cache.get(key);
     if (cached) return cached;
     try {
-      const matcher = createWorkspaceExcludeMatcher(node.type === 'workspaceRoot' ? node.folder : this.folderFor(node.uri));
+      const matcher = createWorkspaceExcludeMatcher(
+        node.type === 'workspaceRoot' ? node.folder : this.folderFor(node.uri),
+      );
       const entries = await vscode.workspace.fs.readDirectory(node.uri);
       const children = entries
         .map(([name, fileType]) => this.toNode(node.uri, name, fileType))
@@ -32,15 +46,25 @@ export class WorkspaceExplorer implements vscode.Disposable {
       this.cache.set(key, children);
       return children;
     } catch (error) {
-      this.output.appendLine(`Unable to read workspace folder ${node.uri.toString()}: ${String(error)}`);
-      const child: WorkspaceExplorerNode = { type: 'workspaceError', id: `workspace-error:${node.uri.toString()}`, label: 'Unable to read this folder.', parentUri: node.uri };
+      this.output.appendLine(
+        `Unable to read workspace folder ${node.uri.toString()}: ${String(error)}`,
+      );
+      const child: WorkspaceExplorerNode = {
+        type: 'workspaceError',
+        id: `workspace-error:${node.uri.toString()}`,
+        label: 'Unable to read this folder.',
+        parentUri: node.uri,
+      };
       this.cache.set(key, [child]);
       return [child];
     }
   }
 
   invalidate(uri?: vscode.Uri): void {
-    if (!uri) { this.cache.clear(); return; }
+    if (!uri) {
+      this.cache.clear();
+      return;
+    }
     this.cache.delete(this.key(uri));
   }
 
@@ -60,7 +84,9 @@ export class WorkspaceExplorer implements vscode.Disposable {
     for (const watcher of this.watchers.values()) watcher.dispose();
     this.watchers.clear();
     for (const folder of vscode.workspace.workspaceFolders ?? []) {
-      const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, '**/*'));
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(folder, '**/*'),
+      );
       watcher.onDidCreate((uri) => this.invalidateParentAndSchedule(uri));
       watcher.onDidDelete((uri) => this.invalidateParentAndSchedule(uri));
       watcher.onDidChange((uri) => this.invalidateParentAndSchedule(uri));
@@ -80,14 +106,39 @@ export class WorkspaceExplorer implements vscode.Disposable {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
   }
 
-  private toNode(parent: vscode.Uri, name: string, fileType: vscode.FileType): WorkspaceExplorerNode {
+  private toNode(
+    parent: vscode.Uri,
+    name: string,
+    fileType: vscode.FileType,
+  ): WorkspaceExplorerNode {
     const uri = vscode.Uri.joinPath(parent, name);
-    if (isDirectoryType(fileType)) return { type: 'workspaceDirectory', id: `workspace-directory:${uri.toString()}`, uri, name, parentUri: parent };
-    return { type: 'workspaceFile', id: `workspace-file:${uri.toString()}`, uri, name, fileType, parentUri: parent };
+    if (isDirectoryType(fileType))
+      return {
+        type: 'workspaceDirectory',
+        id: `workspace-directory:${uri.toString()}`,
+        uri,
+        name,
+        parentUri: parent,
+      };
+    return {
+      type: 'workspaceFile',
+      id: `workspace-file:${uri.toString()}`,
+      uri,
+      name,
+      fileType,
+      parentUri: parent,
+    };
   }
 
   private folderFor(uri: vscode.Uri): vscode.WorkspaceFolder {
-    return vscode.workspace.getWorkspaceFolder(uri) ?? vscode.workspace.workspaceFolders?.[0] ?? { uri, name: uri.path.split('/').filter(Boolean).pop() ?? uri.toString(), index: 0 };
+    return (
+      vscode.workspace.getWorkspaceFolder(uri) ??
+      vscode.workspace.workspaceFolders?.[0] ?? {
+        uri,
+        name: uri.path.split('/').filter(Boolean).pop() ?? uri.toString(),
+        index: 0,
+      }
+    );
   }
 
   private invalidateParentAndSchedule(uri: vscode.Uri): void {
@@ -110,10 +161,18 @@ export class WorkspaceExplorer implements vscode.Disposable {
     const root = this.getRoots().find((node) => node.uri.toString() === uri.toString());
     if (root) return root;
     const name = uri.path.split('/').filter(Boolean).pop() ?? uri.toString();
-    return { type: 'workspaceDirectory', id: `workspace-directory:${uri.toString()}`, uri, name, parentUri: parentUri(uri) };
+    return {
+      type: 'workspaceDirectory',
+      id: `workspace-directory:${uri.toString()}`,
+      uri,
+      name,
+      parentUri: parentUri(uri),
+    };
   }
 
-  private key(uri: vscode.Uri): string { return uri.toString(); }
+  private key(uri: vscode.Uri): string {
+    return uri.toString();
+  }
 }
 
 export function parentUri(uri: vscode.Uri): vscode.Uri {

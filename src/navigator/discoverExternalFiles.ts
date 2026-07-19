@@ -2,9 +2,15 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import type { AgentFileName, AgentSource, DiscoveryResult, DiscoveredFile } from './types';
 
-export interface DiscoveryOptions { maxResults: number; maxDepth: number }
+export interface DiscoveryOptions {
+  maxResults: number;
+  maxDepth: number;
+}
 
-export async function discoverExternalFiles(source: AgentSource, options: DiscoveryOptions = { maxResults: 1000, maxDepth: 12 }): Promise<DiscoveryResult> {
+export async function discoverExternalFiles(
+  source: AgentSource,
+  options: DiscoveryOptions = { maxResults: 1000, maxDepth: 12 },
+): Promise<DiscoveryResult> {
   const files: DiscoveredFile[] = [];
   const messages: string[] = [];
   const seen = new Set<string>();
@@ -13,31 +19,62 @@ export async function discoverExternalFiles(source: AgentSource, options: Discov
   let truncated = false;
 
   async function addFile(filePath: string): Promise<void> {
-    if (files.length >= options.maxResults) { truncated = true; return; }
+    if (files.length >= options.maxResults) {
+      truncated = true;
+      return;
+    }
     const base = path.basename(filePath) as AgentFileName;
     if (!source.files.includes(base)) return;
     let absolutePath: string;
-    try { absolutePath = await fs.realpath(filePath); } catch { messages.push(`Cannot read ${filePath}.`); return; }
+    try {
+      absolutePath = await fs.realpath(filePath);
+    } catch {
+      messages.push(`Cannot read ${filePath}.`);
+      return;
+    }
     const canonicalPath = process.platform === 'win32' ? absolutePath.toLowerCase() : absolutePath;
     if (seenFiles.has(canonicalPath)) return;
     seenFiles.add(canonicalPath);
-    files.push({ sourceId: source.id, sourceLabel: source.groupLabel, fileName: base, absolutePath, relativePath: path.relative(root, filePath) || base });
+    files.push({
+      sourceId: source.id,
+      sourceLabel: source.groupLabel,
+      fileName: base,
+      absolutePath,
+      relativePath: path.relative(root, filePath) || base,
+    });
   }
 
   async function walk(dir: string, depth: number): Promise<void> {
-    if (files.length >= options.maxResults) { truncated = true; return; }
+    if (files.length >= options.maxResults) {
+      truncated = true;
+      return;
+    }
     let real: string;
-    try { real = await fs.realpath(dir); } catch { messages.push(`Cannot read ${dir}.`); return; }
+    try {
+      real = await fs.realpath(dir);
+    } catch {
+      messages.push(`Cannot read ${dir}.`);
+      return;
+    }
     if (seen.has(real)) return;
     seen.add(real);
     let entries: import('node:fs').Dirent[];
-    try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { messages.push(`Cannot read ${dir}.`); return; }
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      messages.push(`Cannot read ${dir}.`);
+      return;
+    }
     entries.sort(compareDirents);
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isFile()) {
         await addFile(fullPath);
-      } else if ((entry.isDirectory() || entry.isSymbolicLink()) && source.recursive && depth < options.maxDepth) {
+      } else if (
+        (entry.isDirectory() || entry.isSymbolicLink()) &&
+        source.recursive &&
+        depth < options.maxDepth
+      ) {
         try {
           const stat = await fs.stat(fullPath);
           if (stat.isDirectory()) await walk(fullPath, depth + 1);
@@ -46,7 +83,10 @@ export async function discoverExternalFiles(source: AgentSource, options: Discov
           messages.push(`Cannot read ${fullPath}.`);
         }
       }
-      if (files.length >= options.maxResults) { truncated = true; break; }
+      if (files.length >= options.maxResults) {
+        truncated = true;
+        break;
+      }
     }
   }
 
@@ -73,7 +113,10 @@ function compareDirents(a: import('node:fs').Dirent, b: import('node:fs').Dirent
 
 function compareDiscoveredFiles(a: DiscoveredFile, b: DiscoveredFile): number {
   const fileOrder = instructionFileOrder(a.fileName) - instructionFileOrder(b.fileName);
-  return fileOrder || a.relativePath.localeCompare(b.relativePath, undefined, { sensitivity: 'base', numeric: true });
+  return (
+    fileOrder ||
+    a.relativePath.localeCompare(b.relativePath, undefined, { sensitivity: 'base', numeric: true })
+  );
 }
 
 function instructionFileOrder(fileName: string): number {

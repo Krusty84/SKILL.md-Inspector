@@ -43,16 +43,18 @@ can execute.
 - **`name` rules** — required, string, ≤ 64 chars, lowercase/digits/hyphens
   only, no leading/trailing hyphen, and a warning when it does not match the
   parent skill folder.
-- **`description` rules** — required, string, ≤ 1024 chars, with quality
-  warnings for descriptions that are too short, vague, missing an action verb,
-  or missing a usage-trigger clause.
+- **`description` rules** — required, string, ≤ 1024 chars; a missing action
+  verb is an error, while descriptions that are too short, vague, or missing a
+  usage-trigger clause produce quality warnings.
 - **Profile-specific metadata rules** — for the selected profile, flags Claude
   reserved words and XML-like tags, checks VS Code / Codex field types, and
   applies an unknown-key policy.
 - **Heuristic Static Description Quality Score (0–100)** — a *deterministic heuristic* for
   each `description` across seven weighted criteria (action verb, usage trigger,
   concrete artifact, boundary, front-loaded intent, low vagueness, good length),
-  shown in the Skill Report with a per-criterion breakdown, a **heuristic coverage** level,
+  with a transparent additive `rawScore` and an explicit adjusted score for essential
+  completeness. Every applied score ceiling and its reason is reported; the public label
+  comes from the adjusted score. The result also includes a **heuristic coverage** level
   and any analysis **limitations**. It estimates how discoverable a description is
   and **does not guarantee** that an agent will select the skill at runtime.
   Missing boundary and front-loaded-intent are surfaced as information diagnostics
@@ -77,25 +79,32 @@ can execute.
   insert frontmatter / `name` / `description`, insert a body template, add a
   "Use when…" or "Do not use when…" clause, create a missing linked file, and
   add a Markdown link to an unreferenced resource.
-- **Skill Report** — a read-only webview summarizing the skill's status,
-  diagnostic counts, referenced/unreferenced files, and the Static Description Quality
-  breakdown.
+- **Skill Report** — a read-only webview that keeps validation status, diagnostic
+  counts, Static Description Quality, instruction authoring quality, resource
+  authoring quality, and referenced/unreferenced files as separate signals.
 - **Activity Bar navigator** — a dedicated **SKILL.md INSPECTOR** icon opens three independent Views: **FAVORITES**, **WORKSPACE**, and **INSTALLED AGENTS**.
 - **Favorites** — add frequently inspected `SKILL.md` files from the Inspector submenu in the editor, Explorer, or Inspector Views. Favorites persist locally across restarts and workspace changes; missing files stay visible with a warning until removed.
-- **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view remains separate in the bottom Panel. It still lists every skill with its status icon, Static Description Quality score, error/warning counts, profile, and resource graph.
+- **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view remains
+  separate in the bottom Panel. Each skill shows tri-state validation, adjusted
+  Static Description Quality and heuristic coverage, instruction authoring quality,
+  diagnostic counts, format/portability compatibility, and its resource graph.
 - **Skill collision detection** — finds skills whose descriptions overlap using a
   composite of smoothed TF-IDF cosine, token Jaccard, character n-gram, and name
   similarity, with High/Medium/Low risk bands and a separate **confidence** in the
   textual evidence, shown in a collision matrix (skill A, skill B, similarity,
   shared terms, risk, confidence, recommendation).
-- **Portability report** — shows per-skill compatibility (✓ / ⚠ / ✗) across the
-  `generic`, `vscode`, `claude`, and `codex` profiles.
+- **Format / portability compatibility** — shows per-skill compatibility
+  (✓ / ⚠ / ✗) across the `generic`, `vscode`, `claude`, and `codex` profiles.
+  This is a profile-format compatibility check; a pass does not include or imply
+  good general description or instruction-body quality.
 - **Resource graph** — per skill, classifies linked/bundled files as referenced,
   unreferenced, missing, remote, or absolute, and flags scripts, binaries, and
   large files.
-- **Export Skills Index** — writes `skills.index.json` describing every skill
-  (name, path, score, counts, profile compatibility, and a per-diagnostic
-  summary of code, severity, and kind).
+- **Export Skills Index** — writes schema-version-3 `skills.index.json` entries with
+  tri-state validation, complete Static Description Quality data (raw/adjusted
+  scores, label, coverage, limitations, findings, and grade-limit adjustments),
+  instruction/resource authoring quality, all diagnostic counts, profile
+  compatibility, and the existing per-diagnostic code/severity/kind summary.
 - **Workspace scanning** — validation, the workspace report, and the index run
   with progress and can be cancelled; discovery skips dependency, build, and
   vendored directories (configurable).
@@ -281,6 +290,7 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | Show Workspace Report | Open the workspace report: collision matrix, portability, resource graphs. |
 | Export Skills Index | Write `skills.index.json` for the workspace. |
 | Refresh Skills | Rescan the workspace and refresh the Skills tree view. |
+| Open Heuristic Dictionary Settings | Open VS Code Settings filtered to all editable heuristic dictionaries. |
 
 ## Settings
 
@@ -305,6 +315,7 @@ Available from the Command Palette under **SKILL.md Inspector**:
 | `skillMdInspector.severity.allowSpecificationOverrides` | `false` | Allow the overrides above to downgrade or disable specification-level errors. |
 | `skillMdInspector.experimental.llmReview.enabled` | `false` | Reserved for future LLM review (inert). |
 | `skillMdInspector.navigator.additionalRoots` | `[]` | Extra bounded local roots to display after built-in agents in INSTALLED AGENTS. |
+| `skillMdInspector.heuristics.dictionaryValues.*` | built-in catalog | Complete dictionaries for lexical heuristic policy. |
 
 Example additional root configuration:
 
@@ -517,17 +528,48 @@ All OpenCode inspection is local and deterministic. The extension does not execu
 
 ## Configurable heuristic dictionaries and resources
 
-`skillMdInspector.heuristics.dictionaries` adapts the deterministic description analysis without changing extension code. Each dictionary (`actionVerbs`, `vagueTerms`, `artifactHints`, `lowSignalArtifactTerms`, `multiWordArtifacts`, `acronyms`, `positiveTriggerPhrases`, `negativeBoundaryPhrases`, and `exclusiveTriggerPhrases`) accepts `add`, `remove`, and `replace`. Entries are trimmed, case-insensitive, and de-duplicated; invalid entries are ignored. `replace` supplies the complete effective dictionary; otherwise built-ins are used, then removals and additions are applied.
+Run **SKILL.md Inspector: Open Heuristic Dictionary Settings** to see and edit every built-in lexical dictionary in the normal VS Code Settings UI. Each `skillMdInspector.heuristics.dictionaryValues.*` setting contains its complete effective base list or map, so **Reset Setting** restores the canonical extension default. Use User settings for organization-wide policy on the current machine, or Workspace/resource settings when a repository needs its own vocabulary. No window reload is required.
 
-```json
+The editable dictionaries are:
+
+| Dictionary suffix | Analysis affected |
+| --- | --- |
+| `actionVerbs` | Blocking action-capability diagnostics, Static Description Quality, improvement, and collision capabilities. |
+| `actionVerbForms` | Explicit base-verb surface forms, including irregular past/participle forms. |
+| `vagueTerms` | Vague-description diagnostics and the low-vagueness score. |
+| `artifactHints` | High-signal artifacts/domains, adjusted score, and collision features. |
+| `lowSignalArtifactTerms` | Generic artifacts that require supporting domain evidence. |
+| `multiWordArtifacts` | Multi-word artifact/domain recognition. |
+| `artifactSupportTerms` | Terms that make low-signal artifacts concrete. |
+| `acronyms` | Known acronym/technology artifact evidence. |
+| `uppercaseOnlyAcronyms` | Ambiguous acronyms that count only when spelled in uppercase. |
+| `positiveTriggerPhrases` | Positive usage-trigger markers. |
+| `negativeBoundaryPhrases` | Negative boundaries and collision-scope separation. |
+| `exclusiveTriggerPhrases` | Markers that count as both a trigger and a boundary. |
+| `restrictiveBoundaryPhrases` | Non-negative scope restrictions and boundary score. |
+| `frontLoadedFillerTerms` | Words ignored while assessing a concrete front-loaded object. |
+| `scopeStopwords` | Words ignored in trigger/boundary clause content. |
+| `scopeVagueTerms` | Words that make trigger/boundary scope content too vague. |
+| `irregularSingularForms` | Base-to-plural mappings used for artifact and collision normalization. |
+| `collisionStopwords` | Common words removed from workspace collision similarity. |
+
+Resolution is deterministic: each effective `dictionaryValues.*` setting is the complete value for that dictionary, and omitted dictionaries use the canonical catalog default.
+
+List entries are trimmed and lowercased; empty entries are removed and duplicates are de-duplicated in stable order. Mapping keys and forms receive the same normalization. Invalid runtime values are ignored while valid entries remain active; if a complete value has the wrong type, that dictionary falls back to its built-in default. Details are written to the **SKILL.md Inspector** output channel, with at most one concise notification for an unchanged invalid state.
+
+Explicit `actionVerbForms` take precedence over generated regular morphology. A base verb with no explicit mapping still receives regular forms. Removing a base from `actionVerbs` also removes all of its configured forms from analysis.
+
+For example, configure explicit action-verb forms as a complete mapping:
+
+```jsonc
 {
-  "skillMdInspector.heuristics.dictionaries": {
-    "artifactHints": { "add": ["bearing", "gearbox"] },
-    "vagueTerms": { "add": ["magic"], "remove": ["simple"] },
-    "acronyms": { "replace": ["ndt", "fmea"] }
-  },
-  "skillMdInspector.resources.directories": ["references", "scripts", "assets", "templates", "fixtures"]
+  "skillMdInspector.heuristics.dictionaryValues.actionVerbForms": {
+    "write": ["write", "writes", "writing", "wrote", "written"],
+    "teach": ["teach", "teaches", "teaching", "taught"]
+  }
 }
 ```
+
+Changing lexical policy can change validation errors, raw/adjusted Static Description Quality, and workspace collision results immediately.
 
 `skillMdInspector.resources.directories` **replaces** the default monitored directories. Only files beneath these relative paths receive unreferenced-resource warnings; root files such as `README.md` and `LICENSE` remain discoverable but are not treated as forgotten bundled resources. Absolute paths and paths containing `..` are ignored.

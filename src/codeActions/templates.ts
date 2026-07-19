@@ -8,7 +8,9 @@ export const USE_WHEN_CLAUSE = ' Use when <describe when to use this skill>.';
 export const DO_NOT_USE_CLAUSE = ' Do not use when <describe when NOT to use this skill>.';
 
 export function frontmatterBlock(name: string): string {
-  return ['---', `name: ${name}`, `description: ${DESCRIPTION_PLACEHOLDER}`, '---', '', ''].join('\n');
+  return ['---', `name: ${name}`, `description: ${DESCRIPTION_PLACEHOLDER}`, '---', '', ''].join(
+    '\n',
+  );
 }
 
 export function bodyTemplate(title: string): string {

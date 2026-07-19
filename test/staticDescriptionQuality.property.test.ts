@@ -16,16 +16,19 @@ const anyText = fc.oneof(
 );
 
 describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
-  it('always yields an integer 0..100 whose finding points sum to the score', () => {
+  it('always yields 0 <= score <= rawScore <= 100 and findings sum to rawScore', () => {
     fc.assert(
       fc.property(anyText, (desc) => {
         const result = computeStaticDescriptionQuality(desc);
         expect(Number.isInteger(result.score)).toBe(true);
+        expect(Number.isInteger(result.rawScore)).toBe(true);
+        expect(result.score).toBe(result.adjustedScore);
         expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
+        expect(result.score).toBeLessThanOrEqual(result.rawScore);
+        expect(result.rawScore).toBeLessThanOrEqual(100);
 
         const sum = result.findings.reduce((total, f) => total + f.pointsEarned, 0);
-        expect(sum).toBe(result.score);
+        expect(sum).toBe(result.rawScore);
 
         for (const finding of result.findings) {
           expect(finding.pointsEarned).toBeGreaterThanOrEqual(0);
@@ -52,9 +55,12 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
       fc.property(anyText, weightSet, (desc, weights) => {
         const result = computeStaticDescriptionQuality(desc, { weights });
         expect(Number.isInteger(result.score)).toBe(true);
+        expect(Number.isInteger(result.rawScore)).toBe(true);
+        expect(result.score).toBe(result.adjustedScore);
         expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
-        expect(result.findings.reduce((total, f) => total + f.pointsEarned, 0)).toBe(result.score);
+        expect(result.score).toBeLessThanOrEqual(result.rawScore);
+        expect(result.rawScore).toBeLessThanOrEqual(100);
+        expect(result.findings.reduce((total, f) => total + f.pointsEarned, 0)).toBe(result.rawScore);
         expect(result.findings.reduce((total, f) => total + f.pointsPossible, 0)).toBe(100);
         for (const finding of result.findings) {
           expect(Number.isInteger(finding.pointsEarned)).toBe(true);

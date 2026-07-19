@@ -10,10 +10,11 @@ export interface SkillReport {
   name: string;
   descriptionLength: number;
   profileLabel: string;
-  status: 'pass' | 'fail';
+  status: 'pass' | 'warning' | 'fail';
   errorCount: number;
   warningCount: number;
   informationCount: number;
+  diagnostics: SkillDiagnostic[];
   referencedFiles: string[];
   unreferencedFiles: string[];
   staticDescriptionQuality: StaticDescriptionQualityResult;
@@ -52,10 +53,11 @@ export function buildReportModel(
     name,
     descriptionLength: description.trim().length,
     profileLabel: profile.label,
-    status: errorCount > 0 ? 'fail' : 'pass',
+    status: errorCount > 0 ? 'fail' : warningCount > 0 ? 'warning' : 'pass',
     errorCount,
     warningCount,
     informationCount,
+    diagnostics: [...diagnostics],
     referencedFiles: doc.resources.filter((r) => r.referenced).map((r) => r.relativePath),
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
     staticDescriptionQuality,

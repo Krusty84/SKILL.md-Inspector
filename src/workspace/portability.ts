@@ -12,6 +12,7 @@ import {
   validateProfileMetadata,
 } from '../validation';
 import { diag, keyRange } from '../validation/util';
+import type { HeuristicDictionaries } from '../quality/dictionaries';
 
 const PROFILE_IDS: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
 
@@ -29,20 +30,27 @@ const CLAUDE_DESCRIPTION_SOFT_MAX = 500;
  * the editor, not here. Each entry keeps its own diagnostics (Task 42), and the
  * selected editor profile never skews the result.
  */
-export function evaluatePortability(doc: SkillDocument): PortabilityEntry[] {
+export function evaluatePortability(
+  doc: SkillDocument,
+  dictionaries?: HeuristicDictionaries,
+): PortabilityEntry[] {
   const frontmatter = validateFrontmatter(doc);
   const links = validateLinks(doc);
 
   return PROFILE_IDS.map((id) => {
     const profile = PROFILES[id];
     const name = validateName(doc, profile);
-    const description = validateDescription(doc, profile);
+    const description = validateDescription(doc, profile, dictionaries);
     const metadata = validateProfileMetadata(doc, profile);
     const notes = portabilityNotes(id, doc);
 
-    const errors = [...frontmatter, ...links, ...name, ...description, ...metadata].filter(
-      (d) => d.severity === 'error',
-    );
+    const errors = [
+      ...frontmatter,
+      ...links,
+      ...name,
+      ...description.filter((diagnostic) => diagnostic.kind !== 'quality'),
+      ...metadata,
+    ].filter((d) => d.severity === 'error');
     // Link portability + profile-specific rules are the portability warnings.
     const warnings = [...links, ...metadata, ...notes].filter((d) => d.severity === 'warning');
 

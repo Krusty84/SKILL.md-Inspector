@@ -6,9 +6,26 @@ export function detectSanitizedExport(value: unknown): SanitizationStatus {
   let visited = 0;
   const visit = (node: unknown): void => {
     if (found || visited++ > 10000) return;
-    if (typeof node === 'string') { if (node.includes('[redacted:')) found = true; return; }
-    if (Array.isArray(node)) { for (const item of node) visit(item); return; }
-    if (isRecord(node)) { if (typeof node.redacted === 'string') { found = true; return; } for (const item of Object.values(node)) visit(item); }
+    if (typeof node === 'string') {
+      if (node.includes('[redacted:')) found = true;
+      return;
+    }
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+    if (isRecord(node)) {
+      if (typeof node.redacted === 'string') {
+        found = true;
+        return;
+      }
+      for (const item of Object.values(node)) visit(item);
+    }
   };
-  try { visit(value); return found ? 'likely-sanitized' : 'not-detected'; } catch { return 'unknown'; }
+  try {
+    visit(value);
+    return found ? 'likely-sanitized' : 'not-detected';
+  } catch {
+    return 'unknown';
+  }
 }

@@ -21,10 +21,18 @@ export async function addFolders(output: vscode.OutputChannel): Promise<void> {
     title: 'Add Folders to Workspace',
   });
   if (!selected) return;
-  await addWorkspaceFolders(selected, output, 'All selected folders are already open in the workspace.');
+  await addWorkspaceFolders(
+    selected,
+    output,
+    'All selected folders are already open in the workspace.',
+  );
 }
 
-async function addWorkspaceFolders(selected: readonly vscode.Uri[], output: vscode.OutputChannel, duplicateMessage: string): Promise<void> {
+async function addWorkspaceFolders(
+  selected: readonly vscode.Uri[],
+  output: vscode.OutputChannel,
+  duplicateMessage: string,
+): Promise<void> {
   const open = new Set((vscode.workspace.workspaceFolders ?? []).map((folder) => key(folder.uri)));
   const seen = new Set<string>();
   const folders = selected.filter((uri) => {
@@ -46,7 +54,9 @@ async function addWorkspaceFolders(selected: readonly vscode.Uri[], output: vsco
     if (!ok) throw new Error('VS Code rejected the workspace folder update.');
   } catch (error) {
     output.appendLine(`Unable to add folders to workspace: ${String(error)}`);
-    void vscode.window.showErrorMessage(`Unable to add folders to workspace: ${error instanceof Error ? error.message : String(error)}`);
+    void vscode.window.showErrorMessage(
+      `Unable to add folders to workspace: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 

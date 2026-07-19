@@ -3,31 +3,107 @@ import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
 import { readConfig } from '../config';
 import { discoverSkillPaths } from '../workspace/discoverSkills';
-import type { NormalizedOpenCodeSession, SessionViewModel, SkillCandidate, SkillMatch } from './model';
+import type {
+  NormalizedOpenCodeSession,
+  SessionViewModel,
+  SkillCandidate,
+  SkillMatch,
+} from './model';
 import { normalizeName } from './util';
 
 export async function attachSkillMatches(session: NormalizedOpenCodeSession): Promise<void> {
   const candidates = new Map<string, SkillCandidate[]>();
-  const roots = (vscode.workspace.workspaceFolders ?? []).filter((f) => f.uri.scheme === 'file').map((f) => f.uri.fsPath);
+  const roots = (vscode.workspace.workspaceFolders ?? [])
+    .filter((f) => f.uri.scheme === 'file')
+    .map((f) => f.uri.fsPath);
   for (const root of roots) {
     for (const skillPath of discoverSkillPaths(root)) {
       try {
-        const content = Buffer.from(await vscode.workspace.fs.readFile(vscode.Uri.file(skillPath))).toString('utf8');
+        const content = Buffer.from(
+          await vscode.workspace.fs.readFile(vscode.Uri.file(skillPath)),
+        ).toString('utf8');
         const cfg = readConfig(vscode.Uri.file(skillPath));
-        const analysis = analyzeSkill(skillPath, content, cfg.profile, { mode: 'text-only' });
-        const candidate: SkillCandidate = { uri: vscode.Uri.file(skillPath).toString(), path: skillPath, name: analysis.document.frontmatter?.name, validationStatus: analysis.diagnostics.some((d) => d.severity === 'error') ? 'errors' : analysis.diagnostics.length ? 'warnings' : 'valid', profile: cfg.profile.id };
-        const key = normalizeName(analysis.document.frontmatter?.name || path.basename(path.dirname(skillPath)));
+        const analysis = analyzeSkill(skillPath, content, cfg.profile, {
+          mode: 'text-only',
+          dictionaries: cfg.heuristicDictionaries,
+          resourceDirectories: cfg.resourceDirectories,
+        });
+        const candidate: SkillCandidate = {
+          uri: vscode.Uri.file(skillPath).toString(),
+          path: skillPath,
+          name: analysis.document.frontmatter?.name,
+          validationStatus: analysis.diagnostics.some((d) => d.severity === 'error')
+            ? 'errors'
+            : analysis.diagnostics.length
+              ? 'warnings'
+              : 'valid',
+          profile: cfg.profile.id,
+        };
+        const key = normalizeName(
+          analysis.document.frontmatter?.name || path.basename(path.dirname(skillPath)),
+        );
         candidates.set(key, [...(candidates.get(key) ?? []), candidate]);
-      } catch { /* ignore unreadable skills */ }
+      } catch {
+        /* ignore unreadable skills */
+      }
     }
   }
   for (const skill of session.skills) {
-    const found = skill.skillName ? candidates.get(normalizeName(skill.skillName)) ?? [] : [];
-    const match: SkillMatch = found.length === 0 ? { status: 'none', candidates: [] } : found.length === 1 ? { status: 'single', candidates: found } : { status: 'multiple', candidates: found, warning: 'Multiple SKILL.md files match this skill name.' };
+    const found = skill.skillName ? (candidates.get(normalizeName(skill.skillName)) ?? []) : [];
+    const match: SkillMatch =
+      found.length === 0
+        ? { status: 'none', candidates: [] }
+        : found.length === 1
+          ? { status: 'single', candidates: found }
+          : {
+              status: 'multiple',
+              candidates: found,
+              warning: 'Multiple SKILL.md files match this skill name.',
+            };
     skill.matchingSkills = [match];
   }
 }
 
 export function buildSessionViewModel(session: NormalizedOpenCodeSession): SessionViewModel {
-  return { session: { title: session.title, id: session.id, parentId: session.parentId, version: session.version, model: session.model, provider: session.provider, agent: session.agent, created: session.created, updated: session.updated, durationMs: session.metrics.sessionDurationMs, details: session.details, sanitization: session.sanitization }, metrics: session.metrics, diagnostics: session.diagnostics, nodes: session.nodes.map((n) => ({ id: n.id, kind: n.kind, parentId: n.parentId, sourceOrder: n.sourceOrder, label: n.label, description: n.description, start: n.start, end: n.end, durationMs: n.durationMs, status: n.status, toolName: n.toolName, skillName: n.skillName, callId: n.callId, children: n.children, preview: n.preview, synthetic: n.synthetic, incomplete: n.incomplete, originalType: n.originalType, details: n.details })), skills: session.skills, large: session.nodes.length > 500 };
+  return {
+    session: {
+      title: session.title,
+      id: session.id,
+      parentId: session.parentId,
+      version: session.version,
+      model: session.model,
+      provider: session.provider,
+      agent: session.agent,
+      created: session.created,
+      updated: session.updated,
+      durationMs: session.metrics.sessionDurationMs,
+      details: session.details,
+      sanitization: session.sanitization,
+    },
+    metrics: session.metrics,
+    diagnostics: session.diagnostics,
+    nodes: session.nodes.map((n) => ({
+      id: n.id,
+      kind: n.kind,
+      parentId: n.parentId,
+      sourceOrder: n.sourceOrder,
+      label: n.label,
+      description: n.description,
+      start: n.start,
+      end: n.end,
+      durationMs: n.durationMs,
+      status: n.status,
+      toolName: n.toolName,
+      skillName: n.skillName,
+      callId: n.callId,
+      children: n.children,
+      preview: n.preview,
+      synthetic: n.synthetic,
+      incomplete: n.incomplete,
+      originalType: n.originalType,
+      details: n.details,
+    })),
+    skills: session.skills,
+    large: session.nodes.length > 500,
+  };
 }

@@ -34,7 +34,11 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
       document.uri.fsPath,
       document.getText(),
       config.profile,
-      { exclude: config.resourceExclude },
+      {
+        exclude: config.resourceExclude,
+        dictionaries: config.heuristicDictionaries,
+        resourceDirectories: config.resourceDirectories,
+      },
     );
 
     const actions: vscode.CodeAction[] = [];

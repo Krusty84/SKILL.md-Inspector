@@ -45,8 +45,9 @@ describe('assessAuthoringQuality instructions', () => {
   it('reports an empty body as a single major finding', () => {
     const result = assessAuthoringQuality(doc('   \n  '));
     expect(result.instructions.findings).toHaveLength(1);
+    expect(result.instructions.findings[0].criterion).toBe('Substantive body');
     expect(result.instructions.findings[0].severity).toBe('major');
-    expect(result.instructions.score).toBe(20);
+    expect(result.instructions.score).toBe(0);
     expect(result.instructions.label).toBe('poor');
   });
 
@@ -57,6 +58,8 @@ describe('assessAuthoringQuality instructions', () => {
     expect(
       result.instructions.findings.find((f) => f.criterion === 'Substantive body')?.severity,
     ).toBe('major');
+    expect(result.instructions.score).toBe(0);
+    expect(result.instructions.label).toBe('poor');
   });
 
   it('flags TODO placeholders but not TODO inside code fences', () => {
@@ -131,6 +134,13 @@ describe('assessAuthoringQuality instructions', () => {
 });
 
 describe('assessAuthoringQuality resources', () => {
+  it('does not penalize a skill with no bundled resources', () => {
+    const result = assessAuthoringQuality(doc(GOOD_BODY));
+    expect(result.resources.score).toBe(100);
+    expect(result.resources.label).toBe('excellent');
+    expect(result.resources.findings).toEqual([]);
+  });
+
   it('scores clean resources as good', () => {
     const result = assessAuthoringQuality(doc(GOOD_BODY, [resource({})]));
     expect(result.resources.score).toBe(100);

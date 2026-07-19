@@ -3,7 +3,10 @@ import type { DiagnosticsProvider } from '../diagnostics/diagnosticsProvider';
 import { resolveSkillTarget } from './resolveSkillTarget';
 
 /** Command: validate the SKILL.md in the active editor and report a summary. */
-export async function validateCurrentSkill(provider: DiagnosticsProvider, uri?: Parameters<typeof resolveSkillTarget>[0]): Promise<void> {
+export async function validateCurrentSkill(
+  provider: DiagnosticsProvider,
+  uri?: Parameters<typeof resolveSkillTarget>[0],
+): Promise<void> {
   const target = await resolveSkillTarget(uri, { warningAction: 'validate' });
   if (!target) {
     return;

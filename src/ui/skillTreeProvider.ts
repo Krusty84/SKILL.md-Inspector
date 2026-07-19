@@ -158,18 +158,42 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None,
     );
-    item.description = `SDQ ${skill.staticDescriptionQuality} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
+    const quality = skill.staticDescriptionQuality;
+    const instructions = skill.authoringQuality.instructions;
+    const scoreAdjustment =
+      quality.rawScore !== quality.adjustedScore
+        ? `Raw Static Description Quality: ${quality.rawScore}/100  \n`
+        : '';
+    const gradeLimitations =
+      quality.gradeLimitations.length > 0
+        ? `Grade limitations:  \n${quality.gradeLimitations
+            .map(
+              (limitation) =>
+                `- ${escapeMarkdown(limitation.code)} — ceiling ${limitation.ceiling}/100. ${escapeMarkdown(limitation.reason)}  \n`,
+            )
+            .join('')}`
+        : '';
+    item.description = `Validation ${skill.validationStatus} · SDQ ${quality.adjustedScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
     item.tooltip = new vscode.MarkdownString(
       [
-        `**${skill.name}**  \n`,
-        `Heuristic Static Description Quality: ${skill.staticDescriptionQuality}/100 (${skill.staticDescriptionQualityLabel})  \n`,
+        `**${escapeMarkdown(skill.name)}**  \n`,
+        `Validation status: ${skill.validationStatus}  \n`,
+        `Adjusted Static Description Quality: ${quality.adjustedScore}/100 (${quality.label}) · heuristic coverage ${quality.coverage}  \n`,
+        scoreAdjustment,
+        gradeLimitations,
+        `Instruction authoring quality: ${instructions.score}/100 (${instructions.label})  \n`,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
-        `Portability: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}  \n`,
-        `_Heuristic score — deterministic, and does not guarantee an agent will select this skill at runtime._`,
+        `Format/portability compatibility: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}  \n`,
+        `_Compatibility checks profile-specific format constraints; they do not include general description or instruction-body quality._  \n`,
+        `_Description quality is deterministic and does not guarantee an agent will select this skill at runtime._`,
       ].join(''),
     );
     item.iconPath = new vscode.ThemeIcon(
-      skill.errors > 0 ? 'error' : skill.warnings > 0 ? 'warning' : 'pass',
+      skill.validationStatus === 'fail'
+        ? 'error'
+        : skill.validationStatus === 'warning'
+          ? 'warning'
+          : 'pass',
     );
     item.resourceUri = vscode.Uri.file(skill.absolutePath);
     item.command = {
@@ -197,6 +221,10 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
 function riskIcon(risk: SkillCollision['risk']): string {
   return risk === 'High' ? 'error' : 'warning';
+}
+
+function escapeMarkdown(value: string): string {
+  return value.replace(/[\\`*_{}[\]<>]/g, '\\$&');
 }
 
 function resourceIcon(kind: ResourceNode['kind']): string {

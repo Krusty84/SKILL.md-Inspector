@@ -7,7 +7,9 @@ export interface OpenCodeSessionUriResolverDeps {
   showOpenDialog(options: vscode.OpenDialogOptions): Thenable<vscode.Uri[] | undefined>;
 }
 
-export function getOpenCodeSessionUriFromTarget(target: OpenCodeSessionCommandTarget): vscode.Uri | undefined {
+export function getOpenCodeSessionUriFromTarget(
+  target: OpenCodeSessionCommandTarget,
+): vscode.Uri | undefined {
   if (target instanceof vscode.Uri) {
     return target;
   }

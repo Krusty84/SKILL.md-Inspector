@@ -17,10 +17,30 @@ export interface StaticDescriptionQualityFinding {
   suggestion?: string;
 }
 
+export type StaticDescriptionQualityGradeLimitationCode =
+  | 'missing-action-capability'
+  | 'missing-usage-trigger'
+  | 'vague-usage-trigger'
+  | 'missing-concrete-artifact';
+
+/** An explicit policy ceiling applied after the additive criterion score. */
+export interface StaticDescriptionQualityGradeLimitation {
+  code: StaticDescriptionQualityGradeLimitationCode;
+  ceiling: number;
+  reason: string;
+}
+
 export interface StaticDescriptionQualityResult {
+  /** Public score after all reported grade limitations are applied. */
   score: number;
+  /** Additive total of `findings[].pointsEarned`, before policy ceilings. */
+  rawScore: number;
+  /** Explicit adjusted score; identical to the compatibility `score` field. */
+  adjustedScore: number;
   label: StaticDescriptionQualityLabel;
   findings: StaticDescriptionQualityFinding[];
+  /** Every essential-completeness ceiling that applies to this description. */
+  gradeLimitations: StaticDescriptionQualityGradeLimitation[];
   /** Applicability and completeness of deterministic checks; not confidence. */
   coverage: HeuristicCoverage;
   /** Human-readable reasons the analysis may be incomplete (Task 79). */

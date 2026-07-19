@@ -1,39 +1,4 @@
-/**
- * Base-form action verbs that signal a skill's capability (brief §7.7). Detection
- * expands each to common inflections at runtime (see descriptionHeuristics).
- */
-export const ACTION_VERBS: readonly string[] = [
-  'analyze',
-  'generate',
-  'format',
-  'convert',
-  'review',
-  'validate',
-  'extract',
-  'summarize',
-  'transform',
-  'compare',
-  'inspect',
-  'test',
-  'debug',
-  'create',
-  'update',
-  'migrate',
-  'classify',
-  'normalize',
-  'calculate',
-  // Common additional capability verbs seen in real skills. The irregular
-  // verbs (write, read, build) inflect via IRREGULAR_VERB_FORMS.
-  'build',
-  'write',
-  'read',
-  'render',
-  'parse',
-  'lint',
-  'refactor',
-  'clean',
-  'standardize',
-  'prepare',
-  'organize',
-  'detect',
-];
+import { DEFAULT_HEURISTIC_DICTIONARIES } from './dictionaries';
+
+/** Compatibility export; canonical values live in defaultHeuristicDictionaries.json. */
+export const ACTION_VERBS: readonly string[] = DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs;

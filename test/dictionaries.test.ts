@@ -3,78 +3,105 @@ import {
   DEFAULT_HEURISTIC_DICTIONARIES,
   resolveHeuristicDictionaries,
   resolveHeuristicDictionariesWithWarnings,
-  type HeuristicDictionaryOverrides,
+  type HeuristicDictionaryValues,
 } from '../src/quality/dictionaries';
 import { buildVerbForms } from '../src/quality/wordForms';
 
 describe('resolveHeuristicDictionaries', () => {
-  it('returns the defaults (frozen) when no overrides are given', () => {
+  it('returns the defaults (frozen) when no values are given', () => {
     const resolved = resolveHeuristicDictionaries();
     expect(resolved).toEqual(DEFAULT_HEURISTIC_DICTIONARIES);
     expect(Object.isFrozen(resolved)).toBe(true);
     expect(Object.isFrozen(resolved.actionVerbs)).toBe(true);
   });
 
-  it('adds entries with trimming, lowercasing, and deduplication', () => {
+  it('normalizes complete list values with trimming, lowercasing, and deduplication', () => {
     const resolved = resolveHeuristicDictionaries({
-      vagueTerms: { add: ['  Sparkly ', 'sparkly'] },
+      vagueTerms: ['  Sparkly ', 'sparkly'],
     });
-    expect(resolved.vagueTerms.filter((term) => term === 'sparkly')).toEqual(['sparkly']);
-    expect(resolved.vagueTerms).toHaveLength(DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.length + 1);
+    expect(resolved.vagueTerms).toEqual(['sparkly']);
   });
 
-  it('drops non-string add entries', () => {
+  it('drops non-string entries', () => {
     const resolved = resolveHeuristicDictionaries({
-      vagueTerms: { add: [42, null, 'zz-term'] },
+      vagueTerms: [42, null, 'zz-term'],
     });
-    expect(resolved.vagueTerms).toContain('zz-term');
-    expect(resolved.vagueTerms).toHaveLength(DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.length + 1);
+    expect(resolved.vagueTerms).toEqual(['zz-term']);
   });
 
-  it('removes entries case-insensitively via normalization', () => {
-    const resolved = resolveHeuristicDictionaries({ actionVerbs: { remove: [' FORMAT '] } });
+  it('uses a supplied dictionary as its complete value', () => {
+    const resolved = resolveHeuristicDictionaries({ actionVerbs: ['triage'] });
+    expect(resolved.actionVerbs).toEqual(['triage']);
     expect(resolved.actionVerbs).not.toContain('format');
-    expect(resolved.actionVerbs).toContain('analyze');
   });
 
-  it('treats removing a non-member as a no-op', () => {
-    const resolved = resolveHeuristicDictionaries({ actionVerbs: { remove: ['frobnicate'] } });
-    expect(resolved.actionVerbs).toEqual([...DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs]);
-  });
-
-  it('replace substitutes the base, then remove and add apply on top', () => {
-    const resolved = resolveHeuristicDictionaries({
-      actionVerbs: { replace: ['Alpha', 'beta'], remove: ['alpha'], add: ['gamma'] },
-    });
-    expect(resolved.actionVerbs).toEqual(['beta', 'gamma']);
-  });
-
-  it('warns on unknown dictionary keys and malformed override values, sorted', () => {
-    const overrides = {
-      frobnicators: { add: ['x'] },
-      vagueTerms: { add: 'not-an-array' },
-    } as HeuristicDictionaryOverrides;
-    const { warnings, dictionaries } = resolveHeuristicDictionariesWithWarnings(overrides);
+  it('warns on unknown dictionary keys and malformed values, sorted', () => {
+    const values = {
+      frobnicators: ['x'],
+      vagueTerms: 'not-an-array',
+    } as HeuristicDictionaryValues;
+    const { warnings, dictionaries } = resolveHeuristicDictionariesWithWarnings(values);
     expect(warnings).toEqual([
-      'Dictionary "vagueTerms" has a malformed override value.',
-      'Unknown heuristic dictionary "frobnicators".',
+      {
+        path: 'heuristics.dictionaryValues.frobnicators',
+        message: 'Unknown heuristic dictionary "frobnicators".',
+      },
+      {
+        path: 'heuristics.dictionaryValues.vagueTerms',
+        message: 'Expected an array of strings; the fallback value was used.',
+      },
     ]);
-    // The malformed override changes nothing.
     expect(dictionaries.vagueTerms).toEqual([...DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms]);
   });
 
   it('returns the same dictionaries with or without warnings', () => {
-    const overrides: HeuristicDictionaryOverrides = { vagueTerms: { add: ['zzz-term'] } };
-    expect(resolveHeuristicDictionaries(overrides)).toEqual(
-      resolveHeuristicDictionariesWithWarnings(overrides).dictionaries,
+    const values: HeuristicDictionaryValues = { vagueTerms: ['zzz-term'] };
+    expect(resolveHeuristicDictionaries(values)).toEqual(
+      resolveHeuristicDictionariesWithWarnings(values).dictionaries,
     );
   });
 
   it('feeds custom action verbs into verb-form expansion without irregular bleed', () => {
-    const resolved = resolveHeuristicDictionaries({ actionVerbs: { replace: ['triage'] } });
+    const resolved = resolveHeuristicDictionaries({ actionVerbs: ['triage'] });
     const { forms } = buildVerbForms(resolved.actionVerbs);
     expect(forms.has('triaged')).toBe(true);
     expect(forms.has('written')).toBe(false);
     expect(forms.has('built')).toBe(false);
+  });
+
+  it('uses canonical defaults for omitted dictionaries', () => {
+    const resolved = resolveHeuristicDictionaries({ vagueTerms: ['custom'] });
+    expect(resolved.vagueTerms).toEqual(['custom']);
+    expect(resolved.actionVerbs).toEqual(DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs);
+  });
+
+  it('normalizes lists and mappings while retaining valid entries', () => {
+    const { dictionaries, warnings } = resolveHeuristicDictionariesWithWarnings({
+      actionVerbs: [' Teach ', 42, '', 'teach'],
+      actionVerbForms: {
+        ' Teach ': [' Teach ', 'teaches', null, 'teaches'],
+        broken: 'not-an-array',
+      },
+    });
+    expect(dictionaries.actionVerbs).toEqual(['teach']);
+    expect(dictionaries.actionVerbForms).toEqual({ teach: ['teach', 'teaches'] });
+    expect(warnings.map((warning) => warning.path)).toEqual([
+      'heuristics.dictionaryValues.actionVerbForms.broken',
+      'heuristics.dictionaryValues.actionVerbForms.teach',
+      'heuristics.dictionaryValues.actionVerbs',
+    ]);
+  });
+
+  it('falls back to the built-in value when a whole dictionary is malformed', () => {
+    const { dictionaries, warnings } = resolveHeuristicDictionariesWithWarnings({
+      artifactHints: 'invalid',
+    });
+    expect(dictionaries.artifactHints).toEqual(DEFAULT_HEURISTIC_DICTIONARIES.artifactHints);
+    expect(warnings).toEqual([
+      {
+        path: 'heuristics.dictionaryValues.artifactHints',
+        message: 'Expected an array of strings; the fallback value was used.',
+      },
+    ]);
   });
 });

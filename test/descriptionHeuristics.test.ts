@@ -8,7 +8,10 @@ import {
   hasNegativeBoundaryPhrase,
   hasExclusiveTriggerPhrase,
 } from '../src/quality/descriptionHeuristics';
-import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  resolveHeuristicDictionaries,
+} from '../src/quality/dictionaries';
 
 describe('descriptionHeuristics', () => {
   it('detects action verbs across common inflections', () => {
@@ -98,10 +101,21 @@ describe('descriptionHeuristics', () => {
   });
 
   it('scopes irregular verbs to the configured action-verb registry', () => {
-    const custom = resolveHeuristicDictionaries({ actionVerbs: { replace: ['convert'] } });
+    const custom = resolveHeuristicDictionaries({ actionVerbs: ['convert'] });
     expect(hasActionVerb('Wrote the report', custom).found).toBe(false);
     expect(hasActionVerb('Built the pipeline', custom).found).toBe(false);
     expect(hasActionVerb('Converted the report', custom).found).toBe(true);
+  });
+
+  it('recognizes configured action verbs and explicit forms without built-in leakage', () => {
+    const custom = resolveHeuristicDictionaries({
+      actionVerbs: ['teach'],
+      actionVerbForms: { teach: ['teach', 'teaches', 'teaching', 'taught'] },
+    });
+    expect(hasActionVerb('Teach API conventions', custom).found).toBe(true);
+    expect(hasActionVerb('Taught API conventions', custom).found).toBe(true);
+    expect(hasActionVerb('Written API conventions', custom).found).toBe(false);
+    expect(hasActionVerb('Built API conventions', custom).found).toBe(false);
   });
 
   it('matches typographic apostrophes in boundary phrases', () => {
@@ -145,5 +159,45 @@ describe('scope-clause selection and artifact signal', () => {
     expect(analyzeDescription('Validate STEP assemblies before CAD release.').concreteArtifact).toBe(true);
     expect(analyzeDescription('Analyze CAN telemetry from vehicle ECUs.').concreteArtifact).toBe(true);
     expect(analyzeDescription('Review Python code for API schema migrations.').concreteArtifact).toBe(true);
+  });
+
+  it('uses editable scope vagueness and restrictive boundary policy', () => {
+    const concreteNeeded = resolveHeuristicDictionaries({
+      scopeVagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.scopeVagueTerms.filter(
+        (term) => term !== 'needed',
+      ),
+    });
+    expect(
+      analyzeDescription('Format reports. Use when needed.', concreteNeeded).triggerClause
+        .contentFound,
+    ).toBe(true);
+
+    const customBoundary = resolveHeuristicDictionaries({
+      restrictiveBoundaryPhrases: [
+        ...DEFAULT_HEURISTIC_DICTIONARIES.restrictiveBoundaryPhrases,
+        'reserved for',
+      ],
+    });
+    expect(
+      analyzeDescription('Format reports. Reserved for audited releases.', customBoundary)
+        .boundaryClause.contentFound,
+    ).toBe(true);
+  });
+
+  it('uses editable artifact support and uppercase-only acronym policy', () => {
+    const customArtifact = resolveHeuristicDictionaries({
+      artifactHints: [...DEFAULT_HEURISTIC_DICTIONARIES.artifactHints, 'widget'],
+    });
+    expect(analyzeDescription('Calibrate widgets.', customArtifact).concreteArtifact).toBe(true);
+
+    expect(analyzeDescription('Analyze can telemetry.').artifactEvidence.matchedTerms).not.toContain('can');
+    const lowercaseAllowed = resolveHeuristicDictionaries({
+      uppercaseOnlyAcronyms: DEFAULT_HEURISTIC_DICTIONARIES.uppercaseOnlyAcronyms.filter(
+        (term) => term !== 'can',
+      ),
+    });
+    expect(
+      analyzeDescription('Analyze can telemetry.', lowercaseAllowed).artifactEvidence.matchedTerms,
+    ).toContain('can');
   });
 });

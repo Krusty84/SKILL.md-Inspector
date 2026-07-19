@@ -51,6 +51,7 @@ host.
 |   +-- config.ts       # Resolves VS Code settings into analysis configuration
 |   `-- extension.ts    # Activation, provider construction, events, and watchers
 +-- test/               # Vitest unit, property, integration, and regression tests
++-- scripts/            # Explicit deterministic repository synchronization tools
 +-- benchmarks/         # Curated Static Description Quality benchmark corpus
 +-- evaluation/         # Example behavioral trigger suites
 +-- fixtures/           # Sample skills, resources, and OpenCode exports
@@ -135,19 +136,30 @@ for the requested document range and translates diagnostic fix metadata into
 `readConfig` resolves `skillMdInspector.*` settings for a URI. It combines one of
 the `generic`, `vscode`, `claude`, or `codex` profiles with configured length
 limits, body strictness, language mode, severity overrides, collision parameters,
-resource directories/exclusions, and heuristic dictionary overrides.
+resource directories/exclusions, and heuristic dictionary values.
 
 Static Description Quality is a separate deterministic measure. The `quality/`
 modules identify action verbs, trigger and boundary phrases, concrete artifacts,
-acronyms, vague language, length, and intent placement. The result contains a
-0-100 score, label, coverage, findings, and explicit limitations; it is not a
+acronyms, vague language, length, and intent placement. The result keeps the
+additive raw score, the adjusted score and label after explicit grade-limit
+adjustments, heuristic coverage, findings, and analysis limitations. It is not a
 probability of runtime skill selection.
 
-Custom dictionary resolution starts from the built-in registries and applies
-case-insensitive `add`, `remove`, or `replace` operations. The same dictionaries
-can feed description diagnostics, Static Description Quality, collision-feature
-helpers, and local description improvement when their callers pass the resolved
-context.
+`src/quality/defaultHeuristicDictionaries.json` is the canonical lexical-policy
+catalog. `dictionaries.ts` normalizes and deeply freezes effective
+`heuristics.dictionaryValues.*` settings, using catalog defaults for omitted
+dictionaries.
+All description diagnostics, Static Description Quality, local improvement,
+portability checks, verb/singular morphology, collision features, collision scoring,
+and report pipelines receive that resolved context. Compatibility modules such as
+`actionVerbs.ts` re-export catalog-derived defaults; they do not own copies.
+
+List policy is normalized by trimming, lowercasing, removing empty/non-string values,
+and stable de-duplication. Mapping keys and string-array values follow the same rules.
+Malformed whole values fall back per dictionary, while valid siblings remain active.
+Structured warnings flow back through `readConfig`; the extension writes details to
+the shared output channel and suppresses repeated notifications for an unchanged
+warning state.
 
 ### Reports and Authoring Quality
 
@@ -160,11 +172,14 @@ sections, oversized bodies, undocumented scripts, and large or unreferenced file
 They are not combined with description quality and do not judge instruction
 correctness.
 
-The workspace report presents saved-file analysis: skills, duplicate/similar names,
-description collisions, profile portability, and resource graphs. Report-model and
-HTML-rendering functions are kept separate from their reusable webview-panel hosts.
-Both skill-oriented report webviews disable scripts and use restrictive content
-security policies.
+The workspace report presents saved-file analysis: tri-state validation, adjusted
+description quality and coverage, instruction authoring quality, diagnostic counts,
+duplicate/similar names, description collisions, format/portability compatibility,
+and resource graphs. Format/portability compatibility covers profile-specific format
+constraints and intentionally excludes general description and instruction-body
+quality. Report-model and HTML-rendering functions are kept separate from their
+reusable webview-panel hosts. Both skill-oriented report webviews disable scripts and
+use restrictive content security policies.
 
 ### Workspace Analysis
 
@@ -173,8 +188,9 @@ skill-analysis tree, workspace report, and index export. It chooses the first op
 workspace folder, resolves its configuration, discovers `SKILL.md` paths, and calls
 the host-independent `analyzeWorkspace` function.
 
-For each readable skill, workspace analysis records diagnostic counts and codes,
-Static Description Quality, per-profile portability, and a resource graph. It then
+For each readable skill, workspace analysis records tri-state validation, diagnostic
+counts and codes, the complete Static Description Quality result, separate instruction
+and resource authoring results, per-profile portability, and a resource graph. It then
 compares the corpus for:
 
 - exact normalized name conflicts;
@@ -183,13 +199,17 @@ compares the corpus for:
   character n-grams, and name similarity, reduced by explicit boundary separation.
 
 Collision output includes the contributing metrics, shared terms, a risk band, and
-confidence in the available textual evidence. Portability reruns relevant validation
-against every profile and produces `pass`, `warning`, or `fail` status. The resource
-graph classifies referenced, unreferenced, missing, remote, and absolute targets and
-flags scripts, binaries, and large files.
+confidence in the available textual evidence. Portability reruns only the relevant
+format/profile checks against every profile and produces `pass`, `warning`, or `fail`
+status; it is not an aggregate quality grade. The resource graph classifies referenced,
+unreferenced, missing, remote, and absolute targets and flags scripts, binaries, and
+large files.
 
-`buildSkillsIndex` projects this analysis into schema version 2 and adds a generation
-timestamp before `exportSkillsIndex` writes `skills.index.json` at the workspace root.
+`buildSkillsIndex` projects this analysis into schema version 3. Each entry retains
+diagnostics and profile compatibility while adding validation status, all diagnostic
+counts, the complete description-quality result, and instruction/resource authoring
+quality. The builder adds a generation timestamp before `exportSkillsIndex` writes
+`skills.index.json` at the workspace root.
 
 ### Navigation and Workspace File Operations
 
@@ -287,9 +307,26 @@ behavioral metrics remain separate from Static Description Quality and validatio
 3. Cross-skill name and description comparisons run after the per-skill records are
    built.
 4. The resulting immutable-style `WorkspaceAnalysis` feeds the Skills tree or
-   workspace report.
-5. Export projects the same model into `skills.index.json` and writes it through the
-   VS Code filesystem API.
+   workspace report without recomputing or collapsing the per-skill quality dimensions.
+5. Export projects the same validation, quality, diagnostics, and compatibility model
+   into schema-version-3 `skills.index.json` and writes it through the VS Code
+   filesystem API.
+
+### Heuristic Configuration
+
+1. VS Code contributes one resource-scoped visible setting for every catalog entry;
+   list dictionaries use arrays and morphology dictionaries use keyed string arrays.
+2. `readConfig` reads the effective User/Workspace/resource values for the requested
+   URI.
+3. The resolver normalizes those complete values and returns deeply frozen
+   dictionaries plus structured warnings, using canonical defaults for omitted
+   dictionaries.
+4. Analysis callers pass the same resolved object through validation, scoring,
+   improvement, portability, workspace analysis, and collision code.
+5. A `skillMdInspector` configuration event clears resource caches, revalidates
+   visible skills, and invalidates every analysis tree. Morphology caches are keyed
+   by both the active base list and mapping object, so a new configuration cannot
+   reuse forms from the previous registry.
 
 ### Navigator
 
@@ -320,6 +357,11 @@ behavioral metrics remain separate from Static Description Quality and validatio
   save/report paths use full discovery and link checks.
 - Profile settings are resolved before validation, and diagnostic output is sorted to
   keep editor and test results stable.
+- Editable lexical policy is data: words, phrases, explicit verb/plural forms, and
+  collision stopwords live in the catalog and settings. Algorithmic behavior remains
+  internal: regex construction, punctuation terminators, tokenization, regular
+  morphology, score thresholds/weights, YAML structure, path/link security, and
+  cache/performance constants are not dictionary settings.
 - Static quality, authoring quality, collision risk, portability, and behavioral
   evaluation are separate signals. None is presented as runtime selection proof.
 - The navigator and skill-analysis tree use different models because one is a
@@ -364,6 +406,9 @@ Prettier, and VS Code type definitions. Packaging may use `@vscode/vsce` through
 - Vitest runs `test/**/*.test.ts` in Node. Property tests use `fast-check`.
 - `npm run test:eval` limits Vitest to evaluation tests, and
   `npm run benchmark:static` runs the curated static-quality benchmark.
+- `npm run sync:heuristic-dictionaries` explicitly copies the catalog into the static
+  VS Code manifest; `npm run check:heuristic-dictionaries` and manifest tests fail on
+  drift. Extension startup never writes repository files or `package.json`.
 - `vscode:prepublish` runs the production build before VSIX packaging.
 
 The standard contributor checks are:
@@ -398,14 +443,6 @@ script. Every skill diagnostic code should also be reflected in `docs/rules.md`.
   do not directly invalidate the live-diagnostic resource cache. Configuration
   changes clear that cache, while workspace analysis and reports perform fresh
   discovery.
-- Configuration propagation is not yet uniform. Live diagnostics and the selected
-  profile's workspace analysis forward configured dictionaries and resource
-  directories. The code-action and per-skill-report validation calls do not; the
-  per-skill report does still use configured dictionaries for its displayed Static
-  Description Quality score.
-- Portability description checks and aggregate collision boundary extraction use
-  built-in heuristic dictionaries rather than configured overrides, even though the
-  lower-level description and collision-feature functions accept custom dictionaries.
 - The Skills tree caches its `WorkspaceAnalysis` until a refresh-triggering event.
   Navigator trees have separate caches and invalidation rules.
 - Similarity tokenization and most description heuristics are English/ASCII-oriented.

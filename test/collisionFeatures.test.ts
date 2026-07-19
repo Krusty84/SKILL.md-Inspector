@@ -20,7 +20,7 @@ describe('extractCapabilities (Task 36)', () => {
   });
 
   it('folds custom verbs to their base form', () => {
-    const dictionaries = resolveHeuristicDictionaries({ actionVerbs: { replace: ['triage'] } });
+    const dictionaries = resolveHeuristicDictionaries({ actionVerbs: ['triage'] });
     expect(extractCapabilities('Triages and triaged the queue.', dictionaries)).toEqual(['triage']);
   });
 });
@@ -34,12 +34,17 @@ describe('extractArtifacts (Task 37)', () => {
   });
 
   it('escapes regex metacharacters in custom multi-word artifact phrases', () => {
-    const plus = resolveHeuristicDictionaries({ multiWordArtifacts: { add: ['c++ template'] } });
+    const plus = resolveHeuristicDictionaries({ multiWordArtifacts: ['c++ template'] });
     expect(() => extractArtifacts('Refactor the C++ template layer.', plus)).not.toThrow();
     expect(extractArtifacts('Refactor the C++ template layer.', plus)).toContain('c++ template');
 
-    const dotted = resolveHeuristicDictionaries({ multiWordArtifacts: { add: ['node.js service'] } });
+    const dotted = resolveHeuristicDictionaries({ multiWordArtifacts: ['node.js service'] });
     expect(extractArtifacts('Restart the nodeXjs service.', dotted)).not.toContain('node.js service');
+  });
+
+  it('includes a custom artifact hint in collision features', () => {
+    const dictionaries = resolveHeuristicDictionaries({ artifactHints: ['widget'] });
+    expect(extractArtifacts('Calibrate widgets before release.', dictionaries)).toContain('widget');
   });
 });
 

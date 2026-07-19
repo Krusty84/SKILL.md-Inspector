@@ -1,5 +1,8 @@
 import { analyzeDescription } from './descriptionHeuristics';
-import { computeStaticDescriptionQuality, type StaticDescriptionQualityOptions } from './staticDescriptionQuality';
+import {
+  computeStaticDescriptionQuality,
+  type StaticDescriptionQualityOptions,
+} from './staticDescriptionQuality';
 
 /** The pattern used when there is nothing salvageable to build on (brief §10.5). */
 export const REWRITE_TEMPLATE =

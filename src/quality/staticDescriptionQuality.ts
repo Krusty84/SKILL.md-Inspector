@@ -1,12 +1,10 @@
-import {
-  analyzeDescription,
-  type DescriptionAnalysis,
-} from './descriptionHeuristics';
+import { analyzeDescription, type DescriptionAnalysis } from './descriptionHeuristics';
 import type { HeuristicDictionaries } from './dictionaries';
 import { isProbablyNonEnglish } from './language';
 import type {
   StaticDescriptionQualityResult,
   StaticDescriptionQualityFinding,
+  StaticDescriptionQualityGradeLimitation,
   StaticDescriptionQualityLabel,
   HeuristicCoverage,
 } from '../types/StaticDescriptionQuality';
@@ -66,7 +64,13 @@ export function scoreAnalysis(
     0,
     Math.round(weights.lowVagueness - (weights.lowVagueness / 2) * analysis.vagueTerms.length),
   );
-  const lengthPoints = scoreLength(analysis.length, minLength, maxLength, weights.goodLength, goodLengthMax);
+  const lengthPoints = scoreLength(
+    analysis.length,
+    minLength,
+    maxLength,
+    weights.goodLength,
+    goodLengthMax,
+  );
 
   const findings: StaticDescriptionQualityFinding[] = [
     finding(
@@ -151,20 +155,74 @@ export function scoreAnalysis(
     );
   }
 
-  // Normalized weights can be fractional; keep the public score an integer in [0, 100].
-  const score = Math.max(
+  // Normalized weights can be fractional; keep the raw additive score an
+  // integer in [0, 100]. Findings remain the transparent source of this total.
+  const rawScore = Math.max(
     0,
     Math.min(100, Math.round(findings.reduce((sum, f) => sum + f.pointsEarned, 0))),
   );
+  const gradeLimitations = assessGradeLimitations(analysis);
+  const adjustedScore = gradeLimitations.reduce(
+    (score, limitation) => Math.min(score, limitation.ceiling),
+    rawScore,
+  );
   const { coverage, limitations } = assessCoverage(analysis, minLength, languageLimited);
   return {
-    score,
-    label: labelFor(score),
+    score: adjustedScore,
+    rawScore,
+    adjustedScore,
+    label: labelFor(adjustedScore),
     findings,
+    gradeLimitations,
     coverage,
     limitations,
     ...(languageLimited ? { partial: true } : {}),
   };
+}
+
+/**
+ * Essential completeness is evaluated separately from additive evidence. Each
+ * returned limitation is a visible policy ceiling, never a hidden deduction.
+ */
+function assessGradeLimitations(
+  analysis: DescriptionAnalysis,
+): StaticDescriptionQualityGradeLimitation[] {
+  const limitations: StaticDescriptionQualityGradeLimitation[] = [];
+
+  if (!analysis.actionVerb.found) {
+    limitations.push({
+      code: 'missing-action-capability',
+      ceiling: 59,
+      reason: 'No action capability is present, so the adjusted score cannot exceed 59.',
+    });
+  }
+  if (!analysis.concreteArtifact) {
+    limitations.push({
+      code: 'missing-concrete-artifact',
+      ceiling: 59,
+      reason: 'No concrete artifact or domain is present, so the adjusted score cannot exceed 59.',
+    });
+  }
+  if (analysis.triggerClause.contentFound) {
+    return limitations;
+  }
+  if (analysis.triggerClause.markerFound) {
+    limitations.push({
+      code: 'vague-usage-trigger',
+      ceiling: 74,
+      reason:
+        'The usage-trigger marker has only vague content, so the adjusted score cannot exceed 74.',
+    });
+  } else {
+    limitations.push({
+      code: 'missing-usage-trigger',
+      ceiling: 69,
+      reason:
+        'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
+    });
+  }
+
+  return limitations;
 }
 
 /**
@@ -201,10 +259,7 @@ function assessCoverage(
   return { coverage, limitations };
 }
 
-function clausePoints(
-  clause: DescriptionAnalysis['triggerClause'],
-  maxPoints: number,
-): number {
+function clausePoints(clause: DescriptionAnalysis['triggerClause'], maxPoints: number): number {
   if (clause.contentFound) return maxPoints;
   return clause.markerFound ? Math.round(maxPoints * 0.25) : 0;
 }
@@ -256,7 +311,9 @@ const WEIGHT_KEYS = [
  * findings' `pointsEarned` sum to the score. Integer weight sets already summing
  * to 100 map to themselves.
  */
-function normalizeWeights(weights: StaticDescriptionQualityWeights): StaticDescriptionQualityWeights {
+function normalizeWeights(
+  weights: StaticDescriptionQualityWeights,
+): StaticDescriptionQualityWeights {
   const total = WEIGHT_KEYS.reduce((sum, key) => sum + weights[key], 0);
   if (total <= 0) {
     return weights; // degenerate profile: every criterion scores 0

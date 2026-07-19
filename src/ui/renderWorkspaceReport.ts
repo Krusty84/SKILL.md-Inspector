@@ -50,6 +50,10 @@ export function renderWorkspaceReportHtml(
   .conf-high { color: var(--vscode-testing-iconPassed, #3fb950); }
   .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
   .conf-low { opacity: 0.7; }
+  .quality-adjustment { white-space: nowrap; }
+  .grade-limitations { margin-top: 0.2rem; font-size: 0.82rem; }
+  .grade-limitations summary { cursor: pointer; }
+  .grade-limitations ul { margin-top: 0.15rem; }
 </style>
 <title>Workspace Skill Report</title>
 </head>
@@ -57,11 +61,12 @@ export function renderWorkspaceReportHtml(
   <h1>Workspace Skill Report</h1>
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
   <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
+  <p class="note">Format / portability compatibility checks profile-specific format constraints only; it does not include general description or instruction-body quality.</p>
 
   <h2>Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th>Name</th><th>Heuristic Static Description Quality</th><th>Errors</th><th>Warnings</th>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
+      <thead><tr><th rowspan="2">Name</th><th rowspan="2">Validation status</th><th rowspan="2">Adjusted description quality</th><th rowspan="2">Heuristic coverage</th><th rowspan="2">Instruction authoring quality</th><th rowspan="2">Errors</th><th rowspan="2">Warnings</th><th rowspan="2">Information</th><th colspan="${PROFILES.length}">Format / portability compatibility</th></tr><tr>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -83,7 +88,31 @@ export function renderWorkspaceReportHtml(
 
 function renderSkillRow(skill: WorkspaceSkill): string {
   const cells = PROFILES.map((profile) => statusCell(skill.profileCompatibility[profile])).join('');
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td>${skill.staticDescriptionQuality}/100 · ${skill.staticDescriptionQualityLabel}</td><td>${skill.errors}</td><td>${skill.warnings}</td>${cells}</tr>`;
+  const quality = skill.staticDescriptionQuality;
+  const instructions = skill.authoringQuality.instructions;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructions.score}/100 · ${instructions.label}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${cells}</tr>`;
+}
+
+function renderDescriptionQuality(quality: WorkspaceSkill['staticDescriptionQuality']): string {
+  const rawScore =
+    quality.rawScore !== quality.adjustedScore
+      ? ` <span class="quality-adjustment">(raw: ${quality.rawScore}/100)</span>`
+      : '';
+  if (quality.gradeLimitations.length === 0) {
+    return `${quality.adjustedScore}/100 · ${escapeHtml(capitalize(quality.label))}${rawScore}`;
+  }
+  const count = quality.gradeLimitations.length;
+  const limitations = quality.gradeLimitations
+    .map(
+      (limitation) =>
+        `<li><code>${escapeHtml(limitation.code)}</code> — ceiling: ${limitation.ceiling}/100. ${escapeHtml(limitation.reason)}</li>`,
+    )
+    .join('');
+  return `${quality.adjustedScore}/100 · ${escapeHtml(capitalize(quality.label))}${rawScore}<details class="grade-limitations"><summary>${count} grade limitation${count === 1 ? '' : 's'}</summary><ul>${limitations}</ul></details>`;
+}
+
+function statusClass(status: WorkspaceSkill['validationStatus']): string {
+  return status === 'pass' ? 'ok' : status === 'warning' ? 'warn' : 'fail';
 }
 
 function renderCollisions(collisions: SkillCollision[]): string {
@@ -171,4 +200,8 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

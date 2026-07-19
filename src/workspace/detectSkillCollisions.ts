@@ -16,6 +16,10 @@ import {
 } from './similarity';
 import { normalizeContentToken } from '../quality/wordForms';
 import { boundarySeparation } from './collisionFeatures';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  type HeuristicDictionaries,
+} from '../quality/dictionaries';
 
 export interface SkillDescriptor {
   name: string;
@@ -57,6 +61,7 @@ export interface CollisionOptions {
 export function detectCollisions(
   skills: SkillDescriptor[],
   options: CollisionOptions = {},
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): SkillCollision[] {
   const threshold = options.threshold ?? DEFAULT_COLLISION_THRESHOLD;
   const weights = normalizeWeights(options.weights ?? DEFAULT_COLLISION_WEIGHTS);
@@ -65,7 +70,9 @@ export function detectCollisions(
 
   // Normalize plural/verb forms so morphological variants collide (Tasks 31–32).
   const tokens = skills.map((skill) =>
-    tokenizeContent(skill.description).map(normalizeContentToken),
+    tokenizeContent(skill.description, dictionaries.collisionStopwords).map((token) =>
+      normalizeContentToken(token, dictionaries),
+    ),
   );
   const vectors = tfidfVectors(tokens);
   const collisions: SkillCollision[] = [];
@@ -77,7 +84,11 @@ export function detectCollisions(
         jaccard: jaccard(tokens[i], tokens[j]),
         charNgram: charNgramSimilarity(skills[i].description, skills[j].description, ngramSize),
         nameSimilarity: nameSimilarity(skills[i].name, skills[j].name),
-        boundarySeparation: boundarySeparation(skills[i].description, skills[j].description),
+        boundarySeparation: boundarySeparation(
+          skills[i].description,
+          skills[j].description,
+          dictionaries,
+        ),
       };
       const composite = compositeScore(metrics, weights, boundaryWeight);
       if (composite < threshold) {

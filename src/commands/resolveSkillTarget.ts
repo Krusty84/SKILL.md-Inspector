@@ -11,7 +11,9 @@ export function isSkillUri(uri: vscode.Uri): boolean {
   return uri.path.split('/').pop() === 'SKILL.md';
 }
 
-type SkillCommandTarget = vscode.Uri | { resourceUri?: vscode.Uri; uri?: vscode.Uri | string; file?: { absolutePath?: string } };
+type SkillCommandTarget =
+  | vscode.Uri
+  | { resourceUri?: vscode.Uri; uri?: vscode.Uri | string; file?: { absolutePath?: string } };
 
 export function resolveSkillUri(target?: SkillCommandTarget): vscode.Uri | undefined {
   if (target instanceof vscode.Uri) return target;
@@ -33,7 +35,9 @@ export async function resolveSkillTarget(
       return undefined;
     }
     const document = await vscode.workspace.openTextDocument(resolvedUri);
-    const editor = options.requireEditor ? await vscode.window.showTextDocument(document) : undefined;
+    const editor = options.requireEditor
+      ? await vscode.window.showTextDocument(document)
+      : undefined;
     return { uri: resolvedUri, document, editor };
   }
 

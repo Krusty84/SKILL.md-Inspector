@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
+import catalog from '../src/quality/defaultHeuristicDictionaries.json';
 
 describe('package manifest context menus and templates', () => {
   it('declares the SKILL.md Inspector submenu in editor and explorer contexts', () => {
@@ -138,6 +139,38 @@ describe('package manifest context menus and templates', () => {
     expect(JSON.stringify(skillItemMenu)).not.toMatch(/canOpenWith|canOpenTimeline|canCompareFiles/);
   });
 
+});
+
+describe('heuristic dictionary manifest consistency', () => {
+  const properties = packageJson.contributes.configuration.properties as Record<
+    string,
+    { type?: string; scope?: string; default?: unknown; items?: { type?: string } }
+  >;
+
+  it('keeps every visible setting default exactly synchronized with the catalog', () => {
+    for (const [key, value] of Object.entries(catalog)) {
+      const setting = properties[`skillMdInspector.heuristics.dictionaryValues.${key}`];
+      expect(setting, key).toBeDefined();
+      expect(setting.default, key).toEqual(value);
+      expect(setting.scope, key).toBe('resource');
+      expect(setting.type, key).toBe(Array.isArray(value) ? 'array' : 'object');
+      if (Array.isArray(value)) {
+        expect(setting.items?.type, key).toBe('string');
+        if (value.length > 0) expect(setting.default, key).not.toEqual([]);
+      } else if (Object.keys(value).length > 0) {
+        expect(setting.default, key).not.toEqual({});
+      }
+    }
+  });
+
+  it('declares the standard settings command', () => {
+    expect(packageJson.contributes.commands).toContainEqual(
+      expect.objectContaining({
+        command: 'skillMdInspector.openHeuristicDictionarySettings',
+        title: 'Open Heuristic Dictionary Settings',
+      }),
+    );
+  });
 });
 
 describe('OpenCode manifest consistency', () => {

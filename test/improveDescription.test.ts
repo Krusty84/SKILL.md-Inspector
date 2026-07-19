@@ -4,7 +4,10 @@ import {
   buildDescriptionSuggestions,
   REWRITE_TEMPLATE,
 } from '../src/quality/improveDescription';
-import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  resolveHeuristicDictionaries,
+} from '../src/quality/dictionaries';
 
 describe('buildImprovedDescription', () => {
   it('returns the template for an empty description', () => {
@@ -39,7 +42,10 @@ describe('buildImprovedDescription', () => {
   it('honors custom dictionaries when deciding what to append', () => {
     const description = 'Format inspection reports using layout rules. Fires when standardizing engineering docs.';
     const dictionaries = resolveHeuristicDictionaries({
-      positiveTriggerPhrases: { add: ['fires when'] },
+      positiveTriggerPhrases: [
+        ...DEFAULT_HEURISTIC_DICTIONARIES.positiveTriggerPhrases,
+        'fires when',
+      ],
     });
     expect(buildImprovedDescription(description)).toContain('Use when <trigger context>.');
     expect(buildImprovedDescription(description, { dictionaries })).not.toContain(

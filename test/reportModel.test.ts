@@ -6,6 +6,7 @@ import { analyzeSkill } from '../src/analysis/analyzeSkill';
 import { buildReportModel } from '../src/ui/reportModel';
 import { renderReportHtml } from '../src/ui/renderReport';
 import { genericProfile } from '../src/profiles/genericProfile';
+import { DiagnosticCode } from '../src/types/DiagnosticCode';
 
 let dir: string;
 
@@ -60,6 +61,38 @@ describe('buildReportModel', () => {
     expect(model.errorCount).toBeGreaterThan(0);
     expect(model.staticDescriptionQuality.label).toBe('poor');
   });
+
+  it('keeps the substantive engineering report formatter fixture excellent', () => {
+    const fixturePath = path.resolve('fixtures/skills/engineering-report-formatter/SKILL.md');
+    const content = fs.readFileSync(fixturePath, 'utf8');
+    const { document, diagnostics } = analyzeSkill(fixturePath, content, genericProfile);
+    const model = buildReportModel(document, diagnostics, genericProfile);
+
+    expect(model.authoringQuality.instructions.score).toBe(100);
+    expect(model.authoringQuality.instructions.label).toBe('excellent');
+  });
+
+  it('reports warnings without treating description or authoring quality as validation', () => {
+    const model = report([
+      '---',
+      'name: engineering-report-formatter',
+      'description: Format technical engineering reports using company layout rules.',
+      '---',
+    ].join('\n'));
+
+    expect(model.status).toBe('warning');
+    expect(model.errorCount).toBe(0);
+    expect(model.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      DiagnosticCode.DescriptionNoTrigger,
+      DiagnosticCode.DescriptionNoBoundary,
+      DiagnosticCode.BodyMissing,
+    ]);
+    expect(model.warningCount).toBe(2);
+    expect(model.informationCount).toBe(1);
+    expect(model.authoringQuality.instructions.score).toBe(0);
+    expect(model.authoringQuality.instructions.label).toBe('poor');
+    expect(model.authoringQuality.resources.score).toBe(100);
+  });
 });
 
 describe('renderReportHtml', () => {
@@ -76,8 +109,68 @@ describe('renderReportHtml', () => {
   it('escapes HTML in dynamic values to prevent injection', () => {
     const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\n');
     model.name = '<img src=x onerror=alert(1)>';
+    model.staticDescriptionQuality.limitations = ['<img src=x onerror=alert(2)>'];
+    model.staticDescriptionQuality.gradeLimitations[0].reason = '<img src=x onerror=alert(3)>';
     const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x');
+    expect(html).toContain('Heuristic coverage limitations');
+    expect(html).toContain('Grade limitations and score adjustments');
+  });
+
+  it('renders validation severity and ordered findings for a warning-only skill', () => {
+    const model = report([
+      '---',
+      'name: engineering-report-formatter',
+      'description: Format technical engineering reports using company layout rules.',
+      '---',
+    ].join('\n'));
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+
+    expect(html).toContain('Validation status: VALID WITH WARNINGS');
+    expect(html).not.toContain('>PASS<');
+    expect(html).toContain('Instruction authoring quality');
+    expect(html).toContain('0/100 · Poor');
+    expect(html.indexOf('Instruction authoring quality')).toBeLessThan(
+      html.indexOf('<h2>Validation findings</h2>'),
+    );
+    expect(html).toContain('Suggestion: Write the instructions the agent should follow after the skill triggers.');
+    expect(html).toContain('<h2>Validation findings</h2>');
+    expect(html).toContain('Diagnostic code');
+    expect(html.indexOf(DiagnosticCode.DescriptionNoTrigger)).toBeLessThan(
+      html.indexOf(DiagnosticCode.DescriptionNoBoundary),
+    );
+    expect(html.indexOf(DiagnosticCode.DescriptionNoBoundary)).toBeLessThan(
+      html.indexOf(DiagnosticCode.BodyMissing),
+    );
+    expect(model.staticDescriptionQuality).toMatchObject({
+      adjustedScore: 69,
+      label: 'acceptable',
+      rawScore: 75,
+    });
+    expect(html).toContain('Heuristic Static Description Quality 69/100 · Acceptable');
+    expect(html).toContain('Raw criterion score: <strong>75/100</strong>');
+    expect(html).toContain('Adjusted score after ceilings: <strong>69/100</strong>');
+    expect(html).toContain('<code>missing-usage-trigger</code> — ceiling: 69/100');
+    expect(html).toContain(
+      'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
+    );
+  });
+
+  it('does not render an adjustment notice for a complete description', () => {
+    const model = report([
+      '---',
+      'name: complete-skill',
+      'description: Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.',
+      '---',
+    ].join('\n'));
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+
+    expect(model.staticDescriptionQuality.rawScore).toBe(
+      model.staticDescriptionQuality.adjustedScore,
+    );
+    expect(model.staticDescriptionQuality.gradeLimitations).toEqual([]);
+    expect(html).not.toContain('<div class="adjustments">');
+    expect(html).not.toContain('Raw criterion score:');
   });
 });

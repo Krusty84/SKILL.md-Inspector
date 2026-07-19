@@ -4,57 +4,16 @@
  * signal comes from the domain-specific words.
  */
 
-const STOPWORDS = new Set([
-  'the',
-  'a',
-  'an',
-  'and',
-  'or',
-  'to',
-  'of',
-  'in',
-  'on',
-  'for',
-  'with',
-  'from',
-  'by',
-  'as',
-  'at',
-  'is',
-  'are',
-  'be',
-  'this',
-  'that',
-  'these',
-  'those',
-  'it',
-  'use',
-  'used',
-  'using',
-  'when',
-  'skill',
-  'agent',
-  'user',
-  'users',
-  'do',
-  'not',
-  'you',
-  'your',
-  'can',
-  'will',
-  'should',
-  'if',
-  'into',
-  'out',
-  'up',
-  'via',
-  'per',
-]);
+import { DEFAULT_HEURISTIC_DICTIONARIES } from '../quality/dictionaries';
 
 /** Lower-cases and keeps meaningful tokens (length > 2, non-stopword). */
-export function tokenizeContent(text: string): string[] {
+export function tokenizeContent(
+  text: string,
+  stopwords: readonly string[] = DEFAULT_HEURISTIC_DICTIONARIES.collisionStopwords,
+): string[] {
+  const ignored = new Set(stopwords);
   return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
-    (token) => token.length > 2 && !STOPWORDS.has(token),
+    (token) => token.length > 2 && !ignored.has(token),
   );
 }
 

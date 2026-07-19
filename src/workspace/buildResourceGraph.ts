@@ -1,7 +1,11 @@
 import * as fs from 'node:fs';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { ResourceGraph, ResourceNode, ResourceFlag } from '../types/Workspace';
-import { resolveRelativeLinkPath, cleanLinkTarget, canonicalizeLocalPath } from '../parser/linkPaths';
+import {
+  resolveRelativeLinkPath,
+  cleanLinkTarget,
+  canonicalizeLocalPath,
+} from '../parser/linkPaths';
 
 export interface ResourceGraphOptions {
   /** Files at or above this size are flagged `large`. */

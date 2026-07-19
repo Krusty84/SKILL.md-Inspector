@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { computeStaticDescriptionQuality, labelFor } from '../src/quality/staticDescriptionQuality';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  resolveHeuristicDictionaries,
+} from '../src/quality/dictionaries';
 
 const EXCELLENT =
   'Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.';
@@ -8,7 +12,10 @@ describe('computeStaticDescriptionQuality', () => {
   it('gives full marks to a complete, trigger-friendly description', () => {
     const result = computeStaticDescriptionQuality(EXCELLENT);
     expect(result.score).toBe(100);
+    expect(result.rawScore).toBe(100);
+    expect(result.adjustedScore).toBe(100);
     expect(result.label).toBe('excellent');
+    expect(result.gradeLimitations).toEqual([]);
     expect(result.findings).toHaveLength(7);
     for (const f of result.findings) {
       expect(f.pointsEarned).toBe(f.pointsPossible);
@@ -88,10 +95,62 @@ describe('computeStaticDescriptionQuality', () => {
   });
 
   it('gives only partial credit when the trigger scope is vague', () => {
-    const trigger = computeStaticDescriptionQuality(
+    const result = computeStaticDescriptionQuality(
       'Analyze logs. Use when appropriate for tasks.',
-    ).findings.find((f) => f.criterion === 'Usage trigger phrase');
+    );
+    const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
     expect(trigger?.pointsEarned).toBe(5); // marker present, content too vague
+    expect(result.adjustedScore).toBeLessThanOrEqual(74);
+    expect(result.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'vague-usage-trigger', ceiling: 74 }),
+    );
+  });
+
+  it('keeps additive evidence in rawScore but caps a missing concrete trigger at 69', () => {
+    const result = computeStaticDescriptionQuality(
+      'Format technical engineering reports using company layout rules.',
+      {
+        weights: {
+          actionVerb: 20,
+          triggerPhrase: 20,
+          concreteArtifact: 20,
+          boundary: 5,
+          frontLoaded: 10,
+          lowVagueness: 10,
+          goodLength: 15,
+        },
+      },
+    );
+
+    expect(result.rawScore).toBe(75);
+    expect(result.adjustedScore).toBe(69);
+    expect(result.score).toBe(result.adjustedScore);
+    expect(result.label).toBe('acceptable');
+    expect(result.findings.reduce((sum, finding) => sum + finding.pointsEarned, 0)).toBe(
+      result.rawScore,
+    );
+    expect(result.gradeLimitations).toEqual([
+      expect.objectContaining({ code: 'missing-usage-trigger', ceiling: 69 }),
+    ]);
+    expect(result.gradeLimitations[0].reason).toContain('69');
+  });
+
+  it('caps descriptions without an action capability or concrete artifact at 59', () => {
+    const noAction = computeStaticDescriptionQuality(
+      'PDF reports for customer audits. Use when customer audit packages are due. Do not use for invoices.',
+    );
+    const noArtifact = computeStaticDescriptionQuality(
+      'Format useful material carefully. Use when preparing a detailed customer delivery. Do not use for internal work.',
+    );
+
+    expect(noAction.adjustedScore).toBeLessThanOrEqual(59);
+    expect(noAction.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'missing-action-capability', ceiling: 59 }),
+    );
+    expect(noArtifact.adjustedScore).toBeLessThanOrEqual(59);
+    expect(noArtifact.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'missing-concrete-artifact', ceiling: 59 }),
+    );
   });
 
   it('awards both trigger and boundary points for "only use when"', () => {
@@ -108,6 +167,57 @@ describe('computeStaticDescriptionQuality', () => {
     const withVague = computeStaticDescriptionQuality('Format powerful reports. Use when needed.');
     const vagueFinding = withVague.findings.find((f) => f.criterion === 'Low vagueness');
     expect(vagueFinding?.pointsEarned).toBe(5);
+  });
+
+  it('applies custom vague and boundary dictionaries to scoring', () => {
+    const vague = resolveHeuristicDictionaries({
+      vagueTerms: [...DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms, 'calibrated'],
+    });
+    const customVague = computeStaticDescriptionQuality(
+      'Format calibrated reports. Use when audits drift. Do not use for invoices.',
+      { dictionaries: vague },
+    );
+    expect(customVague.findings.find((f) => f.criterion === 'Low vagueness')?.pointsEarned).toBe(5);
+
+    const noPowerful = resolveHeuristicDictionaries({
+      vagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.filter(
+        (term) => term !== 'powerful',
+      ),
+    });
+    expect(
+      computeStaticDescriptionQuality('Format powerful reports.', {
+        dictionaries: noPowerful,
+      }).findings.find((f) => f.criterion === 'Low vagueness')?.pointsEarned,
+    ).toBe(10);
+
+    const boundary = resolveHeuristicDictionaries({
+      restrictiveBoundaryPhrases: [
+        ...DEFAULT_HEURISTIC_DICTIONARIES.restrictiveBoundaryPhrases,
+        'reserved for',
+      ],
+    });
+    expect(
+      computeStaticDescriptionQuality(
+        'Format inspection reports. Use when audits drift. Reserved for audited releases.',
+        { dictionaries: boundary },
+      ).findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned,
+    ).toBe(15);
+  });
+
+  it('lets a custom artifact hint change artifact points and the adjusted score', () => {
+    const description = 'Analyze widgets carefully. Use when widget calibration drifts.';
+    const before = computeStaticDescriptionQuality(description);
+    const dictionaries = resolveHeuristicDictionaries({
+      artifactHints: [...DEFAULT_HEURISTIC_DICTIONARIES.artifactHints, 'widget'],
+    });
+    const after = computeStaticDescriptionQuality(description, { dictionaries });
+    expect(
+      before.findings.find((f) => f.criterion === 'Concrete artifact / domain')?.pointsEarned,
+    ).toBe(0);
+    expect(
+      after.findings.find((f) => f.criterion === 'Concrete artifact / domain')?.pointsEarned,
+    ).toBe(15);
+    expect(after.adjustedScore).toBeGreaterThan(before.adjustedScore);
   });
 
   it('respects a configurable minimum length', () => {

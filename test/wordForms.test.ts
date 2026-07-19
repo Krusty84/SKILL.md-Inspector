@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildVerbForms, singularize, normalizeVerbForm, normalizeContentToken } from '../src/quality/wordForms';
+import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
 
 describe('singularize (Task 31)', () => {
   it('reduces regular plurals to a shared singular form', () => {
@@ -61,6 +62,23 @@ describe('buildVerbForms', () => {
     const verbs = ['analyze', 'format'];
     expect(buildVerbForms(verbs)).toBe(buildVerbForms(verbs));
   });
+
+  it('uses explicit custom forms before generated regular morphology', () => {
+    const verbs = ['teach'];
+    const forms = { teach: ['teach', 'teaches', 'teaching', 'taught'] };
+    const result = buildVerbForms(verbs, forms);
+    expect(result.forms).toEqual(new Set(['teach', 'teaches', 'teaching', 'taught']));
+    expect(result.forms.has('teached')).toBe(false);
+  });
+
+  it('includes the form mapping identity in the cache key', () => {
+    const verbs = ['teach'];
+    const first = buildVerbForms(verbs, { teach: ['taught'] });
+    const second = buildVerbForms(verbs, { teach: ['teaching'] });
+    expect(first).not.toBe(second);
+    expect(first.forms.has('taught')).toBe(true);
+    expect(second.forms.has('taught')).toBe(false);
+  });
 });
 
 describe('normalizeVerbForm (Task 32)', () => {
@@ -82,5 +100,12 @@ describe('normalizeContentToken', () => {
     expect(normalizeContentToken('reports')).toBe('report');
     // 3rd-person "analyzes" would be mangled to "analy" if singularized first.
     expect(normalizeContentToken('analyzes')).toBe('analyze');
+  });
+
+  it('uses configurable irregular singular forms', () => {
+    const dictionaries = resolveHeuristicDictionaries({
+      irregularSingularForms: { criterion: ['criteria'] },
+    });
+    expect(normalizeContentToken('criteria', dictionaries)).toBe('criterion');
   });
 });

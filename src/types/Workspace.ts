@@ -1,6 +1,7 @@
 import type { SkillProfileId } from './SkillProfile';
 import type { SkillDiagnosticSeverity, SkillDiagnosticKind } from './SkillDiagnostic';
-import type { StaticDescriptionQualityLabel } from './StaticDescriptionQuality';
+import type { StaticDescriptionQualityResult } from './StaticDescriptionQuality';
+import type { SkillAuthoringQuality } from '../authoring/authoringQuality';
 
 /** A compact diagnostic carried into the tree/report models and the exported index (Task 87). */
 export interface IndexDiagnostic {
@@ -10,6 +11,7 @@ export interface IndexDiagnostic {
 }
 
 export type PortabilityStatus = 'pass' | 'warning' | 'fail';
+export type ValidationStatus = 'pass' | 'warning' | 'fail';
 
 /** A single diagnostic contributing to a profile's portability status (Task 42). */
 export interface PortabilityDiagnostic {
@@ -54,8 +56,9 @@ export interface WorkspaceSkill {
   path: string;
   absolutePath: string;
   description: string;
-  staticDescriptionQuality: number;
-  staticDescriptionQualityLabel: StaticDescriptionQualityLabel;
+  validationStatus: ValidationStatus;
+  staticDescriptionQuality: StaticDescriptionQualityResult;
+  authoringQuality: SkillAuthoringQuality;
   errors: number;
   warnings: number;
   information: number;
@@ -137,17 +140,20 @@ export interface SkillsIndexEntry {
   name: string;
   path: string;
   description: string;
-  staticDescriptionQuality: number;
+  validationStatus: ValidationStatus;
+  staticDescriptionQuality: StaticDescriptionQualityResult;
+  authoringQuality: SkillAuthoringQuality;
   errors: number;
   warnings: number;
+  information: number;
   /** The machine-readable rule output: every diagnostic's code, severity, and kind (Task 87). */
   diagnostics: IndexDiagnostic[];
   profileCompatibility: Record<string, PortabilityStatus>;
 }
 
 export interface SkillsIndex {
-  /** Bumped for the Static Description Quality field rename. */
-  schemaVersion: 2;
+  /** Bumped for workspace/report quality parity fields. */
+  schemaVersion: 3;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }

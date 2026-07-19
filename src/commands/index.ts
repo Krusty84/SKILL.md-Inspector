@@ -9,6 +9,7 @@ import { showWorkspaceReport } from './showWorkspaceReport';
 import { exportSkillsIndex } from './exportSkillsIndex';
 import { openTemplateSettings } from './openTemplateSettings';
 import { resetTemplates } from './resetTemplates';
+import { openHeuristicDictionarySettings } from './openHeuristicDictionarySettings';
 
 /** Registers all extension commands and ties their disposables to `context`. */
 export function registerCommands(
@@ -28,18 +29,25 @@ export function registerCommands(
     vscode.commands.registerCommand('skillMdInspector.showSkillReport', (uri?: vscode.Uri) =>
       showSkillReport(uri),
     ),
-    vscode.commands.registerCommand('skillMdInspector.improveDescriptionLocally', (uri?: vscode.Uri) =>
-      improveDescriptionLocally(uri),
+    vscode.commands.registerCommand(
+      'skillMdInspector.improveDescriptionLocally',
+      (uri?: vscode.Uri) => improveDescriptionLocally(uri),
     ),
     vscode.commands.registerCommand('skillMdInspector.showWorkspaceReport', () =>
       showWorkspaceReport(),
     ),
-    vscode.commands.registerCommand('skillMdInspector.exportSkillsIndex', () => exportSkillsIndex()),
+    vscode.commands.registerCommand('skillMdInspector.exportSkillsIndex', () =>
+      exportSkillsIndex(),
+    ),
     vscode.commands.registerCommand('skillMdInspector.openTemplateSettings', () =>
       openTemplateSettings(),
     ),
     vscode.commands.registerCommand('skillMdInspector.resetTemplates', (uri?: vscode.Uri) =>
       resetTemplates(uri),
+    ),
+    vscode.commands.registerCommand(
+      'skillMdInspector.openHeuristicDictionarySettings',
+      openHeuristicDictionarySettings,
     ),
   );
 }

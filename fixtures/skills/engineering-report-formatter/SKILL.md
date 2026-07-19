@@ -9,10 +9,6 @@ description: Format technical engineering reports using company layout rules. Us
 
 Use this skill when the user needs to format or standardize technical engineering reports.
 
-## Examples
-
-Given a raw engineering report, return a formatted report following the company layout.
-
 ## Constraints
 
 Do not invent measurements, serial numbers, or inspection results.

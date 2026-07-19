@@ -14,12 +14,24 @@ const opts = (p: SkillProfile) => ({
   weights: p.description.weights,
 });
 
-describe('profile-dependent trigger-quality weights', () => {
+describe('profile-dependent static-description-quality weights', () => {
   it('lets the generic profile reach excellent without a boundary', () => {
     const result = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
     expect(result.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned).toBe(0);
+    expect(result.gradeLimitations.some((limitation) => limitation.code.includes('boundary'))).toBe(false);
     expect(result.score).toBeGreaterThanOrEqual(90);
     expect(result.label).toBe('excellent');
+  });
+
+  it('caps the Generic engineering-report regression despite its raw score of 75', () => {
+    const result = computeStaticDescriptionQuality(
+      'Format technical engineering reports using company layout rules.',
+      opts(genericProfile),
+    );
+
+    expect(result.rawScore).toBe(75);
+    expect(result.adjustedScore).toBeLessThanOrEqual(69);
+    expect(result.label).toBe('acceptable');
   });
 
   it('weights the missing boundary more heavily under codex', () => {
@@ -58,7 +70,7 @@ describe('profile-dependent trigger-quality weights', () => {
       'Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.';
     const result = computeStaticDescriptionQuality(full, { weights: ones });
     expect(result.score).toBe(100);
-    expect(result.findings.reduce((sum, f) => sum + f.pointsEarned, 0)).toBe(result.score);
+    expect(result.findings.reduce((sum, f) => sum + f.pointsEarned, 0)).toBe(result.rawScore);
     expect(result.findings.reduce((sum, f) => sum + f.pointsPossible, 0)).toBe(100);
     expect(result.findings.every((f) => Number.isInteger(f.pointsPossible))).toBe(true);
   });

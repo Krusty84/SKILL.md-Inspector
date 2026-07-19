@@ -30,7 +30,13 @@ export function runAllValidations(
   profile: SkillProfile,
   options: RunValidationsOptions = {},
 ): SkillDiagnostic[] {
-  const diagnostics = runRules({ doc, profile, skipFilesystem: options.skipFilesystem, dictionaries: options.dictionaries, resourceDirectories: options.resourceDirectories });
+  const diagnostics = runRules({
+    doc,
+    profile,
+    skipFilesystem: options.skipFilesystem,
+    dictionaries: options.dictionaries,
+    resourceDirectories: options.resourceDirectories,
+  });
   return sortDiagnostics(applyProfileOverrides(diagnostics, profile));
 }
 

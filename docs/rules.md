@@ -245,7 +245,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.noVerb`
 
-**warning** · all profiles · auto-fix: no
+**error** · all profiles · auto-fix: no
 
 `description` has no clear action verb stating the capability.
 

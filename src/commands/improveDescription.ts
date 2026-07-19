@@ -10,8 +10,13 @@ import { resolveSkillTarget } from './resolveSkillTarget';
  * only the missing trigger/boundary clauses are added, unless the current
  * description scores "poor", in which case the full template is suggested.
  */
-export async function improveDescriptionLocally(uri?: Parameters<typeof resolveSkillTarget>[0]): Promise<void> {
-  const target = await resolveSkillTarget(uri, { requireEditor: true, warningAction: 'improve its description' });
+export async function improveDescriptionLocally(
+  uri?: Parameters<typeof resolveSkillTarget>[0],
+): Promise<void> {
+  const target = await resolveSkillTarget(uri, {
+    requireEditor: true,
+    warningAction: 'improve its description',
+  });
   if (!target || !target.editor) {
     return;
   }

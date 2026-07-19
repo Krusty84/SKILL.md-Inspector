@@ -1,2 +1,4 @@
-/** Low-signal words and phrases. Single words are token matched; phrases use word boundaries. */
-export const VAGUE_TERMS: readonly string[] = ['help', 'helpful', 'useful', 'various', 'many things', 'common tasks', 'many tasks', 'different things', 'all kinds of', 'improve things', 'handle everything', 'work with', 'process stuff', 'best results', 'general', 'general-purpose', 'generic', 'flexible', 'easy', 'simple', 'stuff', 'anything', 'assistant', 'improves', 'better', 'smart', 'powerful', 'advanced', 'intelligent', 'robust', 'comprehensive'];
+import { DEFAULT_HEURISTIC_DICTIONARIES } from './dictionaries';
+
+/** Compatibility export; canonical values live in defaultHeuristicDictionaries.json. */
+export const VAGUE_TERMS: readonly string[] = DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms;

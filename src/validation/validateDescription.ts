@@ -81,7 +81,7 @@ export function validateDescription(
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNoVerb,
-        'warning',
+        'error',
         '`description` does not contain a clear action verb (e.g. "format", "analyze", "generate").',
         range,
       ),

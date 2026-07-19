@@ -128,7 +128,10 @@ function valueOrigin(
     return { line: line + 1, character: 0 };
   }
   if (node.type === 'inlineCode' && start.line === end.line) {
-    const backticks = Math.max(1, Math.floor((end.column - start.column - (node.value ?? '').length) / 2));
+    const backticks = Math.max(
+      1,
+      Math.floor((end.column - start.column - (node.value ?? '').length) / 2),
+    );
     return { line, character: start.column - 1 + backticks };
   }
   // Plain text (and any fallback): the value starts exactly at the node position.
@@ -152,7 +155,12 @@ function pathRange(
       character += 1;
     }
   }
-  return { startLine: line, startCharacter: character, endLine: line, endCharacter: character + length };
+  return {
+    startLine: line,
+    startCharacter: character,
+    endLine: line,
+    endCharacter: character + length,
+  };
 }
 
 export function classifyLink(url: string): SkillLinkKind {

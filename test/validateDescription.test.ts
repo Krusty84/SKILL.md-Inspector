@@ -3,12 +3,22 @@ import { parseSkillFile } from '../src/parser/parseSkillFile';
 import { validateDescription } from '../src/validation/validateDescription';
 import { genericProfile } from '../src/profiles/genericProfile';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  resolveHeuristicDictionaries,
+  type HeuristicDictionaries,
+} from '../src/quality/dictionaries';
 
-function codes(description: string): string[] {
+function codes(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): string[] {
   const content = `---\nname: demo\ndescription: ${JSON.stringify(description)}\n---\n`;
-  return validateDescription(parseSkillFile('/ws/skills/demo/SKILL.md', content), genericProfile).map(
-    (d) => d.code,
-  );
+  return validateDescription(
+    parseSkillFile('/ws/skills/demo/SKILL.md', content),
+    genericProfile,
+    dictionaries,
+  ).map((d) => d.code);
 }
 
 describe('validateDescription', () => {
@@ -21,11 +31,19 @@ describe('validateDescription', () => {
   });
 
   it('flags the vague example from the brief', () => {
-    const result = codes('Helps with documents.');
+    const description = 'Helps with documents.';
+    const result = codes(description);
     expect(result).toContain(DiagnosticCode.DescriptionTooShort);
     expect(result).toContain(DiagnosticCode.DescriptionVague);
     expect(result).toContain(DiagnosticCode.DescriptionNoVerb);
     expect(result).toContain(DiagnosticCode.DescriptionNoTrigger);
+
+    const content = `---\nname: demo\ndescription: ${JSON.stringify(description)}\n---\n`;
+    const noVerb = validateDescription(
+      parseSkillFile('/ws/skills/demo/SKILL.md', content),
+      genericProfile,
+    ).find((diagnostic) => diagnostic.code === DiagnosticCode.DescriptionNoVerb);
+    expect(noVerb?.severity).toBe('error');
   });
 
   it('reports a description over the maximum length as an error', () => {
@@ -54,5 +72,43 @@ describe('validateDescription', () => {
     const result = codes('Format technical PDF reports using the standard company layout rules.');
     expect(result).toContain(DiagnosticCode.DescriptionNoTrigger);
     expect(result).not.toContain(DiagnosticCode.DescriptionNoVerb);
+  });
+
+  it('uses configured action-verb values for blocking noVerb diagnostics', () => {
+    const added = resolveHeuristicDictionaries({
+      actionVerbs: [...DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs, 'frobnicate'],
+    });
+    expect(
+      codes(
+        'Frobnicate calibrated widgets. Use when widget calibration drifts.',
+        added,
+      ),
+    ).not.toContain(DiagnosticCode.DescriptionNoVerb);
+
+    const removed = resolveHeuristicDictionaries({
+      actionVerbs: DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs.filter(
+        (verb) => verb !== 'format',
+      ),
+    });
+    expect(
+      codes('Format inspection reports. Use when standardizing reports.', removed),
+    ).toContain(DiagnosticCode.DescriptionNoVerb);
+  });
+
+  it('applies added and removed vague terms to diagnostics', () => {
+    const added = resolveHeuristicDictionaries({
+      vagueTerms: [...DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms, 'calibrated'],
+    });
+    expect(codes('Format calibrated reports. Use when audits drift.', added)).toContain(
+      DiagnosticCode.DescriptionVague,
+    );
+    const removed = resolveHeuristicDictionaries({
+      vagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.filter(
+        (term) => term !== 'powerful',
+      ),
+    });
+    expect(codes('Format powerful reports. Use when audits drift.', removed)).not.toContain(
+      DiagnosticCode.DescriptionVague,
+    );
   });
 });

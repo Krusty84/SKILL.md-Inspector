@@ -37,9 +37,15 @@ export interface ValidationRule {
 export const VALIDATION_RULES: ValidationRule[] = [
   { id: 'frontmatter', run: ({ doc }) => validateFrontmatter(doc) },
   { id: 'name', run: ({ doc, profile }) => validateName(doc, profile) },
-  { id: 'description', run: ({ doc, profile, dictionaries }) => validateDescription(doc, profile, dictionaries) },
+  {
+    id: 'description',
+    run: ({ doc, profile, dictionaries }) => validateDescription(doc, profile, dictionaries),
+  },
   { id: 'links', run: ({ doc, skipFilesystem }) => validateLinks(doc, { skipFilesystem }) },
-  { id: 'resources', run: ({ doc, resourceDirectories }) => validateResources(doc, resourceDirectories) },
+  {
+    id: 'resources',
+    run: ({ doc, resourceDirectories }) => validateResources(doc, resourceDirectories),
+  },
   { id: 'body', run: ({ doc, profile }) => validateBody(doc, profile) },
   { id: 'profile-metadata', run: ({ doc, profile }) => validateProfileMetadata(doc, profile) },
 ];

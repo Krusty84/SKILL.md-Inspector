@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { detectCollisions, riskFor } from '../src/workspace/detectSkillCollisions';
+import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
 
 describe('detectCollisions', () => {
   const skills = [
@@ -149,6 +150,24 @@ describe('detectCollisions morphological overlap (Task 75)', () => {
     expect(collisions[0].sharedTerms).toEqual(
       expect.arrayContaining(['format', 'inspection', 'report']),
     );
+  });
+
+  it('uses configured verb forms and collision stopwords', () => {
+    const dictionaries = resolveHeuristicDictionaries({
+      actionVerbs: ['teach'],
+      actionVerbForms: { teach: ['teach', 'taught'] },
+      collisionStopwords: ['api'],
+    });
+    const [collision] = detectCollisions(
+      [
+        { name: 'alpha', description: 'Teach API conventions.' },
+        { name: 'beta', description: 'Taught API conventions.' },
+      ],
+      { threshold: 0 },
+      dictionaries,
+    );
+    expect(collision.sharedTerms).toContain('teach');
+    expect(collision.sharedTerms).not.toContain('api');
   });
 });
 

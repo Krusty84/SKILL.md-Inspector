@@ -74,7 +74,11 @@ describe('workspace discovery + analysis', () => {
     const pdf = analysis.skills.find((s) => s.name === 'pdf-report-formatter');
     expect(pdf).toBeDefined();
     expect(pdf!.errors).toBe(0);
-    expect(pdf!.staticDescriptionQuality).toBeGreaterThan(0);
+    expect(pdf!.validationStatus).toBe('warning');
+    expect(pdf!.staticDescriptionQuality.adjustedScore).toBeGreaterThan(0);
+    expect(pdf!.staticDescriptionQuality.score).toBe(pdf!.staticDescriptionQuality.adjustedScore);
+    expect(pdf!.authoringQuality.instructions.score).toBeGreaterThan(0);
+    expect(pdf!.authoringQuality.resources.score).toBeLessThan(100);
     expect(Object.keys(pdf!.profileCompatibility).sort()).toEqual([
       'claude',
       'codex',
@@ -86,7 +90,36 @@ describe('workspace discovery + analysis', () => {
 
     const broken = analysis.skills.find((s) => s.name === 'Broken Skill');
     expect(broken!.errors).toBeGreaterThan(0);
+    expect(broken!.validationStatus).toBe('fail');
     expect(broken!.profileCompatibility.generic).toBe('fail');
+  });
+
+  it('keeps validation, description, authoring, and compatibility dimensions distinct for minimal frontmatter', () => {
+    writeSkill(
+      'skills/minimal-skill/SKILL.md',
+      [
+        '---',
+        'name: minimal-skill',
+        'description: Format technical engineering reports using company layout rules.',
+        '---',
+      ].join('\n'),
+    );
+
+    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const minimal = analysis.skills.find((skill) => skill.name === 'minimal-skill')!;
+
+    expect(minimal.validationStatus).toBe('warning');
+    expect(minimal.staticDescriptionQuality.rawScore).toBeGreaterThan(
+      minimal.staticDescriptionQuality.adjustedScore,
+    );
+    expect(minimal.staticDescriptionQuality.label).toBe('acceptable');
+    expect(minimal.staticDescriptionQuality.coverage).toBe('high');
+    expect(minimal.staticDescriptionQuality.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'missing-usage-trigger', ceiling: 69 }),
+    );
+    expect(minimal.authoringQuality.instructions).toMatchObject({ score: 0, label: 'poor' });
+    expect(minimal.authoringQuality.resources).toMatchObject({ score: 100, label: 'excellent' });
+    expect(minimal.profileCompatibility.generic).toBe('pass');
   });
 
   it('detects a collision between the two report formatters', () => {
@@ -145,7 +178,28 @@ describe('workspace discovery + analysis', () => {
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
     const entry = index.skills.find((s) => s.name === 'pdf-report-formatter')!;
+    expect(index.schemaVersion).toBe(3);
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
+    expect(entry.validationStatus).toBe('warning');
+    expect(entry.staticDescriptionQuality).toMatchObject({
+      rawScore: expect.any(Number),
+      adjustedScore: expect.any(Number),
+      label: expect.any(String),
+      coverage: expect.any(String),
+      limitations: expect.any(Array),
+      gradeLimitations: expect.any(Array),
+    });
+    expect(entry.authoringQuality.instructions).toMatchObject({
+      score: expect.any(Number),
+      label: expect.any(String),
+      findings: expect.any(Array),
+    });
+    expect(entry.authoringQuality.resources).toMatchObject({
+      score: expect.any(Number),
+      label: expect.any(String),
+      findings: expect.any(Array),
+    });
+    expect(entry.information).toBeGreaterThanOrEqual(0);
     expect(entry.profileCompatibility.generic).toBe('pass');
   });
 

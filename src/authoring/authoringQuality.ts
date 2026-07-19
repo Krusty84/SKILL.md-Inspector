@@ -34,7 +34,7 @@ export interface SkillAuthoringQuality {
  * unreferenced asset file.
  */
 const SEVERITY_PENALTY: Record<AuthoringSeverity, number> = {
-  major: 80,
+  major: 100,
   moderate: 20,
   minor: 10,
 };
@@ -61,8 +61,11 @@ function toResult(findings: AuthoringFinding[]): InstructionQualityResult {
   // Repeated housekeeping findings are grouped by severity, with a cap per class.
   const penalties = new Map<AuthoringSeverity, number>();
   for (const finding of findings) {
-    const cap = finding.severity === 'minor' ? 30 : finding.severity === 'moderate' ? 50 : 80;
-    penalties.set(finding.severity, Math.min(cap, (penalties.get(finding.severity) ?? 0) + SEVERITY_PENALTY[finding.severity]));
+    const cap = finding.severity === 'minor' ? 30 : finding.severity === 'moderate' ? 50 : 100;
+    penalties.set(
+      finding.severity,
+      Math.min(cap, (penalties.get(finding.severity) ?? 0) + SEVERITY_PENALTY[finding.severity]),
+    );
   }
   const score = Math.max(0, 100 - [...penalties.values()].reduce((sum, value) => sum + value, 0));
   return { score, label: authoringLabelFor(score), findings };
