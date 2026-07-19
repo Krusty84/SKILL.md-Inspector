@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { discoverSkillPaths } from '../src/workspace/discoverSkills';
 import { analyzeWorkspace, buildSkillsIndex } from '../src/workspace/analyzeWorkspace';
 import { genericProfile } from '../src/profiles/genericProfile';
+import { DiagnosticCode } from '../src/types/DiagnosticCode';
 
 let root: string;
 
@@ -226,6 +227,33 @@ describe('workspace discovery + analysis', () => {
     expect(again.diagnostics).toEqual(broken.diagnostics);
   });
 
+  it('propagates resource token diagnostics into workspace counts and status', () => {
+    writeTokenBudgetSkill('warning-token-skill', 10_001);
+    writeTokenBudgetSkill('error-token-skill', 25_001);
+
+    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const warningSkill = analysis.skills.find((skill) => skill.name === 'warning-token-skill')!;
+    const errorSkill = analysis.skills.find((skill) => skill.name === 'error-token-skill')!;
+
+    expect(warningSkill.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: DiagnosticCode.ReferenceFileTokenLimit,
+        severity: 'warning',
+      }),
+    );
+    expect(warningSkill.warnings).toBeGreaterThanOrEqual(1);
+    expect(warningSkill.validationStatus).toBe('warning');
+
+    expect(errorSkill.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: DiagnosticCode.ReferenceFileTokenLimit,
+        severity: 'error',
+      }),
+    );
+    expect(errorSkill.errors).toBeGreaterThanOrEqual(1);
+    expect(errorSkill.validationStatus).toBe('fail');
+  });
+
   it('stops analysis when cancellation is requested and marks the result partial (Task 64)', () => {
     const paths = discoverSkillPaths(root); // 3 skills
     const cancel = { isCancellationRequested: false };
@@ -274,3 +302,26 @@ describe('workspace discovery + analysis', () => {
     ]);
   });
 });
+
+function writeTokenBudgetSkill(name: string, referenceTokens: number): void {
+  writeSkill(
+    `skills/${name}/SKILL.md`,
+    [
+      '---',
+      `name: ${name}`,
+      'description: Inspect token budgets for reference material. Use when validating packaged skills. Do not use for unrelated files.',
+      '---',
+      '',
+      '## When to use',
+      '',
+      'Use this workflow when validating a package.',
+      '',
+      '## Examples',
+      '',
+      'Input: a package. Output: token diagnostics.',
+      '',
+      'See [guide](./references/guide.md).',
+    ].join('\n'),
+  );
+  writeSkill(`skills/${name}/references/guide.md`, ' hello'.repeat(referenceTokens));
+}

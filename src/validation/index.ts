@@ -11,12 +11,15 @@ import { validateLinks } from './validateLinks';
 import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
 import { validateProfileMetadata } from './validateProfileMetadata';
+import { validateTokenBudgets } from './validateTokenBudgets';
+import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
 
 export interface RunValidationsOptions {
   /** Skip filesystem-dependent checks (linked-file existence, symlink escape). */
   skipFilesystem?: boolean;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
+  tokenUsage?: AnalyzedSkillTokenUsage;
 }
 
 /**
@@ -36,6 +39,7 @@ export function runAllValidations(
     skipFilesystem: options.skipFilesystem,
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
+    tokenUsage: options.tokenUsage,
   });
   return sortDiagnostics(applyProfileOverrides(diagnostics, profile));
 }
@@ -86,6 +90,7 @@ export {
   validateResources,
   validateBody,
   validateProfileMetadata,
+  validateTokenBudgets,
 };
 export { toKebabCase, NAME_PATTERN } from './validateName';
 export { sortDiagnostics } from './util';

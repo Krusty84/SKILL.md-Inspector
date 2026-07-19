@@ -38,9 +38,7 @@ describe('hasExampleEvidence', () => {
 
   it('associates nested concrete evidence with its parent Examples section', () => {
     expect(
-      hasExampleEvidence(
-        '## Examples\n\n### CSV input\n\nInput: raw.csv\n\nOutput: cleaned.csv',
-      ),
+      hasExampleEvidence('## Examples\n\n### CSV input\n\nInput: raw.csv\n\nOutput: cleaned.csv'),
     ).toBe(true);
   });
 

@@ -22,8 +22,8 @@ function fixturePath(name: string): string {
 function fixtureReport(name: string, profile: SkillProfile = genericProfile) {
   const filePath = fixturePath(name);
   const content = fs.readFileSync(filePath, 'utf8');
-  const { document, diagnostics } = analyzeSkill(filePath, content, profile);
-  return buildReportModel(document, diagnostics, profile);
+  const { document, diagnostics, tokenUsage } = analyzeSkill(filePath, content, profile);
+  return buildReportModel(document, diagnostics, profile, tokenUsage);
 }
 
 describe('explicit not-scored quality state', () => {
@@ -70,13 +70,17 @@ describe('explicit not-scored quality state', () => {
       '',
       '# Body',
     ].join('\n');
-    const { document, diagnostics } = analyzeSkill(
+    const { document, diagnostics, tokenUsage } = analyzeSkill(
       '/skills/invalid-description/SKILL.md',
       content,
       genericProfile,
-      { mode: 'text-only' },
     );
-    const result = buildReportModel(document, diagnostics, genericProfile).staticDescriptionQuality;
+    const result = buildReportModel(
+      document,
+      diagnostics,
+      genericProfile,
+      tokenUsage,
+    ).staticDescriptionQuality;
 
     expect(result).toMatchObject({
       state: 'not-scored',

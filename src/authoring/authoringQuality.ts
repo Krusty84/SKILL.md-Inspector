@@ -7,6 +7,7 @@ import {
 } from '../quality/dictionaries';
 import { buildVerbForms } from '../quality/wordForms';
 import { analyzeBodyEvidence } from '../validation/bodyEvidence';
+import { countTextLines } from '../analysis/textMetrics';
 
 export type AuthoringLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 
@@ -78,6 +79,7 @@ const LARGE_RESOURCE_BYTES = 1024 * 1024;
 export function assessAuthoringQuality(
   doc: SkillDocument,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+  bodyLines: number = countTextLines(doc.body),
 ): SkillAuthoringQuality {
   const resourceFindings = assessResources(doc.resources);
   return {
@@ -86,7 +88,7 @@ export function assessAuthoringQuality(
         ? notScoredInstructions(instructionNotScoredReason(doc))
         : {
             state: 'scored',
-            ...toResult(assessInstructions(doc.body, doc.bodyStartLine, dictionaries)),
+            ...toResult(assessInstructions(doc.body, doc.bodyStartLine, dictionaries, bodyLines)),
           },
     resources: toResult(resourceFindings),
   };
@@ -140,6 +142,7 @@ function assessInstructions(
   body: string,
   bodyStartLine: number,
   dictionaries: HeuristicDictionaries,
+  bodyLines: number,
 ): AuthoringFinding[] {
   const findings: AuthoringFinding[] = [];
 
@@ -247,7 +250,7 @@ function assessInstructions(
     });
   }
 
-  if (lines.length > MAX_BODY_LINES) {
+  if (bodyLines > MAX_BODY_LINES) {
     findings.push({
       criterion: 'Length',
       severity: 'moderate',

@@ -15,7 +15,7 @@ export async function showSkillReport(
 
   const config = readConfig(target.document.uri);
   const analysisContext = analysisContextFromConfig(config);
-  const { document, diagnostics } = analyzeSkill(
+  const { document, diagnostics, tokenUsage } = analyzeSkill(
     target.document.uri.fsPath,
     target.document.getText(),
     analysisContext.profile,
@@ -29,6 +29,7 @@ export async function showSkillReport(
     document,
     diagnostics,
     analysisContext.profile,
+    tokenUsage,
     analysisContext.dictionaries,
   );
   SkillReportPanel.show(report);

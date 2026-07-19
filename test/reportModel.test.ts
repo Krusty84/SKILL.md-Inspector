@@ -19,12 +19,12 @@ afterEach(() => {
 });
 
 function report(content: string) {
-  const { document, diagnostics } = analyzeSkill(
+  const { document, diagnostics, tokenUsage } = analyzeSkill(
     path.join(dir, 'SKILL.md'),
     content,
     genericProfile,
   );
-  return buildReportModel(document, diagnostics, genericProfile);
+  return buildReportModel(document, diagnostics, genericProfile, tokenUsage);
 }
 
 describe('buildReportModel', () => {
@@ -71,8 +71,12 @@ describe('buildReportModel', () => {
   it('keeps the substantive engineering report formatter fixture excellent', () => {
     const fixturePath = path.resolve('fixtures/skills/engineering-report-formatter/SKILL.md');
     const content = fs.readFileSync(fixturePath, 'utf8');
-    const { document, diagnostics } = analyzeSkill(fixturePath, content, genericProfile);
-    const model = buildReportModel(document, diagnostics, genericProfile);
+    const { document, diagnostics, tokenUsage } = analyzeSkill(
+      fixturePath,
+      content,
+      genericProfile,
+    );
+    const model = buildReportModel(document, diagnostics, genericProfile, tokenUsage);
 
     expect(model.authoringQuality.instructions.score).toBe(90);
     expect(model.authoringQuality.instructions.label).toBe('excellent');
@@ -112,6 +116,9 @@ describe('renderReportHtml', () => {
     expect(html).toContain('demo');
     expect(html).toContain('Static Description Quality');
     expect(html).toContain(`${model.staticDescriptionQuality.score}`);
+    expect(html).toContain('Reference files (0)');
+    expect(html).toContain('Non-standard files (0)');
+    expect(html).toContain('Aggregate total: 0 tokens');
   });
 
   it('escapes HTML in dynamic values to prevent injection', () => {
@@ -124,6 +131,40 @@ describe('renderReportHtml', () => {
     expect(html).toContain('&lt;img src=x');
     expect(html).toContain('Heuristic coverage limitations');
     expect(html).toContain('Grade limitations and score adjustments');
+  });
+
+  it('renders deterministic o200k_base file counts, totals, and escaped paths', () => {
+    fs.mkdirSync(path.join(dir, 'references'), { recursive: true });
+    fs.mkdirSync(path.join(dir, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'references', 'z.md'), 'zulu');
+    fs.writeFileSync(path.join(dir, 'references', 'a<&>.md'), 'alpha');
+    fs.writeFileSync(path.join(dir, 'templates', '<card>.txt'), 'template');
+    const model = report(
+      [
+        '---',
+        'name: demo',
+        'description: Format reports. Use when needed. Do not use for contracts.',
+        '---',
+        'Body text.',
+      ].join('\n'),
+    );
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+
+    expect(model.tokenUsage.references.files.map((entry) => entry.relativePath)).toEqual([
+      'references/a<&>.md',
+      'references/z.md',
+    ]);
+    expect(html).toContain('Token usage (o200k_base)');
+    expect(html).toContain('Reference files (2)');
+    expect(html).toContain('Non-standard files (1)');
+    expect(html).toContain('references/a&lt;&amp;&gt;.md');
+    expect(html).toContain('templates/&lt;card&gt;.txt');
+    expect(html).toContain(
+      `Aggregate total: ${model.tokenUsage.references.totalTokens.toLocaleString('en-US')} tokens`,
+    );
+    expect(html).toContain(
+      `Aggregate total: ${model.tokenUsage.otherFiles.totalTokens.toLocaleString('en-US')} tokens`,
+    );
   });
 
   it('renders validation severity and ordered findings for a warning-only skill', () => {

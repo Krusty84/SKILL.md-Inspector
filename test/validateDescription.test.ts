@@ -88,21 +88,17 @@ describe('validateDescription', () => {
       ...genericProfile,
       description: { ...genericProfile.description, maxLength: 100 },
     };
-    expect(
-      codes(descriptionOfLength(100), DEFAULT_HEURISTIC_DICTIONARIES, profile),
-    ).not.toContain(DiagnosticCode.DescriptionTooLong);
+    expect(codes(descriptionOfLength(100), DEFAULT_HEURISTIC_DICTIONARIES, profile)).not.toContain(
+      DiagnosticCode.DescriptionTooLong,
+    );
   });
 
   it('keeps the default recommended and maximum boundaries unchanged', () => {
-    expect(codes(descriptionOfLength(500))).not.toContain(
-      DiagnosticCode.DescriptionTooVerbose,
-    );
+    expect(codes(descriptionOfLength(500))).not.toContain(DiagnosticCode.DescriptionTooVerbose);
     expect(codes(descriptionOfLength(501))).toContain(DiagnosticCode.DescriptionTooVerbose);
     expect(codes(descriptionOfLength(1024))).not.toContain(DiagnosticCode.DescriptionTooLong);
     expect(codes(descriptionOfLength(1025))).toContain(DiagnosticCode.DescriptionTooLong);
-    expect(codes(descriptionOfLength(1025))).not.toContain(
-      DiagnosticCode.DescriptionTooVerbose,
-    );
+    expect(codes(descriptionOfLength(1025))).not.toContain(DiagnosticCode.DescriptionTooVerbose);
   });
 
   it('reports a missing description', () => {

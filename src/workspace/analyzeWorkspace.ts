@@ -107,7 +107,7 @@ function toWorkspaceSkill(
     return undefined;
   }
 
-  const { document, diagnostics } = analyzeSkill(absolutePath, content, profile, {
+  const { document, diagnostics, tokenUsage } = analyzeSkill(absolutePath, content, profile, {
     exclude,
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
@@ -136,7 +136,11 @@ function toWorkspaceSkill(
     kind: d.kind,
   }));
   const resourceGraph = buildResourceGraph(document);
-  const authoringQuality = assessAuthoringQuality(document, options.dictionaries);
+  const authoringQuality = assessAuthoringQuality(
+    document,
+    options.dictionaries,
+    tokenUsage.body.lines,
+  );
 
   const portability = evaluatePortability(document, options.dictionaries);
 

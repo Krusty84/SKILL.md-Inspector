@@ -1781,6 +1781,7 @@
     "benchmark:static": "vitest run test/benchmarks/staticDescriptionQuality.test.ts"
   },
   "dependencies": {
+    "js-tiktoken": "^1.0.21",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",

@@ -5,6 +5,7 @@ import type { StaticDescriptionQualityResult } from '../types/StaticDescriptionQ
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { assessAuthoringQuality, type SkillAuthoringQuality } from '../authoring/authoringQuality';
 import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
+import type { SkillTokenUsage } from '../types/SkillTokenUsage';
 
 export interface SkillReport {
   name: string;
@@ -20,6 +21,7 @@ export interface SkillReport {
   staticDescriptionQuality: StaticDescriptionQualityResult;
   /** Separate structural authoring dimension; it is never averaged into description quality. */
   authoringQuality: SkillAuthoringQuality;
+  tokenUsage: SkillTokenUsage;
 }
 
 /**
@@ -31,6 +33,7 @@ export function buildReportModel(
   doc: SkillDocument,
   diagnostics: SkillDiagnostic[],
   profile: SkillProfile,
+  tokenUsage: SkillTokenUsage,
   dictionaries?: HeuristicDictionaries,
 ): SkillReport {
   const errorCount = diagnostics.filter((d) => d.severity === 'error').length;
@@ -61,6 +64,21 @@ export function buildReportModel(
     referencedFiles: doc.resources.filter((r) => r.referenced).map((r) => r.relativePath),
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
     staticDescriptionQuality,
-    authoringQuality: assessAuthoringQuality(doc, dictionaries),
+    authoringQuality: assessAuthoringQuality(doc, dictionaries, tokenUsage.body.lines),
+    tokenUsage: {
+      ...tokenUsage,
+      references: {
+        files: [...tokenUsage.references.files].sort(compareTokenPaths),
+        totalTokens: tokenUsage.references.totalTokens,
+      },
+      otherFiles: {
+        files: [...tokenUsage.otherFiles.files].sort(compareTokenPaths),
+        totalTokens: tokenUsage.otherFiles.totalTokens,
+      },
+    },
   };
+}
+
+function compareTokenPaths(a: { relativePath: string }, b: { relativePath: string }): number {
+  return a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0;
 }

@@ -51,6 +51,13 @@ export const DiagnosticCode = {
   // Resources
   ResourceUnreferenced: 'skill.resource.unreferenced',
 
+  // Token budgets
+  BodyTokenLimit: 'skill.token.body.limit',
+  BodyLineLimit: 'skill.token.body.lines',
+  ReferenceFileTokenLimit: 'skill.token.referenceFile.limit',
+  ReferencesTokenLimit: 'skill.token.references.limit',
+  OtherFilesTokenLimit: 'skill.token.otherFiles.limit',
+
   // Body / sections
   BodyMissing: 'skill.body.missing',
   BodyNoExamples: 'skill.body.noExamples',
@@ -103,6 +110,11 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.DescriptionNoBoundary]: 'quality',
   [DiagnosticCode.DescriptionNotFrontLoaded]: 'quality',
   [DiagnosticCode.ResourceUnreferenced]: 'quality',
+  [DiagnosticCode.BodyTokenLimit]: 'quality',
+  [DiagnosticCode.BodyLineLimit]: 'quality',
+  [DiagnosticCode.ReferenceFileTokenLimit]: 'quality',
+  [DiagnosticCode.ReferencesTokenLimit]: 'quality',
+  [DiagnosticCode.OtherFilesTokenLimit]: 'quality',
   [DiagnosticCode.BodyMissing]: 'quality',
   [DiagnosticCode.BodyNoExamples]: 'quality',
   [DiagnosticCode.BodyNoWhenToUse]: 'quality',

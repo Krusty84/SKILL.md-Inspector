@@ -4,3 +4,4 @@ export * from './SkillDocument';
 export * from './SkillProfile';
 export * from './StaticDescriptionQuality';
 export * from './QualityAssessment';
+export * from './SkillTokenUsage';

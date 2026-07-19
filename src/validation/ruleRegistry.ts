@@ -9,6 +9,8 @@ import { validateLinks } from './validateLinks';
 import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
 import { validateProfileMetadata } from './validateProfileMetadata';
+import { validateTokenBudgets } from './validateTokenBudgets';
+import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
 
 /** Everything a rule needs to run. */
 export interface ValidationContext {
@@ -18,6 +20,7 @@ export interface ValidationContext {
   skipFilesystem?: boolean;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
+  tokenUsage?: AnalyzedSkillTokenUsage;
 }
 
 /**
@@ -47,6 +50,7 @@ export const VALIDATION_RULES: ValidationRule[] = [
     run: ({ doc, resourceDirectories }) => validateResources(doc, resourceDirectories),
   },
   { id: 'body', run: ({ doc, profile, dictionaries }) => validateBody(doc, profile, dictionaries) },
+  { id: 'token-budgets', run: ({ doc, tokenUsage }) => validateTokenBudgets(doc, tokenUsage) },
   { id: 'profile-metadata', run: ({ doc, profile }) => validateProfileMetadata(doc, profile) },
 ];
 

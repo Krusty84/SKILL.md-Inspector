@@ -335,10 +335,21 @@ describe('assessAuthoringQuality instructions', () => {
     expect(dup?.message).toContain('"steps"');
   });
 
-  it('flags a body longer than 500 lines as moderate', () => {
-    const body = `# T\n\nIntro.\n${'line\n'.repeat(510)}`;
-    const result = assessAuthoringQuality(doc(body));
-    expect(result.instructions.findings.some((f) => f.criterion === 'Length')).toBe(true);
+  it('uses the strict shared 500-line boundary for the moderate length finding', () => {
+    const atLimit = Array.from({ length: 500 }, (_, index) => `Instruction line ${index}.`).join(
+      '\n',
+    );
+    const aboveLimit = `${atLimit}\nOne more instruction.`;
+
+    expect(
+      assessAuthoringQuality(doc(atLimit)).instructions.findings.some(
+        (finding) => finding.criterion === 'Length',
+      ),
+    ).toBe(false);
+    const result = assessAuthoringQuality(doc(aboveLimit));
+    expect(result.instructions.findings.some((finding) => finding.criterion === 'Length')).toBe(
+      true,
+    );
     expect(result.instructions.score).toBeGreaterThan(0);
   });
 

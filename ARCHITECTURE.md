@@ -99,26 +99,37 @@ skill directory and `withResources` marks referenced resources. The normalized
 document is shared by validators, reports, quality assessment, quick fixes, and
 workspace analysis.
 
+`src/analysis/tokenUsage.ts` derives a separate tool-neutral `SkillTokenUsage`
+model. It counts the parsed Markdown body and, in full mode, reads eligible text
+resources once to classify reference and non-standard content. Hidden paths,
+known binary formats, and byte content detected as binary are not decoded. Paths
+and file entries are normalized and sorted before they reach validation or reports.
+
 ### Validation and diagnostics
 
 `src/analysis/analyzeSkill.ts` defines the canonical single-skill pipeline:
 
 1. parse the current text;
 2. attach discovered resources when using full analysis;
-3. run the registered validation areas;
-4. apply the active profile and configured policy;
-5. return a `SkillDocument` and tool-neutral `SkillDiagnostic` values.
+3. calculate offline `o200k_base` token metrics for the available scope;
+4. run the registered validation areas;
+5. apply the active profile and configured policy;
+6. return a `SkillDocument`, token-usage model, and tool-neutral `SkillDiagnostic`
+   values.
 
 There are two analysis modes:
 
-- `text-only` avoids filesystem access and is used for debounced editor changes;
-- `full` discovers resources and verifies local links and is used for open, save,
-  commands, reports, and workspace analysis.
+- `text-only` avoids filesystem access, measures only the already-parsed body, and
+  is used for debounced editor changes;
+- `full` discovers resources, verifies local links, and measures eligible resource
+  text for open, save, commands, reports, and workspace analysis.
 
 `src/validation/ruleRegistry.ts` provides stable validation areas for frontmatter,
-name, description, links, resources, body content, and profile metadata. Diagnostic
-severity overrides are applied after rules run. Specification errors cannot be
-downgraded unless the user explicitly enables that behavior.
+name, description, links, resources, body content, token budgets, and profile
+metadata. Token-budget policy consumes the already-calculated usage model rather
+than reading files again. Diagnostic severity overrides are applied after rules
+run. Specification errors cannot be downgraded unless the user explicitly enables
+that behavior.
 
 `src/diagnostics/diagnosticsProvider.ts` bridges the analysis result to a VS Code
 diagnostic collection and caches resource discovery. `src/codeActions/` converts
@@ -185,7 +196,9 @@ The same `WorkspaceAnalysis` model feeds the Skills tree and workspace report.
 
 The per-skill report is different: it analyzes the active editor buffer and can
 therefore include unsaved changes. Reports render escaped, script-disabled HTML in
-the extension host.
+the extension host. Its token section displays the body metric plus deterministic
+per-file and aggregate metrics from the same full-analysis token model used by
+validation.
 
 ### Navigation and file operations
 
@@ -254,10 +267,13 @@ repository supplies no production provider or UI for this subsystem.
 2. `extension.ts` filters for the exact `SKILL.md` filename and resolves scoped
    configuration.
 3. `DiagnosticsProvider` calls `analyzeSkill` with the in-memory document text.
-4. The parser and validation registry return normalized diagnostics.
-5. The adapter maps those diagnostics to VS Code ranges and replaces the document's
+4. The pipeline measures the parsed body; full runs also measure eligible resource
+   text before validation.
+5. The validation registry consumes the shared metrics and returns normalized
+   diagnostics.
+6. The adapter maps those diagnostics to VS Code ranges and replaces the document's
    diagnostic collection entry.
-6. If requested, the code-action provider maps quick-fix metadata to editor or
+7. If requested, the code-action provider maps quick-fix metadata to editor or
    filesystem edits.
 
 ### Workspace analysis
@@ -317,6 +333,8 @@ Production dependencies are deliberately small:
 - Node `fs`, `path`, and `os` support local discovery and path handling;
 - `yaml` supplies source-aware frontmatter parsing;
 - `unified`, `remark-parse`, and `unist-util-visit` supply Markdown traversal.
+- `js-tiktoken/lite` plus the bundled `o200k_base` rank table supplies exact offline
+  tokenization without loading the full encoding catalog.
 
 There is no runtime network service, telemetry service, agent integration, or
 subprocess-based discovery. OpenCode support is file import only.
@@ -359,6 +377,8 @@ script.
   and the per-skill report, but not in collision, portability, or index results.
 - Full skill and workspace analysis uses synchronous Node filesystem operations.
   Cancellation is checked between skill files, not within a single scan step.
+- Token-budget thresholds are fixed policy. Resource token totals exist only after
+  full analysis; text-only analysis never infers missing groups as zero.
 - Path-oriented analysis does not uniformly support remote or virtual filesystem
   providers. The Workspace navigator and OpenCode reader are more broadly URI-based.
 - Resource file watchers cover only `references`, `scripts`, `assets`, and

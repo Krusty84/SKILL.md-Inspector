@@ -46,6 +46,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0 1.25rem 2rem; line-height: 1.5; }
   h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
   h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; margin-top: 2rem; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 0.35rem; }
+  h3 { font-size: 0.95rem; margin-top: 1.25rem; }
   .badge { font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 999px; }
   .badge.ok, .badge.q-good { background: var(--vscode-testing-iconPassed, #3fb950); color: #06210c; }
   .badge.warning { background: var(--vscode-editorWarning-foreground, #cca700); color: #241f00; }
@@ -123,6 +124,14 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 
   <h2>Unreferenced files</h2>
   ${renderFileList(report.unreferencedFiles, 'No unreferenced resource files.')}
+
+  <h2>Token usage (${escapeHtml(report.tokenUsage.encoding)})</h2>
+  <table><tbody>
+    <tr><th>Content</th><th>Tokens</th><th>Lines</th></tr>
+    <tr><td><code>SKILL.md</code> body</td><td>${formatNumber(report.tokenUsage.body.tokens)}</td><td>${formatNumber(report.tokenUsage.body.lines)}</td></tr>
+  </tbody></table>
+  ${renderTokenGroup('Reference files', report.tokenUsage.references)}
+  ${renderTokenGroup('Non-standard files', report.tokenUsage.otherFiles)}
 </body>
 </html>`;
 }
@@ -194,6 +203,24 @@ function renderFileList(files: string[], emptyMessage: string): string {
     return `<p class="empty">${emptyMessage}</p>`;
   }
   return `<ul>${files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join('')}</ul>`;
+}
+
+function renderTokenGroup(label: string, group: SkillReport['tokenUsage']['references']): string {
+  const rows = group.files
+    .map(
+      (entry) =>
+        `<tr><td><code>${escapeHtml(entry.relativePath)}</code></td><td>${formatNumber(entry.tokens)}</td></tr>`,
+    )
+    .join('');
+  const fileRows =
+    rows.length > 0
+      ? `<table><thead><tr><th>Path</th><th>Tokens</th></tr></thead><tbody>${rows}</tbody></table>`
+      : '<p class="empty">No counted files.</p>';
+  return `<h3>${escapeHtml(label)} (${formatNumber(group.files.length)})</h3>${fileRows}<p><strong>Aggregate total: ${formatNumber(group.totalTokens)} tokens</strong></p>`;
+}
+
+function formatNumber(value: number): string {
+  return escapeHtml(value.toLocaleString('en-US'));
 }
 
 function scoreBadgeClass(label: StaticDescriptionQualityLabel): string {

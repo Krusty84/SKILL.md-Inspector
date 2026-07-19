@@ -312,6 +312,76 @@ A file under `references/`, `scripts/`, `assets/`, or `templates/` is never refe
 - Bad: `references/style-guide.md` exists but nothing links or names it.
 - Good: `See [the style guide](./references/style-guide.md).` (or name the path in prose).
 
+### Token-budget diagnostics
+
+Token budgets use exact, offline `o200k_base` tokenization. Every threshold uses a
+strict greater-than comparison: a value equal to a limit does not exceed it. When a
+metric has warning and error limits, only the highest applicable diagnostic is
+emitted. Resource diagnostics are attached to the top of `SKILL.md` and name the
+affected file or aggregate group because VS Code cannot attach them to every bundled
+resource.
+
+These diagnostics affect validation status and warning/error counts. They do not
+change instruction or resource authoring-quality scores.
+
+### `skill.token.body.limit`
+
+**warning** · all profiles · auto-fix: no
+
+The Markdown body after YAML frontmatter exceeds 5,000 `o200k_base` tokens. YAML
+frontmatter is not counted. Large instruction bodies consume excessive agent context;
+move detailed supporting material into focused reference files.
+
+- Warning: `SKILL.md` body has 5,001 tokens.
+- No finding: `SKILL.md` body has exactly 5,000 tokens.
+
+### `skill.token.body.lines`
+
+**warning** · all profiles · auto-fix: no
+
+The Markdown body after YAML frontmatter exceeds 500 lines. This diagnostic uses the
+same body line count as the existing instruction-authoring length finding.
+
+- Warning: `SKILL.md` body has 501 lines.
+- No finding: `SKILL.md` body has exactly 500 lines.
+
+### `skill.token.referenceFile.limit`
+
+**warning** above 10,000 / **error** above 25,000 · all profiles · auto-fix: no
+
+One readable text file recursively under the exact top-level `references/` directory
+exceeds its per-file budget. Referenced and unreferenced files are both measured.
+
+- Warning: `references/api.md` has 25,000 tokens.
+- Error: `references/api.md` has 25,001 tokens; the error replaces the warning.
+- Good: split a large guide into focused reference files and link the relevant ones.
+
+### `skill.token.references.limit`
+
+**warning** above 25,000 / **error** above 50,000 · all profiles · auto-fix: no
+
+All counted reference files together exceed the aggregate reference budget. This
+guards against a package whose individual references are acceptable but whose total
+context is excessive.
+
+- Warning: reference files total 25,001 tokens.
+- Error: reference files total 50,001 tokens; the error replaces the warning.
+- No finding: reference files total exactly 25,000 tokens.
+
+### `skill.token.otherFiles.limit`
+
+**warning** above 25,000 / **error** above 100,000 · all profiles · auto-fix: no
+
+Readable non-standard text files outside `SKILL.md`, `references/`, `scripts/`, and
+`assets/` exceed their aggregate budget. For this rule, `templates/` and unknown
+top-level directories are non-standard content. There are no script or asset token
+limits.
+
+- Warning: non-standard files total 25,001 tokens.
+- Error: non-standard files total 100,001 tokens; the error replaces the warning.
+- Good: keep auxiliary text focused or place true reference content under
+  `references/`.
+
 ### `skill.body.missing`
 
 **warning** · all profiles · auto-fix: yes (insert a body template)

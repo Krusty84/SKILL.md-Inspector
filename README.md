@@ -18,6 +18,9 @@ links, run agent executables, send telemetry, or require network access at runti
 - **Review separate quality signals** — inspect Static Description Quality,
   instruction authoring quality, resource authoring quality, validation status, and
   heuristic coverage without combining them into a misleading aggregate score.
+- **Measure packaged context offline** — view exact `o200k_base` token and line
+  metrics for the `SKILL.md` body, reference files, and non-standard text files,
+  with validation diagnostics when fixed content budgets are exceeded.
 - **Analyze a workspace** — discover skills, detect duplicate or similar names,
   compare overlapping descriptions, check format compatibility across four profiles,
   inspect resource graphs, and export a machine-readable `skills.index.json`.

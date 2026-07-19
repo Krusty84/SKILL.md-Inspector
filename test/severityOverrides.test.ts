@@ -81,4 +81,20 @@ describe('profile severity overrides (Task 85)', () => {
       'information',
     );
   });
+
+  it('applies quality severity overrides to token-budget diagnostics', () => {
+    const longBody = Array.from({ length: 501 }, () => 'Inspect the input.').join('\n');
+    const diagnostics = runAllValidations(
+      parseSkillFile(
+        '/ws/skills/x/SKILL.md',
+        `---\nname: demo\ndescription: Format reports. Use when needed. Do not use otherwise.\n---\n${longBody}`,
+      ),
+      withOverrides({ [DiagnosticCode.BodyLineLimit]: 'information' }),
+      { skipFilesystem: true },
+    );
+
+    expect(
+      diagnostics.find((diagnostic) => diagnostic.code === DiagnosticCode.BodyLineLimit),
+    ).toMatchObject({ severity: 'information', kind: 'quality' });
+  });
 });

@@ -5,10 +5,25 @@ import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
+import type {
+  AnalyzedSkillTokenUsage,
+  SkillBodyTokenUsage,
+  SkillTokenUsage,
+} from '../types/SkillTokenUsage';
+import { measureBodyTokenUsage, measureSkillTokenUsage } from './tokenUsage';
 
 export interface SkillAnalysis {
   document: SkillDocument;
   diagnostics: SkillDiagnostic[];
+  tokenUsage: AnalyzedSkillTokenUsage;
+}
+
+export interface TextOnlySkillAnalysis extends SkillAnalysis {
+  tokenUsage: SkillBodyTokenUsage;
+}
+
+export interface FullSkillAnalysis extends SkillAnalysis {
+  tokenUsage: SkillTokenUsage;
 }
 
 export type AnalysisMode = 'text-only' | 'full';
@@ -35,24 +50,46 @@ export function analyzeSkill(
   filePath: string,
   content: string,
   profile: SkillProfile,
+  options: AnalyzeSkillOptions & { mode: 'text-only' },
+): TextOnlySkillAnalysis;
+export function analyzeSkill(
+  filePath: string,
+  content: string,
+  profile: SkillProfile,
+  options?: AnalyzeSkillOptions & { mode?: 'full' },
+): FullSkillAnalysis;
+export function analyzeSkill(
+  filePath: string,
+  content: string,
+  profile: SkillProfile,
+  options?: AnalyzeSkillOptions,
+): SkillAnalysis;
+export function analyzeSkill(
+  filePath: string,
+  content: string,
+  profile: SkillProfile,
   options: AnalyzeSkillOptions = {},
 ): SkillAnalysis {
   const parsed = parseSkillFile(filePath, content);
 
   if (options.mode === 'text-only') {
+    const tokenUsage = measureBodyTokenUsage(parsed.body);
     const diagnostics = runAllValidations(parsed, profile, {
       skipFilesystem: true,
       dictionaries: options.dictionaries,
       resourceDirectories: options.resourceDirectories,
+      tokenUsage,
     });
-    return { document: parsed, diagnostics };
+    return { document: parsed, diagnostics, tokenUsage };
   }
 
   const discover = options.discover ?? discoverResources;
   const document = withResources(parsed, discover(parsed.directory, options.exclude));
+  const tokenUsage = measureSkillTokenUsage(document);
   const diagnostics = runAllValidations(document, profile, {
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
+    tokenUsage,
   });
-  return { document, diagnostics };
+  return { document, diagnostics, tokenUsage };
 }
