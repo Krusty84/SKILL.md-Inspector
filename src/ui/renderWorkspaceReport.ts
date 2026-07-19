@@ -90,10 +90,17 @@ function renderSkillRow(skill: WorkspaceSkill): string {
   const cells = PROFILES.map((profile) => statusCell(skill.profileCompatibility[profile])).join('');
   const quality = skill.staticDescriptionQuality;
   const instructions = skill.authoringQuality.instructions;
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructions.score}/100 · ${instructions.label}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${cells}</tr>`;
+  const instructionQuality =
+    instructions.state === 'scored'
+      ? `${instructions.score}/100 · ${instructions.label}`
+      : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${cells}</tr>`;
 }
 
 function renderDescriptionQuality(quality: WorkspaceSkill['staticDescriptionQuality']): string {
+  if (quality.state === 'not-scored') {
+    return `Not scored — ${escapeHtml(quality.notScoredReason)}`;
+  }
   const rawScore =
     quality.rawScore !== quality.adjustedScore
       ? ` <span class="quality-adjustment">(raw: ${quality.rawScore}/100)</span>`

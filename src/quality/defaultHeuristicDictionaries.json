@@ -30,13 +30,23 @@
     "standardize",
     "prepare",
     "organize",
-    "detect"
+    "detect",
+    "apply",
+    "automate",
+    "diagnose",
+    "fill",
+    "reduce",
+    "run",
+    "translate",
+    "turn"
   ],
   "actionVerbForms": {
+    "apply": ["apply", "applies", "applying", "applied"],
     "build": ["build", "builds", "building", "built"],
     "debug": ["debug", "debugs", "debugging", "debugged"],
     "format": ["format", "formats", "formatting", "formatted"],
     "read": ["read", "reads", "reading"],
+    "run": ["run", "runs", "running", "ran"],
     "write": ["write", "writes", "writing", "wrote", "written"]
   },
   "vagueTerms": [

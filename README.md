@@ -49,14 +49,17 @@ can execute.
 - **Profile-specific metadata rules** — for the selected profile, flags Claude
   reserved words and XML-like tags, checks VS Code / Codex field types, and
   applies an unknown-key policy.
-- **Heuristic Static Description Quality Score (0–100)** — a *deterministic heuristic* for
-  each `description` across seven weighted criteria (action verb, usage trigger,
+- **Heuristic Static Description Quality assessment** — a *deterministic heuristic* for
+  each valid, non-empty string `description` across seven weighted criteria (action
+  verb, usage trigger,
   concrete artifact, boundary, front-loaded intent, low vagueness, good length),
   with a transparent additive `rawScore` and an explicit adjusted score for essential
   completeness. Every applied score ceiling and its reason is reported; the public label
   comes from the adjusted score. The result also includes a **heuristic coverage** level
   and any analysis **limitations**. It estimates how discoverable a description is
   and **does not guarantee** that an agent will select the skill at runtime.
+  Missing, null, non-string, and blank descriptions are explicitly **Not scored**
+  with null numeric fields; they never earn positive points from absent wording.
   Missing boundary and front-loaded-intent are surfaced as information diagnostics
   that explain the lost points.
 - **Improve Description Locally** — a command that builds a better `description`
@@ -81,7 +84,9 @@ can execute.
   add a Markdown link to an unreferenced resource.
 - **Skill Report** — a read-only webview that keeps validation status, diagnostic
   counts, Static Description Quality, instruction authoring quality, resource
-  authoring quality, and referenced/unreferenced files as separate signals.
+  authoring quality, and referenced/unreferenced files as separate signals. Description
+  and instruction assessments show **Not scored** when required input or trustworthy
+  Markdown body boundaries are unavailable; resource quality remains independent.
 - **Activity Bar navigator** — a dedicated **SKILL.md INSPECTOR** icon opens three independent Views: **FAVORITES**, **WORKSPACE**, and **INSTALLED AGENTS**.
 - **Favorites** — add frequently inspected `SKILL.md` files from the Inspector submenu in the editor, Explorer, or Inspector Views. Favorites persist locally across restarts and workspace changes; missing files stay visible with a warning until removed.
 - **Skills analysis Panel** — the existing **SKILL.md Skills** analysis view remains
@@ -100,11 +105,14 @@ can execute.
 - **Resource graph** — per skill, classifies linked/bundled files as referenced,
   unreferenced, missing, remote, or absolute, and flags scripts, binaries, and
   large files.
-- **Export Skills Index** — writes schema-version-3 `skills.index.json` entries with
+- **Export Skills Index** — writes schema-version-4 `skills.index.json` entries with
   tri-state validation, complete Static Description Quality data (raw/adjusted
-  scores, label, coverage, limitations, findings, and grade-limit adjustments),
+  scores, label, explicit assessment state/reason, coverage, limitations, findings,
+  and grade-limit adjustments),
   instruction/resource authoring quality, all diagnostic counts, profile
   compatibility, and the existing per-diagnostic code/severity/kind summary.
+  Version 4 is incompatible with version 3: description and instruction scores/labels
+  can now be `null` when their `state` is `not-scored`.
 - **Workspace scanning** — validation, the workspace report, and the index run
   with progress and can be cancelled; discovery skips dependency, build, and
   vendored directories (configurable).

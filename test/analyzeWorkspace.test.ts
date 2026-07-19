@@ -109,6 +109,10 @@ describe('workspace discovery + analysis', () => {
     const minimal = analysis.skills.find((skill) => skill.name === 'minimal-skill')!;
 
     expect(minimal.validationStatus).toBe('warning');
+    expect(minimal.staticDescriptionQuality.state).toBe('scored');
+    if (minimal.staticDescriptionQuality.state !== 'scored') {
+      throw new Error('Expected a scored description');
+    }
     expect(minimal.staticDescriptionQuality.rawScore).toBeGreaterThan(
       minimal.staticDescriptionQuality.adjustedScore,
     );
@@ -178,10 +182,11 @@ describe('workspace discovery + analysis', () => {
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
     const entry = index.skills.find((s) => s.name === 'pdf-report-formatter')!;
-    expect(index.schemaVersion).toBe(3);
+    expect(index.schemaVersion).toBe(4);
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
     expect(entry.validationStatus).toBe('warning');
     expect(entry.staticDescriptionQuality).toMatchObject({
+      state: 'scored',
       rawScore: expect.any(Number),
       adjustedScore: expect.any(Number),
       label: expect.any(String),
@@ -190,6 +195,7 @@ describe('workspace discovery + analysis', () => {
       gradeLimitations: expect.any(Array),
     });
     expect(entry.authoringQuality.instructions).toMatchObject({
+      state: 'scored',
       score: expect.any(Number),
       label: expect.any(String),
       findings: expect.any(Array),

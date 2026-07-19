@@ -27,6 +27,10 @@ export interface FrontLoadedIntentResult {
   matchedCapability?: string;
   matchedObject?: string;
 }
+interface LeadingCapabilityMatch extends PhraseMatch {
+  tokenIndex?: number;
+  position?: 'direct' | 'subject' | 'use-when' | 'when-asked' | 'trigger';
+}
 export interface DescriptionAnalysis {
   raw: string;
   trimmed: string;
@@ -87,10 +91,11 @@ export function analyzeFrontLoadedIntent(
 ): FrontLoadedIntentResult {
   const leading = description.split(/(?<=[.!?])\s+/)[0] ?? '';
   const tokens = tokenize(leading);
+  const leadingCapability = matchLeadingCapability(leading, dictionaries);
   const forms = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms).forms;
   const filler = new Set(dictionaries.frontLoadedFillerTerms);
-  const capability = tokens.find((token) => forms.has(token));
-  const object = tokens.find(
+  const capability = leadingCapability.matched;
+  const object = tokens.slice((leadingCapability.tokenIndex ?? tokens.length) + 1).find(
     (token) =>
       !forms.has(token) &&
       token.length > 2 &&
@@ -98,14 +103,15 @@ export function analyzeFrontLoadedIntent(
       !dictionaries.vagueTerms.includes(token),
   );
   const concrete =
-    analyzeArtifactEvidence(leading, dictionaries).found || Boolean(object && tokens.length >= 5);
-  const prefix = /^\s*use (?:this )?(?:skill )?when\b/i.test(leading)
-    ? 'use-when-first'
-    : /^\s*when asked to\b/i.test(leading)
-      ? 'when-asked-first'
-      : tokens.length > 0 && forms.has(tokens[0])
-        ? 'capability-first'
-        : undefined;
+    analyzeArtifactEvidence(leading, dictionaries).found || Boolean(object && tokens.length >= 4);
+  const prefix =
+    leadingCapability.position === 'use-when'
+      ? 'use-when-first'
+      : leadingCapability.position === 'when-asked'
+        ? 'when-asked-first'
+        : leadingCapability.position === 'direct' || leadingCapability.position === 'subject'
+          ? 'capability-first'
+          : undefined;
   return prefix && capability && concrete
     ? { found: true, pattern: prefix, matchedCapability: capability, matchedObject: object }
     : { found: false };
@@ -149,7 +155,65 @@ function matchDescriptionVerb(
   description: string,
   dictionaries: HeuristicDictionaries,
 ): PhraseMatch {
-  return matchVerb(tokenize(capabilityText(description, dictionaries)), dictionaries);
+  const match = matchLeadingCapability(description, dictionaries);
+  return match.found ? { found: true, matched: match.matched } : { found: false };
+}
+
+function matchLeadingCapability(
+  description: string,
+  dictionaries: HeuristicDictionaries,
+): LeadingCapabilityMatch {
+  const leading = description.split(/(?<=[.!?])\s+/)[0] ?? '';
+  const tokens = tokenize(leading);
+  const { forms, toBase } = buildVerbForms(
+    dictionaries.actionVerbs,
+    dictionaries.actionVerbForms,
+  );
+  const candidate = (
+    tokenIndex: number,
+    position: LeadingCapabilityMatch['position'],
+    allowGerund: boolean,
+  ): LeadingCapabilityMatch | undefined => {
+    const token = tokens[tokenIndex];
+    const base = token ? toBase.get(token) : undefined;
+    if (!token || !forms.has(token) || (!allowGerund && token !== base && token.endsWith('ing'))) {
+      return undefined;
+    }
+    return { found: true, matched: token, tokenIndex, position };
+  };
+  const startsWith = (prefix: readonly string[]): boolean =>
+    prefix.every((token, index) => tokens[index] === token);
+  const after = (
+    prefix: readonly string[],
+    position: LeadingCapabilityMatch['position'],
+  ): LeadingCapabilityMatch | undefined => {
+    if (!startsWith(prefix)) return undefined;
+    const start = prefix.length;
+    const frames = [
+      [] as string[],
+      ['the', 'user', 'needs', 'to'],
+      ['the', 'user', 'asks', 'to'],
+      ['asked', 'to'],
+    ];
+    for (const frame of frames) {
+      if (frame.every((token, index) => tokens[start + index] === token)) {
+        const match = candidate(start + frame.length, position, true);
+        if (match) return match;
+      }
+    }
+    return undefined;
+  };
+
+  return (
+    candidate(0, 'direct', false) ??
+    (startsWith(['this', 'skill']) ? candidate(2, 'subject', false) : undefined) ??
+    after(['use', 'this', 'skill', 'when'], 'use-when') ??
+    after(['use', 'this', 'when'], 'use-when') ??
+    after(['use', 'when'], 'use-when') ??
+    after(['when', 'asked', 'to'], 'when-asked') ??
+    after(['only', 'use', 'when'], 'trigger') ??
+    after(['trigger', 'when'], 'trigger') ?? { found: false }
+  );
 }
 function matchPhrase(text: string, phrases: readonly string[]): PhraseMatch {
   const matched = [...phrases].sort().find((phrase) => phraseRegex(phrase).test(text));
@@ -324,19 +388,6 @@ function normalizeSeparators(text: string): string {
 }
 function phraseMatchesNormalized(text: string, phrase: string): boolean {
   return text.includes(` ${phrase.toLowerCase().replace(/[ _-]+/g, ' ')} `);
-}
-function capabilityText(text: string, dictionaries: HeuristicDictionaries): string {
-  const markers = [
-    ...dictionaries.positiveTriggerPhrases,
-    ...dictionaries.negativeBoundaryPhrases,
-    ...dictionaries.exclusiveTriggerPhrases,
-    ...dictionaries.restrictiveBoundaryPhrases,
-  ];
-  const firstMarker = markers
-    .flatMap((marker) => [...text.matchAll(phraseRegex(marker, 'gi'))])
-    .map((match) => match.index ?? text.length)
-    .sort((a, b) => a - b)[0];
-  return firstMarker === undefined || firstMarker === 0 ? text : text.slice(0, firstMarker);
 }
 export function tokenize(text: string): string[] {
   return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];

@@ -161,11 +161,11 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     const quality = skill.staticDescriptionQuality;
     const instructions = skill.authoringQuality.instructions;
     const scoreAdjustment =
-      quality.rawScore !== quality.adjustedScore
+      quality.state === 'scored' && quality.rawScore !== quality.adjustedScore
         ? `Raw Static Description Quality: ${quality.rawScore}/100  \n`
         : '';
     const gradeLimitations =
-      quality.gradeLimitations.length > 0
+      quality.state === 'scored' && quality.gradeLimitations.length > 0
         ? `Grade limitations:  \n${quality.gradeLimitations
             .map(
               (limitation) =>
@@ -173,15 +173,24 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
             )
             .join('')}`
         : '';
-    item.description = `Validation ${skill.validationStatus} · SDQ ${quality.adjustedScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
+    const descriptionSummary =
+      quality.state === 'scored'
+        ? `Adjusted Static Description Quality: ${quality.adjustedScore}/100 (${quality.label}) · heuristic coverage ${quality.coverage}  \n`
+        : `Description quality: Not scored — ${escapeMarkdown(quality.notScoredReason)}  \n`;
+    const instructionSummary =
+      instructions.state === 'scored'
+        ? `Instruction authoring quality: ${instructions.score}/100 (${instructions.label})  \n`
+        : `Instruction structure: Not scored — ${escapeMarkdown(instructions.notScoredReason)}  \n`;
+    const treeScore = quality.state === 'scored' ? String(quality.adjustedScore) : 'Not scored';
+    item.description = `Validation ${skill.validationStatus} · SDQ ${treeScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
     item.tooltip = new vscode.MarkdownString(
       [
         `**${escapeMarkdown(skill.name)}**  \n`,
         `Validation status: ${skill.validationStatus}  \n`,
-        `Adjusted Static Description Quality: ${quality.adjustedScore}/100 (${quality.label}) · heuristic coverage ${quality.coverage}  \n`,
+        descriptionSummary,
         scoreAdjustment,
         gradeLimitations,
-        `Instruction authoring quality: ${instructions.score}/100 (${instructions.label})  \n`,
+        instructionSummary,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
         `Format/portability compatibility: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}  \n`,
         `_Compatibility checks profile-specific format constraints; they do not include general description or instruction-body quality._  \n`,

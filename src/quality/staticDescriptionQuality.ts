@@ -9,6 +9,8 @@ import type {
   HeuristicCoverage,
 } from '../types/StaticDescriptionQuality';
 import type { DescriptionLanguage, StaticDescriptionQualityWeights } from '../types/SkillProfile';
+import type { SkillDocument } from '../types/SkillDocument';
+import { DiagnosticCode } from '../types/DiagnosticCode';
 
 export interface StaticDescriptionQualityOptions {
   minLength?: number;
@@ -34,10 +36,28 @@ const GOOD_LENGTH_MAX = 500;
 
 /** Computes the 0–100 Static Description Quality Score for a raw description. */
 export function computeStaticDescriptionQuality(
-  description: string,
+  description: unknown,
   options: StaticDescriptionQualityOptions = {},
 ): StaticDescriptionQualityResult {
+  if (description === undefined) return notScoredResult('description is missing');
+  if (description === null) return notScoredResult('description is null');
+  if (typeof description !== 'string') return notScoredResult('description is not a string');
+  if (description.trim() === '') return notScoredResult('description is empty');
   return scoreAnalysis(analyzeDescription(description, options.dictionaries), options);
+}
+
+/** Scores a document while preserving fatal frontmatter parsing context. */
+export function assessDocumentDescriptionQuality(
+  doc: SkillDocument,
+  options: StaticDescriptionQualityOptions = {},
+): StaticDescriptionQualityResult {
+  if (
+    doc.frontmatter === null &&
+    !doc.parseErrors.some((error) => error.code === DiagnosticCode.FrontmatterMissing)
+  ) {
+    return notScoredResult('frontmatter could not be parsed');
+  }
+  return computeStaticDescriptionQuality(doc.frontmatter?.description, options);
 }
 
 /** Scores an already-computed analysis (avoids re-analyzing the description). */
@@ -168,6 +188,7 @@ export function scoreAnalysis(
   );
   const { coverage, limitations } = assessCoverage(analysis, minLength, languageLimited);
   return {
+    state: 'scored',
     score: adjustedScore,
     rawScore,
     adjustedScore,
@@ -177,6 +198,21 @@ export function scoreAnalysis(
     coverage,
     limitations,
     ...(languageLimited ? { partial: true } : {}),
+  };
+}
+
+function notScoredResult(reason: string): StaticDescriptionQualityResult {
+  return {
+    state: 'not-scored',
+    score: null,
+    rawScore: null,
+    adjustedScore: null,
+    label: null,
+    notScoredReason: reason,
+    findings: [],
+    gradeLimitations: [],
+    coverage: 'low',
+    limitations: [reason],
   };
 }
 

@@ -17,6 +17,7 @@ function analysis(): WorkspaceAnalysis {
         description: 'Format PDF reports.',
         validationStatus: 'warning',
         staticDescriptionQuality: {
+          state: 'scored',
           score: 69,
           rawScore: 75,
           adjustedScore: 69,
@@ -34,6 +35,7 @@ function analysis(): WorkspaceAnalysis {
         },
         authoringQuality: {
           instructions: {
+            state: 'scored',
             score: 0,
             label: 'poor',
             findings: [

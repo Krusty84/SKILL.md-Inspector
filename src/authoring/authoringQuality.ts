@@ -1,4 +1,6 @@
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
+import type { QualityAssessmentState } from '../types/QualityAssessment';
+import { DiagnosticCode } from '../types/DiagnosticCode';
 
 export type AuthoringLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 
@@ -11,11 +13,26 @@ export interface AuthoringFinding {
   suggestion: string;
 }
 
-export interface InstructionQualityResult {
-  score: number;
-  label: AuthoringLabel;
+interface InstructionQualityResultBase {
   findings: AuthoringFinding[];
 }
+
+export interface ScoredInstructionQualityResult extends InstructionQualityResultBase {
+  state: Extract<QualityAssessmentState, 'scored'>;
+  score: number;
+  label: AuthoringLabel;
+}
+
+export interface NotScoredInstructionQualityResult extends InstructionQualityResultBase {
+  state: Extract<QualityAssessmentState, 'not-scored'>;
+  score: null;
+  label: null;
+  notScoredReason: string;
+}
+
+export type InstructionQualityResult =
+  | ScoredInstructionQualityResult
+  | NotScoredInstructionQualityResult;
 
 export interface ResourceQualityResult {
   score: number;
@@ -49,15 +66,17 @@ const LARGE_RESOURCE_BYTES = 1024 * 1024;
  * bundled resources have obvious authoring defects.
  */
 export function assessAuthoringQuality(doc: SkillDocument): SkillAuthoringQuality {
-  const instructionFindings = assessInstructions(doc.body);
   const resourceFindings = assessResources(doc.resources);
   return {
-    instructions: toResult(instructionFindings),
+    instructions:
+      doc.frontmatter === null
+        ? notScoredInstructions(instructionNotScoredReason(doc))
+        : { state: 'scored', ...toResult(assessInstructions(doc.body)) },
     resources: toResult(resourceFindings),
   };
 }
 
-function toResult(findings: AuthoringFinding[]): InstructionQualityResult {
+function toResult(findings: AuthoringFinding[]): ResourceQualityResult {
   // Repeated housekeeping findings are grouped by severity, with a cap per class.
   const penalties = new Map<AuthoringSeverity, number>();
   for (const finding of findings) {
@@ -69,6 +88,22 @@ function toResult(findings: AuthoringFinding[]): InstructionQualityResult {
   }
   const score = Math.max(0, 100 - [...penalties.values()].reduce((sum, value) => sum + value, 0));
   return { score, label: authoringLabelFor(score), findings };
+}
+
+function instructionNotScoredReason(doc: SkillDocument): string {
+  return doc.parseErrors.some((error) => error.code === DiagnosticCode.FrontmatterMissing)
+    ? 'frontmatter is missing'
+    : 'frontmatter could not be parsed';
+}
+
+function notScoredInstructions(reason: string): InstructionQualityResult {
+  return {
+    state: 'not-scored',
+    score: null,
+    label: null,
+    notScoredReason: reason,
+    findings: [],
+  };
 }
 
 function authoringLabelFor(score: number): AuthoringLabel {

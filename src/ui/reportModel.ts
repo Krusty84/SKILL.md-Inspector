@@ -4,7 +4,7 @@ import type { SkillProfile } from '../types/SkillProfile';
 import type { StaticDescriptionQualityResult } from '../types/StaticDescriptionQuality';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { assessAuthoringQuality, type SkillAuthoringQuality } from '../authoring/authoringQuality';
-import { computeStaticDescriptionQuality } from '../quality/staticDescriptionQuality';
+import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
 
 export interface SkillReport {
   name: string;
@@ -41,7 +41,7 @@ export function buildReportModel(
   const description =
     typeof doc.frontmatter?.description === 'string' ? doc.frontmatter.description : '';
 
-  const staticDescriptionQuality = computeStaticDescriptionQuality(description, {
+  const staticDescriptionQuality = assessDocumentDescriptionQuality(doc, {
     minLength: profile.description.minLength,
     maxLength: profile.description.maxLength,
     language: profile.description.language,

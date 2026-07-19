@@ -211,6 +211,9 @@ describe('computeStaticDescriptionQuality', () => {
       artifactHints: [...DEFAULT_HEURISTIC_DICTIONARIES.artifactHints, 'widget'],
     });
     const after = computeStaticDescriptionQuality(description, { dictionaries });
+    if (before.state !== 'scored' || after.state !== 'scored') {
+      throw new Error('Expected valid descriptions to be scored');
+    }
     expect(
       before.findings.find((f) => f.criterion === 'Concrete artifact / domain')?.pointsEarned,
     ).toBe(0);
@@ -284,8 +287,10 @@ describe('computeStaticDescriptionQuality coverage (Task 79)', () => {
     expect(result.limitations.length).toBeGreaterThan(0);
   });
 
-  it('is low for an empty description', () => {
+  it('retains low coverage while marking an empty description not scored', () => {
     const result = computeStaticDescriptionQuality('');
+    expect(result.state).toBe('not-scored');
+    expect(result.score).toBeNull();
     expect(result.coverage).toBe('low');
     expect(result.limitations.length).toBeGreaterThan(0);
   });

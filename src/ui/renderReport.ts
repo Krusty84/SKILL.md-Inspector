@@ -21,6 +21,20 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
         : 'INVALID';
   const q = report.staticDescriptionQuality;
   const instructions = report.authoringQuality.instructions;
+  const descriptionBadge =
+    q.state === 'scored'
+      ? `<span class="badge ${scoreBadgeClass(q.label)}">Heuristic Static Description Quality ${q.adjustedScore}/100 · ${escapeHtml(capitalize(q.label))}</span>`
+      : `<span class="badge q-not-scored">Description quality: Not scored — ${escapeHtml(q.notScoredReason)}</span>`;
+  const descriptionCard =
+    q.state === 'scored'
+      ? `<span class="score">${q.adjustedScore}<span class="max"> / 100</span></span>`
+      : `Not scored — ${escapeHtml(q.notScoredReason)}`;
+  const instructionCard =
+    instructions.state === 'scored'
+      ? `${instructions.score}/100 · ${escapeHtml(capitalize(instructions.label))}`
+      : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
+  const instructionCardLabel =
+    instructions.state === 'scored' ? 'Instruction authoring quality' : 'Instruction structure';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -37,6 +51,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   .badge.warning { background: var(--vscode-editorWarning-foreground, #cca700); color: #241f00; }
   .badge.fail, .badge.q-low { background: var(--vscode-errorForeground, #f14c4c); color: #2b0606; }
   .badge.q-mid { background: var(--vscode-editorWarning-foreground, #cca700); color: #241f00; }
+  .badge.q-not-scored { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
   .card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; padding: 0.7rem 0.85rem; }
   .card .label { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }
@@ -70,11 +85,11 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 <title>Skill Report</title>
 </head>
 <body>
-  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> <span class="badge ${scoreBadgeClass(q.label)}">Heuristic Static Description Quality ${q.adjustedScore}/100 · ${escapeHtml(capitalize(q.label))}</span></h1>
+  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> ${descriptionBadge}</h1>
   <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
   <div class="grid">
-    ${card('Adjusted Static Description Quality', `<span class="score">${q.adjustedScore}<span class="max"> / 100</span></span>`)}
-    ${card('Instruction authoring quality', `${instructions.score}/100 · ${escapeHtml(capitalize(instructions.label))}`)}
+    ${card('Description quality', descriptionCard)}
+    ${card(instructionCardLabel, instructionCard)}
     ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
@@ -95,7 +110,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   ${renderDiagnostics(report.diagnostics)}
 
   <h2>Trigger quality breakdown</h2>
-  <ul>${q.findings.map(renderFinding).join('')}</ul>
+  ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">Description quality was not scored — ${escapeHtml(q.notScoredReason)}.</p>`}
 
   <h2>Instruction authoring quality</h2>
   ${renderAuthoring(report.authoringQuality.instructions)}
@@ -113,7 +128,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 }
 
 function renderGradeLimitations(quality: SkillReport['staticDescriptionQuality']): string {
-  if (quality.gradeLimitations.length === 0) {
+  if (quality.state === 'not-scored' || quality.gradeLimitations.length === 0) {
     return '';
   }
   const scoreSummary =
@@ -155,7 +170,14 @@ function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
     .join('')}</tbody></table>`;
 }
 
-function renderAuthoring(result: SkillReport['authoringQuality']['instructions']): string {
+function renderAuthoring(
+  result:
+    | SkillReport['authoringQuality']['instructions']
+    | SkillReport['authoringQuality']['resources'],
+): string {
+  if ('state' in result && result.state === 'not-scored') {
+    return `<p><strong>Not scored — ${escapeHtml(result.notScoredReason)}</strong></p>`;
+  }
   const findings =
     result.findings.length === 0
       ? '<p class="empty">No structural findings.</p>'

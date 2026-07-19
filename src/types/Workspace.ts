@@ -152,8 +152,8 @@ export interface SkillsIndexEntry {
 }
 
 export interface SkillsIndex {
-  /** Bumped for workspace/report quality parity fields. */
-  schemaVersion: 3;
+  /** Version 4 adds explicit scored/not-scored quality assessment state. */
+  schemaVersion: 4;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }

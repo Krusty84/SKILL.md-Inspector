@@ -143,7 +143,11 @@ modules identify action verbs, trigger and boundary phrases, concrete artifacts,
 acronyms, vague language, length, and intent placement. The result keeps the
 additive raw score, the adjusted score and label after explicit grade-limit
 adjustments, heuristic coverage, findings, and analysis limitations. It is not a
-probability of runtime skill selection.
+probability of runtime skill selection. `QualityAssessmentState` distinguishes a
+normal `scored` result (including a legitimate score of zero) from `not-scored`.
+Missing, null, non-string, and blank descriptions produce `not-scored` with null
+numeric fields and no criterion points. Fatal frontmatter parsing also prevents a
+description assessment because the metadata cannot be trusted.
 
 `src/quality/defaultHeuristicDictionaries.json` is the canonical lexical-policy
 catalog. `dictionaries.ts` normalizes and deeply freezes effective
@@ -170,7 +174,9 @@ instruction quality and resource quality. These authoring scores detect obvious
 hygiene problems such as empty instructions, placeholders, empty/duplicate
 sections, oversized bodies, undocumented scripts, and large or unreferenced files.
 They are not combined with description quality and do not judge instruction
-correctness.
+correctness. Instruction quality is `not-scored` when missing or malformed
+frontmatter makes the Markdown body boundary untrustworthy. Resource quality is
+still scored independently after successful resource discovery.
 
 The workspace report presents saved-file analysis: tri-state validation, adjusted
 description quality and coverage, instruction authoring quality, diagnostic counts,
@@ -205,11 +211,13 @@ status; it is not an aggregate quality grade. The resource graph classifies refe
 unreferenced, missing, remote, and absolute targets and flags scripts, binaries, and
 large files.
 
-`buildSkillsIndex` projects this analysis into schema version 3. Each entry retains
+`buildSkillsIndex` projects this analysis into schema version 4. Each entry retains
 diagnostics and profile compatibility while adding validation status, all diagnostic
 counts, the complete description-quality result, and instruction/resource authoring
 quality. The builder adds a generation timestamp before `exportSkillsIndex` writes
-`skills.index.json` at the workspace root.
+`skills.index.json` at the workspace root. Version 4 is an incompatible change from
+version 3: description and instruction results now include `state`, and their numeric
+score fields and labels are null when `state` is `not-scored`.
 
 ### Navigation and Workspace File Operations
 
@@ -309,7 +317,7 @@ behavioral metrics remain separate from Static Description Quality and validatio
 4. The resulting immutable-style `WorkspaceAnalysis` feeds the Skills tree or
    workspace report without recomputing or collapsing the per-skill quality dimensions.
 5. Export projects the same validation, quality, diagnostics, and compatibility model
-   into schema-version-3 `skills.index.json` and writes it through the VS Code
+   into schema-version-4 `skills.index.json` and writes it through the VS Code
    filesystem API.
 
 ### Heuristic Configuration

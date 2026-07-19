@@ -15,6 +15,31 @@ describe('resolveHeuristicDictionaries', () => {
     expect(Object.isFrozen(resolved.actionVerbs)).toBe(true);
   });
 
+  it('includes the synchronized action-capability vocabulary and irregular forms', () => {
+    expect(DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs).toEqual(
+      expect.arrayContaining([
+        'apply',
+        'automate',
+        'diagnose',
+        'fill',
+        'reduce',
+        'run',
+        'translate',
+        'turn',
+      ]),
+    );
+    const { forms } = buildVerbForms(
+      DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs,
+      DEFAULT_HEURISTIC_DICTIONARIES.actionVerbForms,
+    );
+    expect(forms.has('applied')).toBe(true);
+    expect(forms.has('running')).toBe(true);
+    expect(forms.has('ran')).toBe(true);
+    expect(forms.has('applyed')).toBe(false);
+    expect(forms.has('runing')).toBe(false);
+    expect(forms.has('runed')).toBe(false);
+  });
+
   it('normalizes complete list values with trimming, lowercasing, and deduplication', () => {
     const resolved = resolveHeuristicDictionaries({
       vagueTerms: ['  Sparkly ', 'sparkly'],

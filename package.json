@@ -1136,7 +1136,15 @@
             "standardize",
             "prepare",
             "organize",
-            "detect"
+            "detect",
+            "apply",
+            "automate",
+            "diagnose",
+            "fill",
+            "reduce",
+            "run",
+            "translate",
+            "turn"
           ],
           "description": "Base verbs recognized as concrete capabilities in description diagnostics, Static Description Quality, local improvement, and collision features.",
           "items": {
@@ -1147,6 +1155,12 @@
           "type": "object",
           "scope": "resource",
           "default": {
+            "apply": [
+              "apply",
+              "applies",
+              "applying",
+              "applied"
+            ],
             "build": [
               "build",
               "builds",
@@ -1169,6 +1183,12 @@
               "read",
               "reads",
               "reading"
+            ],
+            "run": [
+              "run",
+              "runs",
+              "running",
+              "ran"
             ],
             "write": [
               "write",

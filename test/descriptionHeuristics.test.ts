@@ -118,6 +118,48 @@ describe('descriptionHeuristics', () => {
     expect(hasActionVerb('Built API conventions', custom).found).toBe(false);
   });
 
+  it.each([
+    ['Diagnose failing HTTP calls.', 'diagnose'],
+    ['This skill diagnoses failing HTTP calls.', 'diagnoses'],
+    ['Use this skill when generating PDF reports.', 'generating'],
+    ['When asked to summarize a design document, extract the decisions.', 'summarize'],
+  ])('matches a capability in an allowed leading position: %s', (description, matched) => {
+    const analysis = analyzeDescription(description);
+    expect(analysis.actionVerb).toEqual({ found: true, matched });
+    expect(analysis.frontLoadedIntent.found).toBe(true);
+    expect(analysis.frontLoadedIntent.matchedCapability).toBe(matched);
+  });
+
+  it.each([
+    'A test case for API behavior. Use when debugging failures.',
+    'Formatting rules for source files. Use when reviewing style.',
+    'A report containing generated output. Use when reviewing results.',
+  ])('does not treat a later noun or adjective as action evidence: %s', (description) => {
+    const analysis = analyzeDescription(description);
+    expect(analysis.actionVerb.found).toBe(false);
+    expect(analysis.frontLoadedIntent.found).toBe(false);
+  });
+
+  it('applies positional matching to custom action verbs', () => {
+    const custom = resolveHeuristicDictionaries({ actionVerbs: ['frobnicate'] });
+    expect(analyzeDescription('Frobnicate API widgets.', custom).actionVerb).toEqual({
+      found: true,
+      matched: 'frobnicate',
+    });
+    expect(analyzeDescription('This skill frobnicates API widgets.', custom).actionVerb.found).toBe(
+      true,
+    );
+    expect(
+      analyzeDescription('Use this skill when frobnicating API widgets.', custom).actionVerb.found,
+    ).toBe(true);
+    expect(
+      analyzeDescription(
+        'A frobnicate example for API widgets. Use when reviewing failures.',
+        custom,
+      ).actionVerb.found,
+    ).toBe(false);
+  });
+
   it('matches typographic apostrophes in boundary phrases', () => {
     expect(hasNegativeBoundaryPhrase('Don’t use for legal transcripts.').found).toBe(true);
     const analysis = analyzeDescription('Summarize meeting notes. Don’t use when drafting contracts.');

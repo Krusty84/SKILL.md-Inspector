@@ -37,6 +37,9 @@ describe('profile-dependent static-description-quality weights', () => {
   it('weights the missing boundary more heavily under codex', () => {
     const generic = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
     const codex = computeStaticDescriptionQuality(NO_BOUNDARY, opts(codexProfile));
+    if (generic.state !== 'scored' || codex.state !== 'scored') {
+      throw new Error('Expected valid descriptions to be scored');
+    }
     expect(codex.score).toBeLessThan(generic.score);
     expect(codex.label).not.toBe('excellent');
   });

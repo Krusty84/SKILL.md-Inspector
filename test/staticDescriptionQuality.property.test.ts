@@ -20,6 +20,13 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
     fc.assert(
       fc.property(anyText, (desc) => {
         const result = computeStaticDescriptionQuality(desc);
+        if (desc.trim() === '') {
+          expect(result).toMatchObject({ state: 'not-scored', score: null, rawScore: null });
+          return;
+        }
+        if (result.state !== 'scored') {
+          throw new Error('Expected a non-empty description to be scored');
+        }
         expect(Number.isInteger(result.score)).toBe(true);
         expect(Number.isInteger(result.rawScore)).toBe(true);
         expect(result.score).toBe(result.adjustedScore);
@@ -54,6 +61,13 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
     fc.assert(
       fc.property(anyText, weightSet, (desc, weights) => {
         const result = computeStaticDescriptionQuality(desc, { weights });
+        if (desc.trim() === '') {
+          expect(result).toMatchObject({ state: 'not-scored', score: null, rawScore: null });
+          return;
+        }
+        if (result.state !== 'scored') {
+          throw new Error('Expected a non-empty description to be scored');
+        }
         expect(Number.isInteger(result.score)).toBe(true);
         expect(Number.isInteger(result.rawScore)).toBe(true);
         expect(result.score).toBe(result.adjustedScore);
@@ -75,6 +89,11 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
     for (const desc of ['', 'x'.repeat(10000), '📄'.repeat(500), 'Отчёт '.repeat(300)]) {
       expect(() => computeStaticDescriptionQuality(desc)).not.toThrow();
       const result = computeStaticDescriptionQuality(desc);
+      if (result.state === 'not-scored') {
+        expect(desc.trim()).toBe('');
+        expect(result.score).toBeNull();
+        continue;
+      }
       expect(result.score).toBeGreaterThanOrEqual(0);
       expect(result.score).toBeLessThanOrEqual(100);
     }

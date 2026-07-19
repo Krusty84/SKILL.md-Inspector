@@ -1,3 +1,5 @@
+import type { QualityAssessmentState } from './QualityAssessment';
+
 /**
  * Types for the Static Description Quality Score, computed by
  * `quality/staticDescriptionQuality.ts` and surfaced in the skill report,
@@ -30,14 +32,7 @@ export interface StaticDescriptionQualityGradeLimitation {
   reason: string;
 }
 
-export interface StaticDescriptionQualityResult {
-  /** Public score after all reported grade limitations are applied. */
-  score: number;
-  /** Additive total of `findings[].pointsEarned`, before policy ceilings. */
-  rawScore: number;
-  /** Explicit adjusted score; identical to the compatibility `score` field. */
-  adjustedScore: number;
-  label: StaticDescriptionQualityLabel;
+interface StaticDescriptionQualityResultBase {
   findings: StaticDescriptionQualityFinding[];
   /** Every essential-completeness ceiling that applies to this description. */
   gradeLimitations: StaticDescriptionQualityGradeLimitation[];
@@ -48,3 +43,29 @@ export interface StaticDescriptionQualityResult {
   /** True when analysis was language-limited (the description is likely not English). */
   partial?: boolean;
 }
+
+export interface StaticDescriptionQualityScoredResult
+  extends StaticDescriptionQualityResultBase {
+  state: Extract<QualityAssessmentState, 'scored'>;
+  /** Public score after all reported grade limitations are applied. */
+  score: number;
+  /** Additive total of `findings[].pointsEarned`, before policy ceilings. */
+  rawScore: number;
+  /** Explicit adjusted score; identical to the compatibility `score` field. */
+  adjustedScore: number;
+  label: StaticDescriptionQualityLabel;
+}
+
+export interface StaticDescriptionQualityNotScoredResult
+  extends StaticDescriptionQualityResultBase {
+  state: Extract<QualityAssessmentState, 'not-scored'>;
+  score: null;
+  rawScore: null;
+  adjustedScore: null;
+  label: null;
+  notScoredReason: string;
+}
+
+export type StaticDescriptionQualityResult =
+  | StaticDescriptionQualityScoredResult
+  | StaticDescriptionQualityNotScoredResult;

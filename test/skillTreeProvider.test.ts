@@ -43,6 +43,7 @@ function analysis(): WorkspaceAnalysis {
         description: 'Format technical engineering reports using company layout rules.',
         validationStatus: 'warning',
         staticDescriptionQuality: {
+          state: 'scored',
           score: 69,
           rawScore: 75,
           adjustedScore: 69,
@@ -59,7 +60,7 @@ function analysis(): WorkspaceAnalysis {
           limitations: [],
         },
         authoringQuality: {
-          instructions: { score: 0, label: 'poor', findings: [] },
+          instructions: { state: 'scored', score: 0, label: 'poor', findings: [] },
           resources: { score: 100, label: 'excellent', findings: [] },
         },
         errors: 0,
@@ -130,5 +131,41 @@ describe('SkillTreeProvider workspace skill tooltip', () => {
     expect(tooltip).toContain('Adjusted Static Description Quality: 100/100 (excellent)');
     expect(tooltip).not.toContain('Raw Static Description Quality:');
     expect(tooltip).not.toContain('Grade limitations:');
+  });
+
+  it('renders not-scored states without numeric placeholders or quality labels', () => {
+    const model = analysis();
+    model.skills[0].staticDescriptionQuality = {
+      state: 'not-scored',
+      score: null,
+      rawScore: null,
+      adjustedScore: null,
+      label: null,
+      notScoredReason: 'description is missing',
+      findings: [],
+      gradeLimitations: [],
+      coverage: 'low',
+      limitations: ['description is missing'],
+    };
+    model.skills[0].authoringQuality.instructions = {
+      state: 'not-scored',
+      score: null,
+      label: null,
+      notScoredReason: 'frontmatter could not be parsed',
+      findings: [],
+    };
+    vi.mocked(computeWorkspaceAnalysis).mockReturnValue({ rootDir: '/ws', analysis: model });
+
+    const provider = new SkillTreeProvider();
+    const node = provider.getChildren().find((candidate) => candidate.type === 'skill')!;
+    const item = provider.getTreeItem(node);
+    const tooltip = (item.tooltip as { value: string }).value;
+
+    expect(item.description).toContain('SDQ Not scored');
+    expect(tooltip).toContain('Description quality: Not scored — description is missing');
+    expect(tooltip).toContain(
+      'Instruction structure: Not scored — frontmatter could not be parsed',
+    );
+    expect(tooltip).not.toMatch(/(?:null|undefined)\/100/);
   });
 });
