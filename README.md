@@ -43,7 +43,8 @@ can execute.
 - **`name` rules** — required, string, ≤ 64 chars, lowercase/digits/hyphens
   only, no leading/trailing hyphen, and a warning when it does not match the
   parent skill folder.
-- **`description` rules** — required, string, ≤ 1024 chars; a missing action
+- **`description` rules** — required, string, within the configured maximum
+  (1024 chars by default); a missing action
   verb is an error, while descriptions that are too short, vague, or missing a
   usage-trigger clause produce quality warnings.
 - **Profile-specific metadata rules** — for the selected profile, flags Claude

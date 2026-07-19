@@ -6,7 +6,6 @@ import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { analyzeDescription } from '../quality/descriptionHeuristics';
 import { diag, keyRange } from './util';
 
-const HARD_DESCRIPTION_MAX_LENGTH = 1024;
 const RECOMMENDED_DESCRIPTION_MAX_LENGTH = 500;
 
 export function validateDescription(
@@ -45,14 +44,14 @@ export function validateDescription(
 
   const analysis = analyzeDescription(value, dictionaries);
   const diagnostics: SkillDiagnostic[] = [];
-  const { minLength } = profile.description;
+  const { minLength, maxLength } = profile.description;
 
-  if (analysis.length > HARD_DESCRIPTION_MAX_LENGTH) {
+  if (analysis.length > maxLength) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionTooLong,
         'error',
-        `\`description\` is ${analysis.length} characters; the maximum is ${HARD_DESCRIPTION_MAX_LENGTH}.`,
+        `\`description\` is ${analysis.length} characters; the maximum is ${maxLength}.`,
         range,
       ),
     );

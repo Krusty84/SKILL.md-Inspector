@@ -224,7 +224,11 @@ function assessInstructions(
     }
   }
 
-  if (!bodyEvidence.hasExampleEvidence) {
+  if (
+    !bodyEvidence.hasExampleEvidence &&
+    (bodyEvidence.emptyExampleHeadings.length === 0 ||
+      bodyEvidence.nonConcreteExampleHeadings.length > 0)
+  ) {
     findings.push({
       criterion: 'Examples',
       severity: 'minor',
@@ -381,7 +385,8 @@ function hasSubstantiveInstructions(
 
   const verbForms = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms).forms;
   const concreteSteps = content.reduce((count, line) => {
-    if (line.inFence || /^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line.text)) return count + 1;
+    if (line.inFence) return count;
+    if (/^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line.text)) return count + 1;
     const actionCount = (line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((word) =>
       verbForms.has(word),
     ).length;

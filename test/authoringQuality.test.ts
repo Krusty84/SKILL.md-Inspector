@@ -151,6 +151,20 @@ describe('assessAuthoringQuality instructions', () => {
     expect(result.instructions.findings.filter((f) => f.criterion === 'Examples')).toHaveLength(1);
   });
 
+  it('reports missing concrete evidence for non-empty placeholder Examples prose', () => {
+    const result = assessAuthoringQuality(
+      doc('# T\n\nDo the work.\n\n## Examples\n\nExamples will be added later.'),
+    );
+
+    expect(result.instructions.findings).toContainEqual(
+      expect.objectContaining({
+        criterion: 'Examples',
+        severity: 'minor',
+        message: 'Body has no concrete example evidence.',
+      }),
+    );
+  });
+
   it('adds one minor finding and deducts 10 when example evidence is missing', () => {
     const body = [
       '# Tool',
@@ -212,6 +226,93 @@ describe('assessAuthoringQuality instructions', () => {
     expect(
       result.instructions.findings.some((item) => item.criterion === 'Substantive instructions'),
     ).toBe(false);
+  });
+
+  it('does not treat arbitrary fenced lines as substantive instructions', () => {
+    const result = assessAuthoringQuality(
+      doc('# Instructions\n\n```text\nalpha\nbeta\ngamma\n```'),
+    );
+
+    expect(result.instructions.findings).toContainEqual(
+      expect.objectContaining({ criterion: 'Substantive instructions' }),
+    );
+    expect(result.instructions.score).toBeLessThanOrEqual(80);
+    expect(result.instructions.label).not.toBe('excellent');
+  });
+
+  it('does not let example detection hide a fenced-only instruction body', () => {
+    const result = assessAuthoringQuality(
+      doc('# Instructions\n\n## Examples\n\n```text\nalpha\nbeta\ngamma\n```'),
+    );
+
+    expect(result.instructions.findings).toContainEqual(
+      expect.objectContaining({ criterion: 'Substantive instructions' }),
+    );
+    expect(result.instructions.findings.some((finding) => finding.criterion === 'Examples')).toBe(
+      false,
+    );
+  });
+
+  it('excludes fenced content from the substantive prose word count', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        '# Instructions\n\n```text\nThese arbitrary words fill a fenced line without documenting any workflow that an agent should follow for a request.\nMore arbitrary words make the block longer than thirty words while still providing no prose instructions outside the fence for the agent.\n```',
+      ),
+    );
+
+    expect(result.instructions.findings).toContainEqual(
+      expect.objectContaining({ criterion: 'Substantive instructions' }),
+    );
+  });
+
+  it('accepts at least 30 substantive prose words', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        [
+          '# Instructions',
+          '',
+          'Review the supplied report carefully before editing any values, preserve the original section order, compare every changed field with the source records, and summarize the verified result for the requester after completing the final consistency check.',
+        ].join('\n'),
+      ),
+    );
+
+    expect(
+      result.instructions.findings.some(
+        (finding) => finding.criterion === 'Substantive instructions',
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps explanatory Quick start prose substantive when followed by a fenced command', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        [
+          '# Instructions',
+          '',
+          'Review the source report before running this command, confirm the selected path belongs to the current request, preserve the original file, inspect the generated output carefully, and report any unexpected differences to the requester.',
+          '',
+          '## Quick start',
+          '',
+          '```bash',
+          'run-tool report.md',
+          '```',
+        ].join('\n'),
+      ),
+    );
+
+    expect(result.instructions.findings).toEqual([]);
+  });
+
+  it('does not count placeholder-only fenced content as substantive', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        '# Instructions\n\n```text\nTODO: add the first step\nFIXME: add the second step\n<describe the third step>\n```',
+      ),
+    );
+
+    expect(result.instructions.findings).toContainEqual(
+      expect.objectContaining({ criterion: 'Substantive instructions' }),
+    );
   });
 
   it('accepts an Examples section whose only content is a code block', () => {

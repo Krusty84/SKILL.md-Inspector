@@ -67,7 +67,7 @@ describe('validateBody strictness (Task 55)', () => {
 });
 
 describe('validateBody profile sections (Task 56)', () => {
-  const body = '## Examples\n\ntext\n\n## When to use\n\ntext';
+  const body = '## Examples\n\nInput: raw. Output: formatted.\n\n## When to use\n\ntext';
 
   it('a minimal profile is satisfied by examples + when-to-use', () => {
     expect(validateBody(docWith(body), profileWith('recommended'))).toEqual([]);
@@ -84,7 +84,7 @@ describe('validateBody profile sections (Task 56)', () => {
   it('accepts concrete frontmatter trigger scope for when-to-use', () => {
     const diagnostics = validateBody(
       docWith(
-        '## Examples\n\nA concrete example.',
+        '## Examples\n\nInput: raw. Output: formatted.',
         'Format CSV reports. Use when cleaning malformed CSV exports.',
       ),
       profileWith('recommended'),
@@ -94,7 +94,7 @@ describe('validateBody profile sections (Task 56)', () => {
 
   it('rejects a vague frontmatter trigger marker for when-to-use', () => {
     const diagnostics = validateBody(
-      docWith('## Examples\n\nA concrete example.', 'Format reports. Use when needed.'),
+      docWith('## Examples\n\nInput: raw. Output: formatted.', 'Format reports. Use when needed.'),
       profileWith('recommended'),
     );
     expect(diagnostics.map((d) => d.code)).toContain(DiagnosticCode.BodyNoWhenToUse);
@@ -125,9 +125,24 @@ describe('validateBody profile sections (Task 56)', () => {
 
   it('requires concrete frontmatter boundary scope when the profile recommends boundaries', () => {
     const diagnostics = validateBody(
-      docWith('## Examples\n\nA concrete example.', 'Format CSV reports. Do not use when needed.'),
+      docWith(
+        '## Examples\n\nInput: raw. Output: formatted.',
+        'Format CSV reports. Do not use when needed.',
+      ),
       profileWith('recommended', [BOUNDARY_SECTION]),
     );
     expect(diagnostics.map((item) => item.code)).toContain(DiagnosticCode.BodySuggestBoundary);
   });
+
+  it.each(['## Examples', '## Examples\n\nExamples will be added later.'])(
+    'requires concrete evidence for %s',
+    (body) => {
+      const diagnostics = validateBody(
+        docWith(body),
+        profileWith('recommended', [EXAMPLES_SECTION]),
+      );
+
+      expect(diagnostics.map((item) => item.code)).toContain(DiagnosticCode.BodyNoExamples);
+    },
+  );
 });

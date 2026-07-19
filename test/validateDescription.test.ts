@@ -3,22 +3,37 @@ import { parseSkillFile } from '../src/parser/parseSkillFile';
 import { validateDescription } from '../src/validation/validateDescription';
 import { genericProfile } from '../src/profiles/genericProfile';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
+import type { SkillProfile } from '../src/types/SkillProfile';
 import {
   DEFAULT_HEURISTIC_DICTIONARIES,
   resolveHeuristicDictionaries,
   type HeuristicDictionaries,
 } from '../src/quality/dictionaries';
 
-function codes(
+function diagnostics(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
-): string[] {
+  profile: SkillProfile = genericProfile,
+) {
   const content = `---\nname: demo\ndescription: ${JSON.stringify(description)}\n---\n`;
   return validateDescription(
     parseSkillFile('/ws/skills/demo/SKILL.md', content),
-    genericProfile,
+    profile,
     dictionaries,
-  ).map((d) => d.code);
+  );
+}
+
+function codes(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+  profile: SkillProfile = genericProfile,
+): string[] {
+  return diagnostics(description, dictionaries, profile).map((diagnostic) => diagnostic.code);
+}
+
+function descriptionOfLength(length: number): string {
+  const prefix = 'Format reports. Use when auditing. ';
+  return prefix + 'x'.repeat(length - prefix.length);
 }
 
 describe('validateDescription', () => {
@@ -49,6 +64,45 @@ describe('validateDescription', () => {
   it('reports a description over the maximum length as an error', () => {
     const long = `Format reports. Use when needed. ${'x'.repeat(1100)}`;
     expect(codes(long)).toContain(DiagnosticCode.DescriptionTooLong);
+  });
+
+  it('enforces the configured maximum without also reporting a verbose warning', () => {
+    const profile: SkillProfile = {
+      ...genericProfile,
+      description: { ...genericProfile.description, maxLength: 100 },
+    };
+    const result = diagnostics(descriptionOfLength(166), DEFAULT_HEURISTIC_DICTIONARIES, profile);
+    const tooLong = result.find(
+      (diagnostic) => diagnostic.code === DiagnosticCode.DescriptionTooLong,
+    );
+
+    expect(tooLong?.severity).toBe('error');
+    expect(tooLong?.message).toContain('100');
+    expect(result.map((diagnostic) => diagnostic.code)).not.toContain(
+      DiagnosticCode.DescriptionTooVerbose,
+    );
+  });
+
+  it('accepts a description exactly at the configured maximum', () => {
+    const profile: SkillProfile = {
+      ...genericProfile,
+      description: { ...genericProfile.description, maxLength: 100 },
+    };
+    expect(
+      codes(descriptionOfLength(100), DEFAULT_HEURISTIC_DICTIONARIES, profile),
+    ).not.toContain(DiagnosticCode.DescriptionTooLong);
+  });
+
+  it('keeps the default recommended and maximum boundaries unchanged', () => {
+    expect(codes(descriptionOfLength(500))).not.toContain(
+      DiagnosticCode.DescriptionTooVerbose,
+    );
+    expect(codes(descriptionOfLength(501))).toContain(DiagnosticCode.DescriptionTooVerbose);
+    expect(codes(descriptionOfLength(1024))).not.toContain(DiagnosticCode.DescriptionTooLong);
+    expect(codes(descriptionOfLength(1025))).toContain(DiagnosticCode.DescriptionTooLong);
+    expect(codes(descriptionOfLength(1025))).not.toContain(
+      DiagnosticCode.DescriptionTooVerbose,
+    );
   });
 
   it('reports a missing description', () => {

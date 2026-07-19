@@ -267,6 +267,31 @@ describe('computeStaticDescriptionQuality', () => {
     expect(good('x'.repeat(1100))).toBe(0); // over the 1024 maximum
   });
 
+  it('caps the full-credit band at a smaller configured maximum', () => {
+    const goodLengthPoints = (length: number) =>
+      computeStaticDescriptionQuality('x'.repeat(length), {
+        minLength: 40,
+        maxLength: 100,
+      }).findings.find((finding) => finding.criterion === 'Good length')!.pointsEarned;
+
+    expect(goodLengthPoints(100)).toBe(10);
+    expect(goodLengthPoints(101)).toBe(0);
+    expect(goodLengthPoints(166)).toBe(0);
+  });
+
+  it('keeps graduated penalties between 500 and a larger configured maximum', () => {
+    const goodLengthPoints = (length: number) =>
+      computeStaticDescriptionQuality('x'.repeat(length), {
+        minLength: 40,
+        maxLength: 700,
+      }).findings.find((finding) => finding.criterion === 'Good length')!.pointsEarned;
+
+    expect(goodLengthPoints(500)).toBe(10);
+    expect(goodLengthPoints(501)).toBe(6);
+    expect(goodLengthPoints(700)).toBe(3);
+    expect(goodLengthPoints(701)).toBe(0);
+  });
+
   it('keeps the recommended band coherent when minLength exceeds the default ceiling', () => {
     const atMin = computeStaticDescriptionQuality('x'.repeat(600), {
       minLength: 600,

@@ -69,7 +69,8 @@ export function scoreAnalysis(
   const maxLength = options.maxLength ?? 1024;
   // A profile may recommend a minimum above the default band ceiling; the band
   // must never invert ("aim for 600–500").
-  const goodLengthMax = Math.max(GOOD_LENGTH_MAX, minLength);
+  const goodLengthMax = Math.min(maxLength, Math.max(GOOD_LENGTH_MAX, minLength));
+  const goodLengthMin = Math.min(minLength, goodLengthMax);
   const language = options.language ?? 'auto';
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
   const weights = normalizeWeights(options.weights ?? CRITERION_POINTS);
@@ -157,10 +158,10 @@ export function scoreAnalysis(
       weights.goodLength,
       lengthPoints === weights.goodLength
         ? `Length is ${analysis.length} characters.`
-        : `Length is ${analysis.length} characters (aim for ${minLength}–${goodLengthMax}).`,
+        : `Length is ${analysis.length} characters (aim for ${goodLengthMin}–${goodLengthMax}).`,
       lengthPoints === weights.goodLength
         ? undefined
-        : `Aim for roughly ${minLength}–${goodLengthMax} characters.`,
+        : `Aim for roughly ${goodLengthMin}–${goodLengthMax} characters.`,
     ),
   ];
 
@@ -332,13 +333,16 @@ function scoreLength(
   maxPoints: number,
   goodLengthMax: number,
 ): number {
+  if (length > maxLength) {
+    return 0;
+  }
   if (length >= minLength && length <= goodLengthMax) {
     return maxPoints; // recommended range
   }
   if (length >= Math.floor(minLength * 0.6) && length < minLength) {
     return Math.round(maxPoints * 0.5); // slightly short
   }
-  if (length > goodLengthMax && length <= maxLength) {
+  if (length > goodLengthMax) {
     // Graduated: a moderately long description beats a very long one.
     const mid = goodLengthMax + Math.floor((maxLength - goodLengthMax) / 2);
     return length <= mid ? Math.round(maxPoints * 0.6) : Math.round(maxPoints * 0.3);

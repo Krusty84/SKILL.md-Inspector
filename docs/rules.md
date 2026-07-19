@@ -115,7 +115,7 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 **error** · all profiles · auto-fix: no
 
-`description` exceeds the hard maximum of 1024 characters.
+`description` exceeds the active profile maximum (1024 characters by default).
 
 - Bad: a 2000-character description.
 - Good: a focused description under the limit.
@@ -125,7 +125,7 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 **warning** · all profiles · auto-fix: no
 
 `description` exceeds the recommended 500-character length but remains within
-the hard 1024-character maximum. Keep capability and trigger scope in
+the active profile maximum. Keep capability and trigger scope in
 frontmatter and move detailed procedure to the Markdown body.
 
 ### `skill.description.overbroadTrigger`

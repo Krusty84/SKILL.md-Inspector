@@ -139,20 +139,20 @@ describe('description hygiene fixture regressions', () => {
     },
   );
 
-  it('uses the hard 1024-character error only above the hard maximum', () => {
+  it('uses the configured maximum for the hard length error', () => {
     const strictProfile: SkillProfile = {
       ...genericProfile,
       description: { ...genericProfile.description, maxLength: 500 },
     };
-    const underHardMaximum = diagnostics(
+    const overConfiguredMaximum = diagnostics(
       `Generate reports. Use when auditing reports. ${'x'.repeat(600)}`,
       strictProfile,
     );
-    expect(underHardMaximum.map((diagnostic) => diagnostic.code)).toContain(
-      DiagnosticCode.DescriptionTooVerbose,
-    );
-    expect(underHardMaximum.map((diagnostic) => diagnostic.code)).not.toContain(
+    expect(overConfiguredMaximum.map((diagnostic) => diagnostic.code)).toContain(
       DiagnosticCode.DescriptionTooLong,
+    );
+    expect(overConfiguredMaximum.map((diagnostic) => diagnostic.code)).not.toContain(
+      DiagnosticCode.DescriptionTooVerbose,
     );
   });
 });

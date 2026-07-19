@@ -9,6 +9,7 @@ export interface BodyEvidence {
   headings: SkillHeading[];
   hasExampleEvidence: boolean;
   emptyExampleHeadings: string[];
+  nonConcreteExampleHeadings: string[];
 }
 
 interface MarkdownSection {
@@ -34,16 +35,27 @@ export function analyzeBodyEvidence(body: string): BodyEvidence {
       phraseRegex('minimal reproduction').test(section.title) &&
       (hasFencedCode(section.children, body) || hasExplicitPair(section.children)),
   );
+  const concreteExampleSections = exampleSections.filter(
+    (section) =>
+      hasFencedCode(section.children, body) ||
+      hasExplicitPair(section.children) ||
+      hasPairedInputOutputFences(section.children, body),
+  );
+  const emptyExampleSections = exampleSections.filter((section) => section.children.length === 0);
 
   return {
     headings: sections.map(({ heading, title }) => ({ text: title, depth: heading.depth })),
     hasExampleEvidence:
-      exampleSections.length > 0 ||
+      concreteExampleSections.length > 0 ||
       hasQuickStart ||
       hasMinimalReproduction ||
       hasPairedInputOutputFences(children, body),
-    emptyExampleHeadings: exampleSections
-      .filter((section) => section.children.length === 0)
+    emptyExampleHeadings: emptyExampleSections.map((section) => section.title),
+    nonConcreteExampleHeadings: exampleSections
+      .filter(
+        (section) =>
+          !emptyExampleSections.includes(section) && !concreteExampleSections.includes(section),
+      )
       .map((section) => section.title),
   };
 }
@@ -74,7 +86,9 @@ function collectSections(children: RootContent[]): MarkdownSection[] {
 }
 
 function hasFencedCode(nodes: RootContent[], body: string): boolean {
-  return nodes.some((node) => node.type === 'code' && isFencedCode(node, body));
+  return nodes.some(
+    (node) => node.type === 'code' && node.value.trim().length > 0 && isFencedCode(node, body),
+  );
 }
 
 function isFencedCode(node: Code, body: string): boolean {
