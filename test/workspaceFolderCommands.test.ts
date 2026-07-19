@@ -12,17 +12,30 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('vscode', () => {
   class Uri {
     constructor(readonly value: string) {}
-    static parse(value: string): Uri { return new Uri(value); }
-    static joinPath(parent: Uri, ...parts: string[]): Uri { return new Uri(`${parent.value.replace(/\/$/, '')}/${parts.join('/')}`); }
-    toString(): string { return this.value; }
-    get path(): string { return this.value.replace(/^\w+:\/\//, ''); }
-    get fsPath(): string { return this.path; }
+    static parse(value: string): Uri {
+      return new Uri(value);
+    }
+    static joinPath(parent: Uri, ...parts: string[]): Uri {
+      return new Uri(`${parent.value.replace(/\/$/, '')}/${parts.join('/')}`);
+    }
+    toString(): string {
+      return this.value;
+    }
+    get path(): string {
+      return this.value.replace(/^\w+:\/\//, '');
+    }
+    get fsPath(): string {
+      return this.path;
+    }
   }
   return {
     Uri,
     ViewColumn: { Beside: 2 },
     commands: {
-      registerCommand: vi.fn((id: string, callback: (...args: unknown[]) => unknown) => { hoisted.commands.set(id, callback); return { dispose: vi.fn() }; }),
+      registerCommand: vi.fn((id: string, callback: (...args: unknown[]) => unknown) => {
+        hoisted.commands.set(id, callback);
+        return { dispose: vi.fn() };
+      }),
       executeCommand: vi.fn(),
     },
     window: {
@@ -31,7 +44,9 @@ vi.mock('vscode', () => {
       showErrorMessage: hoisted.showErrorMessage,
     },
     workspace: {
-      get workspaceFolders() { return hoisted.state.folders; },
+      get workspaceFolders() {
+        return hoisted.state.folders;
+      },
       updateWorkspaceFolders: hoisted.updateWorkspaceFolders,
       fs: { isWritableFileSystem: vi.fn(() => true) },
     },
@@ -84,7 +99,9 @@ describe('Select SKILLs Folder command', () => {
     await register()();
 
     expect(hoisted.updateWorkspaceFolders).not.toHaveBeenCalled();
-    expect(hoisted.showInformationMessage).toHaveBeenCalledWith('This folder is already open in the workspace.');
+    expect(hoisted.showInformationMessage).toHaveBeenCalledWith(
+      'This folder is already open in the workspace.',
+    );
   });
 
   it('handles cancellation without changing the workspace', async () => {

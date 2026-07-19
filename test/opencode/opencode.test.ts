@@ -2,8 +2,18 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => ({
-  Uri: { file: (fsPath: string) => ({ fsPath, path: fsPath, scheme: 'file', toString: () => `file://${fsPath}` }) },
-  workspace: { workspaceFolders: [], getConfiguration: () => ({ get: (_key: string, defaultValue: unknown) => defaultValue }) },
+  Uri: {
+    file: (fsPath: string) => ({
+      fsPath,
+      path: fsPath,
+      scheme: 'file',
+      toString: () => `file://${fsPath}`,
+    }),
+  },
+  workspace: {
+    workspaceFolders: [],
+    getConfiguration: () => ({ get: (_key: string, defaultValue: unknown) => defaultValue }),
+  },
 }));
 
 import { buildSessionViewModel } from '../../src/opencode/buildSessionViewModel';
@@ -39,14 +49,25 @@ function fixtureInfo(root: Record<string, unknown>): Record<string, unknown> {
 }
 
 function fixtureMessages(root: Record<string, unknown>): Record<string, unknown>[] {
-  if (!Array.isArray(root.messages) || !root.messages.every(isRecord)) throw new Error('Fixture messages must be objects.');
+  if (!Array.isArray(root.messages) || !root.messages.every(isRecord))
+    throw new Error('Fixture messages must be objects.');
   return root.messages;
 }
 
-function summary(id: string, parentId?: string, updated = 1, fileName = `${id}.json`): SessionSummary {
+function summary(
+  id: string,
+  parentId?: string,
+  updated = 1,
+  fileName = `${id}.json`,
+): SessionSummary {
   const uriString = `file:///${fileName}`;
   return {
-    uri: { toString: () => uriString, path: `/${fileName}`, scheme: 'file', fsPath: `/${fileName}` } as never,
+    uri: {
+      toString: () => uriString,
+      path: `/${fileName}`,
+      scheme: 'file',
+      fsPath: `/${fileName}`,
+    } as never,
     uriString,
     fileName,
     size: 1,
@@ -109,7 +130,12 @@ describe('OpenCode real-format parsing and normalization', () => {
     if (!isRecord(secondAssistant.info)) throw new Error('Assistant info must be an object.');
     secondAssistant.info.id = 'msg_assistant_2';
     secondAssistant.info.cost = 0.02;
-    secondAssistant.info.tokens = { input: 5, output: 6, reasoning: 7, cache: { read: 8, write: 9 } };
+    secondAssistant.info.tokens = {
+      input: 5,
+      output: 6,
+      reasoning: 7,
+      cache: { read: 8, write: 9 },
+    };
     secondAssistant.parts = [];
     fixtureMessages(root).push(secondAssistant);
 
@@ -137,7 +163,9 @@ describe('OpenCode real-format parsing and normalization', () => {
     const metrics = normalize(root).metrics;
     expect(metrics.inputTokens).toBeUndefined();
     expect(metrics.outputTokens).toBeUndefined();
-    expect(Object.values(metrics).some((value) => typeof value === 'number' && Number.isNaN(value))).toBe(false);
+    expect(
+      Object.values(metrics).some((value) => typeof value === 'number' && Number.isNaN(value)),
+    ).toBe(false);
   });
 
   it('reads assistant time.completed and retry time.created', () => {
@@ -154,16 +182,27 @@ describe('OpenCode real-format parsing and normalization', () => {
 
   it('does not invent timestamps or warnings for step boundary parts', () => {
     const parsed = parseSessionExport(fixture('regular-session.json'));
-    const stepParts = parsed.session?.messages.flatMap((message) => message.parts).filter((part) => part.originalType === 'step-start' || part.originalType === 'step-finish') ?? [];
+    const stepParts =
+      parsed.session?.messages
+        .flatMap((message) => message.parts)
+        .filter(
+          (part) => part.originalType === 'step-start' || part.originalType === 'step-finish',
+        ) ?? [];
 
     expect(stepParts).toHaveLength(2);
-    expect(stepParts.every((part) => part.start === undefined && part.end === undefined)).toBe(true);
+    expect(stepParts.every((part) => part.start === undefined && part.end === undefined)).toBe(
+      true,
+    );
     expect(parsed.diagnostics.some((diagnostic) => diagnostic.code.includes('time'))).toBe(false);
   });
 
   it('uses state.output and state.error for clean tool previews', () => {
-    const completed = normalize(fixture('regular-session.json')).nodes.find((node) => node.toolName === 'read');
-    const failed = normalize(fixture('tool-error-session.json')).nodes.find((node) => node.toolName === 'read');
+    const completed = normalize(fixture('regular-session.json')).nodes.find(
+      (node) => node.toolName === 'read',
+    );
+    const failed = normalize(fixture('tool-error-session.json')).nodes.find(
+      (node) => node.toolName === 'read',
+    );
 
     expect(completed?.preview).toBe('Safe fixture output');
     expect(completed?.preview).not.toContain('call_read');
@@ -174,7 +213,8 @@ describe('OpenCode real-format parsing and normalization', () => {
   it('applies the configured preview limit and keeps the truncation marker', () => {
     const root = mutableFixture('regular-session.json');
     const tool = fixtureMessages(root)[1].parts;
-    if (!Array.isArray(tool) || !isRecord(tool[3]) || !isRecord(tool[3].state)) throw new Error('Tool fixture shape changed.');
+    if (!Array.isArray(tool) || !isRecord(tool[3]) || !isRecord(tool[3].state))
+      throw new Error('Tool fixture shape changed.');
     tool[3].state.output = 'abcdefghijklmnopqrstuvwxyz';
 
     const node = normalize(root, 10).nodes.find((candidate) => candidate.toolName === 'read');
@@ -193,7 +233,10 @@ describe('OpenCode real-format parsing and normalization', () => {
 
     expect(assistantOnly.metrics.assistantErrorCount).toBe(1);
     expect(assistantOnly.metrics.toolErrorCount).toBe(0);
-    expect(assistantOnly.nodes.find((node) => node.kind === 'assistant-message')).toMatchObject({ status: 'error', preview: 'APIError: Synthetic upstream failure' });
+    expect(assistantOnly.nodes.find((node) => node.kind === 'assistant-message')).toMatchObject({
+      status: 'error',
+      preview: 'APIError: Synthetic upstream failure',
+    });
     expect(combined.metrics.toolErrorCount).toBe(1);
     expect(combined.metrics.assistantErrorCount).toBe(1);
     expect(combined.metrics.errorCount).toBe(2);
@@ -203,16 +246,28 @@ describe('OpenCode real-format parsing and normalization', () => {
     const session = normalize(fixture('sanitized-session.json'));
 
     expect(session.sanitization).toBe('likely-sanitized');
-    expect(session.diagnostics.some((diagnostic) => diagnostic.code === 'opencode.sanitized.likely')).toBe(true);
+    expect(
+      session.diagnostics.some((diagnostic) => diagnostic.code === 'opencode.sanitized.likely'),
+    ).toBe(true);
   });
 
   it('preserves unknown roles, part types, tool names, statuses, and fields', () => {
     const root = {
       info: { id: 'future', futureSessionField: { retained: true } },
-      messages: [{
-        info: { role: 'future-role', futureMessageField: 42 },
-        parts: [{ type: 'future-part', futurePartField: 'kept' }, { type: 'tool', tool: 'future-tool', state: { status: 'paused' }, futureToolField: true }],
-      }],
+      messages: [
+        {
+          info: { role: 'future-role', futureMessageField: 42 },
+          parts: [
+            { type: 'future-part', futurePartField: 'kept' },
+            {
+              type: 'tool',
+              tool: 'future-tool',
+              state: { status: 'paused' },
+              futureToolField: true,
+            },
+          ],
+        },
+      ],
       futureRootField: ['kept'],
     };
     const parsed = parseSessionExport(root);
@@ -221,9 +276,14 @@ describe('OpenCode real-format parsing and normalization', () => {
     expect(parsed.session?.messages[0]?.role).toBe('unknown');
     expect(parsed.session?.messages[0]?.parts[0]?.kind).toBe('unknown');
     expect(parsed.session?.messages[0]?.parts[0]?.raw.futurePartField).toBe('kept');
-    expect(parsed.session?.messages[0]?.parts[1]).toMatchObject({ toolName: 'future-tool', status: 'paused' });
+    expect(parsed.session?.messages[0]?.parts[1]).toMatchObject({
+      toolName: 'future-tool',
+      status: 'paused',
+    });
     expect(parsed.session?.raw.futureRootField).toEqual(['kept']);
-    expect(parsed.diagnostics.filter((diagnostic) => diagnostic.code.includes('unknown')).length).toBeGreaterThanOrEqual(3);
+    expect(
+      parsed.diagnostics.filter((diagnostic) => diagnostic.code.includes('unknown')).length,
+    ).toBeGreaterThanOrEqual(3);
   });
 
   it('keeps root validation tolerant but rejects invalid required containers', () => {
@@ -243,10 +303,23 @@ describe('OpenCode real-format parsing and normalization', () => {
   it('keeps negative durations undefined', () => {
     const session = normalize({
       info: {},
-      messages: [{ info: { role: 'assistant', time: { created: 10, completed: 1 } }, parts: [{ type: 'tool', tool: 'read', state: { status: 'completed', time: { start: 10, end: 1 } } }] }],
+      messages: [
+        {
+          info: { role: 'assistant', time: { created: 10, completed: 1 } },
+          parts: [
+            {
+              type: 'tool',
+              tool: 'read',
+              state: { status: 'completed', time: { start: 10, end: 1 } },
+            },
+          ],
+        },
+      ],
     });
 
-    expect(session.nodes.find((node) => node.kind === 'assistant-message')?.durationMs).toBeUndefined();
+    expect(
+      session.nodes.find((node) => node.kind === 'assistant-message')?.durationMs,
+    ).toBeUndefined();
     expect(session.nodes.find((node) => node.toolName === 'read')?.durationMs).toBeUndefined();
   });
 });
@@ -279,7 +352,11 @@ describe('OpenCode session tree construction', () => {
   });
 
   it('handles duplicate IDs deterministically without dropping sessions', () => {
-    const tree = buildSessionTree([summary('parent', undefined, 1, 'a.json'), summary('parent', undefined, 1, 'b.json'), summary('child', 'parent', 2, 'c.json')]);
+    const tree = buildSessionTree([
+      summary('parent', undefined, 1, 'a.json'),
+      summary('parent', undefined, 1, 'b.json'),
+      summary('child', 'parent', 2, 'c.json'),
+    ]);
 
     expect(flattenTree(tree)).toHaveLength(3);
     expect(tree.find((item) => item.fileName === 'a.json')?.children[0]?.id).toBe('child');
@@ -291,9 +368,13 @@ describe('OpenCode static report', () => {
     const root = mutableFixture('regular-session.json');
     fixtureInfo(root).title = 'Demo <script>alert(1)</script>';
     const tool = fixtureMessages(root)[1].parts;
-    if (!Array.isArray(tool) || !isRecord(tool[3]) || !isRecord(tool[3].state)) throw new Error('Tool fixture shape changed.');
+    if (!Array.isArray(tool) || !isRecord(tool[3]) || !isRecord(tool[3].state))
+      throw new Error('Tool fixture shape changed.');
     tool[3].state.output = '<img src=x onerror=alert(1)>';
-    const html = renderOpenCodeSessionReportHtml(buildSessionViewModel(normalize(root)), 'vscode-resource:');
+    const html = renderOpenCodeSessionReportHtml(
+      buildSessionViewModel(normalize(root)),
+      'vscode-resource:',
+    );
 
     expect(html).toContain('fixture-provider');
     expect(html).toContain('fixture-model');
@@ -321,9 +402,33 @@ describe('OpenCode schema compatibility diagnostics and report details', () => {
 
     expect(isRecord(schema)).toBe(true);
     expect(parsed.fatal).toBe(false);
-    expect(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'warning')).toHaveLength(0);
-    expect(parsed.session?.messages.flatMap((message) => message.parts.map((part) => part.originalType))).toEqual(expect.arrayContaining(['text','reasoning','file','tool','step-start','step-finish','snapshot','patch','agent','subtask','retry','compaction']));
-    expect(session.nodes.filter((node) => node.kind === 'tool' || node.kind === 'skill').map((node) => node.status).sort()).toEqual(['completed','error','pending','running']);
+    expect(
+      parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'warning'),
+    ).toHaveLength(0);
+    expect(
+      parsed.session?.messages.flatMap((message) => message.parts.map((part) => part.originalType)),
+    ).toEqual(
+      expect.arrayContaining([
+        'text',
+        'reasoning',
+        'file',
+        'tool',
+        'step-start',
+        'step-finish',
+        'snapshot',
+        'patch',
+        'agent',
+        'subtask',
+        'retry',
+        'compaction',
+      ]),
+    );
+    expect(
+      session.nodes
+        .filter((node) => node.kind === 'tool' || node.kind === 'skill')
+        .map((node) => node.status)
+        .sort(),
+    ).toEqual(['completed', 'error', 'pending', 'running']);
   });
 
   it('reports cross-object invariants, duplicate IDs, missing IDs, required fields, and noncanonical prefixes non-fatally', () => {
@@ -333,13 +438,20 @@ describe('OpenCode schema compatibility diagnostics and report details', () => {
     info.id = 'bad_session';
     info.workspaceID = 'bad_workspace';
     delete info.slug;
-    if (!isRecord(messages[0].info) || !isRecord(messages[1].info)) throw new Error('Fixture message shape changed.');
+    if (!isRecord(messages[0].info) || !isRecord(messages[1].info))
+      throw new Error('Fixture message shape changed.');
     messages[0].info.id = 'bad_message';
     delete messages[0].info.agent;
     messages[1].info.id = 'bad_message';
     messages[1].info.parentID = 'missing_parent';
     const assistantParts = messages[1].parts;
-    if (!Array.isArray(assistantParts) || !isRecord(assistantParts[0]) || !isRecord(assistantParts[1]) || !isRecord(assistantParts[4])) throw new Error('Fixture part shape changed.');
+    if (
+      !Array.isArray(assistantParts) ||
+      !isRecord(assistantParts[0]) ||
+      !isRecord(assistantParts[1]) ||
+      !isRecord(assistantParts[4])
+    )
+      throw new Error('Fixture part shape changed.');
     assistantParts[0].id = 'bad_part';
     assistantParts[1].id = 'bad_part';
     assistantParts[1].sessionID = 'other_session';
@@ -354,8 +466,29 @@ describe('OpenCode schema compatibility diagnostics and report details', () => {
 
     expect(parsed.fatal).toBe(false);
     expect(parsed.session?.messages).toHaveLength(2);
-    expect(codes).toEqual(expect.arrayContaining(['opencode.id.sessionNoncanonical','opencode.id.workspaceNoncanonical','opencode.id.messageNoncanonical','opencode.id.messageDuplicate','opencode.invariant.assistantParentMissing','opencode.id.partNoncanonical','opencode.id.partDuplicate','opencode.invariant.partSessionIdMismatch','opencode.invariant.partMessageIdMismatch','opencode.id.toolCallDuplicate','opencode.required.string','opencode.required.present']));
-    expect(parsed.diagnostics.find((diagnostic) => diagnostic.code === 'opencode.invariant.partMessageIdMismatch' && diagnostic.message.includes('other_message'))?.path).toContain('parts[1].messageID');
+    expect(codes).toEqual(
+      expect.arrayContaining([
+        'opencode.id.sessionNoncanonical',
+        'opencode.id.workspaceNoncanonical',
+        'opencode.id.messageNoncanonical',
+        'opencode.id.messageDuplicate',
+        'opencode.invariant.assistantParentMissing',
+        'opencode.id.partNoncanonical',
+        'opencode.id.partDuplicate',
+        'opencode.invariant.partSessionIdMismatch',
+        'opencode.invariant.partMessageIdMismatch',
+        'opencode.id.toolCallDuplicate',
+        'opencode.required.string',
+        'opencode.required.present',
+      ]),
+    );
+    expect(
+      parsed.diagnostics.find(
+        (diagnostic) =>
+          diagnostic.code === 'opencode.invariant.partMessageIdMismatch' &&
+          diagnostic.message.includes('other_message'),
+      )?.path,
+    ).toContain('parts[1].messageID');
   });
 
   it('reports assistant self-parent references and parser-synthesized missing IDs without dropping source order', () => {
@@ -365,20 +498,28 @@ describe('OpenCode schema compatibility diagnostics and report details', () => {
     messages[1].info.parentID = messages[1].info.id;
     delete messages[1].info.id;
     const parts = messages[1].parts;
-    if (!Array.isArray(parts) || !isRecord(parts[2])) throw new Error('Fixture part shape changed.');
+    if (!Array.isArray(parts) || !isRecord(parts[2]))
+      throw new Error('Fixture part shape changed.');
     delete parts[2].id;
     const parsed = parseSessionExport(root);
 
     expect(parsed.fatal).toBe(false);
     expect(parsed.session?.messages.map((message) => message.sourceOrder)).toEqual([0, 1]);
-    expect(parsed.session?.messages[1]?.parts.map((part) => part.sourceOrder).slice(0, 4)).toEqual([0, 1, 2, 3]);
-    expect(parsed.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(expect.arrayContaining(['opencode.id.messageMissing','opencode.id.partMissing']));
+    expect(parsed.session?.messages[1]?.parts.map((part) => part.sourceOrder).slice(0, 4)).toEqual([
+      0, 1, 2, 3,
+    ]);
+    expect(parsed.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(
+      expect.arrayContaining(['opencode.id.messageMissing', 'opencode.id.partMissing']),
+    );
   });
 
   it('renders compatibility, metadata, named agent, subtask, retry, attachments, diffs, zero timestamps, and escaped URL text', () => {
     const root = mutableFixture('schema-conformant/strict-session.json');
     fixtureInfo(root).share = { url: 'javascript:<script>alert(1)</script>' };
-    const html = renderOpenCodeSessionReportHtml(buildSessionViewModel(normalize(root, 40)), 'vscode-resource:');
+    const html = renderOpenCodeSessionReportHtml(
+      buildSessionViewModel(normalize(root, 40)),
+      'vscode-resource:',
+    );
 
     expect(html).toContain('Compatibility summary');
     expect(html).toContain('reconstructed compatibility reference');

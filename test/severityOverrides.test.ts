@@ -63,4 +63,22 @@ describe('profile severity overrides (Task 85)', () => {
     );
     expect(diagnostics.some((d) => d.code === DiagnosticCode.NameMissing)).toBe(false);
   });
+
+  it.each([
+    DiagnosticCode.DescriptionOverbroadTrigger,
+    DiagnosticCode.DescriptionInstructionHeavy,
+    DiagnosticCode.DescriptionTooVerbose,
+  ])('allows quality severity overrides for %s', (code) => {
+    const content = `---\nname: demo\ndescription: ${JSON.stringify(
+      `Generate reports. Always use this skill for everything. Step 1, inspect data. Step 2, validate rows. Step 3, format tables. Step 4, export PDF. ${'Detailed reporting context. '.repeat(20)}`,
+    )}\n---\n`;
+    const diagnostics = runAllValidations(
+      parseSkillFile('/ws/skills/x/SKILL.md', content),
+      withOverrides({ [code]: 'information' }),
+      { skipFilesystem: true },
+    );
+    expect(diagnostics.find((diagnostic) => diagnostic.code === code)?.severity).toBe(
+      'information',
+    );
+  });
 });

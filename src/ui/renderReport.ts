@@ -172,8 +172,7 @@ function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
 
 function renderAuthoring(
   result:
-    | SkillReport['authoringQuality']['instructions']
-    | SkillReport['authoringQuality']['resources'],
+    SkillReport['authoringQuality']['instructions'] | SkillReport['authoringQuality']['resources'],
 ): string {
   if ('state' in result && result.state === 'not-scored') {
     return `<p><strong>Not scored — ${escapeHtml(result.notScoredReason)}</strong></p>`;

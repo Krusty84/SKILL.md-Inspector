@@ -3,11 +3,16 @@ import type { SkillDiagnostic, SkillDiagnosticSeverity } from '../types/SkillDia
 import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
 import {
+  assessScopeClause,
   hasNegativeBoundaryPhrase,
   hasExclusiveTriggerPhrase,
 } from '../quality/descriptionHeuristics';
-import { extractHeadings } from '../parser/parseMarkdownHeadings';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  type HeuristicDictionaries,
+} from '../quality/dictionaries';
 import { DEFAULT_BODY_SECTIONS, hasSection } from './bodySections';
+import { analyzeBodyEvidence } from './bodyEvidence';
 import { diag, bodyTopRange } from './util';
 
 /**
@@ -16,7 +21,11 @@ import { diag, bodyTopRange } from './util';
  * the section recommendations come from the profile and are surfaced at a
  * severity governed by `profile.body.strictness` (off | recommended | strict).
  */
-export function validateBody(doc: SkillDocument, profile: SkillProfile): SkillDiagnostic[] {
+export function validateBody(
+  doc: SkillDocument,
+  profile: SkillProfile,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): SkillDiagnostic[] {
   // Only meaningful once the frontmatter parsed; otherwise the frontmatter
   // error dominates and `body` may be the entire file.
   if (!doc.frontmatter) {
@@ -45,15 +54,25 @@ export function validateBody(doc: SkillDocument, profile: SkillProfile): SkillDi
   const severity: SkillDiagnosticSeverity = strictness === 'strict' ? 'warning' : 'information';
   const sections = profile.body?.sections ?? DEFAULT_BODY_SECTIONS;
 
-  const headings = extractHeadings(doc.body);
+  const evidence = analyzeBodyEvidence(doc.body);
   const diagnostics: SkillDiagnostic[] = [];
+  const description =
+    typeof doc.frontmatter.description === 'string' ? doc.frontmatter.description : '';
+  const frontmatterTrigger = assessScopeClause(description, 'trigger', dictionaries);
+  const frontmatterBoundary = assessScopeClause(description, 'boundary', dictionaries);
 
   for (const spec of sections) {
-    // A boundary can also be expressed in prose ("Do not use when...").
+    // Trigger and boundary scope can live in concrete frontmatter clauses;
+    // boundaries expressed in body prose remain supported as before.
     const satisfied =
-      hasSection(headings, spec) ||
+      (spec.id === 'examples'
+        ? evidence.hasExampleEvidence
+        : hasSection(evidence.headings, spec)) ||
+      (spec.id === 'whenToUse' && frontmatterTrigger.contentFound) ||
       (spec.id === 'boundary' &&
-        (hasNegativeBoundaryPhrase(doc.body).found || hasExclusiveTriggerPhrase(doc.body).found));
+        (hasNegativeBoundaryPhrase(doc.body, dictionaries).found ||
+          hasExclusiveTriggerPhrase(doc.body, dictionaries).found ||
+          frontmatterBoundary.contentFound));
     if (!satisfied) {
       diagnostics.push(diag(spec.code, severity, spec.message, range));
     }

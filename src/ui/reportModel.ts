@@ -61,6 +61,6 @@ export function buildReportModel(
     referencedFiles: doc.resources.filter((r) => r.referenced).map((r) => r.relativePath),
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
     staticDescriptionQuality,
-    authoringQuality: assessAuthoringQuality(doc),
+    authoringQuality: assessAuthoringQuality(doc, dictionaries),
   };
 }

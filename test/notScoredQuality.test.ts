@@ -62,9 +62,14 @@ describe('explicit not-scored quality state', () => {
     ['non-string', '42', 'description is not a string'],
     ['blank', '"   "', 'description is empty'],
   ])('propagates a %s YAML description through the report model', (_case, value, reason) => {
-    const content = ['---', 'name: invalid-description', `description: ${value}`, '---', '', '# Body'].join(
-      '\n',
-    );
+    const content = [
+      '---',
+      'name: invalid-description',
+      `description: ${value}`,
+      '---',
+      '',
+      '# Body',
+    ].join('\n');
     const { document, diagnostics } = analyzeSkill(
       '/skills/invalid-description/SKILL.md',
       content,

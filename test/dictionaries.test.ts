@@ -40,6 +40,17 @@ describe('resolveHeuristicDictionaries', () => {
     expect(forms.has('runed')).toBe(false);
   });
 
+  it('includes the centralized overbroad trigger vocabulary', () => {
+    expect(DEFAULT_HEURISTIC_DICTIONARIES.overbroadTriggerPhrases).toEqual(
+      expect.arrayContaining([
+        'always use this skill',
+        'whenever .* is mentioned',
+        'in any way',
+        'any kind of output',
+      ]),
+    );
+  });
+
   it('normalizes complete list values with trimming, lowercasing, and deduplication', () => {
     const resolved = resolveHeuristicDictionaries({
       vagueTerms: ['  Sparkly ', 'sparkly'],

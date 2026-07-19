@@ -68,8 +68,12 @@ describe('descriptionHeuristics', () => {
   });
 
   it('matches hyphenated vague terms as whole phrases', () => {
-    expect(analyzeDescription('A general-purpose helper for anything.').vagueTerms).toContain('general-purpose');
-    expect(analyzeDescription('The general approach works well here.').vagueTerms).toContain('general');
+    expect(analyzeDescription('A general-purpose helper for anything.').vagueTerms).toContain(
+      'general-purpose',
+    );
+    expect(analyzeDescription('The general approach works well here.').vagueTerms).toContain(
+      'general',
+    );
   });
 
   it('tokenizes Latin, Cyrillic, accented, and CJK text', () => {
@@ -162,7 +166,9 @@ describe('descriptionHeuristics', () => {
 
   it('matches typographic apostrophes in boundary phrases', () => {
     expect(hasNegativeBoundaryPhrase('Don’t use for legal transcripts.').found).toBe(true);
-    const analysis = analyzeDescription('Summarize meeting notes. Don’t use when drafting contracts.');
+    const analysis = analyzeDescription(
+      'Summarize meeting notes. Don’t use when drafting contracts.',
+    );
     expect(analysis.triggerClause.markerFound).toBe(false); // inner "use when" must not leak
     expect(analysis.boundaryClause.contentFound).toBe(true);
   });
@@ -180,27 +186,50 @@ describe('descriptionHeuristics', () => {
 
 describe('scope-clause selection and artifact signal', () => {
   it('selects the earliest strongest marker across sentences, lines, and casing', () => {
-    expect(analyzeDescription('Use when needed. Use when processing PDF invoices.').triggerClause.contentFound).toBe(true);
-    expect(analyzeDescription('Use when processing PDF invoices. USE WHEN needed.').triggerClause.matched).toBe('use when');
-    expect(analyzeDescription('Do not use when needed.\nDo not use when processing legal contracts.').boundaryClause.contentFound).toBe(true);
-    const analysis = analyzeDescription('Do not use when handling invoices. Use when processing PDF reports.');
+    expect(
+      analyzeDescription('Use when needed. Use when processing PDF invoices.').triggerClause
+        .contentFound,
+    ).toBe(true);
+    expect(
+      analyzeDescription('Use when processing PDF invoices. USE WHEN needed.').triggerClause
+        .matched,
+    ).toBe('use when');
+    expect(
+      analyzeDescription('Do not use when needed.\nDo not use when processing legal contracts.')
+        .boundaryClause.contentFound,
+    ).toBe(true);
+    const analysis = analyzeDescription(
+      'Do not use when handling invoices. Use when processing PDF reports.',
+    );
     expect(analysis.triggerClause.contentFound).toBe(true);
     expect(analysis.triggerClause.contentTokens).toContain('pdf');
   });
 
   it('credits an uppercase ambiguous acronym as single-token clause content', () => {
-    expect(analyzeDescription('Validate assemblies. Use for STEP.').triggerClause.contentFound).toBe(true);
-    expect(analyzeDescription('Validate assemblies. Use for step.').triggerClause.contentFound).toBe(false);
-    expect(analyzeDescription('Validate assemblies. Use for SQL.').triggerClause.contentFound).toBe(true);
+    expect(
+      analyzeDescription('Validate assemblies. Use for STEP.').triggerClause.contentFound,
+    ).toBe(true);
+    expect(
+      analyzeDescription('Validate assemblies. Use for step.').triggerClause.contentFound,
+    ).toBe(false);
+    expect(analyzeDescription('Validate assemblies. Use for SQL.').triggerClause.contentFound).toBe(
+      true,
+    );
   });
 
   it('does not credit generic artifacts without supporting context', () => {
     expect(analyzeDescription('Process files when needed.').concreteArtifact).toBe(false);
     expect(analyzeDescription('Handle data.').concreteArtifact).toBe(false);
     expect(analyzeDescription('Work with code.').concreteArtifact).toBe(false);
-    expect(analyzeDescription('Validate STEP assemblies before CAD release.').concreteArtifact).toBe(true);
-    expect(analyzeDescription('Analyze CAN telemetry from vehicle ECUs.').concreteArtifact).toBe(true);
-    expect(analyzeDescription('Review Python code for API schema migrations.').concreteArtifact).toBe(true);
+    expect(
+      analyzeDescription('Validate STEP assemblies before CAD release.').concreteArtifact,
+    ).toBe(true);
+    expect(analyzeDescription('Analyze CAN telemetry from vehicle ECUs.').concreteArtifact).toBe(
+      true,
+    );
+    expect(
+      analyzeDescription('Review Python code for API schema migrations.').concreteArtifact,
+    ).toBe(true);
   });
 
   it('uses editable scope vagueness and restrictive boundary policy', () => {
@@ -232,7 +261,9 @@ describe('scope-clause selection and artifact signal', () => {
     });
     expect(analyzeDescription('Calibrate widgets.', customArtifact).concreteArtifact).toBe(true);
 
-    expect(analyzeDescription('Analyze can telemetry.').artifactEvidence.matchedTerms).not.toContain('can');
+    expect(
+      analyzeDescription('Analyze can telemetry.').artifactEvidence.matchedTerms,
+    ).not.toContain('can');
     const lowercaseAllowed = resolveHeuristicDictionaries({
       uppercaseOnlyAcronyms: DEFAULT_HEURISTIC_DICTIONARIES.uppercaseOnlyAcronyms.filter(
         (term) => term !== 'can',

@@ -66,9 +66,8 @@ describe('fixture-backed action capability detection', () => {
     expect(result.analysis.actionVerb).toEqual({ found: true, matched: capability });
     expect(result.analysis.frontLoadedIntent.matchedCapability).toBe(capability);
     expect(
-      result.quality.findings.find((finding) =>
-        finding.criterion.startsWith('Action verb'),
-      )?.message,
+      result.quality.findings.find((finding) => finding.criterion.startsWith('Action verb'))
+        ?.message,
     ).toContain(`"${capability}"`);
   });
 

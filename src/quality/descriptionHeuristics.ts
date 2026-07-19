@@ -27,6 +27,16 @@ export interface FrontLoadedIntentResult {
   matchedCapability?: string;
   matchedObject?: string;
 }
+export interface OverbroadTriggerAnalysis extends PhraseMatch {
+  matchedPhrases: string[];
+}
+export interface InstructionHeavyAnalysis {
+  found: boolean;
+  stepMarkerCount: number;
+  numberedClauseCount: number;
+  imperativeSentenceCount: number;
+  workflowMarkerCount: number;
+}
 interface LeadingCapabilityMatch extends PhraseMatch {
   tokenIndex?: number;
   position?: 'direct' | 'subject' | 'use-when' | 'when-asked' | 'trigger';
@@ -45,6 +55,8 @@ export interface DescriptionAnalysis {
   triggerClause: ScopeClauseAnalysis;
   boundaryClause: ScopeClauseAnalysis;
   frontLoadedIntent: FrontLoadedIntentResult;
+  overbroadTrigger: OverbroadTriggerAnalysis;
+  instructionHeavy: InstructionHeavyAnalysis;
 }
 
 export function analyzeDescription(
@@ -71,7 +83,82 @@ export function analyzeDescription(
     triggerClause,
     boundaryClause,
     frontLoadedIntent: analyzeFrontLoadedIntent(trimmed, dictionaries),
+    overbroadTrigger: analyzeOverbroadTrigger(trimmed, dictionaries),
+    instructionHeavy: analyzeInstructionHeavy(trimmed, dictionaries),
   };
+}
+
+export function analyzeOverbroadTrigger(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): OverbroadTriggerAnalysis {
+  const usageContext =
+    /\b(?:use|using|invoke|activate|select|choose)\s+(?:this|the)\s+skill\b|\b(?:this\s+skill|it)\b[^.!?;]{0,80}\b(?:used|invoked|activated|selected|chosen|considered)\b|\b(?:should|must|can|will)\b[^.!?;]{0,40}\bbe\s+(?:used|invoked|activated|selected|chosen|considered)\b|\btrigger(?:s|ed)?\s+when\b/iu;
+  const sentences = description.match(/[^.!?;\n]+(?:[.!?;]+|$)/g) ?? [];
+  const matchedPhrases = dictionaries.overbroadTriggerPhrases.filter((phrase) =>
+    sentences.some(
+      (sentence) => usageContext.test(sentence) && overbroadPhraseRegex(phrase).test(sentence),
+    ),
+  );
+  return matchedPhrases.length > 0
+    ? { found: true, matched: matchedPhrases[0], matchedPhrases }
+    : { found: false, matchedPhrases: [] };
+}
+
+export function analyzeInstructionHeavy(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): InstructionHeavyAnalysis {
+  const stepMarkerCount = description.match(/\bstep\s+\d+\b/giu)?.length ?? 0;
+  const numberedClauseCount = [
+    ...description.matchAll(/(?:^|[\n;:]|[,.!?]\s+)\s*\d{1,2}[.)]\s+(?=\p{L})/gu),
+  ].length;
+  const actionVerbs = new Set(dictionaries.actionVerbs);
+  const imperativeSentenceCount = description
+    .split(/(?<=[.!?;])\s+|\n+/)
+    .map((sentence) =>
+      sentence
+        .trim()
+        .replace(/^step\s+\d+\s*[,.:)-]?\s*/iu, '')
+        .replace(/^\d{1,2}[.)]\s*/u, ''),
+    )
+    .filter((sentence) => {
+      const firstToken = sentence.match(/^([\p{L}\p{N}]+)/u)?.[1].toLowerCase();
+      return firstToken !== undefined && actionVerbs.has(firstToken);
+    }).length;
+  // A numbered imperative can satisfy more than one detector; use the largest
+  // count so one clause is not counted twice toward the combined threshold.
+  const workflowMarkerCount = Math.max(
+    stepMarkerCount,
+    numberedClauseCount,
+    imperativeSentenceCount,
+  );
+  return {
+    found:
+      stepMarkerCount >= 4 ||
+      numberedClauseCount >= 4 ||
+      imperativeSentenceCount >= 6 ||
+      (description.trim().length > 500 && workflowMarkerCount >= 3),
+    stepMarkerCount,
+    numberedClauseCount,
+    imperativeSentenceCount,
+    workflowMarkerCount,
+  };
+}
+
+function overbroadPhraseRegex(phrase: string): RegExp {
+  const source = phrase
+    .split('.*')
+    .map((part) =>
+      part
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => escapeRegex(word).replace(/'/g, "['’]"))
+        .join('\\s+'),
+    )
+    .join('[^\\n.!?;]{1,160}?');
+  return new RegExp(`\\b${source}\\b`, 'iu');
 }
 export function hasActionVerb(
   description: string,
@@ -95,13 +182,15 @@ export function analyzeFrontLoadedIntent(
   const forms = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms).forms;
   const filler = new Set(dictionaries.frontLoadedFillerTerms);
   const capability = leadingCapability.matched;
-  const object = tokens.slice((leadingCapability.tokenIndex ?? tokens.length) + 1).find(
-    (token) =>
-      !forms.has(token) &&
-      token.length > 2 &&
-      !filler.has(token) &&
-      !dictionaries.vagueTerms.includes(token),
-  );
+  const object = tokens
+    .slice((leadingCapability.tokenIndex ?? tokens.length) + 1)
+    .find(
+      (token) =>
+        !forms.has(token) &&
+        token.length > 2 &&
+        !filler.has(token) &&
+        !dictionaries.vagueTerms.includes(token),
+    );
   const concrete =
     analyzeArtifactEvidence(leading, dictionaries).found || Boolean(object && tokens.length >= 4);
   const prefix =
@@ -165,10 +254,7 @@ function matchLeadingCapability(
 ): LeadingCapabilityMatch {
   const leading = description.split(/(?<=[.!?])\s+/)[0] ?? '';
   const tokens = tokenize(leading);
-  const { forms, toBase } = buildVerbForms(
-    dictionaries.actionVerbs,
-    dictionaries.actionVerbForms,
-  );
+  const { forms, toBase } = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms);
   const candidate = (
     tokenIndex: number,
     position: LeadingCapabilityMatch['position'],

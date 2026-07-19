@@ -1508,6 +1508,25 @@
             "type": "string"
           }
         },
+        "skillMdInspector.heuristics.dictionaryValues.overbroadTriggerPhrases": {
+          "type": "array",
+          "scope": "resource",
+          "default": [
+            "always use this skill",
+            "should always be used",
+            "whenever .* is mentioned",
+            "whenever .* are mentioned",
+            "in any way",
+            "for anything",
+            "for everything",
+            "basically always",
+            "any kind of output"
+          ],
+          "description": "Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.",
+          "items": {
+            "type": "string"
+          }
+        },
         "skillMdInspector.heuristics.dictionaryValues.frontLoadedFillerTerms": {
           "type": "array",
           "scope": "resource",

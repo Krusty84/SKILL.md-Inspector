@@ -245,6 +245,17 @@
     "except when",
     "except for"
   ],
+  "overbroadTriggerPhrases": [
+    "always use this skill",
+    "should always be used",
+    "whenever .* is mentioned",
+    "whenever .* are mentioned",
+    "in any way",
+    "for anything",
+    "for everything",
+    "basically always",
+    "any kind of output"
+  ],
   "frontLoadedFillerTerms": [
     "this",
     "skill",

@@ -1,0 +1,533 @@
+{
+  "stuff": {
+    "group": "quality-ladder",
+    "tier": "broken",
+    "frontmatter": "missing",
+    "requiredDiagnostics": ["skill.frontmatter.missing"],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "not-scored" },
+    "instructionQuality": { "state": "not-scored" },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": [],
+    "limitations": [
+      "The vague prose and TODO are human-review examples because missing frontmatter prevents deterministic instruction scoring."
+    ]
+  },
+  "helper": {
+    "group": "quality-ladder",
+    "tier": "broken",
+    "frontmatter": "invalid",
+    "requiredDiagnostics": ["skill.frontmatter.invalid"],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "not-scored" },
+    "instructionQuality": { "state": "not-scored" },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": []
+  },
+  "data-thing": {
+    "group": "quality-ladder",
+    "tier": "poor",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.tooShort",
+      "skill.body.noExamples",
+      "skill.body.noWhenToUse"
+    ],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [],
+    "limitations": [
+      "Contradictory step ordering and whether the prose is useful are semantic judgments outside deterministic structural scoring."
+    ]
+  },
+  "email-drafter": {
+    "group": "quality-ladder",
+    "tier": "mediocre",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.vague"
+    ],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
+    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
+    "requiredInstructionFindings": ["Placeholders", "Empty section"],
+    "forbiddenInstructionFindings": [],
+    "limitations": [
+      "The mutually contradictory drafting rules remain a human-review example; deterministic instruction quality checks structure and hygiene only."
+    ]
+  },
+  "report-generator": {
+    "group": "quality-ladder",
+    "tier": "mediocre",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [
+      "skill.description.tooLong",
+      "skill.description.overbroadTrigger",
+      "skill.description.vague",
+      "skill.body.noExamples"
+    ],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [],
+    "limitations": [
+      "Circular or unhelpful prose is semantic unless it crosses a deterministic repetition or structure threshold."
+    ]
+  },
+  "git-commit-helper": {
+    "group": "quality-ladder",
+    "tier": "decent",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.body.noExamples"],
+    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "changelog-writer": {
+    "group": "quality-ladder",
+    "tier": "good",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Examples",
+      "Empty section",
+      "Duplicate sections",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "csv-cleaner": {
+    "group": "quality-ladder",
+    "tier": "very-good",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.body.noExamples"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Empty section",
+      "Duplicate sections",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "api-error-triage": {
+    "group": "quality-ladder",
+    "tier": "excellent",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary",
+      "skill.description.vague"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Examples",
+      "Empty section",
+      "Duplicate sections",
+      "Length",
+      "Repetitive instructions"
+    ],
+    "limitations": [
+      "Factual correctness and the safety of the troubleshooting advice are outside deterministic structural scoring."
+    ]
+  },
+  "pdf-form-filler": {
+    "group": "quality-ladder",
+    "tier": "excellent",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary",
+      "skill.resource.unreferenced"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Examples",
+      "Empty section",
+      "Duplicate sections",
+      "Length",
+      "Repetitive instructions"
+    ],
+    "resourceExpectations": {
+      "requiredFindings": [],
+      "forbiddenFindings": ["Undocumented script", "Unreferenced resource", "Large resource"],
+      "requiredNodes": [
+        { "path": "references/field-types.md", "kind": "referenced" },
+        { "path": "scripts/fill_form.py", "kind": "referenced" }
+      ]
+    },
+    "limitations": [
+      "The fixture contract checks that resources exist and are referenced, not that the PDF script is functionally correct or safe for every input."
+    ]
+  },
+  "json-formatter": {
+    "group": "defect-zoo",
+    "tier": "broken",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.description.missing"],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "not-scored" },
+    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
+    "requiredInstructionFindings": ["Substantive instructions", "Examples"],
+    "forbiddenInstructionFindings": []
+  },
+  "sql-optimizer": {
+    "group": "defect-zoo",
+    "tier": "broken",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.name.missing"],
+    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "Docker-Deploy-Helper": {
+    "group": "defect-zoo",
+    "tier": "poor",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.name.folderMismatch", "skill.name.format"],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [],
+    "limitations": [
+      "The unsafe retry-with-sudo advice is intentionally outside deterministic structural analysis and requires human review."
+    ]
+  },
+  "legacy-migration": {
+    "group": "defect-zoo",
+    "tier": "poor",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.description.vague"],
+    "forbiddenDiagnostics": ["skill.frontmatter.missing", "skill.frontmatter.invalid"],
+    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
+    "instructionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
+    "requiredInstructionFindings": ["Unclosed code fence", "Examples"],
+    "forbiddenInstructionFindings": []
+  },
+  "webhook-debugger": {
+    "group": "defect-zoo",
+    "tier": "mediocre",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [
+      "skill.description.instructionHeavy",
+      "skill.description.overbroadTrigger"
+    ],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
+    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
+    "requiredInstructionFindings": ["Substantive instructions", "Examples"],
+    "forbiddenInstructionFindings": []
+  },
+  "k8s-log-analyzer": {
+    "group": "defect-zoo",
+    "tier": "mediocre",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.name.folderMismatch", "skill.name.tooLong"],
+    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "style-formatter": {
+    "group": "defect-zoo",
+    "tier": "mediocre",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.name.folderMismatch"],
+    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
+    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "code-formatter": {
+    "group": "defect-zoo",
+    "tier": "decent",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.body.noExamples"],
+    "forbiddenDiagnostics": [
+      "skill.name.folderMismatch",
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "meeting-notes": {
+    "group": "defect-zoo",
+    "tier": "decent",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.name.folderMismatch"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Examples",
+      "Empty section",
+      "Duplicate sections",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "markdown-slides": {
+    "group": "defect-zoo",
+    "tier": "good",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.link.missing"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ],
+    "resourceExpectations": {
+      "requiredFindings": [],
+      "forbiddenFindings": ["Undocumented script", "Unreferenced resource", "Large resource"],
+      "requiredNodes": [
+        { "path": "references/theme-guide.md", "kind": "missing" },
+        { "path": "scripts/build.py", "kind": "missing" }
+      ]
+    }
+  },
+  "release-automation": {
+    "group": "defect-zoo",
+    "tier": "mediocre",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.body.noExamples"],
+    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
+    "requiredInstructionFindings": ["Examples", "Length", "Repetitive instructions"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders"
+    ]
+  },
+  "tech-translator": {
+    "group": "defect-zoo",
+    "tier": "good",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.body.noExamples"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ],
+    "limitations": [
+      "The Russian body is a Unicode robustness case; language quality and translation correctness require human review."
+    ]
+  },
+  "bug-repro-minimizer": {
+    "group": "defect-zoo",
+    "tier": "excellent",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": [],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Examples",
+      "Empty section",
+      "Duplicate sections",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "engineering-report-formatter": {
+    "group": "legacy",
+    "tier": "good",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.body.noExamples"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ]
+  },
+  "pdf-helper": {
+    "group": "legacy",
+    "tier": "poor",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [
+      "skill.name.folderMismatch",
+      "skill.name.format",
+      "skill.description.tooShort",
+      "skill.description.vague"
+    ],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
+    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
+    "requiredInstructionFindings": ["Substantive instructions", "Examples"],
+    "forbiddenInstructionFindings": []
+  },
+  "pdf-report-formatter": {
+    "group": "legacy",
+    "tier": "good",
+    "frontmatter": "valid",
+    "requiredDiagnostics": ["skill.resource.unreferenced", "skill.body.noExamples"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger",
+      "skill.description.noBoundary"
+    ],
+    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "requiredInstructionFindings": ["Examples"],
+    "forbiddenInstructionFindings": [
+      "Substantive body",
+      "Substantive instructions",
+      "Unclosed code fence",
+      "Placeholders",
+      "Length",
+      "Repetitive instructions"
+    ],
+    "resourceExpectations": {
+      "requiredFindings": ["Unreferenced resource"],
+      "forbiddenFindings": ["Undocumented script", "Large resource"],
+      "requiredNodes": [
+        { "path": "references/report-style-guide.md", "kind": "referenced" },
+        { "path": "references/unused-notes.md", "kind": "unreferenced" }
+      ]
+    }
+  }
+}

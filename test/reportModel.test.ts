@@ -19,7 +19,11 @@ afterEach(() => {
 });
 
 function report(content: string) {
-  const { document, diagnostics } = analyzeSkill(path.join(dir, 'SKILL.md'), content, genericProfile);
+  const { document, diagnostics } = analyzeSkill(
+    path.join(dir, 'SKILL.md'),
+    content,
+    genericProfile,
+  );
   return buildReportModel(document, diagnostics, genericProfile);
 }
 
@@ -46,12 +50,14 @@ describe('buildReportModel', () => {
     expect(model.staticDescriptionQuality.score).toBeGreaterThanOrEqual(75);
     expect(model.staticDescriptionQuality.findings).toHaveLength(7);
     expect(
-      model.staticDescriptionQuality.findings.find((f) => f.criterion.startsWith('Action verb'))?.pointsEarned,
+      model.staticDescriptionQuality.findings.find((f) => f.criterion.startsWith('Action verb'))
+        ?.pointsEarned,
     ).toBe(20);
     expect(
       // Generic profile de-emphasizes the boundary criterion (weight 5); the
       // single concrete artifact "contracts" earns the clause full credit.
-      model.staticDescriptionQuality.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned,
+      model.staticDescriptionQuality.findings.find((f) => f.criterion === 'Boundary phrase')
+        ?.pointsEarned,
     ).toBe(5);
   });
 
@@ -68,17 +74,19 @@ describe('buildReportModel', () => {
     const { document, diagnostics } = analyzeSkill(fixturePath, content, genericProfile);
     const model = buildReportModel(document, diagnostics, genericProfile);
 
-    expect(model.authoringQuality.instructions.score).toBe(100);
+    expect(model.authoringQuality.instructions.score).toBe(90);
     expect(model.authoringQuality.instructions.label).toBe('excellent');
   });
 
   it('reports warnings without treating description or authoring quality as validation', () => {
-    const model = report([
-      '---',
-      'name: engineering-report-formatter',
-      'description: Format technical engineering reports using company layout rules.',
-      '---',
-    ].join('\n'));
+    const model = report(
+      [
+        '---',
+        'name: engineering-report-formatter',
+        'description: Format technical engineering reports using company layout rules.',
+        '---',
+      ].join('\n'),
+    );
 
     expect(model.status).toBe('warning');
     expect(model.errorCount).toBe(0);
@@ -119,12 +127,14 @@ describe('renderReportHtml', () => {
   });
 
   it('renders validation severity and ordered findings for a warning-only skill', () => {
-    const model = report([
-      '---',
-      'name: engineering-report-formatter',
-      'description: Format technical engineering reports using company layout rules.',
-      '---',
-    ].join('\n'));
+    const model = report(
+      [
+        '---',
+        'name: engineering-report-formatter',
+        'description: Format technical engineering reports using company layout rules.',
+        '---',
+      ].join('\n'),
+    );
     const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
 
     expect(html).toContain('Validation status: VALID WITH WARNINGS');
@@ -134,7 +144,9 @@ describe('renderReportHtml', () => {
     expect(html.indexOf('Instruction authoring quality')).toBeLessThan(
       html.indexOf('<h2>Validation findings</h2>'),
     );
-    expect(html).toContain('Suggestion: Write the instructions the agent should follow after the skill triggers.');
+    expect(html).toContain(
+      'Suggestion: Write the instructions the agent should follow after the skill triggers.',
+    );
     expect(html).toContain('<h2>Validation findings</h2>');
     expect(html).toContain('Diagnostic code');
     expect(html.indexOf(DiagnosticCode.DescriptionNoTrigger)).toBeLessThan(
@@ -158,12 +170,14 @@ describe('renderReportHtml', () => {
   });
 
   it('does not render an adjustment notice for a complete description', () => {
-    const model = report([
-      '---',
-      'name: complete-skill',
-      'description: Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.',
-      '---',
-    ].join('\n'));
+    const model = report(
+      [
+        '---',
+        'name: complete-skill',
+        'description: Format inspection reports using standard rules. Use when standardizing reports. Do not use when handling invoices.',
+        '---',
+      ].join('\n'),
+    );
     const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
 
     expect(model.staticDescriptionQuality.rawScore).toBe(

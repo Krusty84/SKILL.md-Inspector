@@ -18,7 +18,9 @@ describe('profile-dependent static-description-quality weights', () => {
   it('lets the generic profile reach excellent without a boundary', () => {
     const result = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
     expect(result.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned).toBe(0);
-    expect(result.gradeLimitations.some((limitation) => limitation.code.includes('boundary'))).toBe(false);
+    expect(result.gradeLimitations.some((limitation) => limitation.code.includes('boundary'))).toBe(
+      false,
+    );
     expect(result.score).toBeGreaterThanOrEqual(90);
     expect(result.label).toBe('excellent');
   });

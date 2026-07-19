@@ -25,7 +25,9 @@ describe('isPathInsideDir (Windows)', () => {
   const dir = 'C:\\ws\\skills\\demo';
 
   it('accepts a nested path', () => {
-    expect(isPathInsideDir(dir, 'C:\\ws\\skills\\demo\\references\\guide.md', path.win32)).toBe(true);
+    expect(isPathInsideDir(dir, 'C:\\ws\\skills\\demo\\references\\guide.md', path.win32)).toBe(
+      true,
+    );
   });
 
   it('rejects a parent-escaping path', () => {
@@ -60,8 +62,8 @@ describe('canonicalizeLocalPath', () => {
 
   it('unifies separators on Windows', () => {
     const dir = 'C:\\ws\\skills\\demo';
-    expect(canonicalizeLocalPath(dir, 'C:\\ws\\skills\\demo\\references\\guide.md', path.win32)).toBe(
-      canonicalizeLocalPath(dir, 'references/guide.md', path.win32),
-    );
+    expect(
+      canonicalizeLocalPath(dir, 'C:\\ws\\skills\\demo\\references\\guide.md', path.win32),
+    ).toBe(canonicalizeLocalPath(dir, 'references/guide.md', path.win32));
   });
 });

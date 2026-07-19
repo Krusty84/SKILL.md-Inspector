@@ -241,9 +241,7 @@
           "messageID": "msg_assistant",
           "type": "patch",
           "hash": "abc",
-          "files": [
-            "a.txt"
-          ],
+          "files": ["a.txt"],
           "patch": "diff --git"
         },
         {

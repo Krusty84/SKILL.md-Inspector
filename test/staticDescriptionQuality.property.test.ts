@@ -74,7 +74,9 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
         expect(result.score).toBeGreaterThanOrEqual(0);
         expect(result.score).toBeLessThanOrEqual(result.rawScore);
         expect(result.rawScore).toBeLessThanOrEqual(100);
-        expect(result.findings.reduce((total, f) => total + f.pointsEarned, 0)).toBe(result.rawScore);
+        expect(result.findings.reduce((total, f) => total + f.pointsEarned, 0)).toBe(
+          result.rawScore,
+        );
         expect(result.findings.reduce((total, f) => total + f.pointsPossible, 0)).toBe(100);
         for (const finding of result.findings) {
           expect(Number.isInteger(finding.pointsEarned)).toBe(true);

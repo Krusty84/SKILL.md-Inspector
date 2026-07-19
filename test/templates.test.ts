@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { builtInTemplates } from '../src/templates/builtInTemplates';
 import { normalizeTemplates } from '../src/templates/normalizeTemplates';
-import { inferSkillNameFromPath, renderTemplate, titleFromSkillName } from '../src/templates/renderTemplate';
+import {
+  inferSkillNameFromPath,
+  renderTemplate,
+  titleFromSkillName,
+} from '../src/templates/renderTemplate';
 import { resolveTemplates } from '../src/templates/resolveTemplates';
 import type { SkillTemplateDefinition } from '../src/templates/types';
 
@@ -54,7 +58,13 @@ describe('template validation', () => {
       { id: 'duplicate', label: 'Second', frontmatter: ['name: y'], body: [] },
     ]);
     expect(result.templates).toEqual([
-      { id: 'duplicate', label: 'First', description: undefined, frontmatter: ['  name: x  '], body: ['  body  '] },
+      {
+        id: 'duplicate',
+        label: 'First',
+        description: undefined,
+        frontmatter: ['  name: x  '],
+        body: ['  body  '],
+      },
     ]);
     expect(result.issues).toHaveLength(1);
   });
@@ -64,7 +74,12 @@ describe('template rendering', () => {
   const template: SkillTemplateDefinition = {
     id: 'test',
     label: 'Test',
-    frontmatter: ['name: {{name}}', 'description: {{name}} and {{title}}', 'metadata:', '  key: value'],
+    frontmatter: [
+      'name: {{name}}',
+      'description: {{name}} and {{title}}',
+      'metadata:',
+      '  key: value',
+    ],
     body: ['# {{title}}', '', '{{name}} {{name}} {{unknown}}', 'plain text'],
   };
 
@@ -75,7 +90,12 @@ describe('template rendering', () => {
   });
 
   it('renders an empty body and templates without placeholders', () => {
-    expect(renderTemplate({ id: 'x', label: 'X', frontmatter: ['name: x'], body: [] }, { name: 'n', title: 'T' })).toBe('---\nname: x\n---\n\n');
+    expect(
+      renderTemplate(
+        { id: 'x', label: 'X', frontmatter: ['name: x'], body: [] },
+        { name: 'n', title: 'T' },
+      ),
+    ).toBe('---\nname: x\n---\n\n');
   });
 });
 

@@ -39,7 +39,9 @@ describe('extractArtifacts (Task 37)', () => {
     expect(extractArtifacts('Refactor the C++ template layer.', plus)).toContain('c++ template');
 
     const dotted = resolveHeuristicDictionaries({ multiWordArtifacts: ['node.js service'] });
-    expect(extractArtifacts('Restart the nodeXjs service.', dotted)).not.toContain('node.js service');
+    expect(extractArtifacts('Restart the nodeXjs service.', dotted)).not.toContain(
+      'node.js service',
+    );
   });
 
   it('includes a custom artifact hint in collision features', () => {
@@ -75,9 +77,9 @@ describe('extractNegativeBoundaries (Task 39)', () => {
   it('does not match markers inside larger words', () => {
     expect(extractNegativeBoundaries('Do not use formatting hints.')).toEqual([]);
     expect(extractNegativeBoundaries('Avoid whenever possible.')).toEqual([]);
-    expect(
-      extractNegativeBoundaries('Format reports. Do not use for formatting slides.'),
-    ).toEqual(['formatting slides']);
+    expect(extractNegativeBoundaries('Format reports. Do not use for formatting slides.')).toEqual([
+      'formatting slides',
+    ]);
   });
 });
 

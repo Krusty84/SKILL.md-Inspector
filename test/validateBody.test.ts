@@ -3,14 +3,20 @@ import { validateBody } from '../src/validation/validateBody';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
 import type { SkillDocument } from '../src/types/SkillDocument';
 import type { SkillProfile, BodyStrictness, BodySectionSpec } from '../src/types/SkillProfile';
-import { EXAMPLES_SECTION, WHEN_TO_USE_SECTION, IO_SECTION } from '../src/validation/bodySections';
+import {
+  BOUNDARY_SECTION,
+  EXAMPLES_SECTION,
+  WHEN_TO_USE_SECTION,
+  IO_SECTION,
+} from '../src/validation/bodySections';
+import { codexProfile } from '../src/profiles/codexProfile';
 
-function docWith(body: string): SkillDocument {
+function docWith(body: string, description = 'd'): SkillDocument {
   return {
     uri: '/ws/skills/x/SKILL.md',
     directory: '/ws/skills/x',
     fileName: 'SKILL.md',
-    frontmatter: { name: 'x', description: 'd' },
+    frontmatter: { name: 'x', description },
     frontmatterRaw: '',
     body,
     bodyStartLine: 4,
@@ -73,5 +79,55 @@ describe('validateBody profile sections (Task 56)', () => {
       profileWith('recommended', [EXAMPLES_SECTION, WHEN_TO_USE_SECTION, IO_SECTION]),
     );
     expect(diagnostics.map((d) => d.code)).toEqual([DiagnosticCode.BodySuggestIO]);
+  });
+
+  it('accepts concrete frontmatter trigger scope for when-to-use', () => {
+    const diagnostics = validateBody(
+      docWith(
+        '## Examples\n\nA concrete example.',
+        'Format CSV reports. Use when cleaning malformed CSV exports.',
+      ),
+      profileWith('recommended'),
+    );
+    expect(diagnostics.map((d) => d.code)).not.toContain(DiagnosticCode.BodyNoWhenToUse);
+  });
+
+  it('rejects a vague frontmatter trigger marker for when-to-use', () => {
+    const diagnostics = validateBody(
+      docWith('## Examples\n\nA concrete example.', 'Format reports. Use when needed.'),
+      profileWith('recommended'),
+    );
+    expect(diagnostics.map((d) => d.code)).toContain(DiagnosticCode.BodyNoWhenToUse);
+  });
+
+  it('uses example evidence rather than requiring an Examples heading', () => {
+    const body =
+      '## Quick start\n\n```bash\nrun-tool input.csv\n```\n\n## When to use\n\nUse for CSV input.';
+    expect(validateBody(docWith(body), profileWith('recommended'))).toEqual([]);
+  });
+
+  it('accepts concrete frontmatter trigger and boundary scope for the Codex profile', () => {
+    const body = [
+      '## Quick start',
+      '',
+      '```bash',
+      'run-tool input.csv',
+      '```',
+      '',
+      '## Input and output',
+      '',
+      'Accept a CSV file and return a cleaned CSV file.',
+    ].join('\n');
+    const description =
+      'Clean malformed CSV exports. Use when repairing inconsistent CSV rows. Do not use for spreadsheet analysis.';
+    expect(validateBody(docWith(body, description), codexProfile)).toEqual([]);
+  });
+
+  it('requires concrete frontmatter boundary scope when the profile recommends boundaries', () => {
+    const diagnostics = validateBody(
+      docWith('## Examples\n\nA concrete example.', 'Format CSV reports. Do not use when needed.'),
+      profileWith('recommended', [BOUNDARY_SECTION]),
+    );
+    expect(diagnostics.map((item) => item.code)).toContain(DiagnosticCode.BodySuggestBoundary);
   });
 });

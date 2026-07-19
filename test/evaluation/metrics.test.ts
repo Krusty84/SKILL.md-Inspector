@@ -73,7 +73,10 @@ describe('behavioral trigger metrics', () => {
 
   it('rejects extra runs beyond runsPerQuery', () => {
     expect(() =>
-      calculateTriggerMetrics(suite, [...knownDecisions, { queryId: 'tp', run: 1, triggered: true }]),
+      calculateTriggerMetrics(suite, [
+        ...knownDecisions,
+        { queryId: 'tp', run: 1, triggered: true },
+      ]),
     ).toThrow(/extra runs/);
   });
 });

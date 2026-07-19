@@ -5,16 +5,30 @@ vi.mock('vscode', () => {
     fsPath: string;
     path: string;
     scheme: string;
-    constructor(value: string, scheme = 'file') { this.fsPath = value; this.path = value; this.scheme = scheme; }
-    toString(): string { return `${this.scheme}://${this.path}`; }
-    static file(value: string): Uri { return new Uri(value); }
-    static parse(value: string): Uri { const [scheme, rest] = value.split('://'); return new Uri(rest ?? value, scheme ?? 'file'); }
+    constructor(value: string, scheme = 'file') {
+      this.fsPath = value;
+      this.path = value;
+      this.scheme = scheme;
+    }
+    toString(): string {
+      return `${this.scheme}://${this.path}`;
+    }
+    static file(value: string): Uri {
+      return new Uri(value);
+    }
+    static parse(value: string): Uri {
+      const [scheme, rest] = value.split('://');
+      return new Uri(rest ?? value, scheme ?? 'file');
+    }
   }
   return { Uri, window: { showOpenDialog: vi.fn() } };
 });
 
 import * as vscode from 'vscode';
-import { getOpenCodeSessionUriFromTarget, resolveOpenCodeSessionUri } from '../../src/commands/opencode/sessionUriResolver';
+import {
+  getOpenCodeSessionUriFromTarget,
+  resolveOpenCodeSessionUri,
+} from '../../src/commands/opencode/sessionUriResolver';
 
 describe('resolveOpenCodeSessionUri', () => {
   it('uses an explicit vscode.Uri target', async () => {
@@ -40,7 +54,14 @@ describe('resolveOpenCodeSessionUri', () => {
     const uri = vscode.Uri.file('/tmp/picked.json');
     const showOpenDialog = vi.fn().mockResolvedValue([uri]);
     await expect(resolveOpenCodeSessionUri(undefined, { showOpenDialog })).resolves.toBe(uri);
-    expect(showOpenDialog).toHaveBeenCalledWith(expect.objectContaining({ canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { 'OpenCode Session Export': ['json'] } }));
+    expect(showOpenDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: { 'OpenCode Session Export': ['json'] },
+      }),
+    );
   });
 
   it('returns undefined when the file picker is cancelled', async () => {
@@ -52,6 +73,8 @@ describe('resolveOpenCodeSessionUri', () => {
     const uri = vscode.Uri.file('/tmp/fallback.json');
     const showOpenDialog = vi.fn().mockResolvedValue([uri]);
     expect(getOpenCodeSessionUriFromTarget('file:///tmp/untrusted.json')).toBeUndefined();
-    await expect(resolveOpenCodeSessionUri('file:///tmp/untrusted.json', { showOpenDialog })).resolves.toBe(uri);
+    await expect(
+      resolveOpenCodeSessionUri('file:///tmp/untrusted.json', { showOpenDialog }),
+    ).resolves.toBe(uri);
   });
 });

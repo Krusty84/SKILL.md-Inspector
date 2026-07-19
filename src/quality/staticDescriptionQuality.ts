@@ -239,6 +239,22 @@ function assessGradeLimitations(
       reason: 'No concrete artifact or domain is present, so the adjusted score cannot exceed 59.',
     });
   }
+  if (analysis.overbroadTrigger.found) {
+    limitations.push({
+      code: 'overbroad-usage-scope',
+      ceiling: 69,
+      reason:
+        'The description claims an overbroad usage scope, so the adjusted score cannot exceed 69.',
+    });
+  }
+  if (analysis.instructionHeavy.found) {
+    limitations.push({
+      code: 'instruction-heavy-description',
+      ceiling: 74,
+      reason:
+        'The frontmatter description embeds detailed procedure that belongs in the Markdown body, so the adjusted score cannot exceed 74.',
+    });
+  }
   if (analysis.triggerClause.contentFound) {
     return limitations;
   }

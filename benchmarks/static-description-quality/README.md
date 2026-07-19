@@ -2,6 +2,21 @@
 
 This version-controlled corpus checks curated qualitative expectations for the deterministic, offline description heuristic. It is **not** a runtime skill-selection benchmark.
 
+## How this benchmark differs from the other corpora
+
+- **Synthetic description benchmark (this directory):** isolates description
+  wording and profile weights in `cases.json`. It does not parse a whole
+  `SKILL.md`, discover resources, or inspect instruction structure.
+- **Whole-file fixture regression corpus:**
+  `fixtures/skills/expectations.json` analyzes every fixture with the generic
+  profile and local filesystem access. It protects parsing, diagnostics,
+  separate description and instruction quality dimensions, resources, name
+  conflicts, and workspace collisions. Run it as part of `npm test`.
+- **Behavioral trigger evaluation:** `evaluation/` records provider selection
+  decisions and calculates runtime precision, recall, specificity, F1, and
+  stability. It is intentionally separate from deterministic static quality;
+  `npm run test:eval` tests the evaluation model and metrics.
+
 Each case records:
 
 - `profile` — the scorer profile (`generic` when omitted for legacy corpus cases); the benchmark resolves that profile's length limits, language mode, and criterion weights rather than using the default scorer weights;

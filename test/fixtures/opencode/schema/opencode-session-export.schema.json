@@ -25,10 +25,7 @@
       }
     }
   },
-  "required": [
-    "info",
-    "messages"
-  ],
+  "required": ["info", "messages"],
   "additionalProperties": false,
   "$defs": {
     "SessionID": {
@@ -86,10 +83,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "read",
-        "write"
-      ]
+      "required": ["read", "write"]
     },
     "Tokens": {
       "type": "object",
@@ -111,12 +105,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "input",
-        "output",
-        "reasoning",
-        "cache"
-      ]
+      "required": ["input", "output", "reasoning", "cache"]
     },
     "FileDiff": {
       "type": "object",
@@ -134,18 +123,11 @@
           "$ref": "#/$defs/FiniteNumber"
         },
         "status": {
-          "enum": [
-            "added",
-            "deleted",
-            "modified"
-          ]
+          "enum": ["added", "deleted", "modified"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "additions",
-        "deletions"
-      ]
+      "required": ["additions", "deletions"]
     },
     "PermissionRule": {
       "type": "object",
@@ -157,19 +139,11 @@
           "type": "string"
         },
         "action": {
-          "enum": [
-            "allow",
-            "deny",
-            "ask"
-          ]
+          "enum": ["allow", "deny", "ask"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "permission",
-        "pattern",
-        "action"
-      ]
+      "required": ["permission", "pattern", "action"]
     },
     "SessionSummary": {
       "type": "object",
@@ -191,11 +165,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "additions",
-        "deletions",
-        "files"
-      ]
+      "required": ["additions", "deletions", "files"]
     },
     "SessionTime": {
       "type": "object",
@@ -214,10 +184,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "created",
-        "updated"
-      ]
+      "required": ["created", "updated"]
     },
     "SessionModel": {
       "type": "object",
@@ -233,10 +200,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "providerID"
-      ]
+      "required": ["id", "providerID"]
     },
     "SessionRevert": {
       "type": "object",
@@ -255,9 +219,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "messageID"
-      ]
+      "required": ["messageID"]
     },
     "SessionInfo": {
       "type": "object",
@@ -300,9 +262,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "url"
-          ]
+          "required": ["url"]
         },
         "title": {
           "type": "string"
@@ -333,15 +293,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "slug",
-        "projectID",
-        "directory",
-        "title",
-        "version",
-        "time"
-      ]
+      "required": ["id", "slug", "projectID", "directory", "title", "version", "time"]
     },
     "OutputFormatText": {
       "type": "object",
@@ -351,9 +303,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type"
-      ]
+      "required": ["type"]
     },
     "OutputFormatJsonSchema": {
       "type": "object",
@@ -369,10 +319,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type",
-        "schema"
-      ]
+      "required": ["type", "schema"]
     },
     "OutputFormat": {
       "oneOf": [
@@ -399,11 +346,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "value",
-        "start",
-        "end"
-      ]
+      "required": ["value", "start", "end"]
     },
     "Position": {
       "type": "object",
@@ -416,10 +359,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "line",
-        "character"
-      ]
+      "required": ["line", "character"]
     },
     "Range": {
       "type": "object",
@@ -432,10 +372,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "start",
-        "end"
-      ]
+      "required": ["start", "end"]
     },
     "FileSource": {
       "type": "object",
@@ -451,11 +388,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type",
-        "text",
-        "path"
-      ]
+      "required": ["type", "text", "path"]
     },
     "SymbolSource": {
       "type": "object",
@@ -480,14 +413,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type",
-        "text",
-        "path",
-        "range",
-        "name",
-        "kind"
-      ]
+      "required": ["type", "text", "path", "range", "name", "kind"]
     },
     "ResourceSource": {
       "type": "object",
@@ -506,12 +432,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type",
-        "text",
-        "clientName",
-        "uri"
-      ]
+      "required": ["type", "text", "clientName", "uri"]
     },
     "FilePartSource": {
       "oneOf": [
@@ -547,13 +468,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "snapshot"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "snapshot"]
     },
     "PatchPart": {
       "type": "object",
@@ -581,14 +496,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "hash",
-        "files"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "hash", "files"]
     },
     "TextPart": {
       "type": "object",
@@ -625,22 +533,14 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "start"
-          ]
+          "required": ["start"]
         },
         "metadata": {
           "$ref": "#/$defs/StringMapAny"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "text"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "text"]
     },
     "ReasoningPart": {
       "type": "object",
@@ -674,20 +574,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "start"
-          ]
+          "required": ["start"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "text",
-        "time"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "text", "time"]
     },
     "FilePart": {
       "type": "object",
@@ -718,14 +609,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "mime",
-        "url"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "mime", "url"]
     },
     "AgentPart": {
       "type": "object",
@@ -759,21 +643,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "value",
-            "start",
-            "end"
-          ]
+          "required": ["value", "start", "end"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "name"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "name"]
     },
     "CompactionPart": {
       "type": "object",
@@ -801,13 +675,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "auto"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "auto"]
     },
     "SubtaskPart": {
       "type": "object",
@@ -844,25 +712,14 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "providerID",
-            "modelID"
-          ]
+          "required": ["providerID", "modelID"]
         },
         "command": {
           "type": "string"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "prompt",
-        "description",
-        "agent"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "prompt", "description", "agent"]
     },
     "APIError": {
       "type": "object",
@@ -893,17 +750,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "message",
-            "isRetryable"
-          ]
+          "required": ["message", "isRetryable"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "ProviderAuthError": {
       "type": "object",
@@ -922,17 +773,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "providerID",
-            "message"
-          ]
+          "required": ["providerID", "message"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "UnknownError": {
       "type": "object",
@@ -951,16 +796,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "message"
-          ]
+          "required": ["message"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "MessageOutputLengthError": {
       "type": "object",
@@ -975,10 +815,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "MessageAbortedError": {
       "type": "object",
@@ -994,16 +831,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "message"
-          ]
+          "required": ["message"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "StructuredOutputError": {
       "type": "object",
@@ -1022,17 +854,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "message",
-            "retries"
-          ]
+          "required": ["message", "retries"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "ContextOverflowError": {
       "type": "object",
@@ -1051,16 +877,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "message"
-          ]
+          "required": ["message"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "ContentFilterError": {
       "type": "object",
@@ -1076,16 +897,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "message"
-          ]
+          "required": ["message"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "data"
-      ]
+      "required": ["name", "data"]
     },
     "AssistantError": {
       "oneOf": [
@@ -1145,21 +961,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "created"
-          ]
+          "required": ["created"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "attempt",
-        "error",
-        "time"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "attempt", "error", "time"]
     },
     "StepStartPart": {
       "type": "object",
@@ -1181,12 +987,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type"
-      ]
+      "required": ["id", "sessionID", "messageID", "type"]
     },
     "StepFinishPart": {
       "type": "object",
@@ -1217,15 +1018,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "reason",
-        "cost",
-        "tokens"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "reason", "cost", "tokens"]
     },
     "ToolStatePending": {
       "type": "object",
@@ -1241,11 +1034,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "status",
-        "input",
-        "raw"
-      ]
+      "required": ["status", "input", "raw"]
     },
     "ToolStateRunning": {
       "type": "object",
@@ -1270,17 +1059,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "start"
-          ]
+          "required": ["start"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "status",
-        "input",
-        "time"
-      ]
+      "required": ["status", "input", "time"]
     },
     "ToolStateCompleted": {
       "type": "object",
@@ -1314,10 +1097,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "start",
-            "end"
-          ]
+          "required": ["start", "end"]
         },
         "attachments": {
           "type": "array",
@@ -1327,14 +1107,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "status",
-        "input",
-        "output",
-        "title",
-        "metadata",
-        "time"
-      ]
+      "required": ["status", "input", "output", "title", "metadata", "time"]
     },
     "ToolStateError": {
       "type": "object",
@@ -1362,19 +1135,11 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "start",
-            "end"
-          ]
+          "required": ["start", "end"]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "status",
-        "input",
-        "error",
-        "time"
-      ]
+      "required": ["status", "input", "error", "time"]
     },
     "ToolState": {
       "oneOf": [
@@ -1422,15 +1187,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "messageID",
-        "type",
-        "callID",
-        "tool",
-        "state"
-      ]
+      "required": ["id", "sessionID", "messageID", "type", "callID", "tool", "state"]
     },
     "Part": {
       "oneOf": [
@@ -1494,9 +1251,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "created"
-          ]
+          "required": ["created"]
         },
         "format": {
           "$ref": "#/$defs/OutputFormat"
@@ -1518,9 +1273,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "diffs"
-          ]
+          "required": ["diffs"]
         },
         "agent": {
           "type": "string"
@@ -1539,10 +1292,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "providerID",
-            "modelID"
-          ]
+          "required": ["providerID", "modelID"]
         },
         "system": {
           "type": "string"
@@ -1552,14 +1302,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "sessionID",
-        "role",
-        "time",
-        "agent",
-        "model"
-      ]
+      "required": ["id", "sessionID", "role", "time", "agent", "model"]
     },
     "AssistantMessage": {
       "type": "object",
@@ -1584,9 +1327,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "created"
-          ]
+          "required": ["created"]
         },
         "error": {
           "$ref": "#/$defs/AssistantError"
@@ -1617,10 +1358,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "cwd",
-            "root"
-          ]
+          "required": ["cwd", "root"]
         },
         "summary": {
           "type": "boolean"
@@ -1680,10 +1418,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "info",
-        "parts"
-      ]
+      "required": ["info", "parts"]
     }
   },
   "examples": [

@@ -53,7 +53,10 @@ describe('validateDescription', () => {
 
   it('reports a missing description', () => {
     const content = '---\nname: demo\n---\n';
-    const result = validateDescription(parseSkillFile('/ws/skills/demo/SKILL.md', content), genericProfile);
+    const result = validateDescription(
+      parseSkillFile('/ws/skills/demo/SKILL.md', content),
+      genericProfile,
+    );
     expect(result.map((d) => d.code)).toContain(DiagnosticCode.DescriptionMissing);
   });
 
@@ -79,20 +82,15 @@ describe('validateDescription', () => {
       actionVerbs: [...DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs, 'frobnicate'],
     });
     expect(
-      codes(
-        'Frobnicate calibrated widgets. Use when widget calibration drifts.',
-        added,
-      ),
+      codes('Frobnicate calibrated widgets. Use when widget calibration drifts.', added),
     ).not.toContain(DiagnosticCode.DescriptionNoVerb);
 
     const removed = resolveHeuristicDictionaries({
-      actionVerbs: DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs.filter(
-        (verb) => verb !== 'format',
-      ),
+      actionVerbs: DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs.filter((verb) => verb !== 'format'),
     });
-    expect(
-      codes('Format inspection reports. Use when standardizing reports.', removed),
-    ).toContain(DiagnosticCode.DescriptionNoVerb);
+    expect(codes('Format inspection reports. Use when standardizing reports.', removed)).toContain(
+      DiagnosticCode.DescriptionNoVerb,
+    );
   });
 
   it('applies added and removed vague terms to diagnostics', () => {
@@ -103,9 +101,7 @@ describe('validateDescription', () => {
       DiagnosticCode.DescriptionVague,
     );
     const removed = resolveHeuristicDictionaries({
-      vagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.filter(
-        (term) => term !== 'powerful',
-      ),
+      vagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.filter((term) => term !== 'powerful'),
     });
     expect(codes('Format powerful reports. Use when audits drift.', removed)).not.toContain(
       DiagnosticCode.DescriptionVague,

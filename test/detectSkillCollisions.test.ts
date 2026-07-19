@@ -117,7 +117,10 @@ describe('detectCollisions risk banding on the displayed similarity', () => {
     const [collision] = detectCollisions(
       [
         { name: 'a'.repeat(1000), description: 'identical shared description text' },
-        { name: 'a'.repeat(799) + 'b'.repeat(201), description: 'identical shared description text' },
+        {
+          name: 'a'.repeat(799) + 'b'.repeat(201),
+          description: 'identical shared description text',
+        },
       ],
       onlyName,
     );

@@ -46,7 +46,7 @@ export const VALIDATION_RULES: ValidationRule[] = [
     id: 'resources',
     run: ({ doc, resourceDirectories }) => validateResources(doc, resourceDirectories),
   },
-  { id: 'body', run: ({ doc, profile }) => validateBody(doc, profile) },
+  { id: 'body', run: ({ doc, profile, dictionaries }) => validateBody(doc, profile, dictionaries) },
   { id: 'profile-metadata', run: ({ doc, profile }) => validateProfileMetadata(doc, profile) },
 ];
 

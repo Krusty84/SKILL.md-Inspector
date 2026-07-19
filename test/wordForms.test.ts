@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildVerbForms, singularize, normalizeVerbForm, normalizeContentToken } from '../src/quality/wordForms';
+import {
+  buildVerbForms,
+  singularize,
+  normalizeVerbForm,
+  normalizeContentToken,
+} from '../src/quality/wordForms';
 import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
 
 describe('singularize (Task 31)', () => {

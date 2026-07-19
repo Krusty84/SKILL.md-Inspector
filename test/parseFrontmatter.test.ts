@@ -139,16 +139,24 @@ describe('frontmatter fence regression cases', () => {
 
   it('does not close on indented literal or folded scalar delimiters', () => {
     for (const indicator of ['|', '>']) {
-      const parsed = parseFrontmatter(`---\nname: demo\ndescription: ${indicator}\n  First line.\n  ---\n  Second line.\n---\n# Body`);
+      const parsed = parseFrontmatter(
+        `---\nname: demo\ndescription: ${indicator}\n  First line.\n  ---\n  Second line.\n---\n# Body`,
+      );
       expect(parsed.frontmatter?.name).toBe('demo');
       expect(parsed.body).toContain('# Body');
     }
   });
   it('treats a markdown thematic break as missing frontmatter', () => {
-    expect(parseFrontmatter('# Demo\n\n---\n\nMore').errors[0].code).toBe('skill.frontmatter.missing');
+    expect(parseFrontmatter('# Demo\n\n---\n\nMore').errors[0].code).toBe(
+      'skill.frontmatter.missing',
+    );
   });
   it('detects plausible later frontmatter and preserves BOM and CRLF', () => {
-    expect(parseFrontmatter('Leading\n---\nname: demo\ndescription: Demo\n---').errors[0].code).toBe('skill.frontmatter.notAtTop');
-    expect(parseFrontmatter('\ufeff---\r\nname: demo\r\ndescription: Demo\r\n---').frontmatter?.name).toBe('demo');
+    expect(
+      parseFrontmatter('Leading\n---\nname: demo\ndescription: Demo\n---').errors[0].code,
+    ).toBe('skill.frontmatter.notAtTop');
+    expect(
+      parseFrontmatter('\ufeff---\r\nname: demo\r\ndescription: Demo\r\n---').frontmatter?.name,
+    ).toBe('demo');
   });
 });

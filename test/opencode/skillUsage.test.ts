@@ -15,7 +15,12 @@ function assistant(parts: unknown[]) {
 }
 
 function skill(name: string) {
-  return { type: 'tool', tool: 'skill', callID: `call-${name}`, state: { status: 'completed', input: { name } } };
+  return {
+    type: 'tool',
+    tool: 'skill',
+    callID: `call-${name}`,
+    state: { status: 'completed', input: { name } },
+  };
 }
 
 function tool(name: string) {
@@ -31,16 +36,25 @@ function followingLabels(session: ReturnType<typeof normalize>, skillIndex: numb
 
 describe('OpenCode skill temporal segments', () => {
   it('continues following actions across steps in one assistant message', () => {
-    const session = normalize([assistant([
-      { type: 'step-start' }, skill('review'), tool('read'), { type: 'step-finish' },
-      { type: 'step-start' }, tool('bash'), { type: 'step-finish' },
-    ])]);
+    const session = normalize([
+      assistant([
+        { type: 'step-start' },
+        skill('review'),
+        tool('read'),
+        { type: 'step-finish' },
+        { type: 'step-start' },
+        tool('bash'),
+        { type: 'step-finish' },
+      ]),
+    ]);
 
     expect(followingLabels(session, 0)).toEqual(['read', 'bash']);
   });
 
   it('terminates a skill segment at the next skill', () => {
-    const session = normalize([assistant([skill('review'), tool('read'), skill('testing'), tool('edit')])]);
+    const session = normalize([
+      assistant([skill('review'), tool('read'), skill('testing'), tool('edit')]),
+    ]);
 
     expect(followingLabels(session, 0)).toEqual(['read']);
     expect(followingLabels(session, 1)).toEqual(['edit']);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 
-const source = readFileSync('src/webview/openCodeSessionReport/index.ts','utf8');
-const css = readFileSync('src/webview/openCodeSessionReport/styles.css','utf8');
+const source = readFileSync('src/webview/openCodeSessionReport/index.ts', 'utf8');
+const css = readFileSync('src/webview/openCodeSessionReport/styles.css', 'utf8');
 const sourceCompact = source.replace(/\s+/g, '');
 const cssCompact = css.replace(/\s+/g, '');
 
@@ -13,15 +13,25 @@ describe('OpenCode session report shell structure', () => {
     expect(sourceCompact).toContain("el('main','timeline-scroll-region')");
     expect(source).toContain('timeline-columns-header');
     expect(source).toContain('timeline-events');
-    expect(source.indexOf("chrome.append(header(), sessionDetails(), toolbar())")).toBeLessThan(source.indexOf('timelineShell()'));
+    expect(source.indexOf('chrome.append(header(), sessionDetails(), toolbar())')).toBeLessThan(
+      source.indexOf('timelineShell()'),
+    );
   });
 
   it('assigns document and timeline scrolling responsibilities', () => {
     expect(cssCompact).toMatch(/html,body,#app\{height:100%;overflow:hidden;?\}/);
-    expect(cssCompact).toMatch(/\.report-shell\{[^}]*display:flex[^}]*flex-direction:column[^}]*height:100vh[^}]*min-height:0/s);
-    expect(cssCompact).toMatch(/\.report-chrome\{[^}]*flex:00auto[^}]*background:var\(--vscode-editor-background\)/s);
-    expect(cssCompact).toMatch(/\.timeline-scroll-region\{[^}]*flex:11auto[^}]*min-height:0[^}]*overflow:auto/s);
-    expect(cssCompact).toMatch(/\.session-details\{[^}]*max-height:min\(42vh,28rem\)[^}]*overflow:auto/s);
+    expect(cssCompact).toMatch(
+      /\.report-shell\{[^}]*display:flex[^}]*flex-direction:column[^}]*height:100vh[^}]*min-height:0/s,
+    );
+    expect(cssCompact).toMatch(
+      /\.report-chrome\{[^}]*flex:00auto[^}]*background:var\(--vscode-editor-background\)/s,
+    );
+    expect(cssCompact).toMatch(
+      /\.timeline-scroll-region\{[^}]*flex:11auto[^}]*min-height:0[^}]*overflow:auto/s,
+    );
+    expect(cssCompact).toMatch(
+      /\.session-details\{[^}]*max-height:min\(42vh,28rem\)[^}]*overflow:auto/s,
+    );
   });
 
   it('defines fixed-header control tooltips and removes the old details text button', () => {
@@ -41,11 +51,15 @@ describe('OpenCode session report shell structure', () => {
   });
 
   it('places explicit event toggle buttons after noninteractive event head content', () => {
-    expect(sourceCompact).toContain("consthead=el('div','event-head');constcontent=el('div','event-head-content')");
-    expect(sourceCompact).toContain("head.append(content);if(event.expandable)head.append(eventToggle(event,expanded));body.append(head)");
+    expect(sourceCompact).toContain(
+      "consthead=el('div','event-head');constcontent=el('div','event-head-content')",
+    );
+    expect(sourceCompact).toContain(
+      'head.append(content);if(event.expandable)head.append(eventToggle(event,expanded));body.append(head)',
+    );
     expect(source).toContain("b.className = 'event-toggle'");
-    expect(source).toContain("b.dataset.action = action");
-    expect(source).toContain("b.dataset.eventId = event.id");
+    expect(source).toContain('b.dataset.action = action');
+    expect(source).toContain('b.dataset.eventId = event.id');
     expect(source).toContain("b.setAttribute('aria-controls', `details-${event.id}`)");
     expect(source).toContain("b.setAttribute('aria-expanded', String(presentation.expanded))");
     expect(source).toContain("b.setAttribute('aria-label', presentation.ariaLabel)");
@@ -56,10 +70,16 @@ describe('OpenCode session report shell structure', () => {
   });
 
   it('styles event toggle placement without absolute positioning', () => {
-    expect(cssCompact).toMatch(/\.event-head\{[^}]*display:grid[^}]*grid-template-columns:minmax\(0,1fr\)auto[^}]*gap:0\.5rem/s);
+    expect(cssCompact).toMatch(
+      /\.event-head\{[^}]*display:grid[^}]*grid-template-columns:minmax\(0,1fr\)auto[^}]*gap:0\.5rem/s,
+    );
     expect(cssCompact).toMatch(/\.event-head-content\{[^}]*min-width:0/s);
-    expect(cssCompact).toMatch(/\.event-toggle\{[^}]*width:1\.6rem[^}]*margin-left:auto[^}]*background:transparent/s);
-    expect(cssCompact).toMatch(/\.event-toggle\[aria-expanded='true'\]\.event-toggle-icon\{[^}]*transform:rotate\(90deg\)/s);
+    expect(cssCompact).toMatch(
+      /\.event-toggle\{[^}]*width:1\.6rem[^}]*margin-left:auto[^}]*background:transparent/s,
+    );
+    expect(cssCompact).toMatch(
+      /\.event-toggle\[aria-expanded='true'\]\.event-toggle-icon\{[^}]*transform:rotate\(90deg\)/s,
+    );
     expect(cssCompact).not.toMatch(/\.event-(?:head|toggle)[^{]*\{[^}]*position:absolute/s);
   });
 });

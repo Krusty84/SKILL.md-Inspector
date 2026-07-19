@@ -115,10 +115,34 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 **error** · all profiles · auto-fix: no
 
-`description` exceeds the profile maximum (default 1024).
+`description` exceeds the hard maximum of 1024 characters.
 
 - Bad: a 2000-character description.
 - Good: a focused description under the limit.
+
+### `skill.description.tooVerbose`
+
+**warning** · all profiles · auto-fix: no
+
+`description` exceeds the recommended 500-character length but remains within
+the hard 1024-character maximum. Keep capability and trigger scope in
+frontmatter and move detailed procedure to the Markdown body.
+
+### `skill.description.overbroadTrigger`
+
+**warning** · all profiles · auto-fix: no
+
+The description uses a conservative overbroad phrase in skill-selection
+context. Operational rules such as “Always verify the output” are not treated
+as overbroad triggers. This finding limits Static Description Quality to 69.
+
+### `skill.description.instructionHeavy`
+
+**warning** · all profiles · auto-fix: no
+
+The description embeds a detailed workflow instead of summarizing capability
+and trigger scope. Detailed procedure belongs in the Markdown body. This
+finding limits Static Description Quality to 74.
 
 ### `skill.link.missing`
 

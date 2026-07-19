@@ -57,7 +57,10 @@ afterEach(() => {
 });
 
 function analyze(content: string) {
-  const doc = withResources(parseSkillFile(path.join(dir, 'SKILL.md'), content), discoverResources(dir));
+  const doc = withResources(
+    parseSkillFile(path.join(dir, 'SKILL.md'), content),
+    discoverResources(dir),
+  );
   return runAllValidations(doc, genericProfile);
 }
 

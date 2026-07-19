@@ -23,7 +23,9 @@ export type StaticDescriptionQualityGradeLimitationCode =
   | 'missing-action-capability'
   | 'missing-usage-trigger'
   | 'vague-usage-trigger'
-  | 'missing-concrete-artifact';
+  | 'missing-concrete-artifact'
+  | 'overbroad-usage-scope'
+  | 'instruction-heavy-description';
 
 /** An explicit policy ceiling applied after the additive criterion score. */
 export interface StaticDescriptionQualityGradeLimitation {
@@ -44,8 +46,7 @@ interface StaticDescriptionQualityResultBase {
   partial?: boolean;
 }
 
-export interface StaticDescriptionQualityScoredResult
-  extends StaticDescriptionQualityResultBase {
+export interface StaticDescriptionQualityScoredResult extends StaticDescriptionQualityResultBase {
   state: Extract<QualityAssessmentState, 'scored'>;
   /** Public score after all reported grade limitations are applied. */
   score: number;
@@ -56,8 +57,7 @@ export interface StaticDescriptionQualityScoredResult
   label: StaticDescriptionQualityLabel;
 }
 
-export interface StaticDescriptionQualityNotScoredResult
-  extends StaticDescriptionQualityResultBase {
+export interface StaticDescriptionQualityNotScoredResult extends StaticDescriptionQualityResultBase {
   state: Extract<QualityAssessmentState, 'not-scored'>;
   score: null;
   rawScore: null;
@@ -67,5 +67,4 @@ export interface StaticDescriptionQualityNotScoredResult
 }
 
 export type StaticDescriptionQualityResult =
-  | StaticDescriptionQualityScoredResult
-  | StaticDescriptionQualityNotScoredResult;
+  StaticDescriptionQualityScoredResult | StaticDescriptionQualityNotScoredResult;

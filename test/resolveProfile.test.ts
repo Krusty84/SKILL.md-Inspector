@@ -3,7 +3,9 @@ import { resolveProfile } from '../src/profiles';
 
 describe('resolveProfile description.language', () => {
   it('applies the "en" override', () => {
-    expect(resolveProfile('generic', { descriptionLanguage: 'en' }).description.language).toBe('en');
+    expect(resolveProfile('generic', { descriptionLanguage: 'en' }).description.language).toBe(
+      'en',
+    );
   });
 
   it('applies the "auto" override', () => {

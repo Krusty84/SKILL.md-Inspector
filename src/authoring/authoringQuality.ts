@@ -1,6 +1,12 @@
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { QualityAssessmentState } from '../types/QualityAssessment';
 import { DiagnosticCode } from '../types/DiagnosticCode';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  type HeuristicDictionaries,
+} from '../quality/dictionaries';
+import { buildVerbForms } from '../quality/wordForms';
+import { analyzeBodyEvidence } from '../validation/bodyEvidence';
 
 export type AuthoringLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 
@@ -31,8 +37,7 @@ export interface NotScoredInstructionQualityResult extends InstructionQualityRes
 }
 
 export type InstructionQualityResult =
-  | ScoredInstructionQualityResult
-  | NotScoredInstructionQualityResult;
+  ScoredInstructionQualityResult | NotScoredInstructionQualityResult;
 
 export interface ResourceQualityResult {
   score: number;
@@ -57,6 +62,11 @@ const SEVERITY_PENALTY: Record<AuthoringSeverity, number> = {
 };
 
 const MAX_BODY_LINES = 500;
+const MIN_SUBSTANTIVE_WORDS = 30;
+const MIN_CONCRETE_STEPS = 3;
+const MIN_REPETITION_LINES = 100;
+const MIN_REPEATED_LINE_LENGTH = 20;
+const REPETITION_THRESHOLD = 0.25;
 const LARGE_RESOURCE_BYTES = 1024 * 1024;
 
 /**
@@ -65,13 +75,19 @@ const LARGE_RESOURCE_BYTES = 1024 * 1024;
  * not judge whether the instructions are *correct*, only whether the body and
  * bundled resources have obvious authoring defects.
  */
-export function assessAuthoringQuality(doc: SkillDocument): SkillAuthoringQuality {
+export function assessAuthoringQuality(
+  doc: SkillDocument,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): SkillAuthoringQuality {
   const resourceFindings = assessResources(doc.resources);
   return {
     instructions:
       doc.frontmatter === null
         ? notScoredInstructions(instructionNotScoredReason(doc))
-        : { state: 'scored', ...toResult(assessInstructions(doc.body)) },
+        : {
+            state: 'scored',
+            ...toResult(assessInstructions(doc.body, doc.bodyStartLine, dictionaries)),
+          },
     resources: toResult(resourceFindings),
   };
 }
@@ -86,7 +102,13 @@ function toResult(findings: AuthoringFinding[]): ResourceQualityResult {
       Math.min(cap, (penalties.get(finding.severity) ?? 0) + SEVERITY_PENALTY[finding.severity]),
     );
   }
-  const score = Math.max(0, 100 - [...penalties.values()].reduce((sum, value) => sum + value, 0));
+  const severityPenalty = [...penalties.values()].reduce((sum, value) => sum + value, 0);
+  const longRepetitivePenalty =
+    findings.some((finding) => finding.criterion === 'Length') &&
+    findings.some((finding) => finding.criterion === 'Repetitive instructions')
+      ? 50
+      : 0;
+  const score = Math.max(0, 100 - Math.max(severityPenalty, longRepetitivePenalty));
   return { score, label: authoringLabelFor(score), findings };
 }
 
@@ -114,7 +136,11 @@ function authoringLabelFor(score: number): AuthoringLabel {
   return 'poor';
 }
 
-function assessInstructions(body: string): AuthoringFinding[] {
+function assessInstructions(
+  body: string,
+  bodyStartLine: number,
+  dictionaries: HeuristicDictionaries,
+): AuthoringFinding[] {
   const findings: AuthoringFinding[] = [];
 
   if (body.trim().length === 0) {
@@ -127,9 +153,13 @@ function assessInstructions(body: string): AuthoringFinding[] {
     return findings; // every other body check is meaningless on an empty body
   }
 
-  const lines = scanLines(body);
+  const scan = scanLines(body);
+  const { lines } = scan;
   const sections = parseSections(lines);
-  const hasProse = lines.some((line) => !line.isHeading && line.text.trim().length > 0);
+  const bodyEvidence = analyzeBodyEvidence(body);
+  const hasProse = lines.some(
+    (line) => !line.isHeading && !line.isFenceDelimiter && line.text.trim().length > 0,
+  );
 
   if (!hasProse) {
     findings.push({
@@ -137,6 +167,24 @@ function assessInstructions(body: string): AuthoringFinding[] {
       severity: 'major',
       message: 'Body contains headings only, with no instruction content.',
       suggestion: 'Add concrete instructions under the headings.',
+    });
+  } else if (!hasSubstantiveInstructions(lines, dictionaries)) {
+    findings.push({
+      criterion: 'Substantive instructions',
+      severity: 'moderate',
+      message: 'Body does not contain enough meaningful prose or concrete instruction steps.',
+      suggestion: 'Add specific guidance or at least three concrete workflow steps.',
+    });
+  }
+
+  if (scan.openFence) {
+    const marker = scan.openFence.marker.repeat(scan.openFence.length);
+    const openingLine = bodyStartLine + scan.openFence.lineIndex + 1;
+    findings.push({
+      criterion: 'Unclosed code fence',
+      severity: 'major',
+      message: `Code fence opened on line ${openingLine} remains open at the end of the file.`,
+      suggestion: `Add a matching ${marker} closing fence.`,
     });
   }
 
@@ -156,18 +204,33 @@ function assessInstructions(body: string): AuthoringFinding[] {
     });
   }
 
+  for (const title of bodyEvidence.emptyExampleHeadings) {
+    findings.push({
+      criterion: 'Examples',
+      severity: 'moderate',
+      message: `Section "${title}" has no content.`,
+      suggestion: 'Add a representative input and expected outcome.',
+    });
+  }
+
   for (const section of sections) {
-    if (!section.hasContent) {
-      const isExamples = /^examples?$/i.test(section.title);
+    if (!section.hasContent && !bodyEvidence.emptyExampleHeadings.includes(section.title)) {
       findings.push({
-        criterion: isExamples ? 'Examples' : 'Empty section',
-        severity: isExamples ? 'moderate' : 'minor',
+        criterion: 'Empty section',
+        severity: 'minor',
         message: `Section "${section.title}" has no content.`,
-        suggestion: isExamples
-          ? 'Add a representative input and expected outcome.'
-          : 'Fill the section in or remove the heading.',
+        suggestion: 'Fill the section in or remove the heading.',
       });
     }
+  }
+
+  if (!bodyEvidence.hasExampleEvidence) {
+    findings.push({
+      criterion: 'Examples',
+      severity: 'minor',
+      message: 'Body has no concrete example evidence.',
+      suggestion: 'Add a representative input and expected outcome.',
+    });
   }
 
   const duplicates = findDuplicateTitles(sections);
@@ -186,6 +249,15 @@ function assessInstructions(body: string): AuthoringFinding[] {
       severity: 'moderate',
       message: `Body exceeds ${MAX_BODY_LINES} lines, creating a maintainability risk.`,
       suggestion: 'Move detailed material into referenced resource files.',
+    });
+  }
+
+  if (hasExcessiveRepetition(lines)) {
+    findings.push({
+      criterion: 'Repetitive instructions',
+      severity: 'moderate',
+      message: 'At least 25% of the substantive content lines repeat earlier instructions.',
+      suggestion: 'Consolidate repeated steps or move repeated detail into a referenced resource.',
     });
   }
 
@@ -224,29 +296,41 @@ interface ScannedLine {
   text: string;
   /** Inside a ``` / ~~~ fenced code block (delimiters count as inside). */
   inFence: boolean;
+  /** Opening or closing fence delimiter rather than fence content. */
+  isFenceDelimiter: boolean;
   /** ATX heading OUTSIDE fenced code; `#` lines inside code are content. */
   isHeading: boolean;
   headingTitle?: string;
   headingDepth?: number;
 }
 
-/** Single pass that tags each line with fence state and heading info. */
-function scanLines(body: string): ScannedLine[] {
+interface FenceState {
+  marker: '`' | '~';
+  length: number;
+  lineIndex: number;
+}
+
+interface LineScanResult {
+  lines: ScannedLine[];
+  openFence: FenceState | null;
+}
+
+/** Single pass that tags each line and preserves an opening fence at EOF. */
+function scanLines(body: string): LineScanResult {
   const result: ScannedLine[] = [];
-  // The marker that opened the current fence: a ``` block is only closed by ```
-  // and ~~~ only by ~~~, so a ~~~ line inside a backtick fence stays content.
-  // Leading whitespace is deliberately unrestricted — this line scanner has no
-  // container context, and fences nested in list items are indented 4+ columns.
-  let fence: '```' | '~~~' | null = null;
-  for (const text of body.split('\n')) {
-    const delimiter = /^\s*(```|~~~)/.exec(text)?.[1] as '```' | '~~~' | undefined;
-    if (delimiter && fence === null) {
-      fence = delimiter;
-      result.push({ text, inFence: true, isHeading: false });
-      continue;
-    }
-    if (delimiter === fence && fence !== null) {
-      result.push({ text, inFence: true, isHeading: false });
+  let fence: FenceState | null = null;
+  const bodyLines = body.split('\n');
+  for (let lineIndex = 0; lineIndex < bodyLines.length; lineIndex++) {
+    const text = bodyLines[lineIndex];
+    if (fence === null) {
+      const opening = parseOpeningFence(text, lineIndex);
+      if (opening) {
+        fence = opening;
+        result.push({ text, inFence: true, isFenceDelimiter: true, isHeading: false });
+        continue;
+      }
+    } else if (isClosingFence(text, fence)) {
+      result.push({ text, inFence: true, isFenceDelimiter: true, isHeading: false });
       fence = null;
       continue;
     }
@@ -254,11 +338,105 @@ function scanLines(body: string): ScannedLine[] {
     result.push({
       text,
       inFence: fence !== null,
+      isFenceDelimiter: false,
       isHeading: Boolean(heading),
       ...(heading ? { headingTitle: heading[2], headingDepth: heading[1].length } : {}),
     });
   }
-  return result;
+  return { lines: result, openFence: fence };
+}
+
+function parseOpeningFence(text: string, lineIndex: number): FenceState | null {
+  // Container-relative indentation is unavailable here, so preserve support for
+  // fences nested in Markdown list items while enforcing marker compatibility.
+  const match = /^\s*(`{3,}|~{3,})(.*)$/.exec(text);
+  if (!match || (match[1][0] === '`' && match[2].includes('`'))) return null;
+  return {
+    marker: match[1][0] as FenceState['marker'],
+    length: match[1].length,
+    lineIndex,
+  };
+}
+
+function isClosingFence(text: string, fence: FenceState): boolean {
+  const match = /^\s*(`+|~+)[ \t]*$/.exec(text);
+  return Boolean(match && match[1][0] === fence.marker && match[1].length >= fence.length);
+}
+
+function hasSubstantiveInstructions(
+  lines: readonly ScannedLine[],
+  dictionaries: HeuristicDictionaries,
+): boolean {
+  const content = lines.filter(
+    (line) =>
+      !line.isHeading &&
+      !line.isFenceDelimiter &&
+      line.text.trim().length > 0 &&
+      !isPurePlaceholder(line.text),
+  );
+  const proseWords = content
+    .filter((line) => !line.inFence)
+    .flatMap((line) => line.text.match(/[\p{L}\p{N}][\p{L}\p{N}'’_-]*/gu) ?? []).length;
+  if (proseWords >= MIN_SUBSTANTIVE_WORDS) return true;
+
+  const verbForms = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms).forms;
+  const concreteSteps = content.reduce((count, line) => {
+    if (line.inFence || /^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line.text)) return count + 1;
+    const actionCount = (line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((word) =>
+      verbForms.has(word),
+    ).length;
+    const negativeInstruction = /^\s*(?:do not|don't|never)\b/i.test(line.text) ? 1 : 0;
+    return count + Math.max(actionCount, negativeInstruction);
+  }, 0);
+  return concreteSteps >= MIN_CONCRETE_STEPS;
+}
+
+function isPurePlaceholder(text: string): boolean {
+  const content = text
+    .trim()
+    .replace(/^(?:[-+*]|\d+[.)])\s+/, '')
+    .replace(/^(?:\/\/|#|<!--)\s*/, '')
+    .replace(/\s*-->$/, '')
+    .trim();
+  return (
+    /^(?:TODO|FIXME|TBD)\b.*$/i.test(content) ||
+    /^<\s*(?:input|describe|placeholder)[^>=]*>\s*[.!?]?$/i.test(content)
+  );
+}
+
+function hasExcessiveRepetition(lines: readonly ScannedLine[]): boolean {
+  const contentLines = lines.filter(
+    (line) => !line.isFenceDelimiter && line.text.trim().length > 0 && !isTableDelimiter(line.text),
+  );
+  if (contentLines.length < MIN_REPETITION_LINES) return false;
+
+  const normalized = contentLines
+    .map((line) => normalizeComparisonLine(line.text))
+    .filter((line) => line.length >= MIN_REPEATED_LINE_LENGTH);
+  if (normalized.length === 0) return false;
+
+  const seen = new Set<string>();
+  let repeats = 0;
+  for (const line of normalized) {
+    if (seen.has(line)) repeats += 1;
+    else seen.add(line);
+  }
+  return repeats / normalized.length >= REPETITION_THRESHOLD;
+}
+
+function normalizeComparisonLine(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^(?:[-+*]|\d+[.)])\s+/, '')
+    .replace(/\b\d+\b/g, '<number>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isTableDelimiter(text: string): boolean {
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(text);
 }
 
 interface BodySection {

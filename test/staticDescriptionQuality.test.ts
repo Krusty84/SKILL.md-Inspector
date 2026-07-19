@@ -39,7 +39,9 @@ describe('computeStaticDescriptionQuality', () => {
   });
 
   it('does not award trigger points to a negative-only description', () => {
-    const result = computeStaticDescriptionQuality('Format reports. Do not use when handling PDFs.');
+    const result = computeStaticDescriptionQuality(
+      'Format reports. Do not use when handling PDFs.',
+    );
     const verb = result.findings.find((f) => f.criterion.startsWith('Action verb'));
     const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
     const boundary = result.findings.find((f) => f.criterion === 'Boundary phrase');
@@ -50,8 +52,9 @@ describe('computeStaticDescriptionQuality', () => {
 
   it('awards no artifact points for arbitrary uppercase words but still credits acronyms (Task 72)', () => {
     const artifactPoints = (desc: string): number =>
-      computeStaticDescriptionQuality(desc).findings.find((f) => f.criterion.startsWith('Concrete artifact'))!
-        .pointsEarned;
+      computeStaticDescriptionQuality(desc).findings.find((f) =>
+        f.criterion.startsWith('Concrete artifact'),
+      )!.pointsEarned;
     // Regression: "any run of uppercase letters" used to count as a concrete artifact.
     expect(artifactPoints('Format IMPORTANT THINGS.')).toBe(0);
     expect(artifactPoints('Generate GOOD RESULTS.')).toBe(0);
@@ -95,9 +98,7 @@ describe('computeStaticDescriptionQuality', () => {
   });
 
   it('gives only partial credit when the trigger scope is vague', () => {
-    const result = computeStaticDescriptionQuality(
-      'Analyze logs. Use when appropriate for tasks.',
-    );
+    const result = computeStaticDescriptionQuality('Analyze logs. Use when appropriate for tasks.');
     const trigger = result.findings.find((f) => f.criterion === 'Usage trigger phrase');
     expect(trigger?.pointsEarned).toBe(5); // marker present, content too vague
     expect(result.adjustedScore).toBeLessThanOrEqual(74);
@@ -153,6 +154,35 @@ describe('computeStaticDescriptionQuality', () => {
     );
   });
 
+  it('reports and applies the overbroad usage-scope ceiling', () => {
+    const result = computeStaticDescriptionQuality(
+      'Format inspection reports using standard rules. Always use this skill for everything involving reports. Do not use for invoices.',
+    );
+    expect(result.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'overbroad-usage-scope', ceiling: 69 }),
+    );
+    expect(result.adjustedScore).toBeLessThanOrEqual(69);
+    expect(
+      result.gradeLimitations.find((limitation) => limitation.code === 'overbroad-usage-scope')
+        ?.reason,
+    ).toContain('69');
+  });
+
+  it('reports and applies the instruction-heavy description ceiling', () => {
+    const result = computeStaticDescriptionQuality(
+      'Generate PDF reports. Step 1, inspect data. Step 2, validate rows. Step 3, format tables. Step 4, export PDF. Use when preparing audits. Do not use for invoices.',
+    );
+    expect(result.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'instruction-heavy-description', ceiling: 74 }),
+    );
+    expect(result.adjustedScore).toBeLessThanOrEqual(74);
+    expect(
+      result.gradeLimitations.find(
+        (limitation) => limitation.code === 'instruction-heavy-description',
+      )?.reason,
+    ).toContain('Markdown body');
+  });
+
   it('awards both trigger and boundary points for "only use when"', () => {
     const result = computeStaticDescriptionQuality(
       'Format release notes. Only use when preparing a tagged release.',
@@ -180,9 +210,7 @@ describe('computeStaticDescriptionQuality', () => {
     expect(customVague.findings.find((f) => f.criterion === 'Low vagueness')?.pointsEarned).toBe(5);
 
     const noPowerful = resolveHeuristicDictionaries({
-      vagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.filter(
-        (term) => term !== 'powerful',
-      ),
+      vagueTerms: DEFAULT_HEURISTIC_DICTIONARIES.vagueTerms.filter((term) => term !== 'powerful'),
     });
     expect(
       computeStaticDescriptionQuality('Format powerful reports.', {
@@ -233,16 +261,23 @@ describe('computeStaticDescriptionQuality', () => {
 
   it('penalizes length gradually and zeroes out over the maximum', () => {
     const good = (text: string) =>
-      computeStaticDescriptionQuality(text).findings.find((f) => f.criterion === 'Good length')!.pointsEarned;
+      computeStaticDescriptionQuality(text).findings.find((f) => f.criterion === 'Good length')!
+        .pointsEarned;
     expect(good('x'.repeat(501))).toBeGreaterThan(good('x'.repeat(1000)));
     expect(good('x'.repeat(1100))).toBe(0); // over the 1024 maximum
   });
 
   it('keeps the recommended band coherent when minLength exceeds the default ceiling', () => {
-    const atMin = computeStaticDescriptionQuality('x'.repeat(600), { minLength: 600, maxLength: 2048 });
+    const atMin = computeStaticDescriptionQuality('x'.repeat(600), {
+      minLength: 600,
+      maxLength: 2048,
+    });
     expect(atMin.findings.find((f) => f.criterion === 'Good length')?.pointsEarned).toBe(10);
 
-    const short = computeStaticDescriptionQuality('x'.repeat(550), { minLength: 600, maxLength: 2048 });
+    const short = computeStaticDescriptionQuality('x'.repeat(550), {
+      minLength: 600,
+      maxLength: 2048,
+    });
     const shortFinding = short.findings.find((f) => f.criterion === 'Good length')!;
     expect(shortFinding.pointsEarned).toBe(5); // slightly short, not "over the ceiling"
     expect(shortFinding.message).toContain('600–600'); // never an inverted "600–500" band

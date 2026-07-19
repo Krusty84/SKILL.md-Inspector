@@ -6,6 +6,9 @@ import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { analyzeDescription } from '../quality/descriptionHeuristics';
 import { diag, keyRange } from './util';
 
+const HARD_DESCRIPTION_MAX_LENGTH = 1024;
+const RECOMMENDED_DESCRIPTION_MAX_LENGTH = 500;
+
 export function validateDescription(
   doc: SkillDocument,
   profile: SkillProfile,
@@ -42,14 +45,23 @@ export function validateDescription(
 
   const analysis = analyzeDescription(value, dictionaries);
   const diagnostics: SkillDiagnostic[] = [];
-  const { minLength, maxLength } = profile.description;
+  const { minLength } = profile.description;
 
-  if (analysis.length > maxLength) {
+  if (analysis.length > HARD_DESCRIPTION_MAX_LENGTH) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionTooLong,
         'error',
-        `\`description\` is ${analysis.length} characters; the maximum is ${maxLength}.`,
+        `\`description\` is ${analysis.length} characters; the maximum is ${HARD_DESCRIPTION_MAX_LENGTH}.`,
+        range,
+      ),
+    );
+  } else if (analysis.length > RECOMMENDED_DESCRIPTION_MAX_LENGTH) {
+    diagnostics.push(
+      diag(
+        DiagnosticCode.DescriptionTooVerbose,
+        'warning',
+        `\`description\` is ${analysis.length} characters; aim for at most ${RECOMMENDED_DESCRIPTION_MAX_LENGTH} and move detailed procedure to the Markdown body.`,
         range,
       ),
     );
@@ -72,6 +84,28 @@ export function validateDescription(
         DiagnosticCode.DescriptionVague,
         'warning',
         `\`description\` uses vague wording (${analysis.vagueTerms.join(', ')}). Describe the concrete task instead.`,
+        range,
+      ),
+    );
+  }
+
+  if (analysis.overbroadTrigger.found) {
+    diagnostics.push(
+      diag(
+        DiagnosticCode.DescriptionOverbroadTrigger,
+        'warning',
+        `\`description\` claims an overbroad usage scope ("${analysis.overbroadTrigger.matched}"). Narrow when the skill should trigger. Static Description Quality is capped at 69.`,
+        range,
+      ),
+    );
+  }
+
+  if (analysis.instructionHeavy.found) {
+    diagnostics.push(
+      diag(
+        DiagnosticCode.DescriptionInstructionHeavy,
+        'warning',
+        '`description` embeds a detailed workflow. Frontmatter should describe capability and trigger scope; detailed procedure belongs in the Markdown body. Static Description Quality is capped at 74.',
         range,
       ),
     );

@@ -136,7 +136,7 @@ function toWorkspaceSkill(
     kind: d.kind,
   }));
   const resourceGraph = buildResourceGraph(document);
-  const authoringQuality = assessAuthoringQuality(document);
+  const authoringQuality = assessAuthoringQuality(document, options.dictionaries);
 
   const portability = evaluatePortability(document, options.dictionaries);
 

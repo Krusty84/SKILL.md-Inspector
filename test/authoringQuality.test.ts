@@ -27,7 +27,11 @@ const resource = (overrides: Partial<SkillResource>): SkillResource => ({
 const GOOD_BODY = [
   '# Example skill',
   '',
-  'Follow these steps to format the report.',
+  'Follow these steps to format the report:',
+  '',
+  '1. Inspect the source notes.',
+  '2. Format the report sections.',
+  '3. Verify the final document.',
   '',
   '## Examples',
   '',
@@ -72,9 +76,49 @@ describe('assessAuthoringQuality instructions', () => {
     expect(inCode.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
   });
 
+  it('reports a fence left open at EOF and identifies its opening line', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        '# T\n\n1. Inspect the input.\n2. Run the check.\n3. Record the output.\n\n```js\nrun();\n',
+      ),
+    );
+    const finding = result.instructions.findings.find(
+      (item) => item.criterion === 'Unclosed code fence',
+    );
+    expect(finding?.severity).toBe('major');
+    expect(finding?.message).toContain('line 11');
+    expect(finding?.suggestion).toContain('```');
+  });
+
+  it('does not close a four-backtick fence with three backticks', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        '# T\n\n1. Inspect the input.\n2. Run the check.\n3. Record the output.\n\n````js\nrun();\n```\n',
+      ),
+    );
+    const finding = result.instructions.findings.find(
+      (item) => item.criterion === 'Unclosed code fence',
+    );
+    expect(finding?.suggestion).toContain('````');
+  });
+
+  it('does not close tilde and backtick fences with one another', () => {
+    const result = assessAuthoringQuality(
+      doc(
+        '# T\n\n1. Inspect the input.\n2. Run the check.\n3. Record the output.\n\n~~~~\nvalue\n````\n',
+      ),
+    );
+    const finding = result.instructions.findings.find(
+      (item) => item.criterion === 'Unclosed code fence',
+    );
+    expect(finding?.suggestion).toContain('~~~~');
+  });
+
   it('treats a mismatched fence marker inside an open fence as fence content', () => {
     // The ~~~ line must not close the backtick fence, so the TODO stays in code.
-    const mixed = assessAuthoringQuality(doc('# T\n\nProse here.\n\n```\n~~~\nTODO: inside the fence\n```\n'));
+    const mixed = assessAuthoringQuality(
+      doc('# T\n\nProse here.\n\n```\n~~~\nTODO: inside the fence\n```\n'),
+    );
     expect(mixed.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
 
     const tilde = assessAuthoringQuality(doc('# T\n\nRun it.\n\n~~~\nTODO: sample\n~~~\n'));
@@ -82,7 +126,9 @@ describe('assessAuthoringQuality instructions', () => {
   });
 
   it('flags TODO placeholders in headings', () => {
-    const result = assessAuthoringQuality(doc('# T\n\nReal intro.\n\n## TODO: fill this in\n\nBody text.\n'));
+    const result = assessAuthoringQuality(
+      doc('# T\n\nReal intro.\n\n## TODO: fill this in\n\nBody text.\n'),
+    );
     expect(result.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(true);
   });
 
@@ -91,13 +137,81 @@ describe('assessAuthoringQuality instructions', () => {
     expect(html.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(false);
 
     const placeholder = assessAuthoringQuality(doc('# T\n\nWrite <input the file name> here.\n'));
-    expect(placeholder.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(true);
+    expect(placeholder.instructions.findings.some((f) => f.criterion === 'Placeholders')).toBe(
+      true,
+    );
   });
 
   it('flags an Examples section with no content', () => {
-    const result = assessAuthoringQuality(doc('# T\n\nDo the work.\n\n## Examples\n\n## Notes\n\nSome notes.'));
+    const result = assessAuthoringQuality(
+      doc('# T\n\nDo the work.\n\n## Examples\n\n## Notes\n\nSome notes.'),
+    );
     const examples = result.instructions.findings.find((f) => f.criterion === 'Examples');
     expect(examples?.severity).toBe('moderate');
+    expect(result.instructions.findings.filter((f) => f.criterion === 'Examples')).toHaveLength(1);
+  });
+
+  it('adds one minor finding and deducts 10 when example evidence is missing', () => {
+    const body = [
+      '# Tool',
+      '',
+      'Follow these steps to process the report safely and consistently:',
+      '',
+      '1. Inspect the source report.',
+      '2. Format every required section.',
+      '3. Verify the completed report.',
+      '',
+      '## Workflow',
+      '',
+      '```bash',
+      'run-tool report.md',
+      '```',
+    ].join('\n');
+    const result = assessAuthoringQuality(doc(body));
+    expect(result.instructions.findings).toEqual([
+      expect.objectContaining({ criterion: 'Examples', severity: 'minor' }),
+    ]);
+    expect(result.instructions.score).toBe(90);
+  });
+
+  it('uses the same Quick start evidence as body diagnostics', () => {
+    const body = [
+      '# Tool',
+      '',
+      'Follow these steps to process the report safely and consistently:',
+      '',
+      '1. Inspect the source report.',
+      '2. Format every required section.',
+      '3. Verify the completed report.',
+      '',
+      '## Quick start',
+      '',
+      '```bash',
+      'run-tool report.md',
+      '```',
+    ].join('\n');
+    const result = assessAuthoringQuality(doc(body));
+    expect(result.instructions.findings.some((f) => f.criterion === 'Examples')).toBe(false);
+    expect(result.instructions.score).toBe(100);
+  });
+
+  it('flags a pointer-only body as non-substantive', () => {
+    const result = assessAuthoringQuality(
+      doc('# Webhook Debugger\n\nFollow the steps in the description above.'),
+    );
+    const finding = result.instructions.findings.find(
+      (item) => item.criterion === 'Substantive instructions',
+    );
+    expect(finding?.severity).toBe('moderate');
+  });
+
+  it('accepts a concise three-step workflow as substantive', () => {
+    const result = assessAuthoringQuality(
+      doc('# Workflow\n\n1. Inspect input.\n2. Run checks.\n3. Report results.'),
+    );
+    expect(
+      result.instructions.findings.some((item) => item.criterion === 'Substantive instructions'),
+    ).toBe(false);
   });
 
   it('accepts an Examples section whose only content is a code block', () => {
@@ -124,6 +238,19 @@ describe('assessAuthoringQuality instructions', () => {
     const body = `# T\n\nIntro.\n${'line\n'.repeat(510)}`;
     const result = assessAuthoringQuality(doc(body));
     expect(result.instructions.findings.some((f) => f.criterion === 'Length')).toBe(true);
+    expect(result.instructions.score).toBeGreaterThan(0);
+  });
+
+  it('ignores repeated Markdown table separators', () => {
+    const tables = Array.from(
+      { length: 40 },
+      (_, index) =>
+        `### Result ${index + 1}\n\n| Input | Output |\n|---|---|\n| value token${(index + 10).toString(36)} | unique result token${(index + 50).toString(36)} |`,
+    ).join('\n\n');
+    const result = assessAuthoringQuality(doc(`# Results\n\n${tables}`));
+    expect(
+      result.instructions.findings.some((item) => item.criterion === 'Repetitive instructions'),
+    ).toBe(false);
   });
 
   it('never returns a negative score', () => {
@@ -168,9 +295,7 @@ describe('assessAuthoringQuality resources', () => {
   });
 
   it('keeps instruction and resource findings separate', () => {
-    const result = assessAuthoringQuality(
-      doc('', [resource({ referenced: false })]),
-    );
+    const result = assessAuthoringQuality(doc('', [resource({ referenced: false })]));
     expect(result.instructions.findings).toHaveLength(1);
     expect(result.resources.findings).toHaveLength(1);
   });

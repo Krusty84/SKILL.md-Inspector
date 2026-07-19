@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ensureEventDetailsRequested, renderDetailsInto } from '../../src/webview/openCodeSessionReport/detailsRenderer';
+import {
+  ensureEventDetailsRequested,
+  renderDetailsInto,
+} from '../../src/webview/openCodeSessionReport/detailsRenderer';
 
 class TestElement {
   public textContent = '';
@@ -8,13 +11,19 @@ class TestElement {
   public className = '';
   public type = '';
   constructor(public readonly tagName: string) {}
-  append(...nodes: TestElement[]): void { this.children.push(...nodes); this.textContent += nodes.map((node) => node.textContent).join(''); }
+  append(...nodes: TestElement[]): void {
+    this.children.push(...nodes);
+    this.textContent += nodes.map((node) => node.textContent).join('');
+  }
 }
 
 const installDocument = (): void => {
   vi.stubGlobal('document', { createElement: (tagName: string) => new TestElement(tagName) });
 };
-const labels = (node: TestElement): string[] => node.children.filter((child) => child.className === 'detail-label').map((child) => child.textContent);
+const labels = (node: TestElement): string[] =>
+  node.children
+    .filter((child) => child.className === 'detail-label')
+    .map((child) => child.textContent);
 
 describe('OpenCode event details rendering', () => {
   it('renders cached details into a newly created details container without a duplicate request', () => {
@@ -30,21 +39,38 @@ describe('OpenCode event details rendering', () => {
     expect(sendRequest).toHaveBeenCalledTimes(1);
     expect(sendRequest).toHaveBeenCalledWith('tool-1');
 
-    details.set('tool-1', { input: '{"filePath":"src/auth.ts"}', output: 'ok', raw: '{"state":{}}' });
+    details.set('tool-1', {
+      input: '{"filePath":"src/auth.ts"}',
+      output: 'ok',
+      raw: '{"state":{}}',
+    });
     renderDetailsInto(firstContainer, 'tool-1', details);
-    expect(labels(firstContainer as unknown as TestElement)).toEqual(['INPUTCopy JSON','OUTPUT','RAW']);
+    expect(labels(firstContainer as unknown as TestElement)).toEqual([
+      'INPUTCopy JSON',
+      'OUTPUT',
+      'RAW',
+    ]);
 
     const secondContainer = new TestElement('div') as unknown as HTMLElement;
     renderDetailsInto(secondContainer, 'tool-1', details);
     ensureEventDetailsRequested('tool-1', details, requested, sendRequest);
-    expect(labels(secondContainer as unknown as TestElement)).toEqual(['INPUTCopy JSON','OUTPUT','RAW']);
-    expect((secondContainer as unknown as TestElement).textContent).not.toContain('Loading details…');
+    expect(labels(secondContainer as unknown as TestElement)).toEqual([
+      'INPUTCopy JSON',
+      'OUTPUT',
+      'RAW',
+    ]);
+    expect((secondContainer as unknown as TestElement).textContent).not.toContain(
+      'Loading details…',
+    );
     expect(sendRequest).toHaveBeenCalledTimes(1);
   });
 
   it('supports repeated bulk expand containers from the cached detail map', () => {
     installDocument();
-    const details = new Map([['tool-1', { output: 'tool output' }], ['skill-1', { output: 'skill output', temporalWarning: 'temporal' }]]);
+    const details = new Map([
+      ['tool-1', { output: 'tool output' }],
+      ['skill-1', { output: 'skill output', temporalWarning: 'temporal' }],
+    ]);
     const requested = new Set(['tool-1', 'skill-1']);
     const sendRequest = vi.fn();
 

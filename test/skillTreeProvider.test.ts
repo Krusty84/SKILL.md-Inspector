@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('vscode', () => {
   class Uri {
     constructor(readonly fsPath: string) {}
-    static file(value: string): Uri { return new Uri(value); }
+    static file(value: string): Uri {
+      return new Uri(value);
+    }
   }
   class TreeItem {
     description?: string;
@@ -12,7 +14,10 @@ vi.mock('vscode', () => {
     resourceUri?: Uri;
     command?: unknown;
     contextValue?: string;
-    constructor(readonly label: string, readonly collapsibleState: number) {}
+    constructor(
+      readonly label: string,
+      readonly collapsibleState: number,
+    ) {}
   }
   class MarkdownString {
     constructor(readonly value: string) {}
@@ -22,8 +27,13 @@ vi.mock('vscode', () => {
     TreeItem,
     MarkdownString,
     TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
-    ThemeIcon: class { constructor(readonly id: string) {} },
-    EventEmitter: class { event = vi.fn(); fire = vi.fn(); },
+    ThemeIcon: class {
+      constructor(readonly id: string) {}
+    },
+    EventEmitter: class {
+      event = vi.fn();
+      fire = vi.fn();
+    },
   };
 });
 
@@ -53,7 +63,8 @@ function analysis(): WorkspaceAnalysis {
             {
               code: 'missing-usage-trigger',
               ceiling: 69,
-              reason: 'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
+              reason:
+                'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
             },
           ],
           coverage: 'high',
