@@ -2,172 +2,371 @@
 
 ## Overview
 
-SKILL.md Inspector is a Visual Studio Code extension for validating and inspecting Agent Skill metadata. It analyzes files named exactly `SKILL.md`, publishes editor diagnostics and quick fixes, scores how discoverable each `description` is, and produces per-skill and workspace-level reports.
+SKILL.md Inspector is a Visual Studio Code extension for authoring, validating, and
+inspecting Agent Skill files. Its primary input is a file named exactly `SKILL.md`.
+The extension provides live diagnostics and quick fixes, per-skill and workspace
+reports, workspace and installed-agent navigation, template insertion, and local
+OpenCode session inspection.
 
-The implementation is local and deterministic. It does not call network services, use telemetry, or invoke an LLM. Parsing, validation, scoring, collision detection, portability checks, and report-model construction are ordinary TypeScript modules with no `vscode` import; VS Code-specific modules adapt those results to diagnostics, commands, edits, tree items, and webviews.
+The extension is local and deterministic. It does not call remote services, send
+telemetry, invoke an LLM, execute OpenCode exports, or fetch links found in skills
+or session data. The experimental LLM setting and `src/llm/` interface are inert.
 
-The shipped extension is a single CommonJS bundle at `dist/extension.js`. VS Code loads that bundle and calls `activate` when a Markdown document is opened or a workspace contains a `SKILL.md` file.
+The codebase has two broad boundaries:
+
+- host-independent TypeScript implements parsing, validation, static description
+  quality, authoring checks, collision detection, portability, evaluation metrics,
+  and most OpenCode normalization;
+- VS Code adapters own documents, configuration, commands, diagnostics, persistence,
+  filesystem URIs, tree views, output channels, and webview lifecycle.
+
+The production build contains a CommonJS extension-host bundle and a separate
+browser bundle for the interactive OpenCode timeline. The ordinary skill and
+workspace reports are script-disabled webviews rendered entirely by the extension
+host.
 
 ## Repository Structure
 
 ```text
 .
 +-- src/
-|   +-- analysis/       # Single-skill and VS Code workspace orchestration
-|   +-- codeActions/    # Diagnostic quick fixes and document templates
-|   +-- commands/       # Command Palette handlers
-|   +-- diagnostics/    # VS Code diagnostic collection, mode dispatch, range mapping
-|   +-- llm/            # Inert provider interface reserved for future work
-|   +-- parser/         # YAML/Markdown AST parsing, link/path helpers, resource discovery + cache
-|   +-- profiles/       # Generic, VS Code, Claude, and Codex rule profiles + resolveProfile
-|   +-- quality/        # Description heuristics, Static Description Quality scoring, local rewrites
-|   +-- types/          # Shared document, diagnostic, profile, quality, and workspace models
-|   +-- ui/             # Tree provider, report models, HTML renderers, and webviews
-|   +-- validation/     # Rule registry, per-rule validators, and the diagnostic pipeline
-|   +-- workspace/      # Discovery, collisions, portability, resource graphs, export model
-|   +-- config.ts       # Maps VS Code settings to an effective profile
-|   `-- extension.ts    # Extension activation and event wiring
-+-- test/               # Headless Vitest unit, property, and regression tests
-+-- docs/rules.md       # Catalogue of every diagnostic code (severity, kind, examples)
-+-- fixtures/           # Example skills and bundled resources used for manual testing
-+-- dist/               # Generated extension bundle and source map
-+-- esbuild.js          # Bundle configuration
-+-- package.json        # Extension manifest, contributions, dependencies, and scripts
-`-- tsconfig.json       # Strict TypeScript checks
+|   +-- analysis/       # Single-skill pipeline and workspace-analysis adapter
+|   +-- authoring/      # Structural instruction and resource authoring checks
+|   +-- codeActions/    # Quick-fix translation and shared insertion templates
+|   +-- commands/       # Skill, workspace-explorer, template, and OpenCode commands
+|   +-- diagnostics/    # Diagnostic collection and VS Code range/severity mapping
+|   +-- evaluation/     # Offline behavioral trigger-suite model, runner, and metrics
+|   +-- llm/            # Inert provider seam; no runtime implementation
+|   +-- navigator/      # Favorites, installed-agent discovery, and workspace browser
+|   +-- opencode/       # Session discovery, tolerant parsing, normalization, and metrics
+|   +-- parser/         # YAML/Markdown parsing, links, resources, globs, and cache
+|   +-- profiles/       # Generic, VS Code, Claude, and Codex validation profiles
+|   +-- quality/        # Static Description Quality heuristics and dictionaries
+|   +-- templates/      # Built-in/custom template validation and rendering
+|   +-- types/          # Shared skill, diagnostic, profile, and workspace models
+|   +-- ui/             # Tree providers, report models/renderers, and webview hosts
+|   +-- validation/     # Rule registry and validators
+|   +-- webview/        # Browser-side OpenCode report state and rendering
+|   +-- workspace/      # Skill discovery, collisions, portability, graphs, and export
+|   +-- config.ts       # Resolves VS Code settings into analysis configuration
+|   `-- extension.ts    # Activation, provider construction, events, and watchers
++-- test/               # Vitest unit, property, integration, and regression tests
++-- benchmarks/         # Curated Static Description Quality benchmark corpus
++-- evaluation/         # Example behavioral trigger suites
++-- fixtures/           # Sample skills, resources, and OpenCode exports
++-- examples/           # Copyable user-configuration examples
++-- docs/rules.md       # Diagnostic-code catalogue
++-- opencode-session-export.schema.json
+|                       # Reconstructed OpenCode compatibility reference
++-- dist/               # Generated extension and OpenCode webview bundles
++-- esbuild.js           # Both production bundle definitions
++-- package.json         # Extension manifest, settings, views, menus, and scripts
++-- tsconfig.json        # Strict no-emit TypeScript configuration
+`-- vitest.config.ts     # Node-based test discovery
 ```
 
-`src/` is the source of truth. `dist/extension.js` is generated by the build and is the entry point declared in the extension manifest.
+`src/` is the implementation source of truth. Files under `dist/` are generated
+and should not be edited directly.
 
 ## Main Runtime Components
 
-### Extension Host Adapter
+### Extension Host Composition
 
-`src/extension.ts` is the runtime entry point. During activation it:
+`src/extension.ts` is the extension-host entry point. `activate` constructs and
+registers:
 
-- creates the shared `DiagnosticsProvider` (which owns the diagnostic collection and a resource cache);
-- registers Command Palette handlers and the Markdown quick-fix provider;
-- registers the Explorer tree view and its refresh command;
-- watches `**/SKILL.md` for create/delete to refresh the tree;
-- watches bundled resource files (`**/{references,scripts,assets,templates}/**`) so adding, removing, or renaming one invalidates the resource cache, refreshes the tree, and re-validates visible skills;
-- validates skills when documents open, change, or save, and clears diagnostics on close;
-- clears the resource cache and re-validates when `skillMdInspector` configuration changes.
+- one `DiagnosticsProvider` and the Markdown code-action provider;
+- the skill-analysis panel tree;
+- the Activity Bar's Favorites, Workspace, Installed Agents, and OpenCode Sessions
+  tree views;
+- skill/report/template commands, workspace file-management commands, and OpenCode
+  commands;
+- file watchers and document/workspace/configuration event handlers;
+- an output channel shared by navigator and OpenCode failures.
 
-Edits are debounced by 300 milliseconds; while typing, revalidation runs the filesystem-free `text-only` pipeline, while open, save, and command runs use the full pipeline. All listeners, providers, watchers, commands, and pending timers are tied to the extension context for cleanup.
+Live edits are debounced by 300 milliseconds. File and configuration events
+invalidate the appropriate caches, refresh tree providers, and revalidate visible
+skills. Registered VS Code disposables are attached to the extension context, and a
+dedicated disposable clears pending validation timers during shutdown.
 
-### Parsing and the Skill Document Model
+### Skill Parsing and Document Model
 
-`src/parser/parseSkillFile.ts` creates the normalized `SkillDocument` used by later stages. Parsing is split into focused, pure operations over source text:
+`parseSkillFile` creates the normalized `SkillDocument` consumed by validation,
+reports, quick fixes, and workspace analysis. Parsing is split into focused stages:
 
-- `parseFrontmatter` parses YAML frontmatter with `yaml`'s document API and a line counter, recording each top-level key's source range, reporting structural and YAML errors, and flagging duplicate keys.
-- `parseMarkdownLinks` uses Unified/Remark/Unist to extract Markdown links from the body, and also recognizes bare resource paths written in prose or code (e.g. `scripts/run.py`) so they count as references.
-- `parseMarkdownHeadings` extracts ATX and setext headings for body-section checks.
-- `discoverResources` scans a skill directory (honoring exclusion globs) for bundled files.
-- `withResources` marks a discovered file as referenced when a relative link — including a bare prose path — resolves to it.
+- `parseFrontmatter` uses `yaml` with source positions to parse top-of-file YAML,
+  retain top-level key ranges, and report malformed or duplicate fields;
+- `parseMarkdownLinks` uses Unified/Remark and also recognizes bare resource paths;
+- `parseMarkdownHeadings` records ATX and setext headings for body checks;
+- `discoverResources` recursively inventories files below the skill directory,
+  honoring exclusion globs and excluding the skill file itself;
+- `withResources` marks inventory entries referenced by relative Markdown links or
+  recognized bare paths.
 
-Text parsing is pure. Filesystem access begins only when resources are discovered or link targets are checked on disk.
+Text parsing itself is filesystem-free. Full analysis begins synchronous Node
+filesystem access when it discovers resources or verifies local link targets.
 
-### Analysis and Validation Core
+### Validation and Diagnostics
 
-`analyzeSkill` is the single-file pipeline and runs in one of two modes:
+`analyzeSkill` is the single-skill pipeline:
 
-- `text-only` (used on every keystroke) parses the text and runs the rules with filesystem checks skipped — no resource discovery, no linked-file existence checks.
-- `full` (used on open, save, and commands) additionally discovers resources (served from a cache) and runs the filesystem-dependent link checks.
+1. parse the current text into a `SkillDocument`;
+2. in `full` mode, attach discovered resources;
+3. run the validation registry;
+4. apply profile severity overrides and return deterministically sorted diagnostics.
 
-`runAllValidations` drives a small **rule registry** (`ruleRegistry.ts`): each validator area — frontmatter, name, description, links, resources, body, and profile metadata — is registered as a `ValidationRule` with an optional `appliesToProfiles` filter. After the registered rules run, the pipeline applies the profile's per-code severity overrides and returns the diagnostics in a deterministic order (document range, then severity, then code).
+`text-only` mode skips resource discovery and filesystem-dependent link checks. It
+is used while typing and for lightweight OpenCode skill matching. `full` mode is
+used on document open/save, explicit validation, reports, and workspace analysis.
 
-Every diagnostic is a tool-neutral `SkillDiagnostic` built by the `diag()` helper, which stamps a `kind` (`specification`, `compatibility`, `security`, or `quality`) from a central code-to-kind map. `diagnostics/mapping.ts` converts these into VS Code diagnostics only at the UI boundary.
+The registry in `src/validation/ruleRegistry.ts` groups rules for frontmatter,
+name, description, links, resources, body structure, and profile metadata. Every
+result is a tool-neutral `SkillDiagnostic` classified as `specification`,
+`compatibility`, `security`, or `quality`. Specification errors cannot be disabled
+or downgraded unless the effective profile explicitly permits it.
 
-### Description Quality
+`DiagnosticsProvider` adapts these results to VS Code diagnostics and owns a
+`ResourceCache` keyed by skill directory. `SkillCodeActionProvider` reruns analysis
+for the requested document range and translates diagnostic fix metadata into
+`WorkspaceEdit` operations. Validation code does not directly mutate files.
 
-Description quality is a related but separate concern. `quality/` detects action verbs (including irregular and inflected forms), positive/negative/exclusive trigger phrases, concrete artifacts and acronyms, vague wording, and intent placement, using dictionary registries rather than open-ended heuristics. `computeStaticDescriptionQuality` turns those findings into a 0–100 score, a label, a heuristic coverage level, and a list of limitations (for example, a non-English or very short description scores low coverage). `buildImprovedDescription` produces deterministic suggestions by keeping the current wording and appending missing "Use when…" / "Do not use when…" clauses, or offering a template when the description scores poorly.
+### Profiles, Configuration, and Heuristics
 
-### Profiles and Configuration
+`readConfig` resolves `skillMdInspector.*` settings for a URI. It combines one of
+the `generic`, `vscode`, `claude`, or `codex` profiles with configured length
+limits, body strictness, language mode, severity overrides, collision parameters,
+resource directories/exclusions, and heuristic dictionary overrides.
 
-`readConfig` reads the `skillMdInspector.*` settings and resolves one of four profiles — `generic`, `vscode`, `claude`, or `codex` — through `resolveProfile`, which folds user settings (name/description limits, description language, body strictness, and per-code severity overrides) onto the profile's defaults. A profile carries its limits, recommended body sections and strictness, profile-specific metadata rules, and any severity overrides.
+Static Description Quality is a separate deterministic measure. The `quality/`
+modules identify action verbs, trigger and boundary phrases, concrete artifacts,
+acronyms, vague language, length, and intent placement. The result contains a
+0-100 score, label, coverage, findings, and explicit limitations; it is not a
+probability of runtime skill selection.
 
-The same effective profile is passed into editor validation, skill reports, workspace analysis, and exported indexes, so those surfaces agree on rule thresholds and overrides. Severity overrides can downgrade or disable a diagnostic by code; specification-kind errors are protected from accidental disabling unless the profile explicitly allows it.
+Custom dictionary resolution starts from the built-in registries and applies
+case-insensitive `add`, `remove`, or `replace` operations. The same dictionaries
+can feed description diagnostics, Static Description Quality, collision-feature
+helpers, and local description improvement when their callers pass the resolved
+context.
 
-### VS Code Diagnostics, Commands, and Edits
+### Reports and Authoring Quality
 
-`DiagnosticsProvider` owns one diagnostic collection and a `ResourceCache`. It delegates analysis to `analyzeSkill` (passing the mode and a cache-backed discovery function), maps the returned diagnostics, and publishes them for a document. Its `validateWorkspace` finds every `SKILL.md` through the VS Code file API and, checking a cancellation token and reporting progress, applies the same provider file by file.
+The per-skill report analyzes the active document text, so it can include unsaved
+editor changes. `buildReportModel` combines validation counts, Static Description
+Quality, referenced resources, and two additional structural authoring scores:
+instruction quality and resource quality. These authoring scores detect obvious
+hygiene problems such as empty instructions, placeholders, empty/duplicate
+sections, oversized bodies, undocumented scripts, and large or unreferenced files.
+They are not combined with description quality and do not judge instruction
+correctness.
 
-Command modules are thin handlers for these workflows: validate the active skill or all workspace skills; insert a starter template; show a per-skill report; suggest and optionally apply a local description rewrite; show the workspace report; export `skills.index.json`; and refresh the tree.
-
-`SkillCodeActionProvider` reruns the core analysis for the active document, selects diagnostics intersecting the requested range, and translates their quick-fix metadata into `WorkspaceEdit` operations — modifying frontmatter or body text, renaming a skill directory, creating a missing linked file, or adding a resource link.
+The workspace report presents saved-file analysis: skills, duplicate/similar names,
+description collisions, profile portability, and resource graphs. Report-model and
+HTML-rendering functions are kept separate from their reusable webview-panel hosts.
+Both skill-oriented report webviews disable scripts and use restrictive content
+security policies.
 
 ### Workspace Analysis
 
-Workspace intelligence starts with `discoverSkillPaths`, which recursively scans a root directory, skipping any directory matching a configurable exclusion glob (dependency caches, VCS metadata, and build output by default) so scans do not descend into vendored or nested repositories. `analyzeWorkspace` analyzes each readable skill into a `WorkspaceSkill` record — diagnostic counts, a compact per-diagnostic summary (code, severity, kind), Static Description Quality, per-profile portability, and a resource graph. It checks a cancellation signal between files and reports progress; a cancelled scan is returned flagged as partial.
+`computeWorkspaceAnalysis` is the VS Code-facing entry point shared by the
+skill-analysis tree, workspace report, and index export. It chooses the first open
+workspace folder, resolves its configuration, discovers `SKILL.md` paths, and calls
+the host-independent `analyzeWorkspace` function.
 
-It then compares every pair of skill descriptions. Collision detection normalizes and tokenizes descriptions and blends four similarity metrics — token Jaccard, smoothed TF-IDF cosine, character n-gram, and name similarity — into a composite score, reduced when the two skills' negative boundaries separate their scopes. Pairs at or above the threshold are reported with a Low/Medium/High risk band and a separate confidence in the textual evidence. Name conflicts (identical names) and confusingly similar names are detected alongside.
+For each readable skill, workspace analysis records diagnostic counts and codes,
+Static Description Quality, per-profile portability, and a resource graph. It then
+compares the corpus for:
 
-Portability is evaluated per profile: profile-independent checks (frontmatter, links) run once and profile-dependent checks (name, description, body, profile metadata) run for each profile, so a Claude-only issue never affects the others and the editor's selected profile does not skew the result. Each profile carries its own contributing diagnostics and a pass/warning/fail status. The resource graph classifies bundled and linked files as referenced, unreferenced, missing, remote, or absolute, and flags scripts, binary formats, and large files.
+- exact normalized name conflicts;
+- confusingly similar names;
+- lexical description collisions using token Jaccard, smoothed TF-IDF cosine,
+  character n-grams, and name similarity, reduced by explicit boundary separation.
 
-### Reports and Explorer Tree
+Collision output includes the contributing metrics, shared terms, a risk band, and
+confidence in the available textual evidence. Portability reruns relevant validation
+against every profile and produces `pass`, `warning`, or `fail` status. The resource
+graph classifies referenced, unreferenced, missing, remote, and absolute targets and
+flags scripts, binaries, and large files.
 
-The Explorer tree, workspace report, and skills-index export share `computeWorkspaceAnalysis`, the VS Code-facing workspace-analysis entry point. The tree lazily computes and caches an analysis until a refresh-triggering event clears it.
+`buildSkillsIndex` projects this analysis into schema version 2 and adds a generation
+timestamp before `exportSkillsIndex` writes `skills.index.json` at the workspace root.
 
-Report construction is separated from presentation: report-model modules convert analysis results into display models, renderer modules produce escaped HTML, and webview panel classes own one reusable, script-disabled panel per report type. The single-skill report shows validation counts and the Static Description Quality breakdown with its coverage and limitations; the workspace report shows skill summaries, the collision matrix (with risk and confidence), profile portability, and resource graphs. Both label the Static Description Quality Score as a heuristic that does not guarantee runtime skill selection.
+### Navigation and Workspace File Operations
+
+Navigation is intentionally separate from workspace-wide skill analysis:
+
+- Favorites stores ordered `SKILL.md` URI strings in VS Code global state. Missing
+  local favorites remain visible until removed.
+- Workspace is a lazy, multi-root, URI-based file browser. `WorkspaceExplorer`
+  reads one directory at a time with `vscode.workspace.fs`, caches children, honors
+  enabled `files.exclude` patterns, and watches each workspace root.
+- Installed Agents scans only declared built-in and user-configured local roots for
+  supported `SKILL.md`, `AGENTS.md`, and `CLAUDE.md` files. Discovery follows bounded
+  depth/result limits, resolves real paths, avoids traversal cycles, and does not
+  invoke agent executables.
+- The separate Skills panel lazily caches the first-folder `WorkspaceAnalysis` for
+  diagnostic, collision, portability, and resource inspection.
+
+Workspace commands use public VS Code APIs for creation, rename, copy/cut/paste,
+trash deletion, terminals, workspace-folder changes, and optional built-in commands.
+They validate relative paths, reject traversal, check known read-only providers, and
+do not overwrite paste conflicts without confirmation. The clipboard stores URIs,
+not file contents.
+
+### Templates
+
+`src/templates/` defines four bundled templates and the custom-template pipeline.
+An empty setting selects the built-ins; a non-empty valid array replaces them. If
+all configured entries are invalid, resolution falls back to the bundled catalog and
+reports the configuration issue.
+
+Templates are represented as frontmatter and body line arrays. Rendering inserts
+YAML delimiters, infers a kebab-case name from the parent directory, derives a title,
+and expands `{{name}}` and `{{title}}`. Insertion is deliberately text-oriented: it
+fills an empty document or inserts at the current cursor without merging existing
+frontmatter.
+
+### OpenCode Session Inspection
+
+The OpenCode subsystem reads exported JSON through `vscode.workspace.fs`. A selected
+sessions-folder URI is persisted in workspace state when a workspace is open and in
+global state otherwise. Discovery can recurse, is bounded by configured file-size and
+result limits, ignores unrelated JSON, and nests exported child sessions by
+`parentID` while guarding against cycles.
+
+The import pipeline is:
+
+1. require only an object root with object `info` and array `messages`;
+2. retain known and unknown roles, part types, fields, and status values;
+3. add non-fatal diagnostics against a reconstructed schema pinned to a specific
+   OpenCode source commit;
+4. detect likely sanitization/redaction markers;
+5. normalize source-ordered messages and parts into trajectory nodes and metrics;
+6. match `skill` tool calls by normalized name against local workspace skills;
+7. build a bounded timeline view model.
+
+The OpenCode report is the only script-enabled webview. The extension-host panel
+sends a bounded initial model, validates incoming messages and event IDs, and serves
+bounded event details lazily. Its browser bundle owns filtering, search, expansion,
+and timeline presentation. A restrictive content security policy permits only local
+extension assets; embedded URLs are displayed as text, and recorded commands are
+never executed.
+
+Skill-call segments describe temporal ordering only. A later tool call is not treated
+as proof that a loaded skill caused or governed that action.
+
+### Offline Evaluation Library
+
+`src/evaluation/` is development/test infrastructure, not an extension command. It
+parses behavioral trigger suites, asks an injected `TriggerProvider` for recorded
+yes/no decisions, and computes confusion-matrix metrics plus repeated-run stability.
+The repository currently supplies only a deterministic fake provider for tests. These
+behavioral metrics remain separate from Static Description Quality and validation.
 
 ## Data Flow
 
 ### Live Editor Validation
 
 1. VS Code opens, changes, or saves a document.
-2. `extension.ts` filters for a file named `SKILL.md` and reads the effective configuration.
-3. `DiagnosticsProvider` passes the in-memory text and filesystem path to `analyzeSkill` — `text-only` while typing, `full` on open/save.
-4. The parser creates a `SkillDocument`; in full mode, cached resource discovery attaches bundled files.
-5. The rule registry returns diagnostics, which are override-adjusted and sorted deterministically.
-6. The adapter maps ranges, severities, and codes to VS Code objects and replaces the document's diagnostic collection entry.
-7. When requested, the code-action provider derives edits from the same analysis and diagnostic metadata.
+2. `extension.ts` accepts only an exact `SKILL.md` filename and resolves scoped
+   configuration.
+3. `DiagnosticsProvider` passes in-memory text to `analyzeSkill`: `text-only` after
+   debounced edits and `full` on open/save or explicit commands.
+4. Parsing and the rule registry return tool-neutral diagnostics.
+5. The diagnostics adapter maps source offsets and severities into VS Code objects
+   and replaces the document's collection entry.
+6. On request, the code-action provider converts fix metadata into editor or
+   filesystem edits.
 
-### Per-Skill Report
+### Workspace Report, Skills Tree, and Export
 
-1. The command reads the active editor's unsaved text and runs `analyzeSkill` with the selected profile.
-2. `buildReportModel` adds diagnostic counts, referenced/unreferenced file lists, and the Static Description Quality result.
-3. The HTML renderer escapes and formats the model.
-4. `SkillReportPanel` displays it in a reusable, script-disabled webview.
+1. `computeWorkspaceAnalysis` selects the first workspace root and discovers saved
+   skill files beneath it.
+2. `analyzeWorkspace` runs full analysis per file and reports progress/cancellation
+   between files.
+3. Cross-skill name and description comparisons run after the per-skill records are
+   built.
+4. The resulting immutable-style `WorkspaceAnalysis` feeds the Skills tree or
+   workspace report.
+5. Export projects the same model into `skills.index.json` and writes it through the
+   VS Code filesystem API.
 
-### Workspace Report, Tree, and Export
+### Navigator
 
-1. `computeWorkspaceAnalysis` chooses the first open workspace folder and discovers `SKILL.md` paths below it.
-2. Each file is read from disk and analyzed into a `WorkspaceSkill`; the report and export commands run this under a cancellable progress notification.
-3. Cross-skill collision, name-conflict, and similar-name detection run after all per-skill records are built.
-4. The resulting `WorkspaceAnalysis` feeds the Explorer tree or workspace report.
-5. For export, `buildSkillsIndex` selects the public fields (including the per-diagnostic summary), adds a generation timestamp, and the command writes `skills.index.json` at the workspace root.
+1. Favorites restores persisted URI strings; Installed Agents discovers declared
+   local roots; Workspace obtains the current VS Code workspace folders.
+2. Each provider converts its own source model into tree items. The three navigator
+   views do not depend on `WorkspaceAnalysis`.
+3. Workspace directories are loaded lazily and cached by URI.
+4. Watchers or explicit file commands invalidate affected parents and refresh only
+   the relevant views where practical.
 
-Workspace analysis reads saved files from disk; unlike active-editor analysis, it does not include unsaved editor changes.
+### OpenCode Report
+
+1. The sessions tree discovers bounded JSON candidates below the persisted folder.
+2. Opening a candidate rereads and parses the full bounded export.
+3. Normalization constructs trajectory nodes, metrics, diagnostics, sanitization
+   state, and local skill matches.
+4. The extension host sends the lightweight timeline model to one reusable webview.
+5. Expanding an event requests its bounded raw details by validated event ID.
 
 ## Key Design Decisions
 
-- Core analysis has no `vscode` import. Rules stay reusable and almost all behavior is tested in a Node process without launching an Extension Development Host.
-- Diagnostics are the shared contract between rules and editor fixes. Rule modules identify a problem and attach fix metadata; the VS Code adapter owns mutations.
-- Validation is data-driven: a rule registry runs registered validators, a central map classifies every code by kind, and profile-resolved severity overrides adjust the result — all before it reaches the editor. Output is deterministically ordered.
-- Profile rules, length limits, and overrides are resolved into one effective profile before analysis rather than read piecemeal in the core.
-- Typing uses a filesystem-free `text-only` pass; a resource cache and file watchers keep the full pass cheap and its inputs fresh.
-- Workspace analysis builds a complete in-memory result and shares it across tree, report, and export; portability is computed independently per profile.
-- Static Description Quality, collision risk, and portability are deterministic heuristics with explicit coverage and limitations (collision results additionally carry an evidence confidence), not semantic or execution-based guarantees. The `llm/` interface and experimental setting are inert placeholders.
+- Validation and most analysis models do not import `vscode`, which keeps core rules
+  reusable in Node tests and makes editor mutations an adapter concern.
+- Diagnostics are the contract between validation and quick fixes. Rules describe
+  problems and fix metadata; VS Code-facing code performs edits.
+- Fast and complete analysis are explicit modes. Keystrokes avoid filesystem work;
+  save/report paths use full discovery and link checks.
+- Profile settings are resolved before validation, and diagnostic output is sorted to
+  keep editor and test results stable.
+- Static quality, authoring quality, collision risk, portability, and behavioral
+  evaluation are separate signals. None is presented as runtime selection proof.
+- The navigator and skill-analysis tree use different models because one is a
+  multi-root file browser while the other is a first-root aggregate analysis.
+- VS Code URI APIs are used where remote-provider support matters. Node filesystem
+  APIs remain in the local skill-analysis and installed-agent paths.
+- OpenCode parsing is tolerant because its export is not a separately versioned public
+  standard. Compatibility diagnostics observe a pinned reconstructed schema without
+  turning it into a strict import gate.
+- Interactive webview data crosses a narrow message boundary: the initial payload and
+  lazily requested details are bounded, and browser-provided identifiers are checked
+  against extension-host state.
 
 ## External Dependencies and Integrations
 
-Runtime dependencies are deliberately small:
+Runtime dependencies are limited to:
 
-- the VS Code Extension API for lifecycle, configuration, diagnostics, edits, commands, files, tree views, and webviews;
-- `yaml` for frontmatter parsing;
-- `unified`, `remark-parse`, and `unist-util-visit` for Markdown link and heading extraction;
-- Node filesystem and path APIs for discovery, resource checks, and workspace analysis.
+- the VS Code Extension API for lifecycle, configuration, diagnostics, commands,
+  persistence, filesystem URIs, tree views, editors, and webviews;
+- Node `fs`, `path`, and `os` APIs for local discovery and path handling;
+- `yaml` for source-aware frontmatter parsing;
+- `unified`, `remark-parse`, and `unist-util-visit` for Markdown syntax traversal.
 
-Build and development dependencies include TypeScript, esbuild, Vitest, `fast-check` (property tests), ESLint, Prettier, VS Code type definitions, and `@vscode/vsce` when packaging through `npx`. The extension has no remote service integration at runtime.
+There is no runtime integration with OpenCode itself; the extension reads exported
+JSON only. Likewise, agent installations are inferred from declared directories,
+not from executable discovery or subprocess calls.
+
+Development dependencies provide TypeScript, esbuild, Vitest, `fast-check`, ESLint,
+Prettier, and VS Code type definitions. Packaging may use `@vscode/vsce` through
+`npx`, but it is not a declared runtime dependency.
 
 ## Build and Validation Notes
 
 - Required VS Code engine: `^1.90.0`.
-- TypeScript targets ES2022 with strict checking, unused-symbol checks, and no emit.
-- esbuild bundles `src/extension.ts` and its dependencies as CommonJS for Node 18, leaving the host-provided `vscode` module external; production builds are minified and watch builds emit a source map.
-- Vitest runs `test/**/*.test.ts` in a Node environment.
-- The Extension Development Host launch configuration runs `npm run build` before loading the current workspace as the extension under development.
+- TypeScript targets ES2022 with strict, unused-symbol, implicit-return, and
+  fallthrough checks; `tsc` performs no emit.
+- `esbuild.js` produces `dist/extension.js` as CommonJS for Node 18 with `vscode`
+  externalized.
+- The same build produces `dist/webview/openCodeSessionReport.js` as an ES2022
+  browser IIFE and extracts its imported CSS beside it.
+- Production builds are minified; watch builds include source maps.
+- Vitest runs `test/**/*.test.ts` in Node. Property tests use `fast-check`.
+- `npm run test:eval` limits Vitest to evaluation tests, and
+  `npm run benchmark:static` runs the curated static-quality benchmark.
+- `vscode:prepublish` runs the production build before VSIX packaging.
 
-Contributor validation commands are:
+The standard contributor checks are:
 
 ```bash
 npm run check-types
@@ -176,19 +375,52 @@ npm test
 npm run build
 ```
 
-`npm run lint` is `eslint src` only; Prettier is run separately. Packaging runs the production build through the `vscode:prepublish` script before creating a VSIX. Every diagnostic code is documented in `docs/rules.md`.
+`npm run lint` checks `src/` only. Prettier is available but is not part of that
+script. Every skill diagnostic code should also be reflected in `docs/rules.md`.
 
 ## Known Constraints
 
-- Workspace reports, the Explorer tree, and index export analyze only the first open workspace folder. The separate workspace-validation command uses VS Code's workspace-wide file search and can cover more than that first folder.
-- Workspace discovery and per-skill analysis use synchronous Node filesystem operations on the extension host. The workspace-validation command yields between files, so its progress and cancellation are live; report and index generation run the analysis synchronously, so on very large skill collections progress may repaint only after it completes.
-- The tree caches its analysis until an explicit refresh, a `SKILL.md` create/delete/save, a bundled-resource create/delete/change, or a relevant configuration change.
-- Workspace analysis reads files from disk, so unsaved `SKILL.md` edits are visible to live diagnostics and the per-skill report but not to the tree, workspace report, collision analysis, or export.
-- Collision scores depend on the descriptions present in the analyzed corpus and indicate lexical overlap, not whether an agent will actually choose the wrong skill; each result carries a confidence in how much text backs it.
-- Portability checks are local heuristics; they do not execute skills in any agent environment. Remote links are classified syntactically but never fetched.
-- Similarity tokenization is ASCII-oriented and the quality heuristics are English-oriented; a non-English description is analyzed structurally and marked low coverage rather than scored semantically.
-- The experimental LLM review setting, provider interface, prompts directory, and providers directory are inert. No LLM-assisted review is currently implemented.
-
-```
-
-```
+- Workspace analysis, the Skills panel, workspace report, and index export use only
+  the first open workspace folder. The Workspace navigator is multi-root, and the
+  separate validate-workspace command uses VS Code-wide file search.
+- Workspace analysis and full local skill analysis use synchronous Node filesystem
+  operations. Cancellation is checked between skill files, so a single large scan
+  step can still block the extension host and delay progress repainting.
+- Workspace aggregate analysis reads saved files. Unsaved text is visible to live
+  diagnostics and the per-skill report, but not to collision, portability, tree, or
+  index results.
+- Full skill analysis is path/Node-filesystem based. The Workspace navigator and
+  OpenCode export reader support URI filesystem providers more broadly, but remote
+  skill validation/resource discovery is not consistently provider-neutral.
+- The resource cache watcher is registered for the built-in
+  `references/scripts/assets/templates` directory names. If
+  `resources.directories` replaces them with custom names, changes under those names
+  do not directly invalidate the live-diagnostic resource cache. Configuration
+  changes clear that cache, while workspace analysis and reports perform fresh
+  discovery.
+- Configuration propagation is not yet uniform. Live diagnostics and the selected
+  profile's workspace analysis forward configured dictionaries and resource
+  directories. The code-action and per-skill-report validation calls do not; the
+  per-skill report does still use configured dictionaries for its displayed Static
+  Description Quality score.
+- Portability description checks and aggregate collision boundary extraction use
+  built-in heuristic dictionaries rather than configured overrides, even though the
+  lower-level description and collision-feature functions accept custom dictionaries.
+- The Skills tree caches its `WorkspaceAnalysis` until a refresh-triggering event.
+  Navigator trees have separate caches and invalidation rules.
+- Similarity tokenization and most description heuristics are English/ASCII-oriented.
+  Non-English input is structurally analyzed and can be marked with limited coverage.
+- Collision and portability results are local heuristics. They do not execute skills
+  in an agent environment, and remote skill links are classified but never fetched.
+- Installed-agent discovery is local and bounded to declared roots; it is not a full
+  home-directory inventory and may omit unsupported agent layouts.
+- OpenCode compatibility is based on a reconstructed schema pinned to one upstream
+  source commit, not an official stable export contract. Unknown content is retained,
+  and sanitization or preview truncation can make trajectory evidence incomplete.
+- OpenCode skill matching is name-based and scans only local `file:` workspace roots.
+  Matches and subsequent actions establish temporal proximity, not causation or rule
+  compliance.
+- The evaluation runner has no production provider or extension UI. It is currently a
+  tested library seam for externally recorded behavioral decisions.
+- The LLM provider interface and experimental setting are inert; no assisted review is
+  implemented.
