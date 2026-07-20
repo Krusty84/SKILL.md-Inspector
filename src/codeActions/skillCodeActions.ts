@@ -167,7 +167,17 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     const action = this.newAction(title, diagnostic, context);
     action.isPreferred = isPreferred;
     action.edit = new vscode.WorkspaceEdit();
-    action.edit.replace(document.uri, document.lineAt(keyRange.startLine).range, replacement);
+    // Replace the whole key+value entry so multi-line scalar values are not left
+    // orphaned. Fall back to the key's line when there is no value range (e.g. an
+    // empty value), which is what the single-line assumption handled before.
+    const valueRange = skillDoc.frontmatterValueRanges?.[key];
+    const range = valueRange
+      ? new vscode.Range(
+          new vscode.Position(keyRange.startLine, keyRange.startCharacter),
+          new vscode.Position(valueRange.endLine, valueRange.endCharacter),
+        )
+      : document.lineAt(keyRange.startLine).range;
+    action.edit.replace(document.uri, range, replacement);
     return action;
   }
 
@@ -222,12 +232,36 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
       return undefined;
     }
     const keyRange = skillDoc.frontmatterKeyRanges?.['description'];
-    if (!keyRange) {
+    const valueRange = skillDoc.frontmatterValueRanges?.['description'];
+    if (!keyRange || !valueRange) {
       return undefined;
     }
     const action = this.newAction(title, diagnostic, context);
     action.edit = new vscode.WorkspaceEdit();
-    action.edit.insert(document.uri, document.lineAt(keyRange.startLine).range.end, clause);
+    const valueStart = new vscode.Position(valueRange.startLine, valueRange.startCharacter);
+    const firstChar = document.getText(
+      new vscode.Range(valueStart, valueStart.translate(0, 1)),
+    );
+    if (firstChar === '"' || firstChar === "'") {
+      // Quoted scalar: appending after the value lands outside the quotes and
+      // breaks the YAML. Rebuild the whole entry with the combined value, safely
+      // re-serialized (JSON encoding is a valid YAML double-quoted scalar).
+      const combined = skillDoc.frontmatter.description + clause;
+      const entry = new vscode.Range(
+        new vscode.Position(keyRange.startLine, keyRange.startCharacter),
+        new vscode.Position(valueRange.endLine, valueRange.endCharacter),
+      );
+      action.edit.replace(document.uri, entry, `description: ${JSON.stringify(combined)}`);
+    } else {
+      // Plain or block (folded/literal) scalar: insert at the end of the value
+      // content. This is correct even for multi-line block scalars, unlike the
+      // key's physical line which the previous implementation used.
+      action.edit.insert(
+        document.uri,
+        new vscode.Position(valueRange.endLine, valueRange.endCharacter),
+        clause,
+      );
+    }
     return action;
   }
 
@@ -294,8 +328,13 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
   }
 
   private descriptionInsertPosition(skillDoc: SkillDocument): vscode.Position {
-    const nameRange = skillDoc.frontmatterKeyRanges?.['name'];
-    const line = nameRange ? nameRange.startLine + 1 : frontmatterStartLine(skillDoc);
+    // Insert the new description line after the *end* of the name value so a
+    // multi-line name scalar is not split. Fall back to the key line, then to the
+    // first frontmatter line.
+    const nameValueRange = skillDoc.frontmatterValueRanges?.['name'];
+    const nameKeyRange = skillDoc.frontmatterKeyRanges?.['name'];
+    const anchorLine = nameValueRange?.endLine ?? nameKeyRange?.startLine;
+    const line = anchorLine !== undefined ? anchorLine + 1 : frontmatterStartLine(skillDoc);
     return new vscode.Position(line, 0);
   }
 }

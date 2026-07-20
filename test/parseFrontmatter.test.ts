@@ -30,6 +30,29 @@ describe('parseFrontmatter', () => {
     expect(result.errors[0].code).toBe(DiagnosticCode.FrontmatterMissing);
   });
 
+  it('exposes value ranges that span multi-line scalars (for safe quick-fix edits)', () => {
+    // Quick fixes append to the *end of the value*; for a block or quoted scalar
+    // that end is not on the key's line. The value range must reach the last line
+    // of the value so an appended clause does not corrupt the YAML.
+    const single = parseFrontmatter('---\nname: demo\ndescription: Format things.\n---\n# B');
+    // `description` is on line 2 (0-based); value ends on the same line.
+    expect(single.frontmatterValueRanges['description'].startLine).toBe(2);
+    expect(single.frontmatterValueRanges['description'].endLine).toBe(2);
+
+    const folded = parseFrontmatter(
+      '---\nname: demo\ndescription: >\n  Formats things\n  across files.\n---\n# B',
+    );
+    // The folded value continues onto lines 3-4; the range must reach line 4,
+    // not stop at the key line (2).
+    expect(folded.frontmatterKeyRanges['description'].startLine).toBe(2);
+    expect(folded.frontmatterValueRanges['description'].endLine).toBe(4);
+
+    const quoted = parseFrontmatter(
+      '---\nname: demo\ndescription: "Format things\n  across files"\n---\n# B',
+    );
+    expect(quoted.frontmatterValueRanges['description'].endLine).toBe(3);
+  });
+
   it('reports frontmatter that is not at the top of the file', () => {
     const content = ['Leading text', '---', 'name: x', '---'].join('\n');
     const result = parseFrontmatter(content);
