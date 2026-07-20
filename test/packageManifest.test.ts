@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
 import catalog from '../src/quality/defaultHeuristicDictionaries.json';
 
+// `contributes.configuration` is an array of titled categories (labeled sections in
+// the Settings UI); merge their property maps so a setting can be looked up by id
+// regardless of which section it lives in.
+const configProperties = Object.assign(
+  {},
+  ...packageJson.contributes.configuration.map((category) => category.properties),
+) as Record<string, any>;
+
 describe('package manifest context menus and templates', () => {
   it('declares the SKILL.md Inspector submenu in editor and explorer contexts', () => {
     expect(packageJson.contributes.submenus).toContainEqual({
@@ -53,7 +61,7 @@ describe('package manifest context menus and templates', () => {
   });
 
   it('declares template setting schema and new commands', () => {
-    const setting = packageJson.contributes.configuration.properties['skillMdInspector.templates'];
+    const setting = configProperties['skillMdInspector.templates'];
     expect(setting.items.properties).toHaveProperty('frontmatter');
     expect(setting.items.properties).toHaveProperty('body');
     expect(setting.items.properties).not.toHaveProperty('content');
@@ -62,58 +70,137 @@ describe('package manifest context menus and templates', () => {
     expect(commands).toContain('skillMdInspector.resetTemplates');
   });
 
-  it('pins the Settings-UI order so Validation and the heuristics/policy block render first', () => {
-    // VS Code sorts extension settings lexicographically by id unless each carries an
-    // explicit integer `order`. These 27 settings are pinned to appear first, in this
-    // exact sequence; every other setting has no `order` and falls below alphabetically.
-    const properties = packageJson.contributes.configuration.properties as Record<
-      string,
-      { order?: number }
-    >;
+  it('groups settings into ordered, labeled Settings-UI sections', () => {
+    // VS Code renders each `contributes.configuration` entry as a labeled section,
+    // sequenced by the entry's `order`. Pin the sections and their members so the
+    // grouping cannot silently regress.
+    const configuration = packageJson.contributes.configuration as unknown as ReadonlyArray<{
+      title: string;
+      order: number;
+      properties: Record<string, { order?: number }>;
+    }>;
     const H = 'skillMdInspector.heuristics.dictionaryValues.';
-    const expectedPrefix = [
-      'skillMdInspector.validation.enabled',
-      'skillMdInspector.validation.runOnSave',
-      `${H}acronyms`,
-      `${H}actionVerbForms`,
-      `${H}actionVerbs`,
-      `${H}artifactHints`,
-      `${H}artifactSupportTerms`,
-      `${H}collisionStopwords`,
-      `${H}exclusiveTriggerPhrases`,
-      `${H}frontLoadedFillerTerms`,
-      `${H}irregularSingularForms`,
-      `${H}lowSignalArtifactTerms`,
-      `${H}multiWordArtifacts`,
-      `${H}negativeBoundaryPhrases`,
-      `${H}overbroadTriggerPhrases`,
-      `${H}positiveTriggerPhrases`,
-      `${H}restrictiveBoundaryPhrases`,
-      `${H}scopeStopwords`,
-      `${H}scopeVagueTerms`,
-      `${H}uppercaseOnlyAcronyms`,
-      `${H}vagueTerms`,
-      'skillMdInspector.discovery.exclude',
-      'skillMdInspector.resources.directories',
-      'skillMdInspector.resources.exclude',
-      'skillMdInspector.severityOverrides',
-      'skillMdInspector.severity.allowSpecificationOverrides',
-      'skillMdInspector.templates',
+    const expected = [
+      {
+        title: 'Validation',
+        order: 1,
+        keys: [
+          'skillMdInspector.validation.enabled',
+          'skillMdInspector.validation.runOnSave',
+          'skillMdInspector.profile',
+        ],
+      },
+      {
+        title: 'Heuristics',
+        order: 2,
+        keys: [
+          `${H}acronyms`,
+          `${H}actionVerbForms`,
+          `${H}actionVerbs`,
+          `${H}artifactHints`,
+          `${H}artifactSupportTerms`,
+          `${H}collisionStopwords`,
+          `${H}exclusiveTriggerPhrases`,
+          `${H}frontLoadedFillerTerms`,
+          `${H}irregularSingularForms`,
+          `${H}lowSignalArtifactTerms`,
+          `${H}multiWordArtifacts`,
+          `${H}negativeBoundaryPhrases`,
+          `${H}overbroadTriggerPhrases`,
+          `${H}positiveTriggerPhrases`,
+          `${H}restrictiveBoundaryPhrases`,
+          `${H}scopeStopwords`,
+          `${H}scopeVagueTerms`,
+          `${H}uppercaseOnlyAcronyms`,
+          `${H}vagueTerms`,
+        ],
+      },
+      {
+        title: 'Discovery & resources',
+        order: 3,
+        keys: [
+          'skillMdInspector.discovery.exclude',
+          'skillMdInspector.resources.directories',
+          'skillMdInspector.resources.exclude',
+        ],
+      },
+      {
+        title: 'Severity',
+        order: 4,
+        keys: [
+          'skillMdInspector.severityOverrides',
+          'skillMdInspector.severity.allowSpecificationOverrides',
+        ],
+      },
+      { title: 'Templates', order: 5, keys: ['skillMdInspector.templates'] },
+      {
+        title: 'Content quality',
+        order: 6,
+        keys: [
+          'skillMdInspector.body.strictness',
+          'skillMdInspector.description.language',
+          'skillMdInspector.description.maxLength',
+          'skillMdInspector.description.minLength',
+          'skillMdInspector.name.maxLength',
+        ],
+      },
+      {
+        title: 'Collision detection',
+        order: 7,
+        keys: [
+          'skillMdInspector.collision.boundarySeparationWeight',
+          'skillMdInspector.collision.ngramSize',
+          'skillMdInspector.collision.threshold',
+          'skillMdInspector.collision.weights',
+          'skillMdInspector.names.similarityThreshold',
+        ],
+      },
+      {
+        title: 'Links',
+        order: 8,
+        keys: [
+          'skillMdInspector.links.onlineCheck.enabled',
+          'skillMdInspector.links.onlineCheck.maxConcurrency',
+        ],
+      },
+      {
+        title: 'Views',
+        order: 9,
+        keys: [
+          'skillMdInspector.navigator.additionalRoots',
+          'skillMdInspector.openCode.maxDiscoveredSessions',
+          'skillMdInspector.openCode.maxPreviewCharacters',
+          'skillMdInspector.openCode.maxSessionFileSizeMb',
+          'skillMdInspector.openCode.scanRecursively',
+        ],
+      },
+      {
+        title: 'Experimental',
+        order: 10,
+        keys: ['skillMdInspector.experimental.llmReview.enabled'],
+      },
     ];
-    // Exactly these settings carry an `order`, and sorting by it reproduces the sequence.
-    const orderedByField = Object.entries(properties)
-      .filter(([, value]) => typeof value.order === 'number')
-      .sort((a, b) => (a[1].order as number) - (b[1].order as number))
-      .map(([id]) => id);
-    expect(orderedByField).toEqual(expectedPrefix);
-    // The `order` values are exactly 1..27 with no gaps or duplicates.
-    expectedPrefix.forEach((id, index) => {
-      expect(properties[id].order).toBe(index + 1);
+    // Sections appear in the declared order with ascending `order`.
+    expect(configuration.map((category) => ({ title: category.title, order: category.order }))).toEqual(
+      expected.map((entry) => ({ title: entry.title, order: entry.order })),
+    );
+    // Each section contains exactly its settings (membership, order-independent).
+    expected.forEach((entry, index) => {
+      expect(Object.keys(configuration[index].properties).sort()).toEqual([...entry.keys].sort());
     });
+    // Validation keeps the enable toggles above the Profile selector.
+    const validation = configuration[0].properties;
+    expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
+    expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
+    expect(validation['skillMdInspector.profile'].order).toBe(3);
+    // Every setting lives in exactly one section (46 total, no duplicates).
+    const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
+    expect(allKeys.length).toBe(46);
+    expect(new Set(allKeys).size).toBe(46);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {
-    const properties = packageJson.contributes.configuration.properties;
+    const properties = configProperties;
     expect(properties['skillMdInspector.links.onlineCheck.enabled']).toMatchObject({
       type: 'boolean',
       default: false,
@@ -367,10 +454,7 @@ describe('package manifest context menus and templates', () => {
 });
 
 describe('heuristic dictionary manifest consistency', () => {
-  const properties = packageJson.contributes.configuration.properties as Record<
-    string,
-    { type?: string; scope?: string; default?: unknown; items?: { type?: string } }
-  >;
+  const properties = configProperties;
 
   it('keeps every visible setting default exactly synchronized with the catalog', () => {
     for (const [key, value] of Object.entries(catalog)) {
