@@ -144,6 +144,17 @@ describe('descriptionHeuristics', () => {
     expect(analysis.frontLoadedIntent.found).toBe(false);
   });
 
+  it.each([
+    ['Converting CSV exports into clean JSON tables.', 'converting'],
+    ['Generating SQL migration scripts for a release.', 'generating'],
+  ])('treats a leading gerund on a concrete artifact as a capability: %s', (description, matched) => {
+    // Distinct from the "Formatting rules" noun phrase above: the gerund here
+    // operates directly on a concrete artifact, so it is a front-loaded capability.
+    const analysis = analyzeDescription(description);
+    expect(analysis.actionVerb).toEqual({ found: true, matched });
+    expect(analysis.frontLoadedIntent.found).toBe(true);
+  });
+
   it('applies positional matching to custom action verbs', () => {
     const custom = resolveHeuristicDictionaries({ actionVerbs: ['frobnicate'] });
     expect(analyzeDescription('Frobnicate API widgets.', custom).actionVerb).toEqual({
@@ -215,6 +226,14 @@ describe('scope-clause selection and artifact signal', () => {
     expect(analyzeDescription('Validate assemblies. Use for SQL.').triggerClause.contentFound).toBe(
       true,
     );
+  });
+
+  it("drops a contraction's stray single letter from scope content", () => {
+    // "it's" tokenizes to ["it","s"]; the stray "s" must not survive as content
+    // and must not turn a vague trigger into concrete scope.
+    const clause = analyzeDescription("Format PDF reports. Use when it's needed.").triggerClause;
+    expect(clause.contentTokens).not.toContain('s');
+    expect(clause.contentFound).toBe(false);
   });
 
   it('does not credit generic artifacts without supporting context', () => {
