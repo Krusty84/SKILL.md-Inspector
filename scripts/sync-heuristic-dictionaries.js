@@ -84,7 +84,15 @@ if (process.argv.includes('--check')) {
   const actual = Object.fromEntries(
     Object.entries(properties).filter(([key]) => key.startsWith(dictionaryPrefix)),
   );
-  if (JSON.stringify(actual) !== JSON.stringify(generated)) {
+  // Order is a settings-UI concern, not drift: a setting may be positioned
+  // anywhere in package.json. Drift means a missing/extra key or a value that no
+  // longer matches the canonical catalog, so compare as an unordered key→value map.
+  const actualKeys = Object.keys(actual).sort();
+  const generatedKeys = Object.keys(generated).sort();
+  const drifted =
+    JSON.stringify(actualKeys) !== JSON.stringify(generatedKeys) ||
+    actualKeys.some((key) => JSON.stringify(actual[key]) !== JSON.stringify(generated[key]));
+  if (drifted) {
     console.error(
       'Heuristic dictionary settings are out of sync. Run npm run sync:heuristic-dictionaries.',
     );
@@ -94,17 +102,22 @@ if (process.argv.includes('--check')) {
 }
 
 const nextProperties = {};
-let inserted = false;
 for (const [key, value] of Object.entries(properties)) {
   if (key.startsWith(dictionaryPrefix)) {
-    if (!inserted) {
-      Object.assign(nextProperties, generated);
-      inserted = true;
+    // Regenerate each heuristic setting in place, preserving the author's chosen
+    // ordering in package.json. Settings whose catalog key no longer exists are
+    // dropped (skipped here); brand-new catalog keys are appended below.
+    if (Object.prototype.hasOwnProperty.call(generated, key)) {
+      nextProperties[key] = generated[key];
     }
     continue;
   }
   nextProperties[key] = value;
 }
-if (!inserted) Object.assign(nextProperties, generated);
+for (const [key, value] of Object.entries(generated)) {
+  if (!Object.prototype.hasOwnProperty.call(nextProperties, key)) {
+    nextProperties[key] = value;
+  }
+}
 packageJson.contributes.configuration.properties = nextProperties;
 fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
