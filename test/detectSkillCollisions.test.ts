@@ -213,3 +213,46 @@ describe('riskFor', () => {
     expect(riskFor(0.45)).toBe('Low');
   });
 });
+
+describe('detectCollisions cancellation and determinism (P3)', () => {
+  // A small deterministic corpus with real overlap and boundary clauses.
+  const corpus = Array.from({ length: 12 }, (_, i) => ({
+    name: `report-formatter-${i}`,
+    description:
+      `Format technical PDF reports using layout rules. Use when asked to standardize reports. ` +
+      `Do not use for release notes ${i % 3}.`,
+  }));
+
+  it('is deterministic across runs (unchanged by the pre-pass refactor)', () => {
+    expect(detectCollisions(corpus, { threshold: 0.3 })).toEqual(
+      detectCollisions(corpus, { threshold: 0.3 }),
+    );
+  });
+
+  it('returns no collisions when cancellation is already requested', () => {
+    const cancel = { isCancellationRequested: true };
+    expect(detectCollisions(corpus, { threshold: 0 }, undefined, cancel)).toEqual([]);
+  });
+
+  it('stops the pair loop promptly once cancellation flips', () => {
+    // Flip cancel on the second row check; the loop must break instead of
+    // grinding through every remaining pair.
+    let checks = 0;
+    const signal = {
+      get isCancellationRequested() {
+        checks += 1;
+        return checks > 1;
+      },
+    };
+    const collisions = detectCollisions(corpus, { threshold: 0 }, undefined, signal);
+    // Only the first row's pairs were compared, far fewer than the full set.
+    const fullPairs = (corpus.length * (corpus.length - 1)) / 2;
+    expect(collisions.length).toBeLessThan(fullPairs);
+    expect(checks).toBeLessThanOrEqual(3);
+  });
+
+  it('without a cancel signal, still compares every pair', () => {
+    const all = detectCollisions(corpus, { threshold: 0 });
+    expect(all).toHaveLength((corpus.length * (corpus.length - 1)) / 2);
+  });
+});

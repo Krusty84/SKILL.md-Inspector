@@ -267,6 +267,21 @@ function matchLeadingCapability(
     }
     return { found: true, matched: token, tokenIndex, position };
   };
+  // A leading gerund of a known action verb reads as a capability only when it
+  // operates directly on a concrete artifact ("Converting CSV exports…"), not an
+  // abstract object ("Formatting rules…"), which is a noun phrase. This lets a
+  // gerund-led capability earn the same front-loaded credit as its imperative
+  // twin without admitting noun phrases the strict check deliberately rejects.
+  const gerundLeadOnArtifact = (): LeadingCapabilityMatch | undefined => {
+    const token = tokens[0];
+    if (!token || !forms.has(token) || !token.endsWith('ing') || token === toBase.get(token)) {
+      return undefined;
+    }
+    const object = tokens.slice(1, 3).join(' ');
+    return object && analyzeArtifactEvidence(object, dictionaries).found
+      ? { found: true, matched: token, tokenIndex: 0, position: 'direct' }
+      : undefined;
+  };
   const startsWith = (prefix: readonly string[]): boolean =>
     prefix.every((token, index) => tokens[index] === token);
   const after = (
@@ -292,6 +307,7 @@ function matchLeadingCapability(
 
   return (
     candidate(0, 'direct', false) ??
+    gerundLeadOnArtifact() ??
     (startsWith(['this', 'skill']) ? candidate(2, 'subject', false) : undefined) ??
     after(['use', 'this', 'skill', 'when'], 'use-when') ??
     after(['use', 'this', 'when'], 'use-when') ??
@@ -363,7 +379,10 @@ export function assessScopeClause(
       const scopeVagueTerms = new Set(dictionaries.scopeVagueTerms);
       const pairs = (clauseText.match(/[\p{L}\p{N}]+/gu) ?? [])
         .map((raw) => ({ raw, lower: raw.toLowerCase() }))
-        .filter((pair) => !stopwords.has(pair.lower));
+        // Drop single-character tokens: they are contraction/possessive remnants
+        // (tokenizing "it's" yields a stray "s"), never meaningful scope content,
+        // and must not upgrade a vague trigger to full credit.
+        .filter((pair) => pair.lower.length > 1 && !stopwords.has(pair.lower));
       const contentTokens = pairs.map((pair) => pair.lower);
       const vagueTokens = contentTokens.filter(
         (token) => scopeVagueTerms.has(token) || dictionaries.vagueTerms.includes(token),

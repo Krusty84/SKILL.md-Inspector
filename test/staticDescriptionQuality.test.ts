@@ -193,6 +193,50 @@ describe('computeStaticDescriptionQuality', () => {
     expect(boundary?.pointsEarned).toBe(15);
   });
 
+  it('caps keyword stuffing where trigger and boundary echo the same scope (P4)', () => {
+    // High additive evidence, but "use when PDF / do not use when PDF" conveys no
+    // distinguishing scope — it must not read as an excellent description.
+    const result = computeStaticDescriptionQuality('Format PDF. Use when PDF. Do not use when PDF.');
+    expect(result.gradeLimitations).toContainEqual(
+      expect.objectContaining({ code: 'echoed-scope-content', ceiling: 69 }),
+    );
+    expect(result.rawScore).toBeGreaterThanOrEqual(90);
+    expect(result.adjustedScore).toBeLessThanOrEqual(69);
+  });
+
+  it('does not treat an exclusive "only use when" trigger as an echo (P4)', () => {
+    // The trigger and boundary derive from one overlapping clause, not two
+    // separate repeated markers, so the echo cap must not fire.
+    const result = computeStaticDescriptionQuality(
+      'Validate API schemas against the company style guide. Only use when reviewing schema files before a release.',
+    );
+    expect(result.gradeLimitations.map((limitation) => limitation.code)).not.toContain(
+      'echoed-scope-content',
+    );
+    expect(result.adjustedScore).toBeGreaterThanOrEqual(90);
+  });
+
+  it("ignores a contraction's stray letter when scoring trigger content (P4)", () => {
+    // Tokenizing "it's" yields a stray "s"; it must not upgrade a vague trigger.
+    const stray = computeStaticDescriptionQuality("Format PDF reports. Use when it's needed.");
+    const vague = computeStaticDescriptionQuality('Format PDF reports. Use when needed.');
+    const straytrigger = stray.findings.find((f) => f.criterion === 'Usage trigger phrase');
+    const vagueTrigger = vague.findings.find((f) => f.criterion === 'Usage trigger phrase');
+    expect(straytrigger?.pointsEarned).toBe(vagueTrigger?.pointsEarned);
+    expect(stray.gradeLimitations.map((l) => l.code)).toContain('vague-usage-trigger');
+  });
+
+  it('scores a leading gerund on a concrete artifact like its imperative twin (P4)', () => {
+    const gerund = computeStaticDescriptionQuality(
+      'Converting CSV exports into clean JSON tables. Use when a data file needs conversion. Do not use for binary formats.',
+    );
+    const imperative = computeStaticDescriptionQuality(
+      'Convert CSV exports into clean JSON tables. Use when a data file needs conversion. Do not use for binary formats.',
+    );
+    expect(gerund.gradeLimitations.map((l) => l.code)).not.toContain('missing-action-capability');
+    expect(gerund.adjustedScore).toBe(imperative.adjustedScore);
+  });
+
   it('deducts for vague wording', () => {
     const withVague = computeStaticDescriptionQuality('Format powerful reports. Use when needed.');
     const vagueFinding = withVague.findings.find((f) => f.criterion === 'Low vagueness');

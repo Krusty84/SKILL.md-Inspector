@@ -179,7 +179,23 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     return baseResult(null);
   }
 
-  const parsed = doc.toJS();
+  // toJS() resolves anchors/aliases lazily and throws — not via doc.errors — on
+  // unresolved aliases (e.g. `description: *required*`, a Markdown-emphasis typo
+  // mistaken for a YAML alias) and on excessive alias expansion ("billion
+  // laughs"). Guard it so parseFrontmatter keeps its never-throw contract and the
+  // failure surfaces as a normal FrontmatterInvalid diagnostic instead of
+  // aborting all analysis for the file.
+  let parsed: unknown;
+  try {
+    parsed = doc.toJS();
+  } catch (error) {
+    errors.push({
+      code: DiagnosticCode.FrontmatterInvalid,
+      message: `Invalid YAML in frontmatter: ${firstLine(error)}`,
+      range: frontmatterRange,
+    });
+    return baseResult(null);
+  }
 
   if (parsed === null || parsed === undefined) {
     // Empty frontmatter block: treat as an empty mapping so the required-field
@@ -214,4 +230,10 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
 
 function singleLineRange(line: number): SkillDiagnosticRange {
   return { startLine: line, startCharacter: 0, endLine: line, endCharacter: 3 };
+}
+
+/** First line of an error's message, matching how YAML parse errors are reported. */
+function firstLine(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.split('\n')[0];
 }

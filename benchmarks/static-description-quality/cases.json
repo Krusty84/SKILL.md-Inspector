@@ -677,5 +677,35 @@
       "frontLoaded": true
     },
     "notes": "Codex profile: capability, concrete artifact, concrete trigger, and boundary remain eligible for excellent."
+  },
+  {
+    "id": "case-52",
+    "language": "en",
+    "description": "Format PDF. Use when PDF. Do not use when PDF.",
+    "expected": {
+      "minScore": 50,
+      "maxScore": 69,
+      "minRawScore": 90,
+      "maxRawScore": 100,
+      "gradeLimitations": ["echoed-scope-content"],
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Adversarial: keyword stuffing where the trigger and boundary echo the artifact. High additive evidence must be capped because the scope conveys no distinguishing guidance."
+  },
+  {
+    "id": "case-53",
+    "language": "en",
+    "description": "Converting CSV exports into clean JSON tables. Use when a data file needs conversion. Do not use for binary formats.",
+    "expected": {
+      "minScore": 90,
+      "maxScore": 100,
+      "gradeLimitations": [],
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "A leading gerund operating on a concrete artifact ('Converting CSV exports') is a front-loaded capability, scored like its imperative twin rather than penalized."
   }
 ]

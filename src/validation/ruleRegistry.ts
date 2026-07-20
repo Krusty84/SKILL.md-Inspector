@@ -2,6 +2,8 @@ import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import type { SkillProfile, SkillProfileId } from '../types/SkillProfile';
+import { DiagnosticCode } from '../types/DiagnosticCode';
+import { diag } from './util';
 import { validateFrontmatter } from './validateFrontmatter';
 import { validateName } from './validateName';
 import { validateDescription } from './validateDescription';
@@ -64,7 +66,25 @@ export function runRules(
     if (rule.appliesToProfiles && !rule.appliesToProfiles.includes(context.profile.id)) {
       continue;
     }
-    diagnostics.push(...rule.run(context));
+    // Rule isolation: one rule throwing must not abort the run and leave the
+    // editor's diagnostics stale. Contain the failure, surface it as a non-fatal
+    // internal diagnostic so the coverage loss is visible, and keep going.
+    try {
+      diagnostics.push(...rule.run(context));
+    } catch (error) {
+      diagnostics.push(ruleFailureDiagnostic(rule.id, error));
+    }
   }
   return diagnostics;
+}
+
+/** A non-fatal diagnostic reporting that one rule crashed, so its coverage loss is never silent. */
+function ruleFailureDiagnostic(ruleId: string, error: unknown): SkillDiagnostic {
+  const detail = error instanceof Error && error.message ? error.message : String(error);
+  return diag(
+    DiagnosticCode.RuleInternalError,
+    'information',
+    `The "${ruleId}" validation rule did not finish (${detail.split('\n')[0]}). ` +
+      'Other checks still ran; this is a linter error, not a problem with the skill.',
+  );
 }

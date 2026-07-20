@@ -9,8 +9,8 @@ describe('diagnostic kind classification (Task 86)', () => {
     }
   });
 
-  it('every kind is one of the four categories', () => {
-    const kinds = new Set(['specification', 'compatibility', 'quality', 'security']);
+  it('every kind is one of the known categories', () => {
+    const kinds = new Set(['specification', 'compatibility', 'quality', 'security', 'internal']);
     for (const kind of Object.values(KIND_BY_CODE)) {
       expect(kinds.has(kind)).toBe(true);
     }
@@ -21,5 +21,6 @@ describe('diagnostic kind classification (Task 86)', () => {
     expect(diag(DiagnosticCode.DescriptionVague, 'warning', 'x').kind).toBe('quality');
     expect(diag(DiagnosticCode.LinkEscapesSkillRoot, 'error', 'x').kind).toBe('security');
     expect(diag(DiagnosticCode.LinkAbsolute, 'warning', 'x').kind).toBe('compatibility');
+    expect(diag(DiagnosticCode.RuleInternalError, 'information', 'x').kind).toBe('internal');
   });
 });

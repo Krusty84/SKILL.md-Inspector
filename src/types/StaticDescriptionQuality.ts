@@ -25,7 +25,8 @@ export type StaticDescriptionQualityGradeLimitationCode =
   | 'vague-usage-trigger'
   | 'missing-concrete-artifact'
   | 'overbroad-usage-scope'
-  | 'instruction-heavy-description';
+  | 'instruction-heavy-description'
+  | 'echoed-scope-content';
 
 /** An explicit policy ceiling applied after the additive criterion score. */
 export interface StaticDescriptionQualityGradeLimitation {

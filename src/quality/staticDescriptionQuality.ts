@@ -226,6 +226,19 @@ function assessGradeLimitations(
 ): StaticDescriptionQualityGradeLimitation[] {
   const limitations: StaticDescriptionQualityGradeLimitation[] = [];
 
+  // Keyword stuffing defense: when the usage trigger and boundary echo the same
+  // scope (e.g. "Use when PDF. Do not use when PDF."), neither clause adds real
+  // guidance, so the description must not read as fully specified. A well-formed
+  // description always scopes its trigger and boundary to *different* contexts.
+  if (scopeContentEchoed(analysis)) {
+    limitations.push({
+      code: 'echoed-scope-content',
+      ceiling: 69,
+      reason:
+        'The usage trigger and boundary describe the same scope, so neither adds distinguishing guidance; the adjusted score cannot exceed 69.',
+    });
+  }
+
   if (!analysis.actionVerb.found) {
     limitations.push({
       code: 'missing-action-capability',
@@ -315,6 +328,62 @@ function assessCoverage(
 function clausePoints(clause: DescriptionAnalysis['triggerClause'], maxPoints: number): number {
   if (clause.contentFound) return maxPoints;
   return clause.markerFound ? Math.round(maxPoints * 0.25) : 0;
+}
+
+/** Meaningful (non-vague, non-stopword) content tokens of a scope clause. */
+function meaningfulScopeTokens(clause: DescriptionAnalysis['triggerClause']): Set<string> {
+  const vague = new Set(clause.vagueTokens);
+  return new Set(clause.contentTokens.filter((token) => !vague.has(token)));
+}
+
+/** True when two clauses' marker phrases occupy overlapping text (one derives from the other). */
+function markerSpansOverlap(
+  a: DescriptionAnalysis['triggerClause'],
+  b: DescriptionAnalysis['triggerClause'],
+): boolean {
+  if (
+    a.matchedOffset === undefined ||
+    b.matchedOffset === undefined ||
+    a.matchedPhrase === undefined ||
+    b.matchedPhrase === undefined
+  ) {
+    return false;
+  }
+  const aEnd = a.matchedOffset + a.matchedPhrase.length;
+  const bEnd = b.matchedOffset + b.matchedPhrase.length;
+  return a.matchedOffset < bEnd && b.matchedOffset < aEnd;
+}
+
+/**
+ * True when the trigger and boundary clauses both have content and that content
+ * is the identical set of meaningful tokens — i.e. the description says "use when
+ * X" and "do not use when X" for the same X, which conveys no real scope. This is
+ * the signature of artifact keyword-stuffing, never of a well-formed description.
+ */
+function scopeContentEchoed(analysis: DescriptionAnalysis): boolean {
+  const triggerClause = analysis.triggerClause;
+  const boundaryClause = analysis.boundaryClause;
+  if (!triggerClause.contentFound || !boundaryClause.contentFound) {
+    return false;
+  }
+  // An exclusive trigger ("only use when X") legitimately fills both the trigger
+  // and boundary roles from one overlapping clause ("use when" sits inside "only
+  // use when"); that is not an echo. Only two *separate*, non-overlapping markers
+  // repeating the same scope (e.g. "use when X" … "do not use when X") are degenerate.
+  if (markerSpansOverlap(triggerClause, boundaryClause)) {
+    return false;
+  }
+  const trigger = meaningfulScopeTokens(triggerClause);
+  const boundary = meaningfulScopeTokens(boundaryClause);
+  if (trigger.size === 0 || trigger.size !== boundary.size) {
+    return false;
+  }
+  for (const token of trigger) {
+    if (!boundary.has(token)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Maps a score to its label band (brief §10.1). */

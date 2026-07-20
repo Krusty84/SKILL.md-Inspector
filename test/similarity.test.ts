@@ -4,6 +4,9 @@ import {
   jaccard,
   tfidfVectors,
   cosine,
+  cosineNormed,
+  normedVector,
+  charNgramVector,
   sharedTerms,
   levenshtein,
   nameSimilarity,
@@ -62,6 +65,38 @@ describe('tfidf cosine', () => {
     const value = cosine(vectors[0], vectors[1]);
     expect(value).toBeGreaterThan(0);
     expect(value).toBeLessThan(1);
+  });
+
+  it('cosineNormed is bit-for-bit identical to cosine (P3 pre-pass)', () => {
+    // The collision loop precomputes norms and uses cosineNormed; it must match
+    // cosine exactly so scores are unchanged.
+    const docs = [
+      tokenizeContent('format technical inspection reports for review'),
+      tokenizeContent('format technical engineering reports for release'),
+      tokenizeContent('generate release notes from commit history'),
+    ];
+    const vectors = tfidfVectors(docs);
+    const normed = vectors.map(normedVector);
+    for (let i = 0; i < vectors.length; i++) {
+      expect(normed[i].norm).toBeGreaterThan(0);
+      for (let j = 0; j < vectors.length; j++) {
+        expect(cosineNormed(normed[i], normed[j])).toBe(cosine(vectors[i], vectors[j]));
+      }
+    }
+  });
+
+  it('charNgramVector + cosineNormed equals charNgramSimilarity', () => {
+    const pairs: Array<[string, string]> = [
+      ['formatter', 'formatting'],
+      ['format inspection reports', 'format engineering reports'],
+      ['format inspection reports', 'zxq wvk'],
+      ['', 'anything'],
+    ];
+    for (const [a, b] of pairs) {
+      expect(cosineNormed(charNgramVector(a, 3), charNgramVector(b, 3))).toBe(
+        charNgramSimilarity(a, b, 3),
+      );
+    }
   });
 });
 

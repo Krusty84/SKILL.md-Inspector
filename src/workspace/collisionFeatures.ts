@@ -116,6 +116,38 @@ export function extractNegativeBoundaries(
   ]);
 }
 
+/** One description's domain and negative-boundary token sets, precomputed once. */
+export interface BoundaryFeatures {
+  /** Normalized content tokens with negative boundary clauses removed. */
+  domain: Set<string>;
+  /** Normalized content tokens taken only from the negative boundary clauses. */
+  boundary: Set<string>;
+}
+
+/**
+ * Extracts one description's boundary features in a single pass (Task 40, P3
+ * pre-pass). Hoisting this out of the O(n²) collision loop turns the per-pair
+ * cost from repeated regex clause-stripping into a set intersection.
+ */
+export function boundaryFeatures(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): BoundaryFeatures {
+  return {
+    domain: domainTokens(description, dictionaries),
+    boundary: boundaryTokens(description, dictionaries),
+  };
+}
+
+/**
+ * How strongly two skills' scopes are separated by their negative boundaries
+ * (0..1, Task 40), computed from precomputed features: the mean fraction of each
+ * skill's positive domain that the other skill explicitly excludes.
+ */
+export function boundarySeparationOf(a: BoundaryFeatures, b: BoundaryFeatures): number {
+  return 0.5 * fractionExcluded(a.domain, b.boundary) + 0.5 * fractionExcluded(b.domain, a.boundary);
+}
+
 /**
  * How strongly two skills' scopes are separated by their negative boundaries
  * (0..1, Task 40): the mean fraction of each skill's positive domain that the
@@ -126,15 +158,10 @@ export function boundarySeparation(
   b: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): number {
-  const excludedA = fractionExcluded(
-    domainTokens(a, dictionaries),
-    boundaryTokens(b, dictionaries),
+  return boundarySeparationOf(
+    boundaryFeatures(a, dictionaries),
+    boundaryFeatures(b, dictionaries),
   );
-  const excludedB = fractionExcluded(
-    domainTokens(b, dictionaries),
-    boundaryTokens(a, dictionaries),
-  );
-  return 0.5 * excludedA + 0.5 * excludedB;
 }
 
 /** Lower-cased alphanumeric word tokens (keeps short tokens like acronyms). */
