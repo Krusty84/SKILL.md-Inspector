@@ -23,25 +23,33 @@ describe('package manifest context menus and templates', () => {
     expect(activeWhen).not.toContain('sideBarFocus');
   });
 
-  it('places existing and template-management commands inside the submenu', () => {
-    const commands = packageJson.contributes.menus['skillMdInspector/context'].map(
-      (item) => item.command,
-    );
+  it('keeps only per-skill actions in the editor submenu, Show Skill Report under Validate Current Skill', () => {
+    const items = packageJson.contributes.menus['skillMdInspector/context'];
+    const commands = items.map((item) => item.command);
     expect(commands).toEqual(
       expect.arrayContaining([
         'skillMdInspector.validateCurrentSkill',
-        'skillMdInspector.validateWorkspaceSkills',
-        'skillMdInspector.insertTemplate',
         'skillMdInspector.showSkillReport',
+        'skillMdInspector.insertTemplate',
         'skillMdInspector.improveDescriptionLocally',
-        'skillMdInspector.showWorkspaceReport',
         'skillMdInspector.exportSkillsIndex',
         'skillMdInspector.refreshSkills',
-        'skillMdInspector.openTemplateSettings',
-        'skillMdInspector.resetTemplates',
         'skillMdInspector.toggleFavorite',
       ]),
     );
+    // Workspace-wide and template-management commands were moved out of the per-file menu.
+    for (const removed of [
+      'skillMdInspector.validateWorkspaceSkills',
+      'skillMdInspector.showWorkspaceReport',
+      'skillMdInspector.openTemplateSettings',
+      'skillMdInspector.resetTemplates',
+    ]) {
+      expect(commands).not.toContain(removed);
+    }
+    // Show Skill Report sits directly under Validate Current Skill (same group, consecutive order).
+    const groupOf = Object.fromEntries(items.map((item) => [item.command, item.group]));
+    expect(groupOf['skillMdInspector.validateCurrentSkill']).toBe('1_validation@1');
+    expect(groupOf['skillMdInspector.showSkillReport']).toBe('1_validation@2');
   });
 
   it('declares template setting schema and new commands', () => {
@@ -275,19 +283,35 @@ describe('package manifest context menus and templates', () => {
         expect.objectContaining({ command: 'skillMdInspector.insertTemplate' }),
         expect.objectContaining({ command: 'skillMdInspector.improveDescriptionLocally' }),
         expect.objectContaining({ command: 'skillMdInspector.showSkillReport' }),
-        expect.objectContaining({
-          command: 'skillMdInspector.addToFavorites',
-          when: 'viewItem == skillMdInspector.skillFile',
-        }),
-        expect.objectContaining({
-          command: 'skillMdInspector.removeFromFavorites',
-          when: 'viewItem == skillMdInspector.favoriteSkillFile',
-        }),
+        // The favorite action is aligned with the editor menu: a single toggle
+        // ("Add or Remove Favorite") rather than a state-aware add/remove pair.
+        expect.objectContaining({ command: 'skillMdInspector.toggleFavorite' }),
       ]),
     );
-    expect(skillItemMenu.some((item) => !item.when)).toBe(true);
+    const skillItemCommands = skillItemMenu.map((item) => item.command);
+    expect(skillItemCommands).not.toContain('skillMdInspector.addToFavorites');
+    expect(skillItemCommands).not.toContain('skillMdInspector.removeFromFavorites');
     expect(JSON.stringify(skillItemMenu)).not.toMatch(
       /canOpenWith|canOpenTimeline|canCompareFiles/,
+    );
+  });
+
+  it('exposes the workspace commands via a folder submenu in the WORKSPACE view', () => {
+    expect(packageJson.contributes.submenus).toContainEqual({
+      id: 'skillMdInspector/workspaceFolderContext',
+      label: 'SKILL.md Inspector',
+    });
+    const folderMenu = packageJson.contributes.menus['skillMdInspector/workspaceFolderContext'];
+    expect(folderMenu.map((item) => item.command)).toEqual([
+      'skillMdInspector.validateWorkspaceSkills',
+      'skillMdInspector.showWorkspaceReport',
+    ]);
+    expect(packageJson.contributes.menus['view/item/context']).toContainEqual(
+      expect.objectContaining({
+        submenu: 'skillMdInspector/workspaceFolderContext',
+        when: 'view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory)',
+        group: '9_inspector@10',
+      }),
     );
   });
 });

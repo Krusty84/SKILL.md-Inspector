@@ -51,8 +51,10 @@ describe('sidebar view contributions', () => {
         (item) => item.command,
       ),
     ).not.toContain('skillMdInspector.addToFavorites');
+    // The tree item submenu now uses the same single toggle as the editor menu,
+    // aligning the two favorite actions that previously differed.
     expect(packageJson.contributes.menus['skillMdInspector/skillItemContext']).toContainEqual(
-      expect.objectContaining({ command: 'skillMdInspector.addToFavorites' }),
+      expect.objectContaining({ command: 'skillMdInspector.toggleFavorite' }),
     );
     expect(packageJson.contributes.menus['skillMdInspector/context']).toContainEqual(
       expect.objectContaining({ command: 'skillMdInspector.toggleFavorite' }),
