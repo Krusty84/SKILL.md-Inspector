@@ -12,6 +12,12 @@ export interface FrontmatterParseResult {
   frontmatterRange?: SkillDiagnosticRange;
   /** Document ranges of each top-level key, from the YAML AST (0-based lines). */
   frontmatterKeyRanges: Record<string, SkillDiagnosticRange>;
+  /**
+   * Document ranges of each top-level *value* node, from the YAML AST. Covers the
+   * whole value including multi-line block/quoted scalars, so edits target the end
+   * of the value rather than the key's physical line.
+   */
+  frontmatterValueRanges: Record<string, SkillDiagnosticRange>;
   /** 0-based line index of the first YAML line (line after the opening fence). */
   yamlStartLine: number;
   /** Markdown body after the closing fence. */
@@ -91,6 +97,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
       frontmatter: null,
       frontmatterRaw: '',
       frontmatterKeyRanges: {},
+      frontmatterValueRanges: {},
       yamlStartLine: 0,
       body: content,
       bodyStartLine: 0,
@@ -111,6 +118,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
       frontmatter: null,
       frontmatterRaw: '',
       frontmatterKeyRanges: {},
+      frontmatterValueRanges: {},
       yamlStartLine: 1,
       body: lines.slice(1).join('\n'),
       bodyStartLine: 1,
@@ -149,11 +157,18 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   // The last occurrence of a duplicate key wins, matching toJS() (last value
   // wins), so key-targeted diagnostics point at the line that took effect.
   const frontmatterKeyRanges: Record<string, SkillDiagnosticRange> = {};
+  const frontmatterValueRanges: Record<string, SkillDiagnosticRange> = {};
   if (isMap(doc.contents)) {
     for (const item of doc.contents.items) {
       if (isScalar(item.key) && item.key.range) {
         const name = String(item.key.value);
         frontmatterKeyRanges[name] = toRange(item.key.range[0], item.key.range[1]);
+        // range[1] is the end of the value content (before trailing whitespace),
+        // which is exactly where an appended clause should go for block/plain
+        // scalars. Covers multi-line values, unlike the key's physical line.
+        if (isScalar(item.value) && item.value.range) {
+          frontmatterValueRanges[name] = toRange(item.value.range[0], item.value.range[1]);
+        }
       }
     }
   }
@@ -220,6 +235,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
       frontmatterRaw,
       frontmatterRange,
       frontmatterKeyRanges,
+      frontmatterValueRanges,
       yamlStartLine,
       body,
       bodyStartLine,

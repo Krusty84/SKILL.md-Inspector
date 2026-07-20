@@ -697,7 +697,7 @@
   {
     "id": "case-53",
     "language": "en",
-    "description": "Converting CSV exports into clean JSON tables. Use when a data file needs conversion. Do not use for binary formats.",
+    "description": "Convert Python 2 code to Python 3. Use for Python 2 code. Do not use for Python 3 code.",
     "expected": {
       "minScore": 90,
       "maxScore": 100,
@@ -706,6 +706,6 @@
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "A leading gerund operating on a concrete artifact ('Converting CSV exports') is a front-loaded capability, scored like its imperative twin rather than penalized."
+    "notes": "Distinct scopes that share tokens ('Python 2' vs 'Python 3') must keep their digits and not trip the keyword-stuffing echo cap."
   }
 ]

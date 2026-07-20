@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { parseSkillFile } from '../src/parser/parseSkillFile';
-import { validateName, toKebabCase } from '../src/validation/validateName';
+import {
+  validateName,
+  toKebabCase,
+  isSafeFolderRenameTarget,
+} from '../src/validation/validateName';
 import { genericProfile } from '../src/profiles/genericProfile';
 import { DiagnosticCode, QuickFixId } from '../src/types/DiagnosticCode';
 
@@ -75,5 +79,39 @@ describe('toKebabCase', () => {
     ['double--hyphen', 'double-hyphen'],
   ])('%s -> %s', (input, expected) => {
     expect(toKebabCase(input)).toBe(expected);
+  });
+});
+
+describe('isSafeFolderRenameTarget (RenameParentFolder guard)', () => {
+  const parent = '/ws/skills';
+
+  it.each(['../../evil', '../sibling', 'a/b', '..', 'a/../../b', 'foo bar', 'UPPER', ''])(
+    'rejects the unsafe rename target %j',
+    (name) => {
+      // The frontmatter name is attacker-controllable; a traversal or non-kebab
+      // value must never drive a folder rename outside the parent directory.
+      expect(isSafeFolderRenameTarget(parent, name)).toBe(false);
+    },
+  );
+
+  it.each(['my-skill', 'pdf-report-formatter', 'skill123'])(
+    'accepts the valid kebab target %j',
+    (name) => {
+      expect(isSafeFolderRenameTarget(parent, name)).toBe(true);
+    },
+  );
+
+  it('a malicious frontmatter name still surfaces the diagnostic but not a safe rename', () => {
+    // validateName emits folderMismatch with the raw name in data.expected; the
+    // guard is the defense that stops the rename fix from acting on it.
+    const parsed = parseSkillFile(
+      '/ws/skills/demo/SKILL.md',
+      '---\nname: ../../evil\ndescription: Format PDF reports for audits.\n---\n# Body',
+    );
+    const mismatch = validateName(parsed, genericProfile).find(
+      (d) => d.quickFixId === QuickFixId.RenameParentFolder,
+    );
+    expect(mismatch?.data?.expected).toBe('../../evil');
+    expect(isSafeFolderRenameTarget('/ws/skills', String(mismatch?.data?.expected))).toBe(false);
   });
 });

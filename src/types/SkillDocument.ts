@@ -46,6 +46,8 @@ export interface SkillDocument {
   frontmatterRaw: string;
   /** Document ranges of each top-level frontmatter key, from the YAML AST. */
   frontmatterKeyRanges?: Record<string, SkillDiagnosticRange>;
+  /** Document ranges of each top-level frontmatter value (covers multi-line scalars). */
+  frontmatterValueRanges?: Record<string, SkillDiagnosticRange>;
   body: string;
   /** 0-based line where the Markdown body begins (line after the closing fence). */
   bodyStartLine: number;

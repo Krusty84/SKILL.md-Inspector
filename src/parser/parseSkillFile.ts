@@ -22,6 +22,7 @@ export function parseSkillFile(filePath: string, content: string): SkillDocument
     frontmatterRange: fm.frontmatterRange,
     frontmatterRaw: fm.frontmatterRaw,
     frontmatterKeyRanges: fm.frontmatterKeyRanges,
+    frontmatterValueRanges: fm.frontmatterValueRanges,
     body: fm.body,
     bodyStartLine: fm.bodyStartLine,
     links,
