@@ -226,15 +226,30 @@ describe('computeStaticDescriptionQuality', () => {
     expect(stray.gradeLimitations.map((l) => l.code)).toContain('vague-usage-trigger');
   });
 
-  it('scores a leading gerund on a concrete artifact like its imperative twin (P4)', () => {
-    const gerund = computeStaticDescriptionQuality(
-      'Converting CSV exports into clean JSON tables. Use when a data file needs conversion. Do not use for binary formats.',
+  it('does not echo-cap distinct scopes that share tokens (P4 regression)', () => {
+    // "Python 2" vs "Python 3": each clause keeps a distinguishing token, so the
+    // stray-token fix must preserve the digits and the echo cap must not fire.
+    const result = computeStaticDescriptionQuality(
+      'Convert Python 2 code to Python 3. Use for Python 2 code. Do not use for Python 3 code.',
     );
-    const imperative = computeStaticDescriptionQuality(
-      'Convert CSV exports into clean JSON tables. Use when a data file needs conversion. Do not use for binary formats.',
-    );
-    expect(gerund.gradeLimitations.map((l) => l.code)).not.toContain('missing-action-capability');
-    expect(gerund.adjustedScore).toBe(imperative.adjustedScore);
+    expect(result.gradeLimitations.map((l) => l.code)).not.toContain('echoed-scope-content');
+    expect(result.adjustedScore).toBeGreaterThanOrEqual(90);
+  });
+
+  it('caps keyword-stuffing variants, not just the exact salad (P4)', () => {
+    // A superset, subset, or plural of the echoed scope must all still be capped —
+    // adding one non-distinguishing token must not defeat the cap.
+    for (const description of [
+      'Format PDF. Use when PDF files. Do not use when PDF.', // superset
+      'Format PDF. Use when PDF. Do not use when PDF files.', // subset
+      'Format PDF. Use when PDF. Do not use when PDFs.', // plural
+    ]) {
+      const result = computeStaticDescriptionQuality(description);
+      expect(result.gradeLimitations.map((l) => l.code), description).toContain(
+        'echoed-scope-content',
+      );
+      expect(result.adjustedScore, description).toBeLessThanOrEqual(69);
+    }
   });
 
   it('deducts for vague wording', () => {

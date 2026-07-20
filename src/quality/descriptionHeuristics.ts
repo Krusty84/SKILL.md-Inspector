@@ -267,21 +267,6 @@ function matchLeadingCapability(
     }
     return { found: true, matched: token, tokenIndex, position };
   };
-  // A leading gerund of a known action verb reads as a capability only when it
-  // operates directly on a concrete artifact ("Converting CSV exports…"), not an
-  // abstract object ("Formatting rules…"), which is a noun phrase. This lets a
-  // gerund-led capability earn the same front-loaded credit as its imperative
-  // twin without admitting noun phrases the strict check deliberately rejects.
-  const gerundLeadOnArtifact = (): LeadingCapabilityMatch | undefined => {
-    const token = tokens[0];
-    if (!token || !forms.has(token) || !token.endsWith('ing') || token === toBase.get(token)) {
-      return undefined;
-    }
-    const object = tokens.slice(1, 3).join(' ');
-    return object && analyzeArtifactEvidence(object, dictionaries).found
-      ? { found: true, matched: token, tokenIndex: 0, position: 'direct' }
-      : undefined;
-  };
   const startsWith = (prefix: readonly string[]): boolean =>
     prefix.every((token, index) => tokens[index] === token);
   const after = (
@@ -307,7 +292,6 @@ function matchLeadingCapability(
 
   return (
     candidate(0, 'direct', false) ??
-    gerundLeadOnArtifact() ??
     (startsWith(['this', 'skill']) ? candidate(2, 'subject', false) : undefined) ??
     after(['use', 'this', 'skill', 'when'], 'use-when') ??
     after(['use', 'this', 'when'], 'use-when') ??
@@ -372,17 +356,22 @@ export function assessScopeClause(
         terminator ? occurrence.end + terminator.index : Infinity,
         description.length,
       );
-      const clauseText = description.slice(occurrence.end, end).trim();
+      // Strip English contraction/possessive suffixes before tokenizing, so
+      // "it's" no longer leaves a stray "s" token that would upgrade a vague
+      // trigger. This is surgical: unlike dropping every single-character token,
+      // it keeps legitimate one-character content such as digits ("Python 2" vs
+      // "Python 3") and single-letter languages ("R", "C").
+      const clauseText = description
+        .slice(occurrence.end, end)
+        .trim()
+        .replace(/['’](?:s|t|re|ve|ll|d|m)\b/gi, '');
       // Single-token evidence needs the original casing: ambiguous acronyms (STEP, CI)
       // only count when written in uppercase, which tokenize() would erase.
       const stopwords = new Set(dictionaries.scopeStopwords);
       const scopeVagueTerms = new Set(dictionaries.scopeVagueTerms);
       const pairs = (clauseText.match(/[\p{L}\p{N}]+/gu) ?? [])
         .map((raw) => ({ raw, lower: raw.toLowerCase() }))
-        // Drop single-character tokens: they are contraction/possessive remnants
-        // (tokenizing "it's" yields a stray "s"), never meaningful scope content,
-        // and must not upgrade a vague trigger to full credit.
-        .filter((pair) => pair.lower.length > 1 && !stopwords.has(pair.lower));
+        .filter((pair) => !stopwords.has(pair.lower));
       const contentTokens = pairs.map((pair) => pair.lower);
       const vagueTokens = contentTokens.filter(
         (token) => scopeVagueTerms.has(token) || dictionaries.vagueTerms.includes(token),

@@ -1,5 +1,6 @@
 import { analyzeDescription, type DescriptionAnalysis } from './descriptionHeuristics';
-import type { HeuristicDictionaries } from './dictionaries';
+import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
+import { normalizeContentToken } from './wordForms';
 import { isProbablyNonEnglish } from './language';
 import type {
   StaticDescriptionQualityResult,
@@ -182,7 +183,10 @@ export function scoreAnalysis(
     0,
     Math.min(100, Math.round(findings.reduce((sum, f) => sum + f.pointsEarned, 0))),
   );
-  const gradeLimitations = assessGradeLimitations(analysis);
+  const gradeLimitations = assessGradeLimitations(
+    analysis,
+    options.dictionaries ?? DEFAULT_HEURISTIC_DICTIONARIES,
+  );
   const adjustedScore = gradeLimitations.reduce(
     (score, limitation) => Math.min(score, limitation.ceiling),
     rawScore,
@@ -223,6 +227,7 @@ function notScoredResult(reason: string): StaticDescriptionQualityResult {
  */
 function assessGradeLimitations(
   analysis: DescriptionAnalysis,
+  dictionaries: HeuristicDictionaries,
 ): StaticDescriptionQualityGradeLimitation[] {
   const limitations: StaticDescriptionQualityGradeLimitation[] = [];
 
@@ -230,7 +235,7 @@ function assessGradeLimitations(
   // scope (e.g. "Use when PDF. Do not use when PDF."), neither clause adds real
   // guidance, so the description must not read as fully specified. A well-formed
   // description always scopes its trigger and boundary to *different* contexts.
-  if (scopeContentEchoed(analysis)) {
+  if (scopeContentEchoed(analysis, dictionaries)) {
     limitations.push({
       code: 'echoed-scope-content',
       ceiling: 69,
@@ -330,60 +335,64 @@ function clausePoints(clause: DescriptionAnalysis['triggerClause'], maxPoints: n
   return clause.markerFound ? Math.round(maxPoints * 0.25) : 0;
 }
 
-/** Meaningful (non-vague, non-stopword) content tokens of a scope clause. */
-function meaningfulScopeTokens(clause: DescriptionAnalysis['triggerClause']): Set<string> {
+/**
+ * Meaningful scope tokens, normalized (plural/verb folding) so "PDF" and "PDFs"
+ * — or "report" and "reports" — compare equal.
+ */
+function normalizedScopeTokens(
+  clause: DescriptionAnalysis['triggerClause'],
+  dictionaries: HeuristicDictionaries,
+): Set<string> {
   const vague = new Set(clause.vagueTokens);
-  return new Set(clause.contentTokens.filter((token) => !vague.has(token)));
+  return new Set(
+    clause.contentTokens
+      .filter((token) => !vague.has(token))
+      .map((token) => normalizeContentToken(token, dictionaries)),
+  );
 }
 
-/** True when two clauses' marker phrases occupy overlapping text (one derives from the other). */
-function markerSpansOverlap(
-  a: DescriptionAnalysis['triggerClause'],
-  b: DescriptionAnalysis['triggerClause'],
-): boolean {
-  if (
-    a.matchedOffset === undefined ||
-    b.matchedOffset === undefined ||
-    a.matchedPhrase === undefined ||
-    b.matchedPhrase === undefined
-  ) {
-    return false;
+/** True when every token of `a` is present in `b` (a ⊆ b). */
+function isSubsetOf(a: Set<string>, b: Set<string>): boolean {
+  for (const token of a) {
+    if (!b.has(token)) {
+      return false;
+    }
   }
-  const aEnd = a.matchedOffset + a.matchedPhrase.length;
-  const bEnd = b.matchedOffset + b.matchedPhrase.length;
-  return a.matchedOffset < bEnd && b.matchedOffset < aEnd;
+  return true;
 }
 
 /**
- * True when the trigger and boundary clauses both have content and that content
- * is the identical set of meaningful tokens — i.e. the description says "use when
- * X" and "do not use when X" for the same X, which conveys no real scope. This is
- * the signature of artifact keyword-stuffing, never of a well-formed description.
+ * True when the trigger and boundary clauses describe the *same* scope, i.e. one
+ * clause's normalized meaningful tokens are entirely contained in the other's, so
+ * neither adds a distinguishing context ("Use when PDF. Do not use when PDF." and
+ * its superset/plural variants). A well-formed description scopes its trigger and
+ * boundary to different things, so each keeps at least one token the other lacks
+ * ("Python 2" vs "Python 3"). This is the signature of artifact keyword-stuffing.
  */
-function scopeContentEchoed(analysis: DescriptionAnalysis): boolean {
+function scopeContentEchoed(
+  analysis: DescriptionAnalysis,
+  dictionaries: HeuristicDictionaries,
+): boolean {
   const triggerClause = analysis.triggerClause;
   const boundaryClause = analysis.boundaryClause;
   if (!triggerClause.contentFound || !boundaryClause.contentFound) {
     return false;
   }
   // An exclusive trigger ("only use when X") legitimately fills both the trigger
-  // and boundary roles from one overlapping clause ("use when" sits inside "only
-  // use when"); that is not an echo. Only two *separate*, non-overlapping markers
-  // repeating the same scope (e.g. "use when X" … "do not use when X") are degenerate.
-  if (markerSpansOverlap(triggerClause, boundaryClause)) {
+  // and boundary roles from one clause — its boundary marker is the exclusive
+  // phrase itself — so it is never an echo.
+  if (
+    boundaryClause.matchedPhrase !== undefined &&
+    dictionaries.exclusiveTriggerPhrases.includes(boundaryClause.matchedPhrase)
+  ) {
     return false;
   }
-  const trigger = meaningfulScopeTokens(triggerClause);
-  const boundary = meaningfulScopeTokens(boundaryClause);
-  if (trigger.size === 0 || trigger.size !== boundary.size) {
+  const trigger = normalizedScopeTokens(triggerClause, dictionaries);
+  const boundary = normalizedScopeTokens(boundaryClause, dictionaries);
+  if (trigger.size === 0 || boundary.size === 0) {
     return false;
   }
-  for (const token of trigger) {
-    if (!boundary.has(token)) {
-      return false;
-    }
-  }
-  return true;
+  return isSubsetOf(trigger, boundary) || isSubsetOf(boundary, trigger);
 }
 
 /** Maps a score to its label band (brief §10.1). */

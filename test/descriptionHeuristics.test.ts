@@ -145,14 +145,16 @@ describe('descriptionHeuristics', () => {
   });
 
   it.each([
-    ['Converting CSV exports into clean JSON tables.', 'converting'],
-    ['Generating SQL migration scripts for a release.', 'generating'],
-  ])('treats a leading gerund on a concrete artifact as a capability: %s', (description, matched) => {
-    // Distinct from the "Formatting rules" noun phrase above: the gerund here
-    // operates directly on a concrete artifact, so it is a front-loaded capability.
+    'Converting CSV exports into clean JSON tables. Use when converting data.',
+    'Formatting JSON guidelines for authors. Use when writing docs.',
+  ])('does not treat a leading gerund noun phrase as front-loaded capability: %s', (description) => {
+    // A leading gerund is deliberately not credited as a positional capability:
+    // "Converting CSV exports" (verb phrase) is indistinguishable from
+    // "Formatting JSON guidelines" (noun phrase) by nearby-artifact heuristics, so
+    // neither earns positional-verb credit. The imperative "Convert…" does.
     const analysis = analyzeDescription(description);
-    expect(analysis.actionVerb).toEqual({ found: true, matched });
-    expect(analysis.frontLoadedIntent.found).toBe(true);
+    expect(analysis.actionVerb.found).toBe(false);
+    expect(analysis.frontLoadedIntent.found).toBe(false);
   });
 
   it('applies positional matching to custom action verbs', () => {
