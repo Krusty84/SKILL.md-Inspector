@@ -62,6 +62,56 @@ describe('package manifest context menus and templates', () => {
     expect(commands).toContain('skillMdInspector.resetTemplates');
   });
 
+  it('pins the Settings-UI order so Validation and the heuristics/policy block render first', () => {
+    // VS Code sorts extension settings lexicographically by id unless each carries an
+    // explicit integer `order`. These 27 settings are pinned to appear first, in this
+    // exact sequence; every other setting has no `order` and falls below alphabetically.
+    const properties = packageJson.contributes.configuration.properties as Record<
+      string,
+      { order?: number }
+    >;
+    const H = 'skillMdInspector.heuristics.dictionaryValues.';
+    const expectedPrefix = [
+      'skillMdInspector.validation.enabled',
+      'skillMdInspector.validation.runOnSave',
+      `${H}acronyms`,
+      `${H}actionVerbForms`,
+      `${H}actionVerbs`,
+      `${H}artifactHints`,
+      `${H}artifactSupportTerms`,
+      `${H}collisionStopwords`,
+      `${H}exclusiveTriggerPhrases`,
+      `${H}frontLoadedFillerTerms`,
+      `${H}irregularSingularForms`,
+      `${H}lowSignalArtifactTerms`,
+      `${H}multiWordArtifacts`,
+      `${H}negativeBoundaryPhrases`,
+      `${H}overbroadTriggerPhrases`,
+      `${H}positiveTriggerPhrases`,
+      `${H}restrictiveBoundaryPhrases`,
+      `${H}scopeStopwords`,
+      `${H}scopeVagueTerms`,
+      `${H}uppercaseOnlyAcronyms`,
+      `${H}vagueTerms`,
+      'skillMdInspector.discovery.exclude',
+      'skillMdInspector.resources.directories',
+      'skillMdInspector.resources.exclude',
+      'skillMdInspector.severityOverrides',
+      'skillMdInspector.severity.allowSpecificationOverrides',
+      'skillMdInspector.templates',
+    ];
+    // Exactly these settings carry an `order`, and sorting by it reproduces the sequence.
+    const orderedByField = Object.entries(properties)
+      .filter(([, value]) => typeof value.order === 'number')
+      .sort((a, b) => (a[1].order as number) - (b[1].order as number))
+      .map(([id]) => id);
+    expect(orderedByField).toEqual(expectedPrefix);
+    // The `order` values are exactly 1..27 with no gaps or duplicates.
+    expectedPrefix.forEach((id, index) => {
+      expect(properties[id].order).toBe(index + 1);
+    });
+  });
+
   it('keeps online link checks opt-in and globally bounded per operation', () => {
     const properties = packageJson.contributes.configuration.properties;
     expect(properties['skillMdInspector.links.onlineCheck.enabled']).toMatchObject({

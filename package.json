@@ -803,12 +803,14 @@
         "skillMdInspector.validation.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable deterministic validation of SKILL.md files."
+          "description": "Enable deterministic validation of SKILL.md files.",
+          "order": 1
         },
         "skillMdInspector.validation.runOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "Re-run validation whenever a SKILL.md file is saved."
+          "description": "Re-run validation whenever a SKILL.md file is saved.",
+          "order": 2
         },
         "skillMdInspector.heuristics.dictionaryValues.acronyms": {
           "type": "array",
@@ -848,7 +850,8 @@
           "description": "Acronyms and technology names recognized as concrete artifact or domain evidence.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 3
         },
         "skillMdInspector.heuristics.dictionaryValues.actionVerbForms": {
           "type": "object",
@@ -906,7 +909,8 @@
             "items": {
               "type": "string"
             }
-          }
+          },
+          "order": 4
         },
         "skillMdInspector.heuristics.dictionaryValues.actionVerbs": {
           "type": "array",
@@ -955,7 +959,8 @@
           "description": "Base verbs recognized as concrete capabilities in description diagnostics, Static Description Quality, local improvement, and collision features.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 5
         },
         "skillMdInspector.heuristics.dictionaryValues.artifactHints": {
           "type": "array",
@@ -1033,7 +1038,8 @@
           "description": "High-signal artifact and domain terms used by description quality and collision feature extraction.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 6
         },
         "skillMdInspector.heuristics.dictionaryValues.artifactSupportTerms": {
           "type": "array",
@@ -1053,7 +1059,8 @@
           "description": "Domain terms that make a low-signal artifact such as file, data, code, or document concrete.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 7
         },
         "skillMdInspector.heuristics.dictionaryValues.collisionStopwords": {
           "type": "array",
@@ -1107,7 +1114,8 @@
           "description": "Common terms removed before workspace description collision similarity is calculated.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 8
         },
         "skillMdInspector.heuristics.dictionaryValues.exclusiveTriggerPhrases": {
           "type": "array",
@@ -1119,7 +1127,8 @@
           "description": "Phrases that act as both a positive usage trigger and an exclusive boundary.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 9
         },
         "skillMdInspector.heuristics.dictionaryValues.frontLoadedFillerTerms": {
           "type": "array",
@@ -1149,7 +1158,8 @@
           "description": "Terms ignored when deciding whether the opening sentence names a concrete capability object.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 10
         },
         "skillMdInspector.heuristics.dictionaryValues.irregularSingularForms": {
           "type": "object",
@@ -1189,7 +1199,8 @@
             "items": {
               "type": "string"
             }
-          }
+          },
+          "order": 11
         },
         "skillMdInspector.heuristics.dictionaryValues.lowSignalArtifactTerms": {
           "type": "array",
@@ -1205,7 +1216,8 @@
           "description": "Generic artifact terms that count only when accompanied by an artifact support term.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 12
         },
         "skillMdInspector.heuristics.dictionaryValues.multiWordArtifacts": {
           "type": "array",
@@ -1225,7 +1237,8 @@
           "description": "Multi-word artifact phrases recognized by description quality and collision feature extraction.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 13
         },
         "skillMdInspector.heuristics.dictionaryValues.negativeBoundaryPhrases": {
           "type": "array",
@@ -1247,7 +1260,8 @@
           "description": "Phrases that introduce a negative usage boundary and separate collision scopes.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 14
         },
         "skillMdInspector.heuristics.dictionaryValues.overbroadTriggerPhrases": {
           "type": "array",
@@ -1266,7 +1280,8 @@
           "description": "Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 15
         },
         "skillMdInspector.heuristics.dictionaryValues.positiveTriggerPhrases": {
           "type": "array",
@@ -1286,7 +1301,8 @@
           "description": "Phrases that introduce a positive usage-trigger clause.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 16
         },
         "skillMdInspector.heuristics.dictionaryValues.restrictiveBoundaryPhrases": {
           "type": "array",
@@ -1302,7 +1318,8 @@
           "description": "Non-negative phrases that restrict scope for boundary detection and scoring.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 17
         },
         "skillMdInspector.heuristics.dictionaryValues.scopeStopwords": {
           "type": "array",
@@ -1339,7 +1356,8 @@
           "description": "Terms ignored when evaluating whether trigger and boundary clauses contain concrete scope.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 18
         },
         "skillMdInspector.heuristics.dictionaryValues.scopeVagueTerms": {
           "type": "array",
@@ -1377,7 +1395,8 @@
           "description": "Terms that make trigger and boundary clause content too vague to receive full credit.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 19
         },
         "skillMdInspector.heuristics.dictionaryValues.uppercaseOnlyAcronyms": {
           "type": "array",
@@ -1391,7 +1410,8 @@
           "description": "Ambiguous acronyms that count only when their matched spelling is uppercase.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 20
         },
         "skillMdInspector.heuristics.dictionaryValues.vagueTerms": {
           "type": "array",
@@ -1432,7 +1452,8 @@
           "description": "Words and phrases treated as vague in description diagnostics and Static Description Quality.",
           "items": {
             "type": "string"
-          }
+          },
+          "order": 21
         },
         "skillMdInspector.discovery.exclude": {
           "type": "array",
@@ -1446,7 +1467,8 @@
             "**/out/**",
             "**/.vscode-test/**"
           ],
-          "description": "Glob patterns for directories to skip when discovering SKILL.md files across the workspace (the tree view and workspace report). Setting this replaces the defaults."
+          "description": "Glob patterns for directories to skip when discovering SKILL.md files across the workspace (the tree view and workspace report). Setting this replaces the defaults.",
+          "order": 22
         },
         "skillMdInspector.resources.directories": {
           "type": "array",
@@ -1459,7 +1481,8 @@
             "assets",
             "templates"
           ],
-          "description": "Relative resource directories monitored for unreferenced bundled files. This replaces the default list; absolute paths and .. traversal are ignored."
+          "description": "Relative resource directories monitored for unreferenced bundled files. This replaces the default list; absolute paths and .. traversal are ignored.",
+          "order": 23
         },
         "skillMdInspector.resources.exclude": {
           "type": "array",
@@ -1472,7 +1495,8 @@
             "**/dist/**",
             "**/out/**"
           ],
-          "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
+          "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults.",
+          "order": 24
         },
         "skillMdInspector.severityOverrides": {
           "type": "object",
@@ -1486,12 +1510,14 @@
             ]
           },
           "default": {},
-          "description": "Override the severity of diagnostics by code, or disable one with \"off\" (e.g. { \"skill.description.vague\": \"information\" }). Specification errors are protected unless skillMdInspector.severity.allowSpecificationOverrides is enabled."
+          "description": "Override the severity of diagnostics by code, or disable one with \"off\" (e.g. { \"skill.description.vague\": \"information\" }). Specification errors are protected unless skillMdInspector.severity.allowSpecificationOverrides is enabled.",
+          "order": 25
         },
         "skillMdInspector.severity.allowSpecificationOverrides": {
           "type": "boolean",
           "default": false,
-          "description": "Allow skillMdInspector.severityOverrides to downgrade or disable specification-level errors (an invalid file). Off by default so structural errors are not hidden accidentally."
+          "description": "Allow skillMdInspector.severityOverrides to downgrade or disable specification-level errors (an invalid file). Off by default so structural errors are not hidden accidentally.",
+          "order": 26
         },
         "skillMdInspector.templates": {
           "type": "array",
@@ -1537,7 +1563,8 @@
               }
             },
             "additionalProperties": false
-          }
+          },
+          "order": 27
         },
         "skillMdInspector.links.onlineCheck.enabled": {
           "type": "boolean",
