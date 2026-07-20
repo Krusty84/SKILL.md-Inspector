@@ -8,14 +8,15 @@ import type {
 import {
   tokenizeContent,
   tfidfVectors,
-  cosine,
+  cosineNormed,
+  normedVector,
+  charNgramVector,
   jaccard,
   sharedTerms,
-  charNgramSimilarity,
   nameSimilarity,
 } from './similarity';
 import { normalizeContentToken } from '../quality/wordForms';
-import { boundarySeparation } from './collisionFeatures';
+import { boundaryFeatures, boundarySeparationOf } from './collisionFeatures';
 import {
   DEFAULT_HEURISTIC_DICTIONARIES,
   type HeuristicDictionaries,
@@ -62,33 +63,40 @@ export function detectCollisions(
   skills: SkillDescriptor[],
   options: CollisionOptions = {},
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+  cancel?: { isCancellationRequested: boolean },
 ): SkillCollision[] {
   const threshold = options.threshold ?? DEFAULT_COLLISION_THRESHOLD;
   const weights = normalizeWeights(options.weights ?? DEFAULT_COLLISION_WEIGHTS);
   const ngramSize = options.ngramSize ?? DEFAULT_NGRAM_SIZE;
   const boundaryWeight = options.boundarySeparationWeight ?? DEFAULT_BOUNDARY_SEPARATION_WEIGHT;
 
+  // O(n) pre-pass (P3): compute every per-skill quantity once here so the O(n²)
+  // pair loop only combines precomputed values. Previously the char n-gram
+  // vectors and boundary token sets were rebuilt for both skills on every pair.
   // Normalize plural/verb forms so morphological variants collide (Tasks 31–32).
   const tokens = skills.map((skill) =>
     tokenizeContent(skill.description, dictionaries.collisionStopwords).map((token) =>
       normalizeContentToken(token, dictionaries),
     ),
   );
-  const vectors = tfidfVectors(tokens);
+  const vectors = tfidfVectors(tokens).map(normedVector);
+  const ngramVectors = skills.map((skill) => charNgramVector(skill.description, ngramSize));
+  const boundaries = skills.map((skill) => boundaryFeatures(skill.description, dictionaries));
   const collisions: SkillCollision[] = [];
 
   for (let i = 0; i < skills.length; i++) {
+    // The pair loop can dominate a large workspace scan; honor cancellation
+    // between rows so it is not an unabortable freeze (P3).
+    if (cancel?.isCancellationRequested) {
+      break;
+    }
     for (let j = i + 1; j < skills.length; j++) {
       const metrics: CollisionMetrics = {
-        cosine: cosine(vectors[i], vectors[j]),
+        cosine: cosineNormed(vectors[i], vectors[j]),
         jaccard: jaccard(tokens[i], tokens[j]),
-        charNgram: charNgramSimilarity(skills[i].description, skills[j].description, ngramSize),
+        charNgram: cosineNormed(ngramVectors[i], ngramVectors[j]),
         nameSimilarity: nameSimilarity(skills[i].name, skills[j].name),
-        boundarySeparation: boundarySeparation(
-          skills[i].description,
-          skills[j].description,
-          dictionaries,
-        ),
+        boundarySeparation: boundarySeparationOf(boundaries[i], boundaries[j]),
       };
       const composite = compositeScore(metrics, weights, boundaryWeight);
       if (composite < threshold) {

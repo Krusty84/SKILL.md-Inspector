@@ -65,20 +65,52 @@ export function tfidfVectors(corpusTokens: string[][]): TfidfVector[] {
   });
 }
 
+/** Dot product of two sparse vectors, iterating the smaller one. */
+function dotProduct(a: TfidfVector, b: TfidfVector): number {
+  let sum = 0;
+  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
+  for (const [term, weight] of small) {
+    const other = large.get(term);
+    if (other !== undefined) {
+      sum += weight * other;
+    }
+  }
+  return sum;
+}
+
 /** Cosine similarity between two sparse vectors (0..1 for non-negative TF-IDF). */
 export function cosine(a: TfidfVector, b: TfidfVector): number {
   if (a.size === 0 || b.size === 0) {
     return 0;
   }
-  let dot = 0;
-  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
-  for (const [term, weight] of small) {
-    const other = large.get(term);
-    if (other !== undefined) {
-      dot += weight * other;
-    }
+  return dotProduct(a, b) / (norm(a) * norm(b));
+}
+
+/** A sparse vector paired with its precomputed L2 norm, so repeated cosine calls avoid re-norming. */
+export interface NormedVector {
+  counts: TfidfVector;
+  norm: number;
+}
+
+/** Pairs a sparse vector with its L2 norm for repeated comparisons (P3 O(n) pre-pass). */
+export function normedVector(counts: TfidfVector): NormedVector {
+  return { counts, norm: norm(counts) };
+}
+
+/**
+ * Cosine over vectors whose norms were precomputed. Bit-for-bit identical to
+ * `cosine(a.counts, b.counts)`; it just skips recomputing the norms every call.
+ */
+export function cosineNormed(a: NormedVector, b: NormedVector): number {
+  if (a.counts.size === 0 || b.counts.size === 0) {
+    return 0;
   }
-  return dot / (norm(a) * norm(b));
+  return dotProduct(a.counts, b.counts) / (a.norm * b.norm);
+}
+
+/** Precomputed character n-gram frequency vector (with its norm) for one text. */
+export function charNgramVector(text: string, n = 3): NormedVector {
+  return normedVector(frequency(charNgrams(text, n)));
 }
 
 /** Terms shared by two token lists, most frequent first. */
@@ -145,7 +177,7 @@ export function charNgrams(text: string, n = 3): string[] {
  * token metrics miss (e.g. "formatter" vs "formatting").
  */
 export function charNgramSimilarity(a: string, b: string, n = 3): number {
-  return cosine(frequency(charNgrams(a, n)), frequency(charNgrams(b, n)));
+  return cosineNormed(charNgramVector(a, n), charNgramVector(b, n));
 }
 
 function norm(vector: TfidfVector): number {

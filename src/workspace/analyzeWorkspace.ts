@@ -64,7 +64,13 @@ export function analyzeWorkspace(
     skills.map((skill) => ({ name: skill.name, description: skill.description })),
     collisionOptions,
     options.dictionaries,
+    options.cancel,
   );
+  // The collision phase can be cancelled mid-scan; reflect that so a partial
+  // cross-skill comparison is never presented as complete.
+  if (options.cancel?.isCancellationRequested) {
+    cancelled = true;
+  }
   const named = skills.map((skill) => ({ name: skill.name, path: skill.path }));
   const nameConflicts = detectNameConflicts(named);
   const similarNames = detectSimilarNames(named, similarityThreshold);
