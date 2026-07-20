@@ -481,7 +481,7 @@
           "group": "1_validation@1"
         },
         {
-          "command": "skillMdInspector.validateWorkspaceSkills",
+          "command": "skillMdInspector.showSkillReport",
           "group": "1_validation@2"
         },
         {
@@ -493,28 +493,12 @@
           "group": "2_editing@2"
         },
         {
-          "command": "skillMdInspector.showSkillReport",
-          "group": "3_reports@1"
-        },
-        {
-          "command": "skillMdInspector.showWorkspaceReport",
-          "group": "3_reports@2"
-        },
-        {
           "command": "skillMdInspector.exportSkillsIndex",
-          "group": "3_reports@3"
+          "group": "3_reports@1"
         },
         {
           "command": "skillMdInspector.refreshSkills",
           "group": "4_maintenance@1"
-        },
-        {
-          "command": "skillMdInspector.openTemplateSettings",
-          "group": "5_templates@1"
-        },
-        {
-          "command": "skillMdInspector.resetTemplates",
-          "group": "5_templates@2"
         },
         {
           "command": "skillMdInspector.toggleFavorite",
@@ -535,6 +519,11 @@
         {
           "submenu": "skillMdInspector/skillItemContext",
           "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
+          "group": "9_inspector@10"
+        },
+        {
+          "submenu": "skillMdInspector/workspaceFolderContext",
+          "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory)",
           "group": "9_inspector@10"
         },
         {
@@ -793,14 +782,18 @@
           "group": "3_reports@1"
         },
         {
-          "command": "skillMdInspector.addToFavorites",
-          "when": "viewItem == skillMdInspector.skillFile",
+          "command": "skillMdInspector.toggleFavorite",
           "group": "4_favorites@10"
+        }
+      ],
+      "skillMdInspector/workspaceFolderContext": [
+        {
+          "command": "skillMdInspector.validateWorkspaceSkills",
+          "group": "1_validation@1"
         },
         {
-          "command": "skillMdInspector.removeFromFavorites",
-          "when": "viewItem == skillMdInspector.favoriteSkillFile",
-          "group": "4_favorites@20"
+          "command": "skillMdInspector.showWorkspaceReport",
+          "group": "1_validation@2"
         }
       ]
     },
@@ -1747,6 +1740,10 @@
       },
       {
         "id": "skillMdInspector/skillItemContext",
+        "label": "SKILL.md Inspector"
+      },
+      {
+        "id": "skillMdInspector/workspaceFolderContext",
         "label": "SKILL.md Inspector"
       }
     ],
