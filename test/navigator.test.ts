@@ -253,12 +253,16 @@ describe('navigator manifest', () => {
         'command' in item ? item.command : undefined,
       ),
     ).not.toContain('skillMdInspector.addToFavorites');
-    expect(packageJson.contributes.configuration.properties).toHaveProperty(
-      'skillMdInspector.navigator.additionalRoots',
-    );
+    // `contributes.configuration` is an array of titled categories; merge their
+    // property maps to look the setting up regardless of which section owns it.
+    const configProperties = Object.assign(
+      {},
+      ...packageJson.contributes.configuration.map((category) => category.properties),
+    ) as Record<string, any>;
+    expect(configProperties).toHaveProperty('skillMdInspector.navigator.additionalRoots');
     expect(
-      packageJson.contributes.configuration.properties['skillMdInspector.navigator.additionalRoots']
-        .items.properties.files.items.enum,
+      configProperties['skillMdInspector.navigator.additionalRoots'].items.properties.files.items
+        .enum,
     ).toContain('CLAUDE.md');
   });
 });

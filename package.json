@@ -797,969 +797,1002 @@
         }
       ]
     },
-    "configuration": {
-      "title": "SKILL.md Inspector",
-      "properties": {
-        "skillMdInspector.validation.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable deterministic validation of SKILL.md files.",
-          "order": 1
-        },
-        "skillMdInspector.validation.runOnSave": {
-          "type": "boolean",
-          "default": true,
-          "description": "Re-run validation whenever a SKILL.md file is saved.",
-          "order": 2
-        },
-        "skillMdInspector.heuristics.dictionaryValues.acronyms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "pdf",
-            "csv",
-            "json",
-            "yaml",
-            "xml",
-            "html",
-            "css",
-            "api",
-            "sql",
-            "sdk",
-            "cli",
-            "pr",
-            "bom",
-            "cad",
-            "cam",
-            "cae",
-            "step",
-            "stl",
-            "dxf",
-            "dwg",
-            "fea",
-            "cfd",
-            "can",
-            "dbc",
-            "ecu",
-            "ci",
-            "ndt",
-            "fmea",
-            "fem",
-            "python"
-          ],
-          "description": "Acronyms and technology names recognized as concrete artifact or domain evidence.",
-          "items": {
-            "type": "string"
+    "configuration": [
+      {
+        "title": "Validation",
+        "order": 1,
+        "properties": {
+          "skillMdInspector.validation.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable deterministic validation of SKILL.md files.",
+            "order": 1
           },
-          "order": 3
-        },
-        "skillMdInspector.heuristics.dictionaryValues.actionVerbForms": {
-          "type": "object",
-          "scope": "resource",
-          "default": {
-            "apply": [
-              "apply",
-              "applies",
-              "applying",
-              "applied"
-            ],
-            "build": [
-              "build",
-              "builds",
-              "building",
-              "built"
-            ],
-            "debug": [
-              "debug",
-              "debugs",
-              "debugging",
-              "debugged"
-            ],
-            "format": [
-              "format",
-              "formats",
-              "formatting",
-              "formatted"
-            ],
-            "read": [
-              "read",
-              "reads",
-              "reading"
-            ],
-            "run": [
-              "run",
-              "runs",
-              "running",
-              "ran"
-            ],
-            "write": [
-              "write",
-              "writes",
-              "writing",
-              "wrote",
-              "written"
-            ]
+          "skillMdInspector.validation.runOnSave": {
+            "type": "boolean",
+            "default": true,
+            "description": "Re-run validation whenever a SKILL.md file is saved.",
+            "order": 2
           },
-          "description": "Explicit surface forms for action verbs. Keys are base verbs and values are recognized forms; explicit entries take precedence over regular morphology.",
-          "propertyNames": {
-            "minLength": 1
-          },
-          "additionalProperties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "order": 4
-        },
-        "skillMdInspector.heuristics.dictionaryValues.actionVerbs": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "analyze",
-            "generate",
-            "format",
-            "convert",
-            "review",
-            "validate",
-            "extract",
-            "summarize",
-            "transform",
-            "compare",
-            "inspect",
-            "test",
-            "debug",
-            "create",
-            "update",
-            "migrate",
-            "classify",
-            "normalize",
-            "calculate",
-            "build",
-            "write",
-            "read",
-            "render",
-            "parse",
-            "lint",
-            "refactor",
-            "clean",
-            "standardize",
-            "prepare",
-            "organize",
-            "detect",
-            "apply",
-            "automate",
-            "diagnose",
-            "fill",
-            "reduce",
-            "run",
-            "translate",
-            "turn"
-          ],
-          "description": "Base verbs recognized as concrete capabilities in description diagnostics, Static Description Quality, local improvement, and collision features.",
-          "items": {
-            "type": "string"
-          },
-          "order": 5
-        },
-        "skillMdInspector.heuristics.dictionaryValues.artifactHints": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "report",
-            "api",
-            "table",
-            "config",
-            "configuration",
-            "schema",
-            "log",
-            "test",
-            "image",
-            "markdown",
-            "pdf",
-            "csv",
-            "json",
-            "yaml",
-            "diagram",
-            "template",
-            "manual",
-            "spreadsheet",
-            "contract",
-            "invoice",
-            "email",
-            "commit",
-            "changelog",
-            "release",
-            "query",
-            "database",
-            "drawing",
-            "assembly",
-            "part",
-            "component",
-            "model",
-            "mesh",
-            "geometry",
-            "bom",
-            "cad",
-            "cam",
-            "cae",
-            "step",
-            "stl",
-            "dxf",
-            "dwg",
-            "fea",
-            "cfd",
-            "simulation",
-            "load-case",
-            "stress",
-            "strain",
-            "vibration",
-            "spectrum",
-            "waveform",
-            "telemetry",
-            "can",
-            "dbc",
-            "ecu",
-            "avionics",
-            "airfoil",
-            "pipeline",
-            "workflow",
-            "migration",
-            "patch",
-            "diff",
-            "manufacturing",
-            "aircraft",
-            "vehicle",
-            "electronics",
-            "circuit",
-            "firmware",
-            "protocol"
-          ],
-          "description": "High-signal artifact and domain terms used by description quality and collision feature extraction.",
-          "items": {
-            "type": "string"
-          },
-          "order": 6
-        },
-        "skillMdInspector.heuristics.dictionaryValues.artifactSupportTerms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "python",
-            "schema",
-            "vehicle",
-            "ecu",
-            "cad",
-            "api",
-            "configuration",
-            "telemetry",
-            "flight",
-            "json"
-          ],
-          "description": "Domain terms that make a low-signal artifact such as file, data, code, or document concrete.",
-          "items": {
-            "type": "string"
-          },
-          "order": 7
-        },
-        "skillMdInspector.heuristics.dictionaryValues.collisionStopwords": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "the",
-            "a",
-            "an",
-            "and",
-            "or",
-            "to",
-            "of",
-            "in",
-            "on",
-            "for",
-            "with",
-            "from",
-            "by",
-            "as",
-            "at",
-            "is",
-            "are",
-            "be",
-            "this",
-            "that",
-            "these",
-            "those",
-            "it",
-            "use",
-            "used",
-            "using",
-            "when",
-            "skill",
-            "agent",
-            "user",
-            "users",
-            "do",
-            "not",
-            "you",
-            "your",
-            "can",
-            "will",
-            "should",
-            "if",
-            "into",
-            "out",
-            "up",
-            "via",
-            "per"
-          ],
-          "description": "Common terms removed before workspace description collision similarity is calculated.",
-          "items": {
-            "type": "string"
-          },
-          "order": 8
-        },
-        "skillMdInspector.heuristics.dictionaryValues.exclusiveTriggerPhrases": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "only use when",
-            "only use for"
-          ],
-          "description": "Phrases that act as both a positive usage trigger and an exclusive boundary.",
-          "items": {
-            "type": "string"
-          },
-          "order": 9
-        },
-        "skillMdInspector.heuristics.dictionaryValues.frontLoadedFillerTerms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "this",
-            "skill",
-            "when",
-            "asked",
-            "the",
-            "user",
-            "for",
-            "from",
-            "with",
-            "and",
-            "help",
-            "needed",
-            "needs",
-            "that",
-            "them",
-            "they",
-            "you",
-            "your",
-            "any",
-            "all"
-          ],
-          "description": "Terms ignored when deciding whether the opening sentence names a concrete capability object.",
-          "items": {
-            "type": "string"
-          },
-          "order": 10
-        },
-        "skillMdInspector.heuristics.dictionaryValues.irregularSingularForms": {
-          "type": "object",
-          "scope": "resource",
-          "default": {
-            "analysis": [
-              "analyses"
-            ],
-            "bus": [
-              "buses"
-            ],
-            "crisis": [
-              "crises"
-            ],
-            "index": [
-              "indices"
-            ],
-            "matrix": [
-              "matrices"
-            ],
-            "movie": [
-              "movies"
-            ],
-            "series": [
-              "series"
-            ],
-            "thesis": [
-              "theses"
-            ]
-          },
-          "description": "Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.",
-          "propertyNames": {
-            "minLength": 1
-          },
-          "additionalProperties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "order": 11
-        },
-        "skillMdInspector.heuristics.dictionaryValues.lowSignalArtifactTerms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "file",
-            "data",
-            "code",
-            "document",
-            "content",
-            "information"
-          ],
-          "description": "Generic artifact terms that count only when accompanied by an artifact support term.",
-          "items": {
-            "type": "string"
-          },
-          "order": 12
-        },
-        "skillMdInspector.heuristics.dictionaryValues.multiWordArtifacts": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "inspection report",
-            "release notes",
-            "commit history",
-            "pull request",
-            "test suite",
-            "design document",
-            "api schema",
-            "maintenance manual",
-            "test plan",
-            "test report"
-          ],
-          "description": "Multi-word artifact phrases recognized by description quality and collision feature extraction.",
-          "items": {
-            "type": "string"
-          },
-          "order": 13
-        },
-        "skillMdInspector.heuristics.dictionaryValues.negativeBoundaryPhrases": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "do not use when",
-            "do not use for",
-            "don't use when",
-            "don't use for",
-            "never use when",
-            "never use for",
-            "avoid using for",
-            "avoid using when",
-            "avoid when",
-            "not intended for",
-            "not designed for",
-            "not suitable for"
-          ],
-          "description": "Phrases that introduce a negative usage boundary and separate collision scopes.",
-          "items": {
-            "type": "string"
-          },
-          "order": 14
-        },
-        "skillMdInspector.heuristics.dictionaryValues.overbroadTriggerPhrases": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "always use this skill",
-            "should always be used",
-            "whenever .* is mentioned",
-            "whenever .* are mentioned",
-            "in any way",
-            "for anything",
-            "for everything",
-            "basically always",
-            "any kind of output"
-          ],
-          "description": "Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.",
-          "items": {
-            "type": "string"
-          },
-          "order": 15
-        },
-        "skillMdInspector.heuristics.dictionaryValues.positiveTriggerPhrases": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "use this skill when",
-            "use this when",
-            "use when",
-            "use for",
-            "trigger when",
-            "when asked to",
-            "when the user needs",
-            "when the user",
-            "appropriate for",
-            "intended for"
-          ],
-          "description": "Phrases that introduce a positive usage-trigger clause.",
-          "items": {
-            "type": "string"
-          },
-          "order": 16
-        },
-        "skillMdInspector.heuristics.dictionaryValues.restrictiveBoundaryPhrases": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "limited to",
-            "only for",
-            "exclude",
-            "excluding",
-            "except when",
-            "except for"
-          ],
-          "description": "Non-negative phrases that restrict scope for boundary detection and scoring.",
-          "items": {
-            "type": "string"
-          },
-          "order": 17
-        },
-        "skillMdInspector.heuristics.dictionaryValues.scopeStopwords": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "the",
-            "a",
-            "an",
-            "to",
-            "when",
-            "for",
-            "only",
-            "user",
-            "this",
-            "that",
-            "skill",
-            "of",
-            "in",
-            "on",
-            "with",
-            "and",
-            "or",
-            "is",
-            "are",
-            "it",
-            "its",
-            "you",
-            "your",
-            "be",
-            "as",
-            "by",
-            "not"
-          ],
-          "description": "Terms ignored when evaluating whether trigger and boundary clauses contain concrete scope.",
-          "items": {
-            "type": "string"
-          },
-          "order": 18
-        },
-        "skillMdInspector.heuristics.dictionaryValues.scopeVagueTerms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "needed",
-            "needs",
-            "necessary",
-            "appropriate",
-            "applicable",
-            "relevant",
-            "suitable",
-            "tasks",
-            "task",
-            "things",
-            "thing",
-            "stuff",
-            "other",
-            "others",
-            "anything",
-            "everything",
-            "something",
-            "general",
-            "various",
-            "work",
-            "help",
-            "helping",
-            "useful",
-            "asks",
-            "asked",
-            "wants",
-            "requests",
-            "specific"
-          ],
-          "description": "Terms that make trigger and boundary clause content too vague to receive full credit.",
-          "items": {
-            "type": "string"
-          },
-          "order": 19
-        },
-        "skillMdInspector.heuristics.dictionaryValues.uppercaseOnlyAcronyms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "can",
-            "step",
-            "pr",
-            "ci"
-          ],
-          "description": "Ambiguous acronyms that count only when their matched spelling is uppercase.",
-          "items": {
-            "type": "string"
-          },
-          "order": 20
-        },
-        "skillMdInspector.heuristics.dictionaryValues.vagueTerms": {
-          "type": "array",
-          "scope": "resource",
-          "default": [
-            "help",
-            "helpful",
-            "useful",
-            "various",
-            "many things",
-            "common tasks",
-            "many tasks",
-            "different things",
-            "all kinds of",
-            "improve things",
-            "handle everything",
-            "work with",
-            "process stuff",
-            "best results",
-            "general",
-            "general-purpose",
-            "generic",
-            "flexible",
-            "easy",
-            "simple",
-            "stuff",
-            "anything",
-            "assistant",
-            "improves",
-            "better",
-            "smart",
-            "powerful",
-            "advanced",
-            "intelligent",
-            "robust",
-            "comprehensive"
-          ],
-          "description": "Words and phrases treated as vague in description diagnostics and Static Description Quality.",
-          "items": {
-            "type": "string"
-          },
-          "order": 21
-        },
-        "skillMdInspector.discovery.exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "**/node_modules/**",
-            "**/.git/**",
-            "**/dist/**",
-            "**/out/**",
-            "**/.vscode-test/**"
-          ],
-          "description": "Glob patterns for directories to skip when discovering SKILL.md files across the workspace (the tree view and workspace report). Setting this replaces the defaults.",
-          "order": 22
-        },
-        "skillMdInspector.resources.directories": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "references",
-            "scripts",
-            "assets",
-            "templates"
-          ],
-          "description": "Relative resource directories monitored for unreferenced bundled files. This replaces the default list; absolute paths and .. traversal are ignored.",
-          "order": 23
-        },
-        "skillMdInspector.resources.exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "**/node_modules/**",
-            "**/.git/**",
-            "**/dist/**",
-            "**/out/**"
-          ],
-          "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults.",
-          "order": 24
-        },
-        "skillMdInspector.severityOverrides": {
-          "type": "object",
-          "additionalProperties": {
+          "skillMdInspector.profile": {
             "type": "string",
+            "default": "generic",
             "enum": [
-              "error",
-              "warning",
-              "information",
-              "off"
-            ]
-          },
-          "default": {},
-          "description": "Override the severity of diagnostics by code, or disable one with \"off\" (e.g. { \"skill.description.vague\": \"information\" }). Specification errors are protected unless skillMdInspector.severity.allowSpecificationOverrides is enabled.",
-          "order": 25
-        },
-        "skillMdInspector.severity.allowSpecificationOverrides": {
-          "type": "boolean",
-          "default": false,
-          "description": "Allow skillMdInspector.severityOverrides to downgrade or disable specification-level errors (an invalid file). Off by default so structural errors are not hidden accidentally.",
-          "order": 26
-        },
-        "skillMdInspector.templates": {
-          "type": "array",
-          "default": [],
-          "description": "Custom SKILL.md templates. A non-empty array replaces the bundled templates.",
-          "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "label",
-              "frontmatter",
-              "body"
+              "generic",
+              "vscode",
+              "claude",
+              "codex"
             ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Stable unique template identifier."
-              },
-              "label": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Template name displayed in the selection list."
-              },
-              "description": {
-                "type": "string",
-                "description": "Optional explanation displayed in the selection list."
-              },
-              "frontmatter": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "string"
-                },
-                "description": "YAML frontmatter lines without the opening and closing --- delimiters."
-              },
-              "body": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Markdown body lines. Use an empty string to insert a blank line."
-              }
-            },
-            "additionalProperties": false
-          },
-          "order": 27
-        },
-        "skillMdInspector.links.onlineCheck.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Check remote-link availability during full validation. Enabling this sends HTTP requests to URLs referenced by SKILL.md files."
-        },
-        "skillMdInspector.links.onlineCheck.maxConcurrency": {
-          "type": "integer",
-          "default": 4,
-          "minimum": 1,
-          "maximum": 10,
-          "description": "Maximum number of concurrent remote-link requests across one complete validation operation."
-        },
-        "skillMdInspector.profile": {
-          "type": "string",
-          "default": "generic",
-          "enum": [
-            "generic",
-            "vscode",
-            "claude",
-            "codex"
-          ],
-          "description": "Validation profile applied to SKILL.md files."
-        },
-        "skillMdInspector.description.minLength": {
-          "type": "number",
-          "default": 40,
-          "description": "Minimum recommended length of the description field."
-        },
-        "skillMdInspector.description.maxLength": {
-          "type": "number",
-          "default": 1024,
-          "description": "Maximum allowed length of the description field."
-        },
-        "skillMdInspector.name.maxLength": {
-          "type": "number",
-          "default": 64,
-          "description": "Maximum allowed length of the name field."
-        },
-        "skillMdInspector.description.language": {
-          "type": "string",
-          "enum": [
-            "en",
-            "auto"
-          ],
-          "default": "auto",
-          "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" detects a non-English description and marks its quality score as language-limited."
-        },
-        "skillMdInspector.names.similarityThreshold": {
-          "type": "number",
-          "default": 0.8,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
-        },
-        "skillMdInspector.collision.threshold": {
-          "type": "number",
-          "default": 0.4,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
-        },
-        "skillMdInspector.collision.ngramSize": {
-          "type": "number",
-          "default": 3,
-          "minimum": 2,
-          "maximum": 5,
-          "description": "Character n-gram size used by the collision character-similarity metric."
-        },
-        "skillMdInspector.collision.boundarySeparationWeight": {
-          "type": "number",
-          "default": 0.5,
-          "minimum": 0,
-          "maximum": 1,
-          "description": "How strongly mutually-exclusive \"Do not use for...\" boundaries reduce the composite collision score (0 = ignore boundaries, 1 = fully cancel overlap when scopes are mutually excluded)."
-        },
-        "skillMdInspector.collision.weights": {
-          "type": "object",
-          "properties": {
-            "jaccard": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Weight of pairwise token Jaccard."
-            },
-            "cosine": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Weight of TF-IDF cosine."
-            },
-            "charNgram": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Weight of character n-gram similarity."
-            },
-            "nameSimilarity": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Weight of skill-name similarity."
+            "description": "Validation profile applied to SKILL.md files.",
+            "order": 3
+          }
+        }
+      },
+      {
+        "title": "Heuristics",
+        "order": 2,
+        "properties": {
+          "skillMdInspector.heuristics.dictionaryValues.acronyms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "pdf",
+              "csv",
+              "json",
+              "yaml",
+              "xml",
+              "html",
+              "css",
+              "api",
+              "sql",
+              "sdk",
+              "cli",
+              "pr",
+              "bom",
+              "cad",
+              "cam",
+              "cae",
+              "step",
+              "stl",
+              "dxf",
+              "dwg",
+              "fea",
+              "cfd",
+              "can",
+              "dbc",
+              "ecu",
+              "ci",
+              "ndt",
+              "fmea",
+              "fem",
+              "python"
+            ],
+            "description": "Acronyms and technology names recognized as concrete artifact or domain evidence.",
+            "items": {
+              "type": "string"
             }
           },
-          "additionalProperties": false,
-          "default": {
-            "jaccard": 0.3,
-            "cosine": 0.3,
-            "charNgram": 0.2,
-            "nameSimilarity": 0.2
-          },
-          "description": "Relative weights blended into the composite collision score. Normalized to sum to 1 at runtime, so only the ratios matter."
-        },
-        "skillMdInspector.body.strictness": {
-          "type": "string",
-          "enum": [
-            "off",
-            "recommended",
-            "strict"
-          ],
-          "default": "recommended",
-          "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
-        },
-        "skillMdInspector.experimental.llmReview.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Reserved for future LLM-assisted review. Not implemented in MVP1."
-        },
-        "skillMdInspector.navigator.additionalRoots": {
-          "type": "array",
-          "default": [],
-          "description": "Additional local agent roots to show in the Installed Agents view.",
-          "items": {
+          "skillMdInspector.heuristics.dictionaryValues.actionVerbForms": {
             "type": "object",
-            "required": [
-              "id",
-              "label",
-              "path"
+            "scope": "resource",
+            "default": {
+              "apply": [
+                "apply",
+                "applies",
+                "applying",
+                "applied"
+              ],
+              "build": [
+                "build",
+                "builds",
+                "building",
+                "built"
+              ],
+              "debug": [
+                "debug",
+                "debugs",
+                "debugging",
+                "debugged"
+              ],
+              "format": [
+                "format",
+                "formats",
+                "formatting",
+                "formatted"
+              ],
+              "read": [
+                "read",
+                "reads",
+                "reading"
+              ],
+              "run": [
+                "run",
+                "runs",
+                "running",
+                "ran"
+              ],
+              "write": [
+                "write",
+                "writes",
+                "writing",
+                "wrote",
+                "written"
+              ]
+            },
+            "description": "Explicit surface forms for action verbs. Keys are base verbs and values are recognized forms; explicit entries take precedence over regular morphology.",
+            "propertyNames": {
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.actionVerbs": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "analyze",
+              "generate",
+              "format",
+              "convert",
+              "review",
+              "validate",
+              "extract",
+              "summarize",
+              "transform",
+              "compare",
+              "inspect",
+              "test",
+              "debug",
+              "create",
+              "update",
+              "migrate",
+              "classify",
+              "normalize",
+              "calculate",
+              "build",
+              "write",
+              "read",
+              "render",
+              "parse",
+              "lint",
+              "refactor",
+              "clean",
+              "standardize",
+              "prepare",
+              "organize",
+              "detect",
+              "apply",
+              "automate",
+              "diagnose",
+              "fill",
+              "reduce",
+              "run",
+              "translate",
+              "turn"
             ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "label": {
-                "type": "string",
-                "minLength": 1
-              },
-              "path": {
-                "type": "string",
-                "minLength": 1
-              },
-              "files": {
-                "type": "array",
-                "items": {
+            "description": "Base verbs recognized as concrete capabilities in description diagnostics, Static Description Quality, local improvement, and collision features.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.artifactHints": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "report",
+              "api",
+              "table",
+              "config",
+              "configuration",
+              "schema",
+              "log",
+              "test",
+              "image",
+              "markdown",
+              "pdf",
+              "csv",
+              "json",
+              "yaml",
+              "diagram",
+              "template",
+              "manual",
+              "spreadsheet",
+              "contract",
+              "invoice",
+              "email",
+              "commit",
+              "changelog",
+              "release",
+              "query",
+              "database",
+              "drawing",
+              "assembly",
+              "part",
+              "component",
+              "model",
+              "mesh",
+              "geometry",
+              "bom",
+              "cad",
+              "cam",
+              "cae",
+              "step",
+              "stl",
+              "dxf",
+              "dwg",
+              "fea",
+              "cfd",
+              "simulation",
+              "load-case",
+              "stress",
+              "strain",
+              "vibration",
+              "spectrum",
+              "waveform",
+              "telemetry",
+              "can",
+              "dbc",
+              "ecu",
+              "avionics",
+              "airfoil",
+              "pipeline",
+              "workflow",
+              "migration",
+              "patch",
+              "diff",
+              "manufacturing",
+              "aircraft",
+              "vehicle",
+              "electronics",
+              "circuit",
+              "firmware",
+              "protocol"
+            ],
+            "description": "High-signal artifact and domain terms used by description quality and collision feature extraction.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.artifactSupportTerms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "python",
+              "schema",
+              "vehicle",
+              "ecu",
+              "cad",
+              "api",
+              "configuration",
+              "telemetry",
+              "flight",
+              "json"
+            ],
+            "description": "Domain terms that make a low-signal artifact such as file, data, code, or document concrete.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.collisionStopwords": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "the",
+              "a",
+              "an",
+              "and",
+              "or",
+              "to",
+              "of",
+              "in",
+              "on",
+              "for",
+              "with",
+              "from",
+              "by",
+              "as",
+              "at",
+              "is",
+              "are",
+              "be",
+              "this",
+              "that",
+              "these",
+              "those",
+              "it",
+              "use",
+              "used",
+              "using",
+              "when",
+              "skill",
+              "agent",
+              "user",
+              "users",
+              "do",
+              "not",
+              "you",
+              "your",
+              "can",
+              "will",
+              "should",
+              "if",
+              "into",
+              "out",
+              "up",
+              "via",
+              "per"
+            ],
+            "description": "Common terms removed before workspace description collision similarity is calculated.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.exclusiveTriggerPhrases": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "only use when",
+              "only use for"
+            ],
+            "description": "Phrases that act as both a positive usage trigger and an exclusive boundary.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.frontLoadedFillerTerms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "this",
+              "skill",
+              "when",
+              "asked",
+              "the",
+              "user",
+              "for",
+              "from",
+              "with",
+              "and",
+              "help",
+              "needed",
+              "needs",
+              "that",
+              "them",
+              "they",
+              "you",
+              "your",
+              "any",
+              "all"
+            ],
+            "description": "Terms ignored when deciding whether the opening sentence names a concrete capability object.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.irregularSingularForms": {
+            "type": "object",
+            "scope": "resource",
+            "default": {
+              "analysis": [
+                "analyses"
+              ],
+              "bus": [
+                "buses"
+              ],
+              "crisis": [
+                "crises"
+              ],
+              "index": [
+                "indices"
+              ],
+              "matrix": [
+                "matrices"
+              ],
+              "movie": [
+                "movies"
+              ],
+              "series": [
+                "series"
+              ],
+              "thesis": [
+                "theses"
+              ]
+            },
+            "description": "Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.",
+            "propertyNames": {
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.lowSignalArtifactTerms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "file",
+              "data",
+              "code",
+              "document",
+              "content",
+              "information"
+            ],
+            "description": "Generic artifact terms that count only when accompanied by an artifact support term.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.multiWordArtifacts": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "inspection report",
+              "release notes",
+              "commit history",
+              "pull request",
+              "test suite",
+              "design document",
+              "api schema",
+              "maintenance manual",
+              "test plan",
+              "test report"
+            ],
+            "description": "Multi-word artifact phrases recognized by description quality and collision feature extraction.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.negativeBoundaryPhrases": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "do not use when",
+              "do not use for",
+              "don't use when",
+              "don't use for",
+              "never use when",
+              "never use for",
+              "avoid using for",
+              "avoid using when",
+              "avoid when",
+              "not intended for",
+              "not designed for",
+              "not suitable for"
+            ],
+            "description": "Phrases that introduce a negative usage boundary and separate collision scopes.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.overbroadTriggerPhrases": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "always use this skill",
+              "should always be used",
+              "whenever .* is mentioned",
+              "whenever .* are mentioned",
+              "in any way",
+              "for anything",
+              "for everything",
+              "basically always",
+              "any kind of output"
+            ],
+            "description": "Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.positiveTriggerPhrases": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "use this skill when",
+              "use this when",
+              "use when",
+              "use for",
+              "trigger when",
+              "when asked to",
+              "when the user needs",
+              "when the user",
+              "appropriate for",
+              "intended for"
+            ],
+            "description": "Phrases that introduce a positive usage-trigger clause.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.restrictiveBoundaryPhrases": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "limited to",
+              "only for",
+              "exclude",
+              "excluding",
+              "except when",
+              "except for"
+            ],
+            "description": "Non-negative phrases that restrict scope for boundary detection and scoring.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.scopeStopwords": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "the",
+              "a",
+              "an",
+              "to",
+              "when",
+              "for",
+              "only",
+              "user",
+              "this",
+              "that",
+              "skill",
+              "of",
+              "in",
+              "on",
+              "with",
+              "and",
+              "or",
+              "is",
+              "are",
+              "it",
+              "its",
+              "you",
+              "your",
+              "be",
+              "as",
+              "by",
+              "not"
+            ],
+            "description": "Terms ignored when evaluating whether trigger and boundary clauses contain concrete scope.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.scopeVagueTerms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "needed",
+              "needs",
+              "necessary",
+              "appropriate",
+              "applicable",
+              "relevant",
+              "suitable",
+              "tasks",
+              "task",
+              "things",
+              "thing",
+              "stuff",
+              "other",
+              "others",
+              "anything",
+              "everything",
+              "something",
+              "general",
+              "various",
+              "work",
+              "help",
+              "helping",
+              "useful",
+              "asks",
+              "asked",
+              "wants",
+              "requests",
+              "specific"
+            ],
+            "description": "Terms that make trigger and boundary clause content too vague to receive full credit.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.uppercaseOnlyAcronyms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "can",
+              "step",
+              "pr",
+              "ci"
+            ],
+            "description": "Ambiguous acronyms that count only when their matched spelling is uppercase.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.vagueTerms": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "help",
+              "helpful",
+              "useful",
+              "various",
+              "many things",
+              "common tasks",
+              "many tasks",
+              "different things",
+              "all kinds of",
+              "improve things",
+              "handle everything",
+              "work with",
+              "process stuff",
+              "best results",
+              "general",
+              "general-purpose",
+              "generic",
+              "flexible",
+              "easy",
+              "simple",
+              "stuff",
+              "anything",
+              "assistant",
+              "improves",
+              "better",
+              "smart",
+              "powerful",
+              "advanced",
+              "intelligent",
+              "robust",
+              "comprehensive"
+            ],
+            "description": "Words and phrases treated as vague in description diagnostics and Static Description Quality.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "title": "Discovery & resources",
+        "order": 3,
+        "properties": {
+          "skillMdInspector.discovery.exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/node_modules/**",
+              "**/.git/**",
+              "**/dist/**",
+              "**/out/**",
+              "**/.vscode-test/**"
+            ],
+            "description": "Glob patterns for directories to skip when discovering SKILL.md files across the workspace (the tree view and workspace report). Setting this replaces the defaults."
+          },
+          "skillMdInspector.resources.directories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "references",
+              "scripts",
+              "assets",
+              "templates"
+            ],
+            "description": "Relative resource directories monitored for unreferenced bundled files. This replaces the default list; absolute paths and .. traversal are ignored."
+          },
+          "skillMdInspector.resources.exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/node_modules/**",
+              "**/.git/**",
+              "**/dist/**",
+              "**/out/**"
+            ],
+            "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
+          }
+        }
+      },
+      {
+        "title": "Severity",
+        "order": 4,
+        "properties": {
+          "skillMdInspector.severityOverrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "error",
+                "warning",
+                "information",
+                "off"
+              ]
+            },
+            "default": {},
+            "description": "Override the severity of diagnostics by code, or disable one with \"off\" (e.g. { \"skill.description.vague\": \"information\" }). Specification errors are protected unless skillMdInspector.severity.allowSpecificationOverrides is enabled."
+          },
+          "skillMdInspector.severity.allowSpecificationOverrides": {
+            "type": "boolean",
+            "default": false,
+            "description": "Allow skillMdInspector.severityOverrides to downgrade or disable specification-level errors (an invalid file). Off by default so structural errors are not hidden accidentally."
+          }
+        }
+      },
+      {
+        "title": "Templates",
+        "order": 5,
+        "properties": {
+          "skillMdInspector.templates": {
+            "type": "array",
+            "default": [],
+            "description": "Custom SKILL.md templates. A non-empty array replaces the bundled templates.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label",
+                "frontmatter",
+                "body"
+              ],
+              "properties": {
+                "id": {
                   "type": "string",
-                  "enum": [
-                    "SKILL.md",
-                    "AGENTS.md",
-                    "CLAUDE.md"
-                  ]
+                  "minLength": 1,
+                  "description": "Stable unique template identifier."
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Template name displayed in the selection list."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Optional explanation displayed in the selection list."
+                },
+                "frontmatter": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "YAML frontmatter lines without the opening and closing --- delimiters."
+                },
+                "body": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Markdown body lines. Use an empty string to insert a blank line."
                 }
               },
-              "recursive": {
-                "type": "boolean",
-                "default": true
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      {
+        "title": "Content quality",
+        "order": 6,
+        "properties": {
+          "skillMdInspector.body.strictness": {
+            "type": "string",
+            "enum": [
+              "off",
+              "recommended",
+              "strict"
+            ],
+            "default": "recommended",
+            "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
+          },
+          "skillMdInspector.description.language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "auto"
+            ],
+            "default": "auto",
+            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" detects a non-English description and marks its quality score as language-limited."
+          },
+          "skillMdInspector.description.maxLength": {
+            "type": "number",
+            "default": 1024,
+            "description": "Maximum allowed length of the description field."
+          },
+          "skillMdInspector.description.minLength": {
+            "type": "number",
+            "default": 40,
+            "description": "Minimum recommended length of the description field."
+          },
+          "skillMdInspector.name.maxLength": {
+            "type": "number",
+            "default": 64,
+            "description": "Maximum allowed length of the name field."
+          }
+        }
+      },
+      {
+        "title": "Collision detection",
+        "order": 7,
+        "properties": {
+          "skillMdInspector.collision.boundarySeparationWeight": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How strongly mutually-exclusive \"Do not use for...\" boundaries reduce the composite collision score (0 = ignore boundaries, 1 = fully cancel overlap when scopes are mutually excluded)."
+          },
+          "skillMdInspector.collision.ngramSize": {
+            "type": "number",
+            "default": 3,
+            "minimum": 2,
+            "maximum": 5,
+            "description": "Character n-gram size used by the collision character-similarity metric."
+          },
+          "skillMdInspector.collision.threshold": {
+            "type": "number",
+            "default": 0.4,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
+          },
+          "skillMdInspector.collision.weights": {
+            "type": "object",
+            "properties": {
+              "jaccard": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of pairwise token Jaccard."
+              },
+              "cosine": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of TF-IDF cosine."
+              },
+              "charNgram": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of character n-gram similarity."
+              },
+              "nameSimilarity": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of skill-name similarity."
               }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "default": {
+              "jaccard": 0.3,
+              "cosine": 0.3,
+              "charNgram": 0.2,
+              "nameSimilarity": 0.2
+            },
+            "description": "Relative weights blended into the composite collision score. Normalized to sum to 1 at runtime, so only the ratios matter."
+          },
+          "skillMdInspector.names.similarityThreshold": {
+            "type": "number",
+            "default": 0.8,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
           }
-        },
-        "skillMdInspector.openCode.maxSessionFileSizeMb": {
-          "type": "number",
-          "default": 25,
-          "minimum": 1,
-          "maximum": 100,
-          "description": "Maximum OpenCode session export file size to read, in MiB."
-        },
-        "skillMdInspector.openCode.maxDiscoveredSessions": {
-          "type": "number",
-          "default": 1000,
-          "minimum": 1,
-          "maximum": 10000,
-          "description": "Maximum OpenCode session JSON files to discover."
-        },
-        "skillMdInspector.openCode.maxPreviewCharacters": {
-          "type": "number",
-          "default": 20000,
-          "minimum": 1000,
-          "maximum": 100000,
-          "description": "Maximum characters retained in OpenCode previews."
-        },
-        "skillMdInspector.openCode.scanRecursively": {
-          "type": "boolean",
-          "default": true,
-          "description": "Scan the selected OpenCode sessions folder recursively."
+        }
+      },
+      {
+        "title": "Links",
+        "order": 8,
+        "properties": {
+          "skillMdInspector.links.onlineCheck.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Check remote-link availability during full validation. Enabling this sends HTTP requests to URLs referenced by SKILL.md files."
+          },
+          "skillMdInspector.links.onlineCheck.maxConcurrency": {
+            "type": "integer",
+            "default": 4,
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Maximum number of concurrent remote-link requests across one complete validation operation."
+          }
+        }
+      },
+      {
+        "title": "Views",
+        "order": 9,
+        "properties": {
+          "skillMdInspector.navigator.additionalRoots": {
+            "type": "array",
+            "default": [],
+            "description": "Additional local agent roots to show in the Installed Agents view.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label",
+                "path"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "SKILL.md",
+                      "AGENTS.md",
+                      "CLAUDE.md"
+                    ]
+                  }
+                },
+                "recursive": {
+                  "type": "boolean",
+                  "default": true
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "skillMdInspector.openCode.maxDiscoveredSessions": {
+            "type": "number",
+            "default": 1000,
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Maximum OpenCode session JSON files to discover."
+          },
+          "skillMdInspector.openCode.maxPreviewCharacters": {
+            "type": "number",
+            "default": 20000,
+            "minimum": 1000,
+            "maximum": 100000,
+            "description": "Maximum characters retained in OpenCode previews."
+          },
+          "skillMdInspector.openCode.maxSessionFileSizeMb": {
+            "type": "number",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum OpenCode session export file size to read, in MiB."
+          },
+          "skillMdInspector.openCode.scanRecursively": {
+            "type": "boolean",
+            "default": true,
+            "description": "Scan the selected OpenCode sessions folder recursively."
+          }
+        }
+      },
+      {
+        "title": "Experimental",
+        "order": 10,
+        "properties": {
+          "skillMdInspector.experimental.llmReview.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Reserved for future LLM-assisted review. Not implemented in MVP1."
+          }
         }
       }
-    },
+    ],
     "submenus": [
       {
         "id": "skillMdInspector/context",
