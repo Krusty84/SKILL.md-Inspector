@@ -54,30 +54,56 @@ function stringArraySchema() {
   return { type: 'array', items: { type: 'string' } };
 }
 
-function visibleSetting(key) {
-  const value = catalog[key];
-  if (mappingKeys.has(key)) {
-    return {
-      type: 'object',
-      scope: 'resource',
-      default: value,
-      description: descriptions[key],
-      propertyNames: { minLength: 1 },
-      additionalProperties: stringArraySchema(),
-    };
+// Stable serialization that sorts object keys recursively (but preserves array
+// order, which is semantically meaningful for the dictionary defaults). Used by
+// the drift check so a field such as `order` appearing in a different position
+// within a setting object is not mistaken for drift.
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
   }
-  return {
-    type: 'array',
-    scope: 'resource',
-    default: value,
-    description: descriptions[key],
-    items: { type: 'string' },
-  };
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function visibleSetting(key, existing) {
+  const value = catalog[key];
+  const setting = mappingKeys.has(key)
+    ? {
+        type: 'object',
+        scope: 'resource',
+        default: value,
+        description: descriptions[key],
+        propertyNames: { minLength: 1 },
+        additionalProperties: stringArraySchema(),
+      }
+    : {
+        type: 'array',
+        scope: 'resource',
+        default: value,
+        description: descriptions[key],
+        items: { type: 'string' },
+      };
+  // The Settings-UI ordering (`order`) is a presentation concern authored in
+  // package.json, not derived from the catalog. Carry it through so the sync
+  // neither strips it nor reports it as drift.
+  if (existing && typeof existing.order === 'number') {
+    setting.order = existing.order;
+  }
+  return setting;
 }
 
 const properties = packageJson.contributes.configuration.properties;
 const generated = Object.fromEntries(
-  Object.keys(catalog).map((key) => [`${visiblePrefix}${key}`, visibleSetting(key)]),
+  Object.keys(catalog).map((key) => {
+    const settingKey = `${visiblePrefix}${key}`;
+    return [settingKey, visibleSetting(key, properties[settingKey])];
+  }),
 );
 
 if (process.argv.includes('--check')) {
@@ -91,7 +117,7 @@ if (process.argv.includes('--check')) {
   const generatedKeys = Object.keys(generated).sort();
   const drifted =
     JSON.stringify(actualKeys) !== JSON.stringify(generatedKeys) ||
-    actualKeys.some((key) => JSON.stringify(actual[key]) !== JSON.stringify(generated[key]));
+    actualKeys.some((key) => stableStringify(actual[key]) !== stableStringify(generated[key]));
   if (drifted) {
     console.error(
       'Heuristic dictionary settings are out of sync. Run npm run sync:heuristic-dictionaries.',
