@@ -8,6 +8,7 @@ const hoisted = vi.hoisted(() => ({
     folders: [] as any[],
     entries: new Map<string, Entry[]>(),
     readCount: new Map<string, number>(),
+    pendingReads: new Map<string, Promise<Entry[]>>(),
     excludes: {} as Record<string, boolean>,
     watchers: [] as any[],
   },
@@ -61,6 +62,8 @@ vi.mock('vscode', () => {
         readDirectory: vi.fn(async (uri: any) => {
           const key = uri.toString();
           state.readCount.set(key, (state.readCount.get(key) ?? 0) + 1);
+          const pending = state.pendingReads.get(key);
+          if (pending) return pending;
           const result = state.entries.get(key);
           if (!result) throw new Error('missing');
           return result;
@@ -111,9 +114,19 @@ beforeEach(() => {
   state.folders = [];
   state.entries.clear();
   state.readCount.clear();
+  state.pendingReads.clear();
   state.excludes = {};
   state.watchers = [];
 });
+
+async function finishLoad(
+  explorer: WorkspaceExplorer,
+  node: Parameters<WorkspaceExplorer['getChildren']>[0],
+): Promise<ReturnType<WorkspaceExplorer['getChildren']>> {
+  explorer.getChildren(node);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  return explorer.getChildren(node);
+}
 
 describe('WorkspaceExplorer', () => {
   it('returns stable workspace roots in VS Code order', () => {
@@ -138,7 +151,11 @@ describe('WorkspaceExplorer', () => {
     const explorer = new WorkspaceExplorer({ appendLine: vi.fn() } as any);
     const [root] = explorer.getRoots();
     expect(state.readCount.size).toBe(0);
-    const children = await explorer.getChildren(root!);
+    const initial = explorer.getChildren(root!);
+    expect(initial).toEqual([
+      expect.objectContaining({ type: 'loading', label: 'Loading folder…' }),
+    ]);
+    const children = await finishLoad(explorer, root!);
     expect(
       children.map((child) =>
         child.type === 'workspaceDirectory' || child.type === 'workspaceFile'
@@ -149,10 +166,11 @@ describe('WorkspaceExplorer', () => {
       ),
     ).toEqual(['.hidden', 'src', 'AGENTS.md', 'README.md', 'SKILL.md']);
     expect(state.readCount.get('mem:///root')).toBe(1);
-    await explorer.getChildren(root!);
+    explorer.getChildren(root!);
     expect(state.readCount.get('mem:///root')).toBe(1);
     expect(state.readCount.has('mem:///root/src')).toBe(false);
-    await explorer.getChildren(
+    await finishLoad(
+      explorer,
       children.find(
         (child): child is any => child.type === 'workspaceDirectory' && child.name === 'src',
       )!,
@@ -166,11 +184,11 @@ describe('WorkspaceExplorer', () => {
     state.entries.set('mem:///root/src', [['a.ts', File]]);
     const explorer = new WorkspaceExplorer({ appendLine: vi.fn() } as any);
     const [root] = explorer.getRoots();
-    const [src] = await explorer.getChildren(root!);
-    await explorer.getChildren(src as any);
+    const [src] = await finishLoad(explorer, root!);
+    await finishLoad(explorer, src as any);
     explorer.invalidate((src as any).uri);
-    await explorer.getChildren(root!);
-    await explorer.getChildren(src as any);
+    explorer.getChildren(root!);
+    await finishLoad(explorer, src as any);
     expect(state.readCount.get('mem:///root')).toBe(1);
     expect(state.readCount.get('mem:///root/src')).toBe(2);
   });
@@ -185,7 +203,7 @@ describe('WorkspaceExplorer', () => {
       ['SKILL.md', File],
     ]);
     const explorer = new WorkspaceExplorer({ appendLine: vi.fn() } as any);
-    const children = await explorer.getChildren(explorer.getRoots()[0]!);
+    const children = await finishLoad(explorer, explorer.getRoots()[0]!);
     expect(children.map((child: any) => child.name)).toEqual(['package.json', 'SKILL.md']);
   });
 
@@ -193,11 +211,39 @@ describe('WorkspaceExplorer', () => {
     state.folders = [folder('mem:///missing', 'missing', 0)];
     const appendLine = vi.fn();
     const explorer = new WorkspaceExplorer({ appendLine } as any);
-    const children = await explorer.getChildren(explorer.getRoots()[0]!);
+    const children = await finishLoad(explorer, explorer.getRoots()[0]!);
     expect(children).toEqual([
       expect.objectContaining({ type: 'workspaceError', label: 'Unable to read this folder.' }),
     ]);
     expect(appendLine).toHaveBeenCalled();
+  });
+
+  it('returns a spinner and does not duplicate reads for repeated expansion', async () => {
+    state.folders = [folder('mem:///root', 'root', 0)];
+    let resolveRead!: (entries: Entry[]) => void;
+    state.pendingReads.set(
+      'mem:///root',
+      new Promise((resolve) => {
+        resolveRead = resolve;
+      }),
+    );
+    const emitter = { fire: vi.fn() };
+    const explorer = new WorkspaceExplorer({ appendLine: vi.fn() } as any, emitter);
+    const [root] = explorer.getRoots();
+
+    const first = explorer.getChildren(root!);
+    const second = explorer.getChildren(root!);
+
+    expect(first).toEqual([expect.objectContaining({ type: 'loading', label: 'Loading folder…' })]);
+    expect(second).toEqual(first);
+    await Promise.resolve();
+    expect(state.readCount.get('mem:///root')).toBe(1);
+    resolveRead([['SKILL.md', File]]);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(explorer.getChildren(root!)).toEqual([
+      expect.objectContaining({ type: 'workspaceFile', name: 'SKILL.md' }),
+    ]);
+    expect(emitter.fire).toHaveBeenCalledWith(root);
   });
 
   it('matches standard exclude glob shapes used by files.exclude', () => {

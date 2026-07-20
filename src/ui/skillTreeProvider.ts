@@ -9,9 +9,11 @@ import type {
   SimilarNames,
   ResourceNode,
 } from '../types/Workspace';
+import { loadingTreeItem, SingleFlight } from './treeLoading';
 
 type TreeNode =
   | { type: 'message'; text: string }
+  | { type: 'loading'; text: string }
   | { type: 'nameConflicts'; conflicts: NameConflict[] }
   | { type: 'nameConflict'; conflict: NameConflict }
   | { type: 'similarNames'; similar: SimilarNames[] }
@@ -26,18 +28,22 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private readonly emitter = new vscode.EventEmitter<TreeNode | undefined>();
   readonly onDidChangeTreeData = this.emitter.event;
   private analysis: WorkspaceAnalysis | undefined;
-  private loaded = false;
+  private hasAnalysisResult = false;
+  private analysisAttempted = false;
+  private readonly analysisLoad = new SingleFlight();
 
-  refresh(): void {
-    this.loaded = false;
-    this.analysis = undefined;
-    this.emitter.fire(undefined);
+  constructor(private readonly output?: vscode.OutputChannel) {}
+
+  refresh(): Promise<void> {
+    return this.startAnalysis();
   }
 
   getTreeItem(node: TreeNode): vscode.TreeItem {
     switch (node.type) {
       case 'message':
         return new vscode.TreeItem(node.text, vscode.TreeItemCollapsibleState.None);
+      case 'loading':
+        return loadingTreeItem(node.text);
       case 'nameConflicts': {
         const item = new vscode.TreeItem(
           `Duplicate names (${node.conflicts.length})`,
@@ -125,9 +131,12 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   }
 
   private rootChildren(): TreeNode[] {
-    if (!this.loaded) {
-      this.analysis = computeWorkspaceAnalysis()?.analysis;
-      this.loaded = true;
+    if (!this.hasAnalysisResult) {
+      if (!this.analysisAttempted) void this.startAnalysis();
+      if (this.analysisLoad.isRunning) {
+        return [{ type: 'loading', text: 'Analyzing workspace skills…' }];
+      }
+      return [{ type: 'message', text: 'Unable to analyze workspace skills.' }];
     }
     if (!this.analysis) {
       return [{ type: 'message', text: 'Open a folder to scan for SKILL.md files.' }];
@@ -149,6 +158,30 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       nodes.push({ type: 'skill', skill });
     }
     return nodes;
+  }
+
+  private startAnalysis(): Promise<void> {
+    const wasRunning = this.analysisLoad.isRunning;
+    this.analysisAttempted = true;
+    const operation = this.analysisLoad.run(async () => {
+      try {
+        const result = await vscode.window.withProgress(
+          { location: { viewId: 'skillMdInspectorSkills' } },
+          async () => computeWorkspaceAnalysis()?.analysis,
+        );
+        this.analysis = result;
+        this.hasAnalysisResult = true;
+      } finally {
+        this.emitter.fire(undefined);
+      }
+    });
+    if (!wasRunning) {
+      this.emitter.fire(undefined);
+      void operation.catch((error: unknown) => {
+        this.output?.appendLine(`Workspace skills analysis failed: ${String(error)}`);
+      });
+    }
+    return operation;
   }
 
   private skillItem(skill: WorkspaceSkill): vscode.TreeItem {

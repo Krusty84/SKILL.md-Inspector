@@ -7,9 +7,11 @@ import { expandConfiguredPath } from '../navigator/expandConfiguredPath';
 import { FAVORITES_KEY, restoreFavorites } from '../navigator/favoritesStore';
 import { normalizeAdditionalRoots } from '../navigator/normalizeAdditionalRoots';
 import type { AgentSource, DiscoveredFile } from '../navigator/types';
+import { loadingTreeItem, SingleFlight } from './treeLoading';
 
 type InstalledAgentsNode =
   | { type: 'message'; label: string }
+  | { type: 'loading'; label: string }
   | { type: 'agent'; label: string; id: string }
   | { type: 'group'; label: string; agentId: string }
   | { type: 'file'; file: DiscoveredFile; favorite: boolean };
@@ -18,6 +20,8 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   private readonly emitter = new vscode.EventEmitter<InstalledAgentsNode | undefined>();
   readonly onDidChangeTreeData = this.emitter.event;
   private loaded = false;
+  private loadAttempted = false;
+  private readonly discoveryLoad = new SingleFlight();
   private installedFiles: DiscoveredFile[] = [];
   private messages: string[] = [];
 
@@ -26,14 +30,19 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     private readonly output: vscode.OutputChannel,
   ) {}
 
-  refresh(): void {
-    this.loaded = false;
-    this.emitter.fire(undefined);
+  refresh(): Promise<void> {
+    return this.startDiscovery();
   }
 
-  async getChildren(node?: InstalledAgentsNode): Promise<InstalledAgentsNode[]> {
-    await this.ensureLoaded();
-    if (!node) return this.installedChildren();
+  getChildren(node?: InstalledAgentsNode): InstalledAgentsNode[] {
+    if (!node) {
+      if (!this.loaded && !this.loadAttempted) void this.startDiscovery();
+      if (!this.loaded && this.discoveryLoad.isRunning)
+        return [{ type: 'loading', label: 'Discovering installed agent skills…' }];
+      if (!this.loaded)
+        return [{ type: 'message', label: 'Unable to discover installed agent skills.' }];
+      return this.installedChildren();
+    }
     if (node.type === 'agent')
       return unique(
         this.installedFiles
@@ -53,6 +62,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   getTreeItem(node: InstalledAgentsNode): vscode.TreeItem {
     if (node.type === 'message')
       return new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.None);
+    if (node.type === 'loading') return loadingTreeItem(node.label);
     if (node.type === 'agent') {
       const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.Collapsed);
       item.iconPath = new vscode.ThemeIcon('hubot');
@@ -67,10 +77,29 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     return this.fileItem(node.file, node.favorite);
   }
 
-  private async ensureLoaded(): Promise<void> {
-    if (this.loaded) return;
-    this.installedFiles = await this.discoverInstalled();
-    this.loaded = true;
+  private startDiscovery(): Promise<void> {
+    const wasRunning = this.discoveryLoad.isRunning;
+    this.loadAttempted = true;
+    const operation = this.discoveryLoad.run(async () => {
+      try {
+        const result = await vscode.window.withProgress(
+          { location: { viewId: 'skillMdInspectorInstalledAgents' } },
+          () => this.discoverInstalled(),
+        );
+        this.installedFiles = result.files;
+        this.messages = result.messages;
+        this.loaded = true;
+      } finally {
+        this.emitter.fire(undefined);
+      }
+    });
+    if (!wasRunning) {
+      this.emitter.fire(undefined);
+      void operation.catch((error: unknown) => {
+        this.output.appendLine(`Installed agent skills discovery failed: ${String(error)}`);
+      });
+    }
+    return operation;
   }
 
   private installedChildren(): InstalledAgentsNode[] {
@@ -106,14 +135,17 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     return item;
   }
 
-  private async discoverInstalled(): Promise<DiscoveredFile[]> {
-    this.messages = [];
+  private async discoverInstalled(): Promise<{
+    files: DiscoveredFile[];
+    messages: string[];
+  }> {
+    const messages: string[] = [];
     const sources = this.sources();
     const files: DiscoveredFile[] = [];
     for (const source of sources) {
       try {
         const result = await discoverExternalFiles(source);
-        this.messages.push(...result.messages);
+        messages.push(...result.messages);
         for (const file of result.files) {
           files.push({
             ...file,
@@ -125,7 +157,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
         this.output.appendLine(String(error));
       }
     }
-    return deduplicateDiscoveredFiles(files);
+    return { files: deduplicateDiscoveredFiles(files), messages };
   }
 
   private sources(): AgentSource[] {

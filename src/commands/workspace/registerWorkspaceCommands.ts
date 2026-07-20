@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { parentUri } from '../../navigator/workspaceExplorer';
 import type { WorkspaceExplorerNode } from '../../navigator/workspaceExplorerTypes';
-import type { WorkspaceTreeProvider } from '../../ui/workspaceTreeProvider';
+import type { WorkspaceTreeNode, WorkspaceTreeProvider } from '../../ui/workspaceTreeProvider';
 import { addFolders, selectSkillsFolder } from './addWorkspaceFolders';
 
 export type WorkspaceCommandTarget = WorkspaceExplorerNode | vscode.Uri | undefined;
@@ -10,7 +10,7 @@ type WorkspaceClipboard = { operation: 'copy' | 'cut'; uris: vscode.Uri[] };
 
 type Deps = {
   provider: WorkspaceTreeProvider;
-  view: vscode.TreeView<WorkspaceExplorerNode | { type: 'message'; label: string }>;
+  view: vscode.TreeView<WorkspaceTreeNode>;
   output: vscode.OutputChannel;
 };
 

@@ -23,6 +23,16 @@ describe('sidebar view contributions', () => {
     );
   });
 
+  it('activates before any contributed tree view requests its data provider', () => {
+    const viewIds = Object.values(packageJson.contributes.views)
+      .flat()
+      .map((view) => view.id);
+
+    expect(packageJson.activationEvents).toEqual(
+      expect.arrayContaining(viewIds.map((viewId) => `onView:${viewId}`)),
+    );
+  });
+
   it('keeps favorites actions scoped to the favorites view title and inspector submenu', () => {
     expect(packageJson.contributes.menus['view/title']).toContainEqual(
       expect.objectContaining({

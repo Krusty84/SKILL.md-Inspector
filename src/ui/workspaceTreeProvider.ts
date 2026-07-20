@@ -1,14 +1,19 @@
 import * as vscode from 'vscode';
 import { FAVORITES_KEY, restoreFavorites } from '../navigator/favoritesStore';
 import { parentUri, WorkspaceExplorer } from '../navigator/workspaceExplorer';
-import type { WorkspaceExplorerNode, WorkspaceRootNode } from '../navigator/workspaceExplorerTypes';
+import type {
+  WorkspaceExplorerChild,
+  WorkspaceExplorerNode,
+  WorkspaceRootNode,
+} from '../navigator/workspaceExplorerTypes';
+import { loadingTreeItem } from './treeLoading';
 
-type WorkspaceNode = { type: 'message'; label: string } | WorkspaceExplorerNode;
+export type WorkspaceTreeNode = { type: 'message'; label: string } | WorkspaceExplorerChild;
 
 export class WorkspaceTreeProvider
-  implements vscode.TreeDataProvider<WorkspaceNode>, vscode.Disposable
+  implements vscode.TreeDataProvider<WorkspaceTreeNode>, vscode.Disposable
 {
-  private readonly emitter = new vscode.EventEmitter<WorkspaceNode | undefined>();
+  private readonly emitter = new vscode.EventEmitter<WorkspaceTreeNode | undefined>();
   readonly onDidChangeTreeData = this.emitter.event;
   private readonly workspaceExplorer: WorkspaceExplorer;
 
@@ -39,7 +44,7 @@ export class WorkspaceTreeProvider
     return this.workspaceExplorer.getRootForUri(uri);
   }
 
-  getChildren(node?: WorkspaceNode): Thenable<WorkspaceNode[]> | WorkspaceNode[] {
+  getChildren(node?: WorkspaceTreeNode): WorkspaceTreeNode[] {
     if (!node) {
       const roots = this.workspaceExplorer.getRoots();
       return roots;
@@ -49,9 +54,10 @@ export class WorkspaceTreeProvider
     return [];
   }
 
-  getTreeItem(node: WorkspaceNode): vscode.TreeItem {
+  getTreeItem(node: WorkspaceTreeNode): vscode.TreeItem {
     if (node.type === 'message')
       return new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.None);
+    if (node.type === 'loading') return loadingTreeItem(node.label);
     if (node.type === 'workspaceRoot') {
       const item = new vscode.TreeItem(node.folder.name, vscode.TreeItemCollapsibleState.Collapsed);
       item.resourceUri = node.uri;
@@ -84,7 +90,7 @@ export class WorkspaceTreeProvider
     return item;
   }
 
-  getParent(node: WorkspaceNode): WorkspaceNode | undefined {
+  getParent(node: WorkspaceTreeNode): WorkspaceTreeNode | undefined {
     if (node.type === 'workspaceRoot' || node.type === 'message') return undefined;
     const parent = node.parentUri;
     const root = this.workspaceExplorer

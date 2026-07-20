@@ -92,10 +92,15 @@ by 300 milliseconds.
 `SkillDocument`. The parser itself does not read the filesystem. Its supporting
 modules handle:
 
-- YAML frontmatter and source ranges through `yaml`;
+- YAML frontmatter, key ranges, and complete value ranges through `yaml`;
 - Markdown links and headings through Unified and Remark;
 - relative-path normalization and containment checks;
 - body evidence used by authoring rules.
+
+Frontmatter parsing treats malformed YAML, including failures raised while aliases
+are materialized, as normal diagnostics rather than uncaught analysis failures.
+Complete value ranges let quick fixes replace or extend multiline and quoted YAML
+scalars without assuming that a field occupies one physical line.
 
 In full analysis, `src/parser/discoverResources.ts` inventories files below the
 skill directory and `withResources` marks referenced resources. The normalized
@@ -132,12 +137,16 @@ name, description, links, resources, body content, token budgets, and profile
 metadata. Token-budget policy consumes the already-calculated usage model rather
 than reading files again. Diagnostic severity overrides are applied after rules
 run. Specification errors cannot be downgraded unless the user explicitly enables
-that behavior.
+that behavior. Each registered rule runs behind an isolation boundary: if a rule
+throws, the remaining rules continue and an information-level internal diagnostic
+reports the lost coverage as a linter failure rather than a problem with the skill.
 
 `src/diagnostics/diagnosticsProvider.ts` bridges the analysis result to a VS Code
 diagnostic collection and caches resource discovery. `src/codeActions/` converts
-diagnostic quick-fix metadata into `WorkspaceEdit` operations. The validation layer
-only describes potential edits; it never applies them.
+diagnostic quick-fix metadata into `WorkspaceEdit` operations. Frontmatter edits use
+parser-provided value ranges, and folder-rename fixes accept only a safe kebab-case
+path segment that remains under the current parent. The validation layer only
+describes potential edits; it never applies them.
 
 Optional online checking is a separate asynchronous phase in `src/online/`.
 `RemoteLinkCheckSession` consumes parsed remote links, deduplicates normalized URLs,
@@ -167,6 +176,10 @@ resolves one of four profiles from `src/profiles/`:
 The resolved configuration contains the profile, resource directories, discovery
 and resource exclusions, collision settings, severity policy, heuristic
 dictionaries, and the opt-in online-check flag and operation-wide concurrency limit.
+The extension manifest presents these settings in ordered groups for validation,
+heuristics, discovery and resources, severity, templates, content quality, collision
+detection, links, views, and experimental concerns. Grouping affects the Settings
+UI, not runtime configuration precedence.
 
 `src/quality/defaultHeuristicDictionaries.json` is the canonical data source for
 action verbs, artifacts, trigger and boundary phrases, vague language, morphology,
@@ -211,6 +224,11 @@ computes:
 - confusingly similar names;
 - description collisions using token, character, and name similarity signals;
 - boundary-based reductions when descriptions declare mutually exclusive scopes.
+
+Collision detection precomputes per-skill TF-IDF norms, character n-grams, and
+boundary features before entering the quadratic pair comparison. It checks
+cancellation between comparison rows, and workspace analysis marks the result as
+cancelled rather than presenting a partial collision scan as complete.
 
 The same `WorkspaceAnalysis` model feeds the Skills tree and workspace report.
 `buildSkillsIndex` projects it into schema-version-4 JSON for export as
@@ -408,7 +426,8 @@ script.
 - Aggregate analysis reads saved files. Unsaved changes appear in live diagnostics
   and the per-skill report, but not in collision, portability, or index results.
 - Full skill and workspace analysis uses synchronous Node filesystem operations.
-  Cancellation is checked between skill files, not within a single scan step.
+  Cancellation is checked between skill files and between rows of the cross-skill
+  collision loop, but not during one skill's resource scan or validation pipeline.
 - Token-budget thresholds are fixed policy. Resource token totals exist only after
   full analysis; text-only analysis never infers missing groups as zero.
 - Path-oriented analysis does not uniformly support remote or virtual filesystem

@@ -31,6 +31,14 @@ export interface WorkspaceErrorNode {
   parentUri: vscode.Uri;
 }
 
+export interface WorkspaceLoadingNode {
+  type: 'loading';
+  id: string;
+  label: string;
+  parentUri: vscode.Uri;
+}
+
 export type WorkspaceExplorerNode =
   WorkspaceRootNode | WorkspaceDirectoryNode | WorkspaceFileNode | WorkspaceErrorNode;
 export type WorkspaceContainerNode = WorkspaceRootNode | WorkspaceDirectoryNode;
+export type WorkspaceExplorerChild = WorkspaceExplorerNode | WorkspaceLoadingNode;

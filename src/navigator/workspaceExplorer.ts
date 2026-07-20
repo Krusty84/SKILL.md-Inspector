@@ -3,12 +3,14 @@ import { createWorkspaceExcludeMatcher } from './workspaceExcludes';
 import { compareWorkspaceNodes, isDirectoryType } from './workspaceSorting';
 import type {
   WorkspaceContainerNode,
+  WorkspaceExplorerChild,
   WorkspaceExplorerNode,
   WorkspaceRootNode,
 } from './workspaceExplorerTypes';
 
 export class WorkspaceExplorer implements vscode.Disposable {
   private readonly cache = new Map<string, WorkspaceExplorerNode[]>();
+  private readonly pendingLoads = new Map<string, Promise<void>>();
   private readonly watchers = new Map<string, vscode.FileSystemWatcher>();
   private readonly pendingRefreshes = new Map<string, WorkspaceExplorerNode | undefined>();
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -29,10 +31,31 @@ export class WorkspaceExplorer implements vscode.Disposable {
     }));
   }
 
-  async getChildren(node: WorkspaceContainerNode): Promise<WorkspaceExplorerNode[]> {
+  getChildren(node: WorkspaceContainerNode): WorkspaceExplorerChild[] {
     const key = this.key(node.uri);
     const cached = this.cache.get(key);
     if (cached) return cached;
+    if (!this.pendingLoads.has(key)) {
+      const load = Promise.resolve()
+        .then(() => this.loadChildren(node))
+        .finally(() => {
+          this.pendingLoads.delete(key);
+          this.emitter?.fire(node);
+        });
+      this.pendingLoads.set(key, load);
+    }
+    return [
+      {
+        type: 'loading',
+        id: `workspace-loading:${node.uri.toString()}`,
+        label: 'Loading folder…',
+        parentUri: node.uri,
+      },
+    ];
+  }
+
+  private async loadChildren(node: WorkspaceContainerNode): Promise<void> {
+    const key = this.key(node.uri);
     try {
       const matcher = createWorkspaceExcludeMatcher(
         node.type === 'workspaceRoot' ? node.folder : this.folderFor(node.uri),
@@ -44,7 +67,6 @@ export class WorkspaceExplorer implements vscode.Disposable {
         .filter((child) => !matcher.excludes(child.uri, child.name))
         .sort(compareWorkspaceNodes);
       this.cache.set(key, children);
-      return children;
     } catch (error) {
       this.output.appendLine(
         `Unable to read workspace folder ${node.uri.toString()}: ${String(error)}`,
@@ -56,7 +78,6 @@ export class WorkspaceExplorer implements vscode.Disposable {
         parentUri: node.uri,
       };
       this.cache.set(key, [child]);
-      return [child];
     }
   }
 

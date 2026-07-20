@@ -25,31 +25,18 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:markdown",
-    "workspaceContains:**/SKILL.md",
-    "onCommand:skillMdInspector.refreshNavigator",
-    "onCommand:skillMdInspector.addToFavorites",
-    "onCommand:skillMdInspector.toggleFavorite",
-    "onView:skillMdInspectorFavorites",
-    "onView:skillMdInspectorWorkspace",
-    "onCommand:skillMdInspector.workspace.selectSkillsFolder",
-    "onView:skillMdInspectorInstalledAgents",
-    "onView:skillMdInspectorOpenCodeSessions",
-    "onCommand:skillMdInspector.openCode.selectSessionsFolder",
-    "onCommand:skillMdInspector.openCode.openReport",
-    "onCommand:skillMdInspector.openCode.openRawJson",
-    "onCommand:skillMdInspector.openCode.clearSessionsFolder",
-    "onCommand:skillMdInspector.openCode.refreshSessions"
+    "workspaceContains:**/SKILL.md"
   ],
   "contributes": {
     "commands": [
       {
         "command": "skillMdInspector.validateCurrentSkill",
-        "title": "Validate Current Skill",
+        "title": "Validate Current SKILL.md",
         "category": "SKILL.md Inspector"
       },
       {
         "command": "skillMdInspector.validateWorkspaceSkills",
-        "title": "Validate Workspace Skills",
+        "title": "Validate Workspace SKILL.mds",
         "category": "SKILL.md Inspector"
       },
       {
@@ -59,7 +46,7 @@
       },
       {
         "command": "skillMdInspector.showSkillReport",
-        "title": "Show Skill Report",
+        "title": "Show SKILL.md Report",
         "category": "SKILL.md Inspector"
       },
       {
@@ -74,12 +61,12 @@
       },
       {
         "command": "skillMdInspector.exportSkillsIndex",
-        "title": "Export Skills Index",
+        "title": "Export SKILL.mds Index",
         "category": "SKILL.md Inspector"
       },
       {
         "command": "skillMdInspector.refreshSkills",
-        "title": "Refresh Skills",
+        "title": "Refresh SKILL.mds",
         "category": "SKILL.md Inspector",
         "icon": "$(refresh)"
       },
@@ -1811,7 +1798,7 @@
       "activitybar": [
         {
           "id": "skillMdInspector",
-          "title": "SKILL.md INSPECTOR",
+          "title": "SKILL.md Inspector",
           "icon": "media/skill-md-inspector.svg"
         }
       ],
@@ -1826,7 +1813,7 @@
     "viewsWelcome": [
       {
         "view": "skillMdInspectorWorkspace",
-        "contents": "No SKILLs folder is selected.\n\n[Select SKILLs Folder](command:skillMdInspector.workspace.selectSkillsFolder)",
+        "contents": "No SKILL.mds folder is selected.\n\n[Select SKILL.mds Folder](command:skillMdInspector.workspace.selectSkillsFolder)",
         "when": "workspaceFolderCount == 0"
       },
       {

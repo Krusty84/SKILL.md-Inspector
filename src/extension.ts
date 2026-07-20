@@ -21,7 +21,7 @@ import {
 import { resolveSkillUri } from './commands/resolveSkillTarget';
 import { OpenCodeSessionFolderStore } from './opencode/sessionFolderStore';
 import {
-  OpenCodeSessionTreeItem,
+  OpenCodeSessionsNode,
   OpenCodeSessionsTreeProvider,
 } from './ui/openCodeSessionsTreeProvider';
 import { registerOpenCodeCommands } from './commands/opencode/registerOpenCodeCommands';
@@ -29,14 +29,59 @@ import { refreshAfterConfigurationChange } from './configurationRefresh';
 
 const CHANGE_DEBOUNCE_MS = 300;
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export function activate(context: vscode.ExtensionContext): void {
+  const output = vscode.window.createOutputChannel('SKILL.md Inspector');
+  context.subscriptions.push(output);
+
+  const treeProvider = new SkillTreeProvider(output);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
+  );
+
+  const favoritesProvider = new FavoritesTreeProvider(context);
+  const favoritesView = vscode.window.createTreeView('skillMdInspectorFavorites', {
+    treeDataProvider: favoritesProvider,
+  });
+  context.subscriptions.push(favoritesView);
+
+  const workspaceProvider = new WorkspaceTreeProvider(context, output);
+  const workspaceView = vscode.window.createTreeView('skillMdInspectorWorkspace', {
+    treeDataProvider: workspaceProvider,
+    canSelectMany: true,
+    showCollapseAll: true,
+  });
+  context.subscriptions.push(workspaceProvider, workspaceView);
+
+  const installedAgentsProvider = new InstalledAgentsTreeProvider(context, output);
+  const installedAgentsView = vscode.window.createTreeView('skillMdInspectorInstalledAgents', {
+    treeDataProvider: installedAgentsProvider,
+  });
+  context.subscriptions.push(installedAgentsView);
+
+  const openCodeSessionFolderStore = new OpenCodeSessionFolderStore(context);
+  const openCodeSessionsProvider = new OpenCodeSessionsTreeProvider(
+    openCodeSessionFolderStore,
+    output,
+  );
+  context.subscriptions.push(openCodeSessionsProvider);
+  try {
+    const openCodeSessionsView: vscode.TreeView<OpenCodeSessionsNode> =
+      vscode.window.createTreeView('skillMdInspectorOpenCodeSessions', {
+        treeDataProvider: openCodeSessionsProvider,
+        showCollapseAll: true,
+      });
+    context.subscriptions.push(openCodeSessionsView);
+    void openCodeSessionsProvider.refresh();
+  } catch (error) {
+    output.appendLine(
+      `OpenCode sessions view initialization failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+    );
+  }
+
   const provider = new DiagnosticsProvider();
   context.subscriptions.push(provider);
-
   registerCommands(context, provider);
 
-  const treeProvider = new SkillTreeProvider();
-  const output = vscode.window.createOutputChannel('SKILL.md Inspector');
   let configurationWarningState = '';
   const reportConfigurationWarnings = (): void => {
     const scope =
@@ -58,48 +103,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       `SKILL.md Inspector ignored invalid heuristic dictionary configuration (${warnings.length} ${warnings.length === 1 ? 'warning' : 'warnings'}). See the SKILL.md Inspector output for details.`,
     );
   };
-  const favoritesProvider = new FavoritesTreeProvider(context);
-  const workspaceProvider = new WorkspaceTreeProvider(context, output);
-  const installedAgentsProvider = new InstalledAgentsTreeProvider(context, output);
-  const openCodeSessionFolderStore = new OpenCodeSessionFolderStore(context);
-  const openCodeSessionsProvider = new OpenCodeSessionsTreeProvider(
-    openCodeSessionFolderStore,
-    output,
-  );
-  const favoritesView = vscode.window.createTreeView('skillMdInspectorFavorites', {
-    treeDataProvider: favoritesProvider,
-  });
-  const workspaceView = vscode.window.createTreeView('skillMdInspectorWorkspace', {
-    treeDataProvider: workspaceProvider,
-    canSelectMany: true,
-    showCollapseAll: true,
-  });
-  const installedAgentsView = vscode.window.createTreeView('skillMdInspectorInstalledAgents', {
-    treeDataProvider: installedAgentsProvider,
-  });
-  let openCodeSessionsView: vscode.TreeView<OpenCodeSessionTreeItem> | undefined;
-  try {
-    openCodeSessionsView = vscode.window.createTreeView('skillMdInspectorOpenCodeSessions', {
-      treeDataProvider: openCodeSessionsProvider,
-      showCollapseAll: true,
-    });
-    void openCodeSessionsProvider.refresh();
-  } catch (error) {
-    output.appendLine(
-      `OpenCode sessions view initialization failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
-    );
-  }
   registerOpenCodeCommands(context, {
     provider: openCodeSessionsProvider,
     store: openCodeSessionFolderStore,
     output,
   });
   registerWorkspaceCommands(context, { provider: workspaceProvider, view: workspaceView, output });
-  const builtInCommandAdapter = await createBuiltInCommandAdapter(output);
-  registerWorkspaceContextCommands(context, {
-    provider: workspaceProvider,
-    adapter: builtInCommandAdapter,
-  });
+  void createBuiltInCommandAdapter(output)
+    .then((adapter) =>
+      registerWorkspaceContextCommands(context, { provider: workspaceProvider, adapter }),
+    )
+    .catch((error: unknown) => {
+      output.appendLine(
+        `Optional WORKSPACE context actions initialization failed: ${String(error)}`,
+      );
+    });
   const refreshNavigator = (): void => {
     favoritesProvider.refresh();
     workspaceProvider.refresh();
@@ -147,14 +165,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   resourceWatcher.onDidChange(onResourceChange);
 
   context.subscriptions.push(
-    output,
-    workspaceProvider,
-    favoritesView,
-    workspaceView,
-    installedAgentsView,
-    ...(openCodeSessionsView ? [openCodeSessionsView] : []),
-    openCodeSessionsProvider,
-    vscode.window.registerTreeDataProvider('skillMdInspectorSkills', treeProvider),
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
     vscode.commands.registerCommand('skillMdInspector.refreshNavigator', refreshNavigator),
     vscode.commands.registerCommand('skillMdInspector.refreshFavorites', () =>

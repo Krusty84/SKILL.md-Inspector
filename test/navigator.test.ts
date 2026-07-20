@@ -212,10 +212,10 @@ describe('navigator manifest', () => {
       'skillMdInspectorOpenCodeSessions',
     ]);
     expect(packageJson.contributes.views.skillMdInspector.map((view) => view.name)).toEqual([
-      'FAVORITES',
       'WORKSPACE',
       'INSTALLED AGENTS',
       'OPENCODE SESSIONS',
+      'FAVORITES',
     ]);
     expect(packageJson.contributes.views.skillMdInspectorPanel[0].id).toBe(
       'skillMdInspectorSkills',
