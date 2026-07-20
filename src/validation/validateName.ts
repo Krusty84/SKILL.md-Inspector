@@ -3,10 +3,22 @@ import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
+import { isPathInsideDir } from '../parser/linkPaths';
 import { diag, keyRange } from './util';
 
 /** A valid skill name: lowercase letters, digits, single hyphens between. */
 export const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/**
+ * Whether `name` is a safe target for renaming a skill folder inside `parentDir`.
+ * The name comes from frontmatter, which is attacker-controllable in an untrusted
+ * SKILL.md, so it must be a valid kebab-case segment (no separators, no `..`) that
+ * stays inside the parent — otherwise a one-click "rename folder" fix could move
+ * the folder to an arbitrary filesystem location.
+ */
+export function isSafeFolderRenameTarget(parentDir: string, name: string): boolean {
+  return NAME_PATTERN.test(name) && isPathInsideDir(parentDir, path.join(parentDir, name));
+}
 
 export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDiagnostic[] {
   if (!doc.frontmatter) {

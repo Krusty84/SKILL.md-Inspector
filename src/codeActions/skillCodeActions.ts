@@ -6,7 +6,7 @@ import { isSkillFile } from '../diagnostics/mapping';
 import { QuickFixId } from '../types/DiagnosticCode';
 import { frontmatterStartLine } from '../parser/parseSkillFile';
 import { isPathInsideDir } from '../parser/linkPaths';
-import { toKebabCase } from '../validation/validateName';
+import { toKebabCase, isSafeFolderRenameTarget } from '../validation/validateName';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import {
@@ -180,8 +180,16 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     if (typeof expected !== 'string' || !expected) {
       return undefined;
     }
+    // Security: `expected` is the frontmatter `name`, which is attacker-controllable
+    // in an untrusted SKILL.md. Only offer to rename to a valid kebab-case segment
+    // that stays inside the parent; a value with separators or `..` (e.g.
+    // "../../evil") must never drive a rename that escapes the parent directory.
+    const parent = path.dirname(skillDoc.directory);
+    if (!isSafeFolderRenameTarget(parent, expected)) {
+      return undefined;
+    }
     const oldUri = vscode.Uri.file(skillDoc.directory);
-    const newUri = vscode.Uri.file(path.join(path.dirname(skillDoc.directory), expected));
+    const newUri = vscode.Uri.file(path.join(parent, expected));
     const action = this.newAction(`Rename folder to "${expected}"`, diagnostic, context);
     action.edit = new vscode.WorkspaceEdit();
     action.edit.renameFile(oldUri, newUri, { ignoreIfExists: false });
