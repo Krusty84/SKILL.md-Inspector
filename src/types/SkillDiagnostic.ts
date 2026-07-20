@@ -9,9 +9,15 @@ export type SkillDiagnosticSeverity = 'error' | 'warning' | 'information';
  * Classifies a diagnostic so reports and CI can separate hard requirements from
  * advice (Task 86): `specification` = the file is invalid; `compatibility` =
  * valid but not portable to a target profile; `security` = a risky reference;
- * `quality` = a discoverability recommendation.
+ * `quality` = a discoverability recommendation; `internal` = the linter itself
+ * failed to complete a check (not a problem with the skill).
  */
-export type SkillDiagnosticKind = 'specification' | 'compatibility' | 'quality' | 'security';
+export type SkillDiagnosticKind =
+  | 'specification'
+  | 'compatibility'
+  | 'quality'
+  | 'security'
+  | 'internal';
 
 export interface SkillDiagnosticRange {
   startLine: number;

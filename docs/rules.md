@@ -13,6 +13,8 @@ recommendation at a glance:
 - **Security** — the file points at something risky to follow or download.
 - **Quality** — recommendations that make a skill easier for an agent to discover and
   trigger. Never fatal.
+- **Internal** — the linter itself failed to complete a check. Not a problem with your
+  skill; shown so a crashed check never silently reduces coverage.
 
 Severities: **error** (blocks a passing status), **warning**, **information**.
 Profiles are `generic`, `vscode`, `claude`, `codex`; "all" means every profile.
@@ -459,6 +461,22 @@ No inputs/outputs section for skills whose profile recommends documenting I/O.
 
 - Bad: a body that never describes inputs or outputs.
 - Good: an `## Inputs and outputs` section.
+
+---
+
+## Internal (the linter itself failed)
+
+### `skill.internal.ruleError`
+
+**information** · all profiles · auto-fix: no
+
+A validation rule threw an exception and did not finish. The other rules still ran
+and their results are unaffected; only that one rule's checks are skipped for this
+file. This indicates a bug in the extension (or an unusual input that exposed one),
+not a problem with your skill — please report the message if it persists.
+
+- Cause: an unexpected error inside a single validation rule.
+- Effect: that rule's diagnostics are missing for this file; every other check is normal.
 
 ---
 

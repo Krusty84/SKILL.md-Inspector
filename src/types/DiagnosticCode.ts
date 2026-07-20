@@ -67,6 +67,9 @@ export const DiagnosticCode = {
   BodyNoWhenToUse: 'skill.body.noWhenToUse',
   BodySuggestBoundary: 'skill.body.suggestBoundary',
   BodySuggestIO: 'skill.body.suggestIO',
+
+  // Internal — the linter itself failed to complete a check.
+  RuleInternalError: 'skill.internal.ruleError',
 } as const;
 
 export type DiagnosticCode = (typeof DiagnosticCode)[keyof typeof DiagnosticCode];
@@ -126,6 +129,8 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.BodyNoWhenToUse]: 'quality',
   [DiagnosticCode.BodySuggestBoundary]: 'quality',
   [DiagnosticCode.BodySuggestIO]: 'quality',
+  // Internal — a rule crashed; surfaced so coverage loss is never silent.
+  [DiagnosticCode.RuleInternalError]: 'internal',
 };
 
 /**
