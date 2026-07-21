@@ -31,5 +31,8 @@ export async function showWorkspaceReport(): Promise<void> {
     vscode.window.showWarningMessage('SKILL.md Inspector: workspace report cancelled; not shown.');
     return;
   }
-  WorkspaceReportPanel.show(result.analysis);
+  WorkspaceReportPanel.show(result.analysis, {
+    kind: 'workspace',
+    folderPath: result.rootDir,
+  });
 }

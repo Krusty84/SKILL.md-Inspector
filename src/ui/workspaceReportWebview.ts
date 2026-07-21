@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import type { WorkspaceAnalysis } from '../types/Workspace';
-import { renderWorkspaceReportHtml } from './renderWorkspaceReport';
+import {
+  renderWorkspaceReportHtml,
+  workspaceReportTitle,
+  type WorkspaceReportScope,
+} from './renderWorkspaceReport';
 
 /** Manages the single read-only Workspace Skill Report webview panel. */
 export class WorkspaceReportPanel {
@@ -23,19 +27,21 @@ export class WorkspaceReportPanel {
     });
   }
 
-  static show(analysis: WorkspaceAnalysis): void {
+  static show(analysis: WorkspaceAnalysis, scope: WorkspaceReportScope): void {
     if (!WorkspaceReportPanel.current || WorkspaceReportPanel.current.disposed) {
       WorkspaceReportPanel.current = new WorkspaceReportPanel();
     }
-    WorkspaceReportPanel.current.render(analysis);
+    WorkspaceReportPanel.current.render(analysis, scope);
     WorkspaceReportPanel.current.panel.reveal();
   }
 
-  private render(analysis: WorkspaceAnalysis): void {
+  private render(analysis: WorkspaceAnalysis, scope: WorkspaceReportScope): void {
     const nonce = createNonce();
+    this.panel.title = workspaceReportTitle(scope);
     this.panel.webview.html = renderWorkspaceReportHtml(analysis, {
       nonce,
       cspSource: this.panel.webview.cspSource,
+      scope,
     });
   }
 }

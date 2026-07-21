@@ -36,7 +36,7 @@
       },
       {
         "command": "skillMdInspector.validateWorkspaceSkills",
-        "title": "Validate Workspace SKILL.mds",
+        "title": "Validate SKILL.md's'",
         "category": "SKILL.md Inspector"
       },
       {
@@ -56,12 +56,12 @@
       },
       {
         "command": "skillMdInspector.showWorkspaceReport",
-        "title": "Show Workspace Report",
+        "title": "Show Report",
         "category": "SKILL.md Inspector"
       },
       {
         "command": "skillMdInspector.installedAgents.validateSkills",
-        "title": "Validate SKILL.mds",
+        "title": "Validate SKILL.md's",
         "category": "SKILL.md Inspector"
       },
       {
@@ -71,12 +71,12 @@
       },
       {
         "command": "skillMdInspector.exportSkillsIndex",
-        "title": "Export SKILL.mds Index",
+        "title": "Export SKILL.md's Index",
         "category": "SKILL.md Inspector"
       },
       {
         "command": "skillMdInspector.refreshSkills",
-        "title": "Refresh SKILL.mds",
+        "title": "Refresh SKILL.md's",
         "category": "SKILL.md Inspector",
         "icon": "$(refresh)"
       },
@@ -1894,7 +1894,7 @@
     "viewsWelcome": [
       {
         "view": "skillMdInspectorWorkspace",
-        "contents": "No SKILL.mds folder is selected.\n\n[Select SKILL.mds Folder](command:skillMdInspector.workspace.selectSkillsFolder)",
+        "contents": "No SKILL.md's folder is selected.\n\n[Select SKILL.md's Folder](command:skillMdInspector.workspace.selectSkillsFolder)",
         "when": "workspaceFolderCount == 0"
       },
       {

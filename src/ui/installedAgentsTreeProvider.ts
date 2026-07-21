@@ -83,6 +83,29 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     return [...new Set(matched)];
   }
 
+  /** Agent label owning the installed skill scope represented by a tree node. */
+  resolveAgentLabelForNode(node: InstalledAgentsNode): string | undefined {
+    if (node.type === 'agent') {
+      return node.label;
+    }
+    const file = this.installedFiles.find((candidate) => {
+      switch (node.type) {
+        case 'group':
+          return (
+            candidate.sourceId.startsWith(`${node.agentId}:`) &&
+            candidate.sourceLabel.endsWith(`/${node.label}`)
+          );
+        case 'skill':
+          return candidate.absolutePath === node.skillMdPath;
+        case 'workspaceDirectory':
+          return isPathInsideDir(node.uri.fsPath, candidate.absolutePath);
+        default:
+          return false;
+      }
+    });
+    return file?.sourceLabel.split('/')[0];
+  }
+
   getChildren(node?: InstalledAgentsNode): InstalledAgentsNode[] | Promise<InstalledAgentsNode[]> {
     if (!node) {
       if (!this.loaded && !this.loadAttempted) void this.startDiscovery();

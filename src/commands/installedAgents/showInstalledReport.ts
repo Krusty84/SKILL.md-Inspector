@@ -46,6 +46,11 @@ export async function showInstalledReport(
     );
     return;
   }
+  const analysisRoot = commonAncestorDir(paths);
+  const folderPath =
+    node.type === 'skill' || node.type === 'workspaceDirectory'
+      ? node.uri.fsPath
+      : analysisRoot;
   const analysis = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -54,7 +59,7 @@ export async function showInstalledReport(
     },
     (progress, token) =>
       computeScopedAnalysisOnline(
-        commonAncestorDir(paths),
+        analysisRoot,
         paths,
         {
           cancel: token,
@@ -74,5 +79,9 @@ export async function showInstalledReport(
     );
     return;
   }
-  WorkspaceReportPanel.show(analysis);
+  WorkspaceReportPanel.show(analysis, {
+    kind: 'installed-agent',
+    agentLabel: installedProvider.resolveAgentLabelForNode(node) ?? 'Unknown agent',
+    folderPath,
+  });
 }

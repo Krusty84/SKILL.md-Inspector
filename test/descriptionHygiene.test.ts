@@ -188,6 +188,7 @@ describe('description hygiene grade-limitation visibility', () => {
       const rendered = renderWorkspaceReportHtml(analysis, {
         nonce: 'n',
         cspSource: 'x',
+        scope: { kind: 'workspace', folderPath: root },
       });
       expect(rendered).toContain('<code>overbroad-usage-scope</code> — ceiling: 69/100');
       expect(rendered).toContain('cannot exceed 69');

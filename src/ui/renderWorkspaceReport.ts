@@ -12,7 +12,12 @@ import type { SkillProfileId } from '../types/SkillProfile';
 export interface RenderOptions {
   nonce: string;
   cspSource: string;
+  scope: WorkspaceReportScope;
 }
+
+export type WorkspaceReportScope =
+  | { kind: 'workspace'; folderPath: string }
+  | { kind: 'installed-agent'; agentLabel: string; folderPath: string };
 
 const PROFILES: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
 
@@ -22,6 +27,7 @@ export function renderWorkspaceReportHtml(
   analysis: WorkspaceAnalysis,
   opts: RenderOptions,
 ): string {
+  const title = workspaceReportTitle(opts.scope);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,10 +61,11 @@ export function renderWorkspaceReportHtml(
   .grade-limitations summary { cursor: pointer; }
   .grade-limitations ul { margin-top: 0.15rem; }
 </style>
-<title>Workspace Skill Report</title>
+<title>${title}</title>
 </head>
 <body>
-  <h1>Workspace Skill Report</h1>
+  <h1>${title}</h1>
+  ${renderScope(opts.scope)}
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
   <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
   <p class="note">Format / portability compatibility checks profile-specific format constraints only; it does not include general description or instruction-body quality.</p>
@@ -84,6 +91,16 @@ export function renderWorkspaceReportHtml(
   ${analysis.skills.map(renderResourceGraph).join('') || '<p class="empty">No skills.</p>'}
 </body>
 </html>`;
+}
+
+export function workspaceReportTitle(scope: WorkspaceReportScope): string {
+  return scope.kind === 'workspace'
+    ? "Workspace SKILL.md's Report"
+    : `${escapeHtml(scope.agentLabel)} Agent SKILL.md's Report`;
+}
+
+function renderScope(scope: WorkspaceReportScope): string {
+  return `<strong>Folder:</strong> <code>${escapeHtml(scope.folderPath)}</code></p>`;
 }
 
 function renderSkillRow(skill: WorkspaceSkill): string {

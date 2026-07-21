@@ -303,6 +303,7 @@ describe('InstalledAgentsTreeProvider.resolveSkillMdPathsForNode', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [skill] = (await p.getChildren(group)) as any[];
     expect(p.resolveSkillMdPathsForNode(skill)).toEqual(['/skills/example/SKILL.md']);
+    expect(p.resolveAgentLabelForNode(skill)).toBe('Agent');
   });
 
   it('resolves an agent node to all of its skills', async () => {
@@ -316,6 +317,7 @@ describe('InstalledAgentsTreeProvider.resolveSkillMdPathsForNode', () => {
       '/skills/a/SKILL.md',
       '/skills/b/SKILL.md',
     ]);
+    expect(p.resolveAgentLabelForNode(agent)).toBe('Agent');
   });
 
   it("resolves a group node to only that group's skills", async () => {
@@ -362,6 +364,7 @@ describe('InstalledAgentsTreeProvider.resolveSkillMdPathsForNode', () => {
       '/a/one/SKILL.md',
       '/b/two/SKILL.md',
     ]);
+    expect(p.resolveAgentLabelForNode(alpha)).toBe('Agent');
   });
 
   it('resolves a subfolder node to the SKILL.md files under it (or none)', async () => {
@@ -374,6 +377,7 @@ describe('InstalledAgentsTreeProvider.resolveSkillMdPathsForNode', () => {
       parentUri: vscode.Uri.file('/skills'),
     };
     expect(p.resolveSkillMdPathsForNode(inside)).toEqual(['/skills/example/SKILL.md']);
+    expect(p.resolveAgentLabelForNode(inside)).toBe('Agent');
     const outside: InstalledAgentsNode = {
       type: 'workspaceDirectory',
       id: 'installed-directory:file:///skills/other',

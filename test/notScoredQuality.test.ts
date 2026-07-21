@@ -195,7 +195,11 @@ describe('explicit not-scored quality state', () => {
     const report = fixtureReport('helper');
     const skillHtml = renderReportHtml(report, { nonce: 'n', cspSource: 'x' });
     const workspace = analyzeWorkspace(FIXTURE_ROOT, [fixturePath('helper')], genericProfile);
-    const workspaceHtml = renderWorkspaceReportHtml(workspace, { nonce: 'n', cspSource: 'x' });
+    const workspaceHtml = renderWorkspaceReportHtml(workspace, {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: FIXTURE_ROOT },
+    });
 
     for (const html of [skillHtml, workspaceHtml]) {
       expect(html).toContain('Not scored — frontmatter could not be parsed');

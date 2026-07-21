@@ -111,6 +111,7 @@ describe('renderWorkspaceReportHtml', () => {
     const html = renderWorkspaceReportHtml(analysis(), {
       nonce: 'n',
       cspSource: 'vscode-webview://x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
     });
     expect(html).toContain('Content-Security-Policy');
     expect(html).toContain('Collision matrix');
@@ -135,6 +136,25 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('Information');
     expect(html).toContain('Format / portability compatibility');
     expect(html).toContain('does not include general description or instruction-body quality');
+    expect(html).toContain('<title>Workspace Skill Report</title>');
+    expect(html).toContain('<strong>Folder:</strong> <code>/ws</code>');
+  });
+
+  it('identifies the agent and folder for an installed-agent report', () => {
+    const html = renderWorkspaceReportHtml(analysis(), {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: {
+        kind: 'installed-agent',
+        agentLabel: 'Codex <local>',
+        folderPath: '/Users/example/.codex/skills',
+      },
+    });
+
+    expect(html).toContain("<title>Agent SKILL.md's Report</title>");
+    expect(html).toContain("<h1>Agent SKILL.md's Report</h1>");
+    expect(html).toContain('<strong>Agent:</strong> Codex &lt;local&gt;');
+    expect(html).toContain('<strong>Folder:</strong> <code>/Users/example/.codex/skills</code>');
   });
 
   it('escapes HTML in skill names', () => {
@@ -142,7 +162,11 @@ describe('renderWorkspaceReportHtml', () => {
     model.skills[0].name = '<script>alert(1)</script>';
     model.skills[0].staticDescriptionQuality.gradeLimitations[0].reason =
       '<img src=x onerror=alert(1)>';
-    const html = renderWorkspaceReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    const html = renderWorkspaceReportHtml(model, {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
     expect(html).not.toContain('<script>alert(1)');
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;script&gt;');
@@ -165,7 +189,11 @@ describe('renderWorkspaceReportHtml', () => {
       );
       const model = analyzeWorkspace(root, [skillPath], genericProfile);
       const minimal = model.skills[0];
-      const html = renderWorkspaceReportHtml(model, { nonce: 'n', cspSource: 'x' });
+      const html = renderWorkspaceReportHtml(model, {
+        nonce: 'n',
+        cspSource: 'x',
+        scope: { kind: 'workspace', folderPath: root },
+      });
 
       expect(minimal.validationStatus).toBe('warning');
       expect(minimal.staticDescriptionQuality.label).toBe('acceptable');
@@ -200,7 +228,11 @@ describe('renderWorkspaceReportHtml', () => {
     quality.label = 'excellent';
     quality.gradeLimitations = [];
 
-    const html = renderWorkspaceReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    const html = renderWorkspaceReportHtml(model, {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
 
     expect(html).toContain('100/100 · Excellent');
     expect(html).not.toContain('(raw:');
