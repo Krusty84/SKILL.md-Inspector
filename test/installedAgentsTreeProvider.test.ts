@@ -89,9 +89,11 @@ import * as vscode from 'vscode';
 import {
   deduplicateDiscoveredFiles,
   InstalledAgentsTreeProvider,
+  type InstalledAgentsNode,
 } from '../src/ui/installedAgentsTreeProvider';
 import { discoverExternalFiles } from '../src/navigator/discoverExternalFiles';
-import type { DiscoveredFile } from '../src/navigator/types';
+import { resolveBuiltInAgentSources } from '../src/navigator/builtInAgentSources';
+import type { AgentSource, DiscoveredFile } from '../src/navigator/types';
 
 function file(fileName: DiscoveredFile['fileName'], absolutePath: string): DiscoveredFile {
   return {
@@ -278,6 +280,108 @@ describe('InstalledAgentsTreeProvider skill folders', () => {
     expect(append).toHaveBeenCalledWith(
       expect.stringContaining('Unable to read installed skill folder'),
     );
+  });
+});
+
+describe('InstalledAgentsTreeProvider.resolveSkillMdPathsForNode', () => {
+  async function providerWith(files: DiscoveredFile[]): Promise<InstalledAgentsTreeProvider> {
+    vi.mocked(discoverExternalFiles).mockResolvedValue({ files, messages: [] });
+    const p = new InstalledAgentsTreeProvider(
+      { globalState: { get: vi.fn(() => []) } } as never,
+      { appendLine: vi.fn() } as never,
+    );
+    await p.refresh();
+    return p;
+  }
+
+  it('resolves a skill folder node to its own SKILL.md', async () => {
+    const p = await providerWith([file('SKILL.md', '/skills/example/SKILL.md')]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [agent] = (await p.getChildren()) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [group] = (await p.getChildren(agent)) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [skill] = (await p.getChildren(group)) as any[];
+    expect(p.resolveSkillMdPathsForNode(skill)).toEqual(['/skills/example/SKILL.md']);
+  });
+
+  it('resolves an agent node to all of its skills', async () => {
+    const p = await providerWith([
+      file('SKILL.md', '/skills/a/SKILL.md'),
+      file('SKILL.md', '/skills/b/SKILL.md'),
+    ]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [agent] = (await p.getChildren()) as any[];
+    expect(p.resolveSkillMdPathsForNode(agent).sort()).toEqual([
+      '/skills/a/SKILL.md',
+      '/skills/b/SKILL.md',
+    ]);
+  });
+
+  it("resolves a group node to only that group's skills", async () => {
+    const sources: AgentSource[] = [
+      {
+        id: 'g1',
+        agentId: 'agent',
+        agentLabel: 'Agent',
+        groupLabel: 'Alpha',
+        rootPath: '/a',
+        files: ['SKILL.md'],
+        recursive: true,
+      },
+      {
+        id: 'g2',
+        agentId: 'agent',
+        agentLabel: 'Agent',
+        groupLabel: 'Beta',
+        rootPath: '/b',
+        files: ['SKILL.md'],
+        recursive: true,
+      },
+    ];
+    vi.mocked(resolveBuiltInAgentSources).mockReturnValueOnce(sources);
+    vi.mocked(discoverExternalFiles)
+      .mockResolvedValueOnce({ files: [file('SKILL.md', '/a/one/SKILL.md')], messages: [] })
+      .mockResolvedValueOnce({ files: [file('SKILL.md', '/b/two/SKILL.md')], messages: [] });
+    const p = new InstalledAgentsTreeProvider(
+      { globalState: { get: vi.fn(() => []) } } as never,
+      { appendLine: vi.fn() } as never,
+    );
+    await p.refresh();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [agent] = (await p.getChildren()) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const groups = (await p.getChildren(agent)) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const alpha = groups.find((g: any) => g.label === 'Alpha');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const beta = groups.find((g: any) => g.label === 'Beta');
+    expect(p.resolveSkillMdPathsForNode(alpha)).toEqual(['/a/one/SKILL.md']);
+    expect(p.resolveSkillMdPathsForNode(beta)).toEqual(['/b/two/SKILL.md']);
+    expect(p.resolveSkillMdPathsForNode(agent).sort()).toEqual([
+      '/a/one/SKILL.md',
+      '/b/two/SKILL.md',
+    ]);
+  });
+
+  it('resolves a subfolder node to the SKILL.md files under it (or none)', async () => {
+    const p = await providerWith([file('SKILL.md', '/skills/example/SKILL.md')]);
+    const inside: InstalledAgentsNode = {
+      type: 'workspaceDirectory',
+      id: 'installed-directory:file:///skills/example',
+      uri: vscode.Uri.file('/skills/example'),
+      name: 'example',
+      parentUri: vscode.Uri.file('/skills'),
+    };
+    expect(p.resolveSkillMdPathsForNode(inside)).toEqual(['/skills/example/SKILL.md']);
+    const outside: InstalledAgentsNode = {
+      type: 'workspaceDirectory',
+      id: 'installed-directory:file:///skills/other',
+      uri: vscode.Uri.file('/skills/other'),
+      name: 'other',
+      parentUri: vscode.Uri.file('/skills'),
+    };
+    expect(p.resolveSkillMdPathsForNode(outside)).toEqual([]);
   });
 });
 

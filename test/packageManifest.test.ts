@@ -495,7 +495,8 @@ describe('package manifest context menus and templates', () => {
       'skillMdInspector.toggleFavorite',
     ]);
 
-    // Installed folders: own submenu, same 2 commands as workspace folders.
+    // Installed folders: own submenu wired to the installed-scope commands (which act on the
+    // clicked row's skills, not the workspace).
     expect(packageJson.contributes.submenus).toContainEqual({
       id: 'skillMdInspector/installedAgentsFolderSkillContext',
       label: 'SKILL.md Inspector',
@@ -504,7 +505,10 @@ describe('package manifest context menus and templates', () => {
       packageJson.contributes.menus['skillMdInspector/installedAgentsFolderSkillContext'].map(
         (item) => item.command,
       ),
-    ).toEqual(['skillMdInspector.validateWorkspaceSkills', 'skillMdInspector.showWorkspaceReport']);
+    ).toEqual([
+      'skillMdInspector.installedAgents.validateSkills',
+      'skillMdInspector.installedAgents.showReport',
+    ]);
 
     // Regression guard: VS Code drops a submenu contributed to view/item/context more than once
     // (that duplicate silently broke the installed-folder and favorites menus).

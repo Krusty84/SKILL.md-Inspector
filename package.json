@@ -60,6 +60,16 @@
         "category": "SKILL.md Inspector"
       },
       {
+        "command": "skillMdInspector.installedAgents.validateSkills",
+        "title": "Validate SKILL.mds",
+        "category": "SKILL.md Inspector"
+      },
+      {
+        "command": "skillMdInspector.installedAgents.showReport",
+        "title": "Show Report",
+        "category": "SKILL.md Inspector"
+      },
+      {
         "command": "skillMdInspector.exportSkillsIndex",
         "title": "Export SKILL.mds Index",
         "category": "SKILL.md Inspector"
@@ -696,6 +706,14 @@
       ],
       "commandPalette": [
         {
+          "command": "skillMdInspector.installedAgents.validateSkills",
+          "when": "false"
+        },
+        {
+          "command": "skillMdInspector.installedAgents.showReport",
+          "when": "false"
+        },
+        {
           "command": "skillMdInspector.workspace.newFileContext",
           "when": "false"
         },
@@ -826,11 +844,11 @@
       ],
       "skillMdInspector/installedAgentsFolderSkillContext": [
         {
-          "command": "skillMdInspector.validateWorkspaceSkills",
+          "command": "skillMdInspector.installedAgents.validateSkills",
           "group": "1_validation@1"
         },
         {
-          "command": "skillMdInspector.showWorkspaceReport",
+          "command": "skillMdInspector.installedAgents.showReport",
           "group": "1_validation@2"
         }
       ]
