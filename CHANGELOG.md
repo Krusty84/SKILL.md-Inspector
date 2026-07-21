@@ -22,6 +22,15 @@
 
 ### Fixed
 
+- **Independent navigator views**: workspace file operations (creating a
+  folder/file, deleting, pasting, renaming) no longer refresh the FAVORITES and
+  INSTALLED AGENTS views. Workspace file watchers are routed only to the views
+  that depend on the changed file — the WORKSPACE tree and the Skills analysis
+  panel — while FAVORITES refreshes only when the changed file is itself a
+  favorite (its missing/exists badge flips). INSTALLED AGENTS (discovered from
+  agent roots outside the workspace) and OPENCODE SESSIONS stay independent, and
+  saving a `SKILL.md` now refreshes only the Skills panel. The favorite-star
+  indicator still updates across views when favorites are toggled.
 - **Scoring heuristics**: decimals and version numbers ("3.14", "1.20") no
   longer count as a file-extension artifact; an uppercase ambiguous acronym as
   the sole clause token ("Use for STEP.") earns full trigger credit like any

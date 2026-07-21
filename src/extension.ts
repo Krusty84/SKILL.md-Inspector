@@ -16,7 +16,6 @@ import {
   FAVORITES_KEY,
   removeFavorite,
   restoreFavorites,
-  updateFavoriteUri,
 } from './navigator/favoritesStore';
 import { resolveSkillUri } from './commands/resolveSkillTarget';
 import { OpenCodeSessionFolderStore } from './opencode/sessionFolderStore';
@@ -27,6 +26,7 @@ import {
 import { registerOpenCodeCommands } from './commands/opencode/registerOpenCodeCommands';
 import { registerInstalledAgentsCommands } from './commands/installedAgents/registerInstalledAgentsCommands';
 import { refreshAfterConfigurationChange } from './configurationRefresh';
+import { registerNavigatorWatchers } from './navigator/navigatorWatchers';
 
 const CHANGE_DEBOUNCE_MS = 300;
 
@@ -138,23 +138,18 @@ export function activate(context: vscode.ExtensionContext): void {
     );
   };
   updateFavoritesContext();
-  const skillWatcher = vscode.workspace.createFileSystemWatcher('**/SKILL.md');
-  skillWatcher.onDidCreate((uri) => {
-    treeProvider.refresh();
-    favoritesProvider.refresh();
-    workspaceProvider.onFilesCreatedOrDeleted([uri]);
-    installedAgentsProvider.refresh();
+  // Keep the SKILL.md navigator views in sync with workspace file changes
+  // without coupling them together: each event is routed only to the views that
+  // depend on the changed file. FAVORITES refreshes only when the changed file
+  // is a favorite, and INSTALLED AGENTS / OPENCODE SESSIONS (whose data lives
+  // outside the workspace) are never touched here.
+  registerNavigatorWatchers(context, {
+    refreshSkillsPanel: () => void treeProvider.refresh(),
+    onWorkspaceFilesCreatedOrDeleted: (uris) => workspaceProvider.onFilesCreatedOrDeleted(uris),
+    onWorkspaceFilesRenamed: (files) => workspaceProvider.onFilesRenamed(files),
+    refreshFavorites: () => favoritesProvider.refresh(),
+    updateFavoritesContext,
   });
-  skillWatcher.onDidDelete((uri) => {
-    treeProvider.refresh();
-    favoritesProvider.refresh();
-    workspaceProvider.onFilesCreatedOrDeleted([uri]);
-    installedAgentsProvider.refresh();
-  });
-  const agentsWatcher = vscode.workspace.createFileSystemWatcher('**/AGENTS.md');
-  agentsWatcher.onDidCreate((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
-  agentsWatcher.onDidDelete((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
-  agentsWatcher.onDidChange((uri) => workspaceProvider.onFilesCreatedOrDeleted([uri]));
 
   // Watch bundled resource files so adding/removing/renaming one refreshes the
   // tree and re-validates the owning skill (Task 60). Renames fire delete+create.
@@ -273,8 +268,6 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showWarningMessage(`Favorite is unavailable: ${uriString}`);
       }
     }),
-    skillWatcher,
-    agentsWatcher,
     resourceWatcher,
   );
 
@@ -315,9 +308,10 @@ export function activate(context: vscode.ExtensionContext): void {
         if (readConfig(document.uri).runOnSave) {
           void provider.validate(document);
         }
-        treeProvider.refresh();
-        favoritesProvider.refresh();
-        workspaceProvider.refresh();
+        // Saving only changes the file's analysis, so refresh just the Skills
+        // panel. The WORKSPACE and FAVORITES file lists don't depend on file
+        // contents and stay independent.
+        void treeProvider.refresh();
       }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
@@ -328,17 +322,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeWorkspaceFolders(() =>
       workspaceProvider.onWorkspaceFoldersChanged(),
     ),
-    vscode.workspace.onDidRenameFiles(async (event) => {
-      let favorites = restoreFavorites(context.globalState.get(FAVORITES_KEY));
-      for (const file of event.files) {
-        favorites = updateFavoriteUri(favorites, file.oldUri.toString(), file.newUri.toString());
-      }
-      await context.globalState.update(FAVORITES_KEY, favorites);
-      updateFavoritesContext();
-      favoritesProvider.refresh();
-      workspaceProvider.onFilesRenamed(event.files);
-      installedAgentsProvider.refresh();
-    }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('skillMdInspector')) {
         reportConfigurationWarnings();
