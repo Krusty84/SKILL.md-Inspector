@@ -55,6 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const installedAgentsProvider = new InstalledAgentsTreeProvider(context, output);
   const installedAgentsView = vscode.window.createTreeView('skillMdInspectorInstalledAgents', {
     treeDataProvider: installedAgentsProvider,
+    showCollapseAll: true,
   });
   context.subscriptions.push(installedAgentsView);
 
