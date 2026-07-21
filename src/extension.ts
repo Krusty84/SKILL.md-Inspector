@@ -36,6 +36,16 @@ const CHANGE_DEBOUNCE_MS = 300;
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('SKILL.md Inspector');
   context.subscriptions.push(output);
+  // Activation marker: if this line reappears (and the channel resets) right
+  // after adding/removing a workspace folder, VS Code terminated and restarted
+  // the extension host (see the updateWorkspaceFolders API note) — every view
+  // in the window reloads then, which no extension can prevent.
+  output.appendLine(
+    `SKILL.md Inspector activated (extension host session started ${new Date().toISOString()})`,
+  );
+  // Every refresh of a sidebar view below logs its trigger through this helper,
+  // so cross-view refresh reports can be traced to an exact cause.
+  const logViewRefresh = (reason: string): void => output.appendLine(`[view-refresh] ${reason}`);
 
   const treeProvider = new SkillTreeProvider(output);
   context.subscriptions.push(
@@ -76,6 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
         showCollapseAll: true,
       });
     context.subscriptions.push(openCodeSessionsView);
+    logViewRefresh('OPENCODE SESSIONS: initial scan on activation');
     void openCodeSessionsProvider.refresh();
   } catch (error) {
     output.appendLine(
@@ -128,9 +139,10 @@ export function activate(context: vscode.ExtensionContext): void {
       );
     });
   const refreshNavigator = (): void => {
+    logViewRefresh('FAVORITES + WORKSPACE + INSTALLED AGENTS: refreshNavigator command');
     favoritesProvider.refresh();
     workspaceProvider.refresh();
-    installedAgentsProvider.refresh();
+    void installedAgentsProvider.refresh();
   };
   const updateFavoritesContext = (): void => {
     const favorites = restoreFavorites(context.globalState.get(FAVORITES_KEY));
@@ -141,6 +153,17 @@ export function activate(context: vscode.ExtensionContext): void {
     );
   };
   updateFavoritesContext();
+  // Favorites commands re-render every view that shows a favorite star: the
+  // FAVORITES list itself plus the star context values in the WORKSPACE and
+  // INSTALLED AGENTS trees. This is the one deliberate cross-view refresh, and
+  // it runs only on explicit favorite actions.
+  const refreshFavoriteSurfaces = (reason: string): void => {
+    logViewRefresh(`FAVORITES + WORKSPACE + INSTALLED AGENTS: ${reason}`);
+    updateFavoritesContext();
+    favoritesProvider.refresh();
+    workspaceProvider.refresh();
+    void installedAgentsProvider.refresh();
+  };
   // Keep the SKILL.md navigator views in sync with workspace file changes
   // without coupling them together: each event is routed only to the views that
   // depend on the changed file. FAVORITES refreshes only when the changed file
@@ -150,7 +173,10 @@ export function activate(context: vscode.ExtensionContext): void {
     refreshSkillsPanel: () => void treeProvider.refresh(),
     onWorkspaceFilesCreatedOrDeleted: (uris) => workspaceProvider.onFilesCreatedOrDeleted(uris),
     onWorkspaceFilesRenamed: (files) => workspaceProvider.onFilesRenamed(files),
-    refreshFavorites: () => favoritesProvider.refresh(),
+    refreshFavorites: () => {
+      logViewRefresh('FAVORITES: a favorited SKILL.md changed on disk');
+      favoritesProvider.refresh();
+    },
     updateFavoritesContext,
   });
 
@@ -197,10 +223,7 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
         await context.globalState.update(FAVORITES_KEY, result.entries);
-        updateFavoritesContext();
-        favoritesProvider.refresh();
-        workspaceProvider.refresh();
-        installedAgentsProvider.refresh();
+        refreshFavoriteSurfaces('addToFavorites command');
       },
     ),
     vscode.commands.registerCommand(
@@ -214,10 +237,7 @@ export function activate(context: vscode.ExtensionContext): void {
           FAVORITES_KEY,
           removeFavorite(restoreFavorites(context.globalState.get(FAVORITES_KEY)), uri.toString()),
         );
-        updateFavoritesContext();
-        favoritesProvider.refresh();
-        workspaceProvider.refresh();
-        installedAgentsProvider.refresh();
+        refreshFavoriteSurfaces('removeFromFavorites command');
       },
     ),
     vscode.commands.registerCommand(
@@ -237,10 +257,7 @@ export function activate(context: vscode.ExtensionContext): void {
           FAVORITES_KEY,
           exists ? removeFavorite(current, uriString) : addFavorite(current, uriString).entries,
         );
-        updateFavoritesContext();
-        favoritesProvider.refresh();
-        workspaceProvider.refresh();
-        installedAgentsProvider.refresh();
+        refreshFavoriteSurfaces('toggleFavorite command');
       },
     ),
     vscode.commands.registerCommand('skillMdInspector.clearFavorites', async () => {
@@ -257,10 +274,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       await context.globalState.update(FAVORITES_KEY, []);
-      updateFavoritesContext();
-      favoritesProvider.refresh();
-      workspaceProvider.refresh();
-      installedAgentsProvider.refresh();
+      refreshFavoriteSurfaces('clearFavorites command');
     }),
     vscode.commands.registerCommand('skillMdInspector.openFavorite', async (uriString: string) => {
       const uri = vscode.Uri.parse(uriString);
@@ -348,8 +362,14 @@ export function activate(context: vscode.ExtensionContext): void {
           clearResourceCache: () => provider.clearResourceCache(),
           revalidateVisible: () => revalidateVisible(provider),
           refreshSkills: () => void treeProvider.refresh(),
-          refreshInstalledAgents: () => void installedAgentsProvider.refresh(),
-          refreshOpenCodeSessions: () => void openCodeSessionsProvider.refresh(),
+          refreshInstalledAgents: () => {
+            logViewRefresh('INSTALLED AGENTS: navigator.additionalRoots setting changed');
+            void installedAgentsProvider.refresh();
+          },
+          refreshOpenCodeSessions: () => {
+            logViewRefresh('OPENCODE SESSIONS: openCode.* discovery settings changed');
+            void openCodeSessionsProvider.refresh();
+          },
         },
       );
       navigatorConfigSnapshot = nextSnapshot;
@@ -381,7 +401,8 @@ function readNavigatorConfigSnapshot(): NavigatorConfigSnapshot {
   const openCode = vscode.workspace.getConfiguration('skillMdInspector.openCode');
   return {
     additionalRoots: JSON.stringify(
-      vscode.workspace.getConfiguration('skillMdInspector').get('navigator.additionalRoots') ?? null,
+      vscode.workspace.getConfiguration('skillMdInspector').get('navigator.additionalRoots') ??
+        null,
     ),
     openCode: JSON.stringify({
       maxDiscoveredSessions: openCode.get('maxDiscoveredSessions') ?? null,
