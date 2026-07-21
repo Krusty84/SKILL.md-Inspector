@@ -515,7 +515,7 @@
         },
         {
           "submenu": "skillMdInspector/workspaceFolderContext",
-          "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)",
+          "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.agent || viewItem == skillMdInspector.agentGroup || viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)",
           "group": "9_inspector@10"
         },
         {
