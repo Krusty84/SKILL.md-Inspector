@@ -25,7 +25,10 @@ import {
 } from './ui/openCodeSessionsTreeProvider';
 import { registerOpenCodeCommands } from './commands/opencode/registerOpenCodeCommands';
 import { registerInstalledAgentsCommands } from './commands/installedAgents/registerInstalledAgentsCommands';
-import { refreshAfterConfigurationChange } from './configurationRefresh';
+import {
+  refreshAfterConfigurationChange,
+  type NavigatorConfigSnapshot,
+} from './configurationRefresh';
 import { registerNavigatorWatchers } from './navigator/navigatorWatchers';
 
 const CHANGE_DEBOUNCE_MS = 300;
@@ -300,6 +303,10 @@ export function activate(context: vscode.ExtensionContext): void {
     );
   };
 
+  // Baseline of the settings the sidebar views depend on, updated on every
+  // handled configuration change so refreshes fire only on real value changes.
+  let navigatorConfigSnapshot = readNavigatorConfigSnapshot();
+
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((document) => void provider.validate(document)),
     vscode.workspace.onDidChangeTextDocument((event) => scheduleValidate(event.document)),
@@ -323,18 +330,29 @@ export function activate(context: vscode.ExtensionContext): void {
       workspaceProvider.onWorkspaceFoldersChanged(),
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('skillMdInspector')) {
-        reportConfigurationWarnings();
-        refreshAfterConfigurationChange({
+      if (!event.affectsConfiguration('skillMdInspector')) return;
+      reportConfigurationWarnings();
+      // Compare the settings each sidebar view actually reads against the last
+      // snapshot so a view refreshes only when its own value changed. Adding or
+      // removing a workspace folder re-fires this event without changing these
+      // values, so INSTALLED AGENTS and OPENCODE SESSIONS stay put; FAVORITES and
+      // the WORKSPACE tree read no skillMdInspector setting and are never here.
+      const nextSnapshot = readNavigatorConfigSnapshot();
+      refreshAfterConfigurationChange(
+        {
+          affectsSkillMdInspector: true,
+          previous: navigatorConfigSnapshot,
+          next: nextSnapshot,
+        },
+        {
           clearResourceCache: () => provider.clearResourceCache(),
           revalidateVisible: () => revalidateVisible(provider),
-          refreshSkills: () => treeProvider.refresh(),
-          refreshFavorites: () => favoritesProvider.refresh(),
-          refreshWorkspace: () => workspaceProvider.refresh(),
-          refreshInstalledAgents: () => installedAgentsProvider.refresh(),
+          refreshSkills: () => void treeProvider.refresh(),
+          refreshInstalledAgents: () => void installedAgentsProvider.refresh(),
           refreshOpenCodeSessions: () => void openCodeSessionsProvider.refresh(),
-        });
-      }
+        },
+      );
+      navigatorConfigSnapshot = nextSnapshot;
     }),
     new vscode.Disposable(() => {
       for (const timer of pending.values()) {
@@ -352,6 +370,26 @@ function revalidateVisible(provider: DiagnosticsProvider): void {
   for (const editor of vscode.window.visibleTextEditors) {
     void provider.validate(editor.document);
   }
+}
+
+/**
+ * Snapshot the exact settings the INSTALLED AGENTS and OPENCODE SESSIONS views
+ * read, so a configuration change refreshes them only when their own value
+ * changed — matching what each provider reads at render time.
+ */
+function readNavigatorConfigSnapshot(): NavigatorConfigSnapshot {
+  const openCode = vscode.workspace.getConfiguration('skillMdInspector.openCode');
+  return {
+    additionalRoots: JSON.stringify(
+      vscode.workspace.getConfiguration('skillMdInspector').get('navigator.additionalRoots') ?? null,
+    ),
+    openCode: JSON.stringify({
+      maxDiscoveredSessions: openCode.get('maxDiscoveredSessions') ?? null,
+      maxPreviewCharacters: openCode.get('maxPreviewCharacters') ?? null,
+      maxSessionFileSizeMb: openCode.get('maxSessionFileSizeMb') ?? null,
+      scanRecursively: openCode.get('scanRecursively') ?? null,
+    }),
+  };
 }
 
 export function deactivate(): void {
