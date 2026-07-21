@@ -338,6 +338,35 @@ repository supplies no production provider or UI for this subsystem.
 3. A relevant configuration event clears resource and analysis caches.
 4. Visible skills are revalidated and affected tree providers are refreshed.
 
+### Sidebar view refresh isolation
+
+Each sidebar view refreshes only on its own triggers; there is no blanket
+fan-out. The contract, enforced by `navigatorWatchers.ts` and
+`configurationRefresh.ts`:
+
+- WORKSPACE: its own file-system watchers, workspace-folder changes, and
+  explicit workspace commands.
+- FAVORITES: favorite commands, and disk changes/renames of a file that is
+  itself a favorite (its missing/exists badge must flip).
+- INSTALLED AGENTS: its refresh command, favorite commands (star context
+  values), and a real value change of `navigator.additionalRoots`.
+- OPENCODE SESSIONS: its own commands, its sessions-folder JSON watcher, and a
+  real value change of `skillMdInspector.openCode.*`. Configuration events are
+  compared against a value snapshot, so folder add/remove events that re-fire
+  `onDidChangeConfiguration` without changing these values refresh nothing.
+- Favorite commands are the one deliberate cross-view refresh (the star
+  appears in three trees). Every sidebar refresh logs a `[view-refresh]`
+  reason line to the SKILL.md Inspector output channel.
+
+Platform caveat: `vscode.workspace.updateWorkspaceFolders` — used by
+Select SKILLs Folder, Add Folders to Workspace, and Remove Folder from
+Workspace — makes VS Code terminate and restart the extension host when the
+first workspace folder is added, removed, or changed, or when a single-folder
+window becomes multi-root. On restart the extension re-activates and every
+view in the window (including built-in ones) reloads; no extension code can
+suppress that reload. The activation marker line in the output channel makes
+a restart recognizable: the channel resets and the marker reappears.
+
 ### OpenCode report
 
 1. The sessions tree discovers candidate JSON files below the selected URI.

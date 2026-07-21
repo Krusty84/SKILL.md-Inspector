@@ -40,6 +40,13 @@
     touched, and saving a `SKILL.md` now refreshes only the Skills panel.
   - The favorite-star indicator still updates across views when favorites are
     toggled.
+  - Every sidebar view refresh now logs a `[view-refresh]` reason line to the
+    SKILL.md Inspector output channel, and activation writes a session marker.
+    This makes the remaining full-reload case recognizable: adding/removing the
+    first workspace folder (or turning a single-folder window multi-root)
+    makes VS Code restart the extension host per the `updateWorkspaceFolders`
+    API contract — the output channel resets and the marker reappears — and
+    every view in the window reloads, which no extension can prevent.
 - **Scoring heuristics**: decimals and version numbers ("3.14", "1.20") no
   longer count as a file-extension artifact; an uppercase ambiguous acronym as
   the sole clause token ("Use for STEP.") earns full trigger credit like any
@@ -68,7 +75,7 @@
 - **Parsing/validation**: inline code inside a link is no longer scanned twice
   (duplicate diagnostics); body-section alias phrases match on token
   boundaries ("Counterexample usage" no longer satisfies Examples); fenced-code
-  tracking pairs ``` with ``` and `~~~` with `~~~`; the placeholder scan covers
+  tracking pairs `with` and `~~~` with `~~~`; the placeholder scan covers
   headings and ignores real HTML with attributes; frontmatter fences tolerate
   trailing whitespace; duplicate-key ranges point at the last (effective)
   occurrence.
@@ -80,7 +87,7 @@
   duplicated inline list. This fixes three scoring bugs: the canonical
   "Use this skill when ..." and "Trigger when the user ..." forms earned no
   trigger credit, and a purely negative sentence such as "Not intended for X"
-  was credited as a *positive* trigger.
+  was credited as a _positive_ trigger.
 - Negative boundary phrases are stripped from a sentence before positive-trigger
   matching, so no fragment embedded in a negation ("use when" inside
   "do not use when", "intended for" inside "not intended for") can count as
@@ -179,6 +186,7 @@ Initial release: a deterministic linter for `SKILL.md` files.
   reserved for future work.
 
 ## Unreleased
+
 - Renamed the deterministic **Trigger Quality** result to **Static Description Quality** and `confidence` to heuristic `coverage`; it does not measure agent selection accuracy.
 - Folder/name mismatches in recognized `skills/<name>/SKILL.md` packages are specification errors.
 - Added offline static benchmark fixtures and a separate behavioral-trigger metrics framework.
