@@ -17,7 +17,7 @@ describe('package manifest context menus and templates', () => {
       label: 'SKILL.md Inspector',
     });
     expect(packageJson.contributes.submenus).toContainEqual({
-      id: 'skillMdInspector/skillItemContext',
+      id: 'skillMdInspector/workspaceFileSkillContext',
       label: 'SKILL.md Inspector',
     });
     const activeWhen =
@@ -304,7 +304,7 @@ describe('package manifest context menus and templates', () => {
           group: '7_modification@10',
         }),
         expect.objectContaining({
-          submenu: 'skillMdInspector/skillItemContext',
+          submenu: 'skillMdInspector/workspaceFileSkillContext',
           group: '9_inspector@10',
         }),
       ]),
@@ -387,26 +387,26 @@ describe('package manifest context menus and templates', () => {
     const viewItems = packageJson.contributes.menus['view/item/context'];
     expect(viewItems).toContainEqual(
       expect.objectContaining({
-        submenu: 'skillMdInspector/skillItemContext',
+        submenu: 'skillMdInspector/workspaceFileSkillContext',
         when: 'view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)',
         group: '9_inspector@10',
       }),
     );
     expect(viewItems).toContainEqual(
       expect.objectContaining({
-        submenu: 'skillMdInspector/skillItemContext',
+        submenu: 'skillMdInspector/favoriteSkillContext',
         when: 'view == skillMdInspectorFavorites && viewItem == skillMdInspector.favoriteSkillFile',
         group: '9_inspector@10',
       }),
     );
     expect(
       viewItems
-        .filter((item) => item.submenu === 'skillMdInspector/skillItemContext')
+        .filter((item) => item.submenu === 'skillMdInspector/workspaceFileSkillContext')
         .map((item) => item.when)
         .join(' '),
     ).not.toContain('activeViewlet');
 
-    const skillItemMenu = packageJson.contributes.menus['skillMdInspector/skillItemContext'];
+    const skillItemMenu = packageJson.contributes.menus['skillMdInspector/workspaceFileSkillContext'];
     expect(skillItemMenu).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ command: 'skillMdInspector.validateCurrentSkill' }),
@@ -428,17 +428,17 @@ describe('package manifest context menus and templates', () => {
 
   it('exposes the workspace commands via a folder submenu in the WORKSPACE view', () => {
     expect(packageJson.contributes.submenus).toContainEqual({
-      id: 'skillMdInspector/workspaceFolderContext',
+      id: 'skillMdInspector/workspaceFolderSkillContext',
       label: 'SKILL.md Inspector',
     });
-    const folderMenu = packageJson.contributes.menus['skillMdInspector/workspaceFolderContext'];
+    const folderMenu = packageJson.contributes.menus['skillMdInspector/workspaceFolderSkillContext'];
     expect(folderMenu.map((item) => item.command)).toEqual([
       'skillMdInspector.validateWorkspaceSkills',
       'skillMdInspector.showWorkspaceReport',
     ]);
     expect(packageJson.contributes.menus['view/item/context']).toContainEqual(
       expect.objectContaining({
-        submenu: 'skillMdInspector/workspaceFolderContext',
+        submenu: 'skillMdInspector/workspaceFolderSkillContext',
         when: 'view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory)',
         group: '9_inspector@10',
       }),
@@ -448,11 +448,11 @@ describe('package manifest context menus and templates', () => {
   it('gives the INSTALLED AGENTS view a trimmed SKILL.md file submenu and the folder submenu', () => {
     // File case: only Validate Current SKILL.md, Show SKILL.md Report, Add or Remove Favorite.
     expect(packageJson.contributes.submenus).toContainEqual({
-      id: 'skillMdInspector/installedSkillItemContext',
+      id: 'skillMdInspector/installedAgentsFileSkillContext',
       label: 'SKILL.md Inspector',
     });
     const installedSkillMenu =
-      packageJson.contributes.menus['skillMdInspector/installedSkillItemContext'];
+      packageJson.contributes.menus['skillMdInspector/installedAgentsFileSkillContext'];
     expect(installedSkillMenu.map((item) => item.command)).toEqual([
       'skillMdInspector.validateCurrentSkill',
       'skillMdInspector.showSkillReport',
@@ -460,21 +460,58 @@ describe('package manifest context menus and templates', () => {
     ]);
     expect(packageJson.contributes.menus['view/item/context']).toContainEqual(
       expect.objectContaining({
-        submenu: 'skillMdInspector/installedSkillItemContext',
+        submenu: 'skillMdInspector/installedAgentsFileSkillContext',
         when: 'view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)',
         group: '9_inspector@10',
       }),
     );
 
     // Folder case: every folder-looking row (agent, group, skill, nested subfolder) gets the
-    // WORKSPACE folder submenu.
+    // installed folder submenu.
     expect(packageJson.contributes.menus['view/item/context']).toContainEqual(
       expect.objectContaining({
-        submenu: 'skillMdInspector/workspaceFolderContext',
+        submenu: 'skillMdInspector/installedAgentsFolderSkillContext',
         when: 'view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.agent || viewItem == skillMdInspector.agentGroup || viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)',
         group: '9_inspector@10',
       }),
     );
+  });
+
+  it('gives FAVORITES files and INSTALLED folders their own submenus, with no duplicate ids', () => {
+    // Favorites files: own submenu, same 5 commands as workspace files.
+    expect(packageJson.contributes.submenus).toContainEqual({
+      id: 'skillMdInspector/favoriteSkillContext',
+      label: 'SKILL.md Inspector',
+    });
+    expect(
+      packageJson.contributes.menus['skillMdInspector/favoriteSkillContext'].map(
+        (item) => item.command,
+      ),
+    ).toEqual([
+      'skillMdInspector.validateCurrentSkill',
+      'skillMdInspector.insertTemplate',
+      'skillMdInspector.improveDescriptionLocally',
+      'skillMdInspector.showSkillReport',
+      'skillMdInspector.toggleFavorite',
+    ]);
+
+    // Installed folders: own submenu, same 2 commands as workspace folders.
+    expect(packageJson.contributes.submenus).toContainEqual({
+      id: 'skillMdInspector/installedAgentsFolderSkillContext',
+      label: 'SKILL.md Inspector',
+    });
+    expect(
+      packageJson.contributes.menus['skillMdInspector/installedAgentsFolderSkillContext'].map(
+        (item) => item.command,
+      ),
+    ).toEqual(['skillMdInspector.validateWorkspaceSkills', 'skillMdInspector.showWorkspaceReport']);
+
+    // Regression guard: VS Code drops a submenu contributed to view/item/context more than once
+    // (that duplicate silently broke the installed-folder and favorites menus).
+    const submenuIds = packageJson.contributes.menus['view/item/context']
+      .filter((item) => item.submenu)
+      .map((item) => item.submenu);
+    expect(new Set(submenuIds).size).toBe(submenuIds.length);
   });
 });
 

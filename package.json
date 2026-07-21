@@ -494,27 +494,27 @@
       ],
       "view/item/context": [
         {
-          "submenu": "skillMdInspector/skillItemContext",
+          "submenu": "skillMdInspector/workspaceFileSkillContext",
           "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
           "group": "9_inspector@10"
         },
         {
-          "submenu": "skillMdInspector/skillItemContext",
+          "submenu": "skillMdInspector/favoriteSkillContext",
           "when": "view == skillMdInspectorFavorites && viewItem == skillMdInspector.favoriteSkillFile",
           "group": "9_inspector@10"
         },
         {
-          "submenu": "skillMdInspector/installedSkillItemContext",
+          "submenu": "skillMdInspector/installedAgentsFileSkillContext",
           "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
           "group": "9_inspector@10"
         },
         {
-          "submenu": "skillMdInspector/workspaceFolderContext",
+          "submenu": "skillMdInspector/workspaceFolderSkillContext",
           "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory)",
           "group": "9_inspector@10"
         },
         {
-          "submenu": "skillMdInspector/workspaceFolderContext",
+          "submenu": "skillMdInspector/installedAgentsFolderSkillContext",
           "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.agent || viewItem == skillMdInspector.agentGroup || viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)",
           "group": "9_inspector@10"
         },
@@ -756,7 +756,7 @@
           "when": "false"
         }
       ],
-      "skillMdInspector/skillItemContext": [
+      "skillMdInspector/workspaceFileSkillContext": [
         {
           "command": "skillMdInspector.validateCurrentSkill",
           "group": "1_validation@1"
@@ -778,7 +778,29 @@
           "group": "4_favorites@10"
         }
       ],
-      "skillMdInspector/installedSkillItemContext": [
+      "skillMdInspector/favoriteSkillContext": [
+        {
+          "command": "skillMdInspector.validateCurrentSkill",
+          "group": "1_validation@1"
+        },
+        {
+          "command": "skillMdInspector.insertTemplate",
+          "group": "2_editing@1"
+        },
+        {
+          "command": "skillMdInspector.improveDescriptionLocally",
+          "group": "2_editing@2"
+        },
+        {
+          "command": "skillMdInspector.showSkillReport",
+          "group": "3_reports@1"
+        },
+        {
+          "command": "skillMdInspector.toggleFavorite",
+          "group": "4_favorites@10"
+        }
+      ],
+      "skillMdInspector/installedAgentsFileSkillContext": [
         {
           "command": "skillMdInspector.validateCurrentSkill",
           "group": "1_validation@1"
@@ -792,7 +814,17 @@
           "group": "4_favorites@10"
         }
       ],
-      "skillMdInspector/workspaceFolderContext": [
+      "skillMdInspector/workspaceFolderSkillContext": [
+        {
+          "command": "skillMdInspector.validateWorkspaceSkills",
+          "group": "1_validation@1"
+        },
+        {
+          "command": "skillMdInspector.showWorkspaceReport",
+          "group": "1_validation@2"
+        }
+      ],
+      "skillMdInspector/installedAgentsFolderSkillContext": [
         {
           "command": "skillMdInspector.validateWorkspaceSkills",
           "group": "1_validation@1"
@@ -1805,15 +1837,23 @@
         "label": "SKILL.md Inspector"
       },
       {
-        "id": "skillMdInspector/skillItemContext",
+        "id": "skillMdInspector/workspaceFileSkillContext",
         "label": "SKILL.md Inspector"
       },
       {
-        "id": "skillMdInspector/installedSkillItemContext",
+        "id": "skillMdInspector/favoriteSkillContext",
         "label": "SKILL.md Inspector"
       },
       {
-        "id": "skillMdInspector/workspaceFolderContext",
+        "id": "skillMdInspector/installedAgentsFileSkillContext",
+        "label": "SKILL.md Inspector"
+      },
+      {
+        "id": "skillMdInspector/workspaceFolderSkillContext",
+        "label": "SKILL.md Inspector"
+      },
+      {
+        "id": "skillMdInspector/installedAgentsFolderSkillContext",
         "label": "SKILL.md Inspector"
       }
     ],
