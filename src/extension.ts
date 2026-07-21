@@ -25,6 +25,7 @@ import {
   OpenCodeSessionsTreeProvider,
 } from './ui/openCodeSessionsTreeProvider';
 import { registerOpenCodeCommands } from './commands/opencode/registerOpenCodeCommands';
+import { registerInstalledAgentsCommands } from './commands/installedAgents/registerInstalledAgentsCommands';
 import { refreshAfterConfigurationChange } from './configurationRefresh';
 
 const CHANGE_DEBOUNCE_MS = 300;
@@ -82,6 +83,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const provider = new DiagnosticsProvider();
   context.subscriptions.push(provider);
   registerCommands(context, provider);
+  registerInstalledAgentsCommands(context, {
+    installedProvider: installedAgentsProvider,
+    diagnostics: provider,
+  });
 
   let configurationWarningState = '';
   const reportConfigurationWarnings = (): void => {

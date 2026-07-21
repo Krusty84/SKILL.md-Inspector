@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { readConfig } from '../config';
+import { readConfig, type InspectorConfig } from '../config';
 import { discoverSkillPaths } from '../workspace/discoverSkills';
 import { analyzeWorkspace, type WorkspaceAnalysisOptions } from '../workspace/analyzeWorkspace';
 import type { WorkspaceAnalysis } from '../types/Workspace';
@@ -48,27 +48,23 @@ export function computeWorkspaceAnalysis(
   };
 }
 
-/** VS Code report/index path: synchronous core analysis plus optional asynchronous link checks. */
-export async function computeWorkspaceAnalysisOnline(
-  options?: WorkspaceAnalysisOptions,
-  remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
-): Promise<WorkspaceAnalysisResult | undefined> {
-  const result = computeWorkspaceAnalysis(options);
-  if (!result || result.analysis.cancelled) {
-    return result;
-  }
-  const config = readConfig(vscode.workspace.workspaceFolders?.[0]?.uri);
+/** Runs the online link checks over an already-computed analysis, mutating it in place. */
+async function augmentAnalysisOnline(
+  analysis: WorkspaceAnalysis,
+  config: InspectorConfig,
+  options: WorkspaceAnalysisOptions | undefined,
+  remoteDependencies: RemoteLinkDependencies,
+): Promise<void> {
   if (!config.onlineCheckEnabled) {
-    return result;
+    return;
   }
-
   const session = new RemoteLinkCheckSession(remoteDependencies, {
     maxConcurrency: config.onlineCheckMaxConcurrency,
     cancellation: options?.cancel,
   });
   try {
     await Promise.all(
-      result.analysis.skills.map(async (skill) => {
+      analysis.skills.map(async (skill) => {
         if (options?.cancel?.isCancellationRequested) return;
         let content: string;
         try {
@@ -103,10 +99,56 @@ export async function computeWorkspaceAnalysisOnline(
       }),
     );
     if (options?.cancel?.isCancellationRequested) {
-      result.analysis.cancelled = true;
+      analysis.cancelled = true;
     }
-    return result;
   } finally {
     session.dispose();
   }
+}
+
+/** VS Code report/index path: synchronous core analysis plus optional asynchronous link checks. */
+export async function computeWorkspaceAnalysisOnline(
+  options?: WorkspaceAnalysisOptions,
+  remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
+): Promise<WorkspaceAnalysisResult | undefined> {
+  const result = computeWorkspaceAnalysis(options);
+  if (!result || result.analysis.cancelled) {
+    return result;
+  }
+  const config = readConfig(vscode.workspace.workspaceFolders?.[0]?.uri);
+  await augmentAnalysisOnline(result.analysis, config, options, remoteDependencies);
+  return result;
+}
+
+/**
+ * Report path for an explicit set of SKILL.md paths (the INSTALLED AGENTS view),
+ * independent of the open workspace. `rootDir` only affects the relative path
+ * shown in the report's duplicate-names list, so a synthesized common-ancestor
+ * directory is fine. Config is read from `scopeUri` (user/global for installed files).
+ */
+export async function computeScopedAnalysisOnline(
+  rootDir: string,
+  skillPaths: string[],
+  options?: WorkspaceAnalysisOptions,
+  scopeUri?: vscode.Uri,
+  remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
+): Promise<WorkspaceAnalysis> {
+  const config = readConfig(scopeUri);
+  const analysis = analyzeWorkspace(
+    rootDir,
+    skillPaths,
+    config.profile,
+    config.resourceExclude,
+    config.nameSimilarityThreshold,
+    config.collision,
+    {
+      ...options,
+      dictionaries: config.heuristicDictionaries,
+      resourceDirectories: config.resourceDirectories,
+    },
+  );
+  if (!analysis.cancelled) {
+    await augmentAnalysisOnline(analysis, config, options, remoteDependencies);
+  }
+  return analysis;
 }

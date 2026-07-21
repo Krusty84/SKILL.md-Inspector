@@ -139,6 +139,47 @@ export class DiagnosticsProvider implements vscode.Disposable {
     }
   }
 
+  /**
+   * Validates an explicit list of SKILL.md absolute paths (used by the installed
+   * agents commands, whose files live outside the workspace), publishing their
+   * diagnostics. Mirrors {@link validateWorkspace} without workspace discovery.
+   */
+  async validatePaths(
+    paths: readonly string[],
+    token?: vscode.CancellationToken,
+    progress?: vscode.Progress<{ message?: string; increment?: number }>,
+  ): Promise<{ processed: number; total: number; cancelled: boolean }> {
+    const total = paths.length;
+    let processed = 0;
+    const operationConfig = readConfig(paths[0] ? vscode.Uri.file(paths[0]) : undefined);
+    const session = new RemoteLinkCheckSession(this.remoteDependencies, {
+      maxConcurrency: operationConfig.onlineCheckMaxConcurrency,
+      cancellation: token,
+    });
+    try {
+      const validations: Array<Promise<void>> = [];
+      for (const filePath of paths) {
+        if (token?.isCancellationRequested) {
+          break;
+        }
+        const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+        validations.push(
+          this.validate(document, 'full', session).then(() => {
+            processed += 1;
+            progress?.report({
+              message: `${processed}/${total}`,
+              increment: total > 0 ? 100 / total : 0,
+            });
+          }),
+        );
+      }
+      await Promise.all(validations);
+      return { processed, total, cancelled: token?.isCancellationRequested === true };
+    } finally {
+      session.dispose();
+    }
+  }
+
   clear(uri: vscode.Uri): void {
     this.cancelRequest(uri.toString());
     this.collection.delete(uri);

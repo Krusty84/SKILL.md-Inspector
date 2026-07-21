@@ -13,9 +13,10 @@ import type {
   WorkspaceFileNode,
 } from '../navigator/workspaceExplorerTypes';
 import { compareWorkspaceNodes, isDirectoryType } from '../navigator/workspaceSorting';
+import { isPathInsideDir } from '../parser/linkPaths';
 import { loadingTreeItem, SingleFlight } from './treeLoading';
 
-type InstalledAgentsNode =
+export type InstalledAgentsNode =
   | { type: 'message'; label: string }
   | { type: 'loading'; label: string }
   | { type: 'agent'; label: string; id: string }
@@ -43,6 +44,43 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   refresh(): Promise<void> {
     this.fsCache.clear();
     return this.startDiscovery();
+  }
+
+  /**
+   * Absolute paths of the SKILL.md files in scope of a right-clicked folder-ish
+   * node, used by the installed-agents validate/report commands: a skill folder
+   * resolves to its own SKILL.md, an agent/group to all of its skills, and a
+   * nested subfolder to the SKILL.md files beneath it (often none).
+   */
+  resolveSkillMdPathsForNode(node: InstalledAgentsNode): string[] {
+    const skills = this.installedFiles.filter((f) => f.fileName === 'SKILL.md');
+    let matched: string[];
+    switch (node.type) {
+      case 'skill':
+        matched = [node.skillMdPath];
+        break;
+      case 'agent':
+        matched = skills
+          .filter((f) => f.sourceId.startsWith(`${node.id}:`))
+          .map((f) => f.absolutePath);
+        break;
+      case 'group':
+        matched = skills
+          .filter(
+            (f) =>
+              f.sourceId.startsWith(`${node.agentId}:`) && f.sourceLabel.endsWith(`/${node.label}`),
+          )
+          .map((f) => f.absolutePath);
+        break;
+      case 'workspaceDirectory':
+        matched = skills
+          .filter((f) => isPathInsideDir(node.uri.fsPath, f.absolutePath))
+          .map((f) => f.absolutePath);
+        break;
+      default:
+        matched = [];
+    }
+    return [...new Set(matched)];
   }
 
   getChildren(node?: InstalledAgentsNode): InstalledAgentsNode[] | Promise<InstalledAgentsNode[]> {
