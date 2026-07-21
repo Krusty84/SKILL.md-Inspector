@@ -21,8 +21,8 @@ export type WorkspaceReportScope =
 
 const PROFILES: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
 
-/** Renders the workspace report (skills overview, collision matrix, portability,
- * resource graphs) as a self-contained, theme-aware HTML document. */
+/** Renders the workspace report (skills overview, collision matrix, and portability)
+ * as a self-contained, theme-aware HTML document. */
 export function renderWorkspaceReportHtml(
   analysis: WorkspaceAnalysis,
   opts: RenderOptions,
@@ -38,7 +38,6 @@ export function renderWorkspaceReportHtml(
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0 1.25rem 2rem; line-height: 1.5; }
   h1 { font-size: 1.4rem; }
   h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; margin-top: 2rem; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 0.35rem; }
-  h3 { font-size: 0.95rem; margin: 1.2rem 0 0.3rem; }
   .scroll { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; margin-top: 0.75rem; font-size: 0.9rem; }
   th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--vscode-panel-border); vertical-align: top; }
@@ -73,7 +72,7 @@ export function renderWorkspaceReportHtml(
   <h2>Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th rowspan="2">Name</th><th rowspan="2">Validation status</th><th rowspan="2">Adjusted description quality</th><th rowspan="2">Heuristic coverage</th><th rowspan="2">Instruction authoring quality</th><th rowspan="2">Errors</th><th rowspan="2">Warnings</th><th rowspan="2">Information</th><th colspan="${PROFILES.length}">Format / portability compatibility</th></tr><tr>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
+      <thead><tr><th rowspan="2">Name</th><th rowspan="2">Validation status</th><th rowspan="2">Adjusted description quality</th><th rowspan="2">Heuristic coverage</th><th rowspan="2">Instruction authoring quality</th><th rowspan="2">Errors</th><th rowspan="2">Warnings</th><th rowspan="2">Information</th><th rowspan="2">External file issues</th><th colspan="${PROFILES.length}">Format / portability compatibility</th></tr><tr>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -87,8 +86,6 @@ export function renderWorkspaceReportHtml(
   <h2>Collision matrix</h2>
   ${renderCollisions(analysis.collisions)}
 
-  <h2>Resource graphs</h2>
-  ${analysis.skills.map(renderResourceGraph).join('') || '<p class="empty">No skills.</p>'}
 </body>
 </html>`;
 }
@@ -100,7 +97,7 @@ export function workspaceReportTitle(scope: WorkspaceReportScope): string {
 }
 
 function renderScope(scope: WorkspaceReportScope): string {
-  return `<strong>Folder:</strong> <code>${escapeHtml(scope.folderPath)}</code></p>`;
+  return `<p><strong>Folder:</strong> <code>${escapeHtml(scope.folderPath)}</code></p>`;
 }
 
 function renderSkillRow(skill: WorkspaceSkill): string {
@@ -111,7 +108,19 @@ function renderSkillRow(skill: WorkspaceSkill): string {
     instructions.state === 'scored'
       ? `${instructions.score}/100 · ${instructions.label}`
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${cells}</tr>`;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${resourceIssueCell(skill)}${cells}</tr>`;
+}
+
+function resourceIssueCell(skill: WorkspaceSkill): string {
+  const issues = skill.resourceGraph.nodes.filter(
+    (node) =>
+      node.kind === 'missing' || node.kind === 'unreferenced' || node.kind === 'absolute',
+  );
+  if (issues.length === 0) {
+    return '<td class="ok">OK</td>';
+  }
+  const cls = issues.some((node) => node.kind === 'missing') ? 'fail' : 'warn';
+  return `<td class="${cls}">${issues.length} issue${issues.length === 1 ? '' : 's'}</td>`;
 }
 
 function renderDescriptionQuality(quality: WorkspaceSkill['staticDescriptionQuality']): string {
@@ -192,22 +201,6 @@ function renderSimilarNames(similar: SimilarNames[]): string {
     )
     .join('');
   return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-function renderResourceGraph(skill: WorkspaceSkill): string {
-  const { nodes } = skill.resourceGraph;
-  if (nodes.length === 0) {
-    return `<h3><code>${escapeHtml(skill.name)}</code></h3><p class="empty">No linked or bundled resources.</p>`;
-  }
-  const items = nodes
-    .map((node) => {
-      const flags =
-        node.flags.length > 0 ? ` <span class="warn">[${node.flags.join(', ')}]</span>` : '';
-      const cls = node.kind === 'missing' ? 'fail' : node.kind === 'unreferenced' ? 'warn' : '';
-      return `<li><code>${escapeHtml(node.path)}</code> — <span class="${cls}">${node.kind}</span>${flags}</li>`;
-    })
-    .join('');
-  return `<h3><code>${escapeHtml(skill.name)}</code></h3><ul>${items}</ul>`;
 }
 
 function statusCell(status: PortabilityStatus | undefined): string {

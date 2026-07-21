@@ -107,7 +107,7 @@ function analysis(): WorkspaceAnalysis {
 }
 
 describe('renderWorkspaceReportHtml', () => {
-  it('renders the collision matrix, portability, and resources with a CSP', () => {
+  it('renders the collision matrix, portability, and external-file issue count with a CSP', () => {
     const html = renderWorkspaceReportHtml(analysis(), {
       nonce: 'n',
       cspSource: 'vscode-webview://x',
@@ -117,7 +117,10 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('Collision matrix');
     expect(html).toContain('0.84');
     expect(html).toContain('High');
-    expect(html).toContain('references/unused.md');
+    expect(html).toContain('External file issues');
+    expect(html).toContain('<td class="warn">1 issue</td>');
+    expect(html).not.toContain('references/unused.md');
+    expect(html).not.toContain('Resource graphs');
     expect(html).toContain('pdf-report-formatter');
     expect(html).toContain('Duplicate names');
     expect(html).toContain('skills/b/SKILL.md'); // every conflicting path is listed
@@ -136,8 +139,44 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('Information');
     expect(html).toContain('Format / portability compatibility');
     expect(html).toContain('does not include general description or instruction-body quality');
-    expect(html).toContain('<title>Workspace Skill Report</title>');
+    expect(html).toContain("<title>Workspace SKILL.md's Report</title>");
     expect(html).toContain('<strong>Folder:</strong> <code>/ws</code>');
+  });
+
+  it('shows OK when a skill has no external-file issues', () => {
+    const model = analysis();
+    model.skills[0].resourceGraph.nodes = [
+      { path: 'references/guide.md', kind: 'referenced', flags: [] },
+      { path: 'https://example.com/guide', kind: 'remote', flags: ['remote'] },
+    ];
+
+    const html = renderWorkspaceReportHtml(model, {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
+
+    expect(html).toContain('<td class="ok">OK</td>');
+    expect(html).not.toContain('references/guide.md');
+    expect(html).not.toContain('https://example.com/guide');
+  });
+
+  it('marks missing external files as errors without listing their paths', () => {
+    const model = analysis();
+    model.skills[0].resourceGraph.nodes = [
+      { path: 'references/missing.md', kind: 'missing', flags: [] },
+      { path: '/shared/guide.md', kind: 'absolute', flags: [] },
+    ];
+
+    const html = renderWorkspaceReportHtml(model, {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
+
+    expect(html).toContain('<td class="fail">2 issues</td>');
+    expect(html).not.toContain('references/missing.md');
+    expect(html).not.toContain('/shared/guide.md');
   });
 
   it('identifies the agent and folder for an installed-agent report', () => {
@@ -151,9 +190,8 @@ describe('renderWorkspaceReportHtml', () => {
       },
     });
 
-    expect(html).toContain("<title>Agent SKILL.md's Report</title>");
-    expect(html).toContain("<h1>Agent SKILL.md's Report</h1>");
-    expect(html).toContain('<strong>Agent:</strong> Codex &lt;local&gt;');
+    expect(html).toContain("<title>Codex &lt;local&gt; Agent SKILL.md's Report</title>");
+    expect(html).toContain("<h1>Codex &lt;local&gt; Agent SKILL.md's Report</h1>");
     expect(html).toContain('<strong>Folder:</strong> <code>/Users/example/.codex/skills</code>');
   });
 
