@@ -3,16 +3,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const testState = vi.hoisted(() => ({
   emitters: [] as { fire: ReturnType<typeof vi.fn> }[],
   progressError: undefined as Error | undefined,
+  fsEntries: new Map<string, [string, number][]>(),
 }));
 
 vi.mock('vscode', () => {
   class Uri {
     constructor(readonly fsPath: string) {}
+    get path(): string {
+      return this.fsPath;
+    }
     static file(value: string): Uri {
       return new Uri(value);
     }
     static parse(value: string): Uri {
       return new Uri(value.replace(/^file:\/\//, ''));
+    }
+    static joinPath(parent: Uri, ...parts: string[]): Uri {
+      return new Uri([parent.fsPath.replace(/\/$/, ''), ...parts].join('/'));
     }
     toString(): string {
       return `file://${this.fsPath}`;
@@ -33,6 +40,7 @@ vi.mock('vscode', () => {
     Uri,
     TreeItem,
     TreeItemCollapsibleState: { None: 0, Collapsed: 1 },
+    FileType: { File: 1, Directory: 2 },
     ThemeIcon: class {
       constructor(readonly id: string) {}
     },
@@ -43,7 +51,15 @@ vi.mock('vscode', () => {
         testState.emitters.push(this);
       }
     },
-    workspace: { getConfiguration: vi.fn(() => ({ get: vi.fn(() => []) })) },
+    workspace: {
+      getConfiguration: vi.fn(() => ({ get: vi.fn(() => []) })),
+      fs: {
+        readDirectory: vi.fn((uri: { toString(): string }) => {
+          const entries = testState.fsEntries.get(uri.toString());
+          return entries ? Promise.resolve(entries) : Promise.reject(new Error('missing'));
+        }),
+      },
+    },
     window: {
       showWarningMessage: vi.fn(),
       withProgress: vi.fn((_options, task) =>
@@ -99,7 +115,6 @@ beforeEach(() => {
 
 describe('InstalledAgentsTreeProvider file items', () => {
   it.each([
-    ['SKILL.md', '/tmp/example-skill/SKILL.md', 'example-skill'],
     ['AGENTS.md', '/tmp/AGENTS.md', 'AGENTS.md'],
     ['CLAUDE.md', '/tmp/CLAUDE.md', 'CLAUDE.md'],
   ] as const)(
@@ -108,17 +123,13 @@ describe('InstalledAgentsTreeProvider file items', () => {
       const item = provider.getTreeItem({
         type: 'file',
         file: file(fileName, absolutePath),
-        favorite: fileName === 'SKILL.md',
+        favorite: false,
       });
 
       expect(item.label).toBe(label);
       expect(item.resourceUri?.fsPath).toBe(absolutePath);
       expect(item.iconPath).toBeUndefined();
-      expect(item.contextValue).toBe(
-        fileName === 'SKILL.md'
-          ? 'skillMdInspector.favoriteSkillFile'
-          : 'skillMdInspector.installedAgentsFile',
-      );
+      expect(item.contextValue).toBe('skillMdInspector.installedAgentsFile');
     },
   );
 
@@ -138,6 +149,138 @@ describe('InstalledAgentsTreeProvider file items', () => {
   });
 });
 
+describe('InstalledAgentsTreeProvider skill folders', () => {
+  async function loadWith(
+    files: DiscoveredFile[],
+    favorites: { uri: string }[] = [],
+  ): Promise<InstalledAgentsTreeProvider> {
+    vi.mocked(discoverExternalFiles).mockResolvedValue({ files, messages: [] });
+    const created = new InstalledAgentsTreeProvider(
+      { globalState: { get: vi.fn(() => favorites) } } as never,
+      { appendLine: vi.fn() } as never,
+    );
+    await created.refresh();
+    return created;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function skillNodeOf(p: InstalledAgentsTreeProvider): Promise<any> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [agent] = (await p.getChildren()) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [group] = (await p.getChildren(agent)) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [skill] = (await p.getChildren(group)) as any[];
+    return skill;
+  }
+
+  beforeEach(() => {
+    testState.fsEntries.clear();
+  });
+
+  it('renders each SKILL.md as a collapsible folder named after its directory', async () => {
+    const p = await loadWith([file('SKILL.md', '/skills/example/SKILL.md')]);
+    const skill = await skillNodeOf(p);
+
+    expect(skill).toMatchObject({
+      type: 'skill',
+      name: 'example',
+      skillMdPath: '/skills/example/SKILL.md',
+    });
+    expect(skill.uri.fsPath).toBe('/skills/example');
+
+    const item = p.getTreeItem(skill);
+    expect(item.label).toBe('example');
+    expect(item.collapsibleState).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+    expect(item.resourceUri?.fsPath).toBe('/skills/example');
+    expect(item.iconPath).toBeUndefined();
+    expect(item.contextValue).toBe('skillMdInspector.skillFolder');
+  });
+
+  it('keeps AGENTS.md as a leaf rather than a folder', async () => {
+    const p = await loadWith([file('AGENTS.md', '/skills/AGENTS.md')]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [agent] = (await p.getChildren()) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [group] = (await p.getChildren(agent)) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [leaf] = (await p.getChildren(group)) as any[];
+    expect(leaf.type).toBe('file');
+  });
+
+  it('lists the real folder contents (directories first) when expanded', async () => {
+    testState.fsEntries.set('file:///skills/example', [
+      ['SKILL.md', vscode.FileType.File],
+      ['references', vscode.FileType.Directory],
+    ]);
+    const p = await loadWith(
+      [file('SKILL.md', '/skills/example/SKILL.md')],
+      [{ uri: 'file:///skills/example/SKILL.md' }],
+    );
+    const skill = await skillNodeOf(p);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const children = (await p.getChildren(skill)) as any[];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(children.map((c: any) => [c.type, c.name])).toEqual([
+      ['workspaceDirectory', 'references'],
+      ['workspaceFile', 'SKILL.md'],
+    ]);
+
+    const dirItem = p.getTreeItem(children[0]);
+    expect(dirItem.collapsibleState).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+    expect(dirItem.contextValue).toBe('skillMdInspector.installedAgentsDirectory');
+    expect(dirItem.command).toBeUndefined();
+
+    const skillItem = p.getTreeItem(children[1]);
+    expect(skillItem.label).toBe('SKILL.md');
+    expect(skillItem.collapsibleState).toBe(vscode.TreeItemCollapsibleState.None);
+    expect(skillItem.contextValue).toBe('skillMdInspector.favoriteSkillFile');
+    expect((skillItem.command as { command: string }).command).toBe('vscode.open');
+  });
+
+  it('expands nested subfolders (recursion)', async () => {
+    testState.fsEntries.set('file:///skills/example', [
+      ['references', vscode.FileType.Directory],
+    ]);
+    testState.fsEntries.set('file:///skills/example/references', [
+      ['guide.md', vscode.FileType.File],
+    ]);
+    const p = await loadWith([file('SKILL.md', '/skills/example/SKILL.md')]);
+    const skill = await skillNodeOf(p);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [references] = (await p.getChildren(skill)) as any[];
+    expect(references).toMatchObject({ type: 'workspaceDirectory', name: 'references' });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nested = (await p.getChildren(references)) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(nested.map((c: any) => c.name)).toEqual(['guide.md']);
+    expect(p.getTreeItem(nested[0]).contextValue).toBe('skillMdInspector.installedAgentsFile');
+  });
+
+  it('shows a message node when a skill folder cannot be read', async () => {
+    const append = vi.fn();
+    vi.mocked(discoverExternalFiles).mockResolvedValue({
+      files: [file('SKILL.md', '/skills/example/SKILL.md')],
+      messages: [],
+    });
+    const p = new InstalledAgentsTreeProvider(
+      { globalState: { get: vi.fn(() => []) } } as never,
+      { appendLine: append } as never,
+    );
+    await p.refresh();
+    const skill = await skillNodeOf(p);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const children = (await p.getChildren(skill)) as any[];
+    expect(children).toEqual([{ type: 'message', label: 'Unable to read this folder.' }]);
+    expect(append).toHaveBeenCalledWith(
+      expect.stringContaining('Unable to read installed skill folder'),
+    );
+  });
+});
+
 describe('InstalledAgentsTreeProvider loading', () => {
   it('shows a spinner, emits completion, and reuses the active discovery', async () => {
     let resolveDiscovery!: (value: { files: DiscoveredFile[]; messages: string[] }) => void;
@@ -152,7 +295,8 @@ describe('InstalledAgentsTreeProvider loading', () => {
       output as never,
     );
 
-    const [loading] = loadingProvider.getChildren();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [loading] = loadingProvider.getChildren() as any[];
     const item = loadingProvider.getTreeItem(loading!);
     const first = loadingProvider.refresh();
     const second = loadingProvider.refresh();

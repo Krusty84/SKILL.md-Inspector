@@ -504,13 +504,18 @@
           "group": "9_inspector@10"
         },
         {
-          "submenu": "skillMdInspector/skillItemContext",
+          "submenu": "skillMdInspector/installedSkillItemContext",
           "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFile || viewItem == skillMdInspector.favoriteSkillFile)",
           "group": "9_inspector@10"
         },
         {
           "submenu": "skillMdInspector/workspaceFolderContext",
           "when": "view == skillMdInspectorWorkspace && (viewItem == skillMdInspector.workspaceRoot || viewItem == skillMdInspector.workspaceDirectory)",
+          "group": "9_inspector@10"
+        },
+        {
+          "submenu": "skillMdInspector/workspaceFolderContext",
+          "when": "view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)",
           "group": "9_inspector@10"
         },
         {
@@ -763,6 +768,20 @@
         {
           "command": "skillMdInspector.improveDescriptionLocally",
           "group": "2_editing@2"
+        },
+        {
+          "command": "skillMdInspector.showSkillReport",
+          "group": "3_reports@1"
+        },
+        {
+          "command": "skillMdInspector.toggleFavorite",
+          "group": "4_favorites@10"
+        }
+      ],
+      "skillMdInspector/installedSkillItemContext": [
+        {
+          "command": "skillMdInspector.validateCurrentSkill",
+          "group": "1_validation@1"
         },
         {
           "command": "skillMdInspector.showSkillReport",
@@ -1787,6 +1806,10 @@
       },
       {
         "id": "skillMdInspector/skillItemContext",
+        "label": "SKILL.md Inspector"
+      },
+      {
+        "id": "skillMdInspector/installedSkillItemContext",
         "label": "SKILL.md Inspector"
       },
       {

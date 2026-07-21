@@ -7,6 +7,12 @@ import { expandConfiguredPath } from '../navigator/expandConfiguredPath';
 import { FAVORITES_KEY, restoreFavorites } from '../navigator/favoritesStore';
 import { normalizeAdditionalRoots } from '../navigator/normalizeAdditionalRoots';
 import type { AgentSource, DiscoveredFile } from '../navigator/types';
+import { createWorkspaceExcludeMatcher } from '../navigator/workspaceExcludes';
+import type {
+  WorkspaceDirectoryNode,
+  WorkspaceFileNode,
+} from '../navigator/workspaceExplorerTypes';
+import { compareWorkspaceNodes, isDirectoryType } from '../navigator/workspaceSorting';
 import { loadingTreeItem, SingleFlight } from './treeLoading';
 
 type InstalledAgentsNode =
@@ -14,7 +20,10 @@ type InstalledAgentsNode =
   | { type: 'loading'; label: string }
   | { type: 'agent'; label: string; id: string }
   | { type: 'group'; label: string; agentId: string }
-  | { type: 'file'; file: DiscoveredFile; favorite: boolean };
+  | { type: 'file'; file: DiscoveredFile; favorite: boolean }
+  | { type: 'skill'; uri: vscode.Uri; name: string; skillMdPath: string }
+  | WorkspaceDirectoryNode
+  | WorkspaceFileNode;
 
 export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<InstalledAgentsNode> {
   private readonly emitter = new vscode.EventEmitter<InstalledAgentsNode | undefined>();
@@ -24,6 +33,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   private readonly discoveryLoad = new SingleFlight();
   private installedFiles: DiscoveredFile[] = [];
   private messages: string[] = [];
+  private readonly fsCache = new Map<string, InstalledAgentsNode[]>();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -31,10 +41,11 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   ) {}
 
   refresh(): Promise<void> {
+    this.fsCache.clear();
     return this.startDiscovery();
   }
 
-  getChildren(node?: InstalledAgentsNode): InstalledAgentsNode[] {
+  getChildren(node?: InstalledAgentsNode): InstalledAgentsNode[] | Promise<InstalledAgentsNode[]> {
     if (!node) {
       if (!this.loaded && !this.loadAttempted) void this.startDiscovery();
       if (!this.loaded && this.discoveryLoad.isRunning)
@@ -55,7 +66,17 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
           (f) =>
             f.sourceId.startsWith(`${node.agentId}:`) && f.sourceLabel.endsWith(`/${node.label}`),
         )
-        .map((file) => ({ type: 'file', file, favorite: this.isFavorite(file.absolutePath) }));
+        .map((file) =>
+          file.fileName === 'SKILL.md'
+            ? {
+                type: 'skill' as const,
+                uri: vscode.Uri.file(path.dirname(file.absolutePath)),
+                name: path.basename(path.dirname(file.absolutePath)),
+                skillMdPath: file.absolutePath,
+              }
+            : { type: 'file' as const, file, favorite: this.isFavorite(file.absolutePath) },
+        );
+    if (node.type === 'skill' || node.type === 'workspaceDirectory') return this.readDir(node.uri);
     return [];
   }
 
@@ -72,6 +93,33 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     if (node.type === 'group') {
       const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.Collapsed);
       item.contextValue = 'skillMdInspector.agentGroup';
+      return item;
+    }
+    if (node.type === 'skill') {
+      const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.Collapsed);
+      item.resourceUri = node.uri;
+      item.tooltip = node.uri.fsPath;
+      item.contextValue = 'skillMdInspector.skillFolder';
+      return item;
+    }
+    if (node.type === 'workspaceDirectory') {
+      const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.Collapsed);
+      item.resourceUri = node.uri;
+      item.tooltip = node.uri.fsPath;
+      item.contextValue = 'skillMdInspector.installedAgentsDirectory';
+      return item;
+    }
+    if (node.type === 'workspaceFile') {
+      const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.None);
+      item.resourceUri = node.uri;
+      item.tooltip = node.uri.fsPath;
+      item.command = { command: 'vscode.open', title: 'Open', arguments: [node.uri] };
+      item.contextValue =
+        node.name === 'SKILL.md'
+          ? this.isFavorite(node.uri.fsPath)
+            ? 'skillMdInspector.favoriteSkillFile'
+            : 'skillMdInspector.skillFile'
+          : 'skillMdInspector.installedAgentsFile';
       return item;
     }
     return this.fileItem(node.file, node.favorite);
@@ -133,6 +181,53 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
           : 'skillMdInspector.skillFile'
         : 'skillMdInspector.installedAgentsFile';
     return item;
+  }
+
+  private toFsNode(
+    parent: vscode.Uri,
+    name: string,
+    fileType: vscode.FileType,
+  ): WorkspaceDirectoryNode | WorkspaceFileNode {
+    const uri = vscode.Uri.joinPath(parent, name);
+    if (isDirectoryType(fileType))
+      return {
+        type: 'workspaceDirectory',
+        id: `installed-directory:${uri.toString()}`,
+        uri,
+        name,
+        parentUri: parent,
+      };
+    return {
+      type: 'workspaceFile',
+      id: `installed-file:${uri.toString()}`,
+      uri,
+      name,
+      fileType,
+      parentUri: parent,
+    };
+  }
+
+  private async readDir(uri: vscode.Uri): Promise<InstalledAgentsNode[]> {
+    const key = uri.toString();
+    const cached = this.fsCache.get(key);
+    if (cached) return cached;
+    try {
+      const matcher = createWorkspaceExcludeMatcher({
+        uri,
+        name: path.basename(uri.fsPath),
+        index: 0,
+      });
+      const entries = await vscode.workspace.fs.readDirectory(uri);
+      const children = entries
+        .map(([name, fileType]) => this.toFsNode(uri, name, fileType))
+        .filter((child) => !matcher.excludes(child.uri, child.name))
+        .sort(compareWorkspaceNodes);
+      this.fsCache.set(key, children);
+      return children;
+    } catch (error) {
+      this.output.appendLine(`Unable to read installed skill folder ${key}: ${String(error)}`);
+      return [{ type: 'message', label: 'Unable to read this folder.' }];
+    }
   }
 
   private async discoverInstalled(): Promise<{
