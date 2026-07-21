@@ -466,11 +466,12 @@ describe('package manifest context menus and templates', () => {
       }),
     );
 
-    // Folder case: one-to-one with the WORKSPACE folder submenu.
+    // Folder case: every folder-looking row (agent, group, skill, nested subfolder) gets the
+    // WORKSPACE folder submenu.
     expect(packageJson.contributes.menus['view/item/context']).toContainEqual(
       expect.objectContaining({
         submenu: 'skillMdInspector/workspaceFolderContext',
-        when: 'view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)',
+        when: 'view == skillMdInspectorInstalledAgents && (viewItem == skillMdInspector.agent || viewItem == skillMdInspector.agentGroup || viewItem == skillMdInspector.skillFolder || viewItem == skillMdInspector.installedAgentsDirectory)',
         group: '9_inspector@10',
       }),
     );
