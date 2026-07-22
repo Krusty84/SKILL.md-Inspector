@@ -3,7 +3,7 @@
 SKILL.md Inspector is a Visual Studio Code extension for authoring and reviewing
 Agent Skills. It validates every file named exactly `SKILL.md`, explains problems in
 the editor, evaluates description and instruction quality, and analyzes collections
-of skills for collisions and portability issues.
+of skills for collisions.
 
 Core analysis is local and deterministic. The extension does not call an LLM, run
 agent executables, or send telemetry. Optional remote-link availability checking is
@@ -12,7 +12,7 @@ disabled by default and is the only validation feature that sends network reques
 ## Features
 
 - **Validate skills as you edit** — check YAML frontmatter, names, descriptions,
-  Markdown links, bundled resources, body structure, and profile-specific metadata.
+  Markdown links, bundled resources, and body structure.
 - **Check remote links when explicitly enabled** — augment full validation with
   SSRF-protected HTTP availability checks while keeping typing and core analysis offline.
 - **Fix common problems quickly** — insert required fields or a complete template,
@@ -25,17 +25,16 @@ disabled by default and is the only validation feature that sends network reques
   metrics for the `SKILL.md` body, reference files, and non-standard text files,
   with validation diagnostics when fixed content budgets are exceeded.
 - **Analyze a workspace** — discover skills, detect duplicate or similar names,
-  compare overlapping descriptions, check format compatibility across four profiles,
-  inspect resource graphs, and export a machine-readable `skills.index.json`.
+  compare overlapping descriptions, inspect resource graphs, and export a
+  machine-readable `skills.index.json`.
 - **Navigate skill ecosystems** — browse workspace files, keep persistent favorites,
   and discover supported local Codex, Claude Code, OpenCode, and GitHub Copilot files.
 - **Inspect OpenCode exports** — browse exported session JSON, view a searchable tool
   timeline, inspect compatibility diagnostics, and correlate recorded `skill` calls
   with local skills by name.
-- **Customize policy without code changes** — select a validation profile, adjust
-  advisory severity, replace resource directories and exclusion globs, define custom
-  templates, and tune the heuristic dictionaries used by description and collision
-  analysis.
+- **Customize policy without code changes** — adjust advisory severity, replace
+  resource directories and exclusion globs, define custom templates, and tune the
+  heuristic dictionaries used by description and collision analysis.
 
 Static Description Quality is a transparent text heuristic, not a prediction that an
 agent will select a skill. OpenCode skill matches and subsequent tool calls show
@@ -91,8 +90,8 @@ Use the **SKILL.md Skills** panel for a compact analysis tree, or run:
 | Command                       | Purpose                                                                    |
 | ----------------------------- | -------------------------------------------------------------------------- |
 | **Validate Workspace Skills** | Validate every discovered `SKILL.md` and publish results to Problems.      |
-| **Show Workspace Report**     | Review name conflicts, description collisions, portability, and resources. |
-| **Export Skills Index**       | Write schema-version-4 `skills.index.json` to the first workspace root.    |
+| **Show Workspace Report**     | Review name conflicts, description collisions, and resources.              |
+| **Export Skills Index**       | Write schema-version-5 `skills.index.json` to the first workspace root.    |
 | **Refresh Skills**            | Rebuild the cached Skills panel analysis.                                  |
 
 Workspace report generation and index export can be cancelled. They analyze saved
@@ -144,19 +143,7 @@ skills/<skill-name>/SKILL.md
 Dependency, VCS, and generated directories are excluded by default. Replace the
 workspace discovery patterns with `skillMdInspector.discovery.exclude` when needed.
 
-## Validation profiles
-
-Set `skillMdInspector.profile` to one of:
-
-| Profile   | Focus                                                              |
-| --------- | ------------------------------------------------------------------ |
-| `generic` | Baseline Agent Skill requirements and recommendations.             |
-| `vscode`  | VS Code/Copilot metadata fields and input/output guidance.         |
-| `claude`  | Claude metadata restrictions and boundary guidance.                |
-| `codex`   | Codex metadata fields with stronger boundary and I/O expectations. |
-
-Profiles are best-effort format checks maintained by this project. A portability pass
-does not prove runtime behavior or instruction quality.
+## Diagnostic classification
 
 Every diagnostic is classified as **specification**, **compatibility**, **security**,
 or **quality**. The complete code catalog, rationale, examples, and available fixes
@@ -172,7 +159,6 @@ Open VS Code Settings and search for `SKILL.md Inspector`. Common settings inclu
 | `skillMdInspector.validation.runOnSave`  | `true`                                         | Run full validation on save.                                   |
 | `skillMdInspector.links.onlineCheck.enabled` | `false`                                    | Send HTTP requests during full validation to check referenced URLs. |
 | `skillMdInspector.links.onlineCheck.maxConcurrency` | `4`                                   | Limit concurrent checks across one complete validation operation (1–10). |
-| `skillMdInspector.profile`               | `generic`                                      | Select the active format profile.                              |
 | `skillMdInspector.description.language`  | `auto`                                         | Use English heuristics or detect limited non-English coverage. |
 | `skillMdInspector.body.strictness`       | `recommended`                                  | Disable, inform, or warn on advisory body sections.            |
 | `skillMdInspector.discovery.exclude`     | common generated directories                   | Replace workspace discovery exclusions.                        |
@@ -200,7 +186,6 @@ The extension deliberately reports distinct signals:
 - **Resource authoring quality** identifies unreferenced files, undocumented scripts,
   and unusually large bundled resources.
 - **Collision risk** compares descriptions and names across the workspace.
-- **Profile compatibility** evaluates format constraints for each supported profile.
 
 When required input is missing or cannot be trusted, description or instruction
 quality is shown as **Not scored** instead of silently assigning zero. Resource
@@ -233,8 +218,8 @@ flows, and constraints, see [ARCHITECTURE.md](ARCHITECTURE.md). Release history 
 
 ## Privacy and limitations
 
-- Core analysis, validation while typing, code actions, portability evaluation, and
-  OpenCode skill matching are offline. Remote links still receive the static
+- Core analysis, validation while typing, code actions, and OpenCode skill matching
+  are offline. Remote links still receive the static
   `skill.link.remoteSuspicious` diagnostic whether online checking is enabled or not.
 - Enabling `skillMdInspector.links.onlineCheck.enabled` sends `HEAD` requests, and
   minimal range `GET` requests when required, to HTTP(S) URLs referenced by

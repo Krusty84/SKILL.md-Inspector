@@ -68,7 +68,7 @@ describe('workspace discovery + analysis', () => {
     expect(paths.some((p) => p.includes('node_modules'))).toBe(false);
   });
 
-  it('analyzes each skill with score, counts, portability, and resource graph', () => {
+  it('analyzes each skill with score, counts, and resource graph', () => {
     const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     expect(analysis.skills).toHaveLength(3);
 
@@ -80,22 +80,15 @@ describe('workspace discovery + analysis', () => {
     expect(pdf!.staticDescriptionQuality.score).toBe(pdf!.staticDescriptionQuality.adjustedScore);
     expect(pdf!.authoringQuality.instructions.score).toBeGreaterThan(0);
     expect(pdf!.authoringQuality.resources.score).toBeLessThan(100);
-    expect(Object.keys(pdf!.profileCompatibility).sort()).toEqual([
-      'claude',
-      'codex',
-      'generic',
-      'vscode',
-    ]);
     const unreferenced = pdf!.resourceGraph.nodes.find((n) => n.kind === 'unreferenced');
     expect(unreferenced?.path).toBe('references/unused.md');
 
     const broken = analysis.skills.find((s) => s.name === 'Broken Skill');
     expect(broken!.errors).toBeGreaterThan(0);
     expect(broken!.validationStatus).toBe('fail');
-    expect(broken!.profileCompatibility.generic).toBe('fail');
   });
 
-  it('keeps validation, description, authoring, and compatibility dimensions distinct for minimal frontmatter', () => {
+  it('keeps validation, description, and authoring dimensions distinct for minimal frontmatter', () => {
     writeSkill(
       'skills/minimal-skill/SKILL.md',
       [
@@ -124,7 +117,6 @@ describe('workspace discovery + analysis', () => {
     );
     expect(minimal.authoringQuality.instructions).toMatchObject({ score: 0, label: 'poor' });
     expect(minimal.authoringQuality.resources).toMatchObject({ score: 100, label: 'excellent' });
-    expect(minimal.profileCompatibility.generic).toBe('pass');
   });
 
   it('detects a collision between the two report formatters', () => {
@@ -153,37 +145,13 @@ describe('workspace discovery + analysis', () => {
     expect(analysis.similarNames.flatMap((s) => [s.a, s.b])).toContain('pdf-reports-formatter');
   });
 
-  it('does not lower Codex portability for a bundled script (Task 47)', () => {
-    writeSkill(
-      'skills/script-skill/SKILL.md',
-      [
-        '---',
-        'name: script-skill',
-        'description: Format inspection reports with helpers. Use when building. Do not use for docs.',
-        '---',
-        '',
-        '## Examples',
-        '',
-        'See [runner](./scripts/run.py).',
-        '',
-        '## When to use',
-        '',
-        'Use when building. Do not use for docs.',
-      ].join('\n'),
-    );
-    writeSkill('skills/script-skill/scripts/run.py', 'print(1)');
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
-    const skill = analysis.skills.find((s) => s.name === 'script-skill')!;
-    expect(skill.profileCompatibility.codex).toBe('pass');
-  });
-
   it('exports an index with the documented shape', () => {
     const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const index = buildSkillsIndex(analysis);
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
     const entry = index.skills.find((s) => s.name === 'pdf-report-formatter')!;
-    expect(index.schemaVersion).toBe(4);
+    expect(index.schemaVersion).toBe(5);
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
     expect(entry.validationStatus).toBe('warning');
     expect(entry.staticDescriptionQuality).toMatchObject({
@@ -207,7 +175,6 @@ describe('workspace discovery + analysis', () => {
       findings: expect.any(Array),
     });
     expect(entry.information).toBeGreaterThanOrEqual(0);
-    expect(entry.profileCompatibility.generic).toBe('pass');
   });
 
   it('includes a machine-readable diagnostics summary in the index (Task 87)', () => {

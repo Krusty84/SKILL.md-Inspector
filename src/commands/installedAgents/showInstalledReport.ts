@@ -29,7 +29,7 @@ export function commonAncestorDir(paths: string[]): string {
 }
 
 /**
- * Command: open an aggregate report (collisions, portability, resources) for the
+ * Command: open an aggregate report (collisions, resources) for the
  * SKILL.md files under a right-clicked INSTALLED AGENTS folder row.
  */
 export async function showInstalledReport(

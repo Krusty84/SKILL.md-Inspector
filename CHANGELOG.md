@@ -22,6 +22,19 @@
 
 ### Removed
 
+- The vendor-specific validation profiles (`vscode`, `claude`, `codex`) and the
+  `skillMdInspector.profile` setting: the generic profile is now the only
+  validation policy, still adjustable through the existing override settings
+  (`name.maxLength`, `description.minLength`/`maxLength`/`language`,
+  `body.strictness`, `severityOverrides`, `severity.allowSpecificationOverrides`).
+  A leftover `skillMdInspector.profile` entry in user settings is ignored, and
+  generic validation behavior is unchanged.
+- The profile-metadata rules and their diagnostics (`skill.metadata.reservedWord`,
+  `skill.metadata.xmlTag`, `skill.metadata.fieldType`,
+  `skill.metadata.unknownKey`), which only the vendor profiles defined.
+- The cross-profile portability evaluation: the workspace report's
+  "Format / portability compatibility" matrix, the compatibility lines in the
+  Skills panel tooltip, and the `skill.portability.claude.descriptionLong` note.
 - The unused static HTML renderer for OpenCode session reports
   (`renderOpenCodeSessionReportHtml`) and its orphaned support code: the
   `buildSessionViewModel` mapper, the compact session view-model types, and the
@@ -30,6 +43,11 @@
   of audit finding N7. Trajectory behaviors the deleted render tests exercised
   (agent/subtask labels, retry error previews, tool attachments) are now asserted
   directly on the normalized session model.
+
+### Changed
+
+- `skills.index.json` now has `schemaVersion` 5: entries no longer contain the
+  `profileCompatibility` map.
 
 ### Fixed
 

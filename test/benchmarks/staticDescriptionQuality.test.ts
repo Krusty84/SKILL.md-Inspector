@@ -3,15 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { computeStaticDescriptionQuality } from '../../src/quality/staticDescriptionQuality';
 import { analyzeDescription } from '../../src/quality/descriptionHeuristics';
 import type { ScopeClauseAnalysis } from '../../src/quality/descriptionHeuristics';
-import { PROFILES } from '../../src/profiles';
-import type { SkillProfileId } from '../../src/types/SkillProfile';
+import { genericProfile } from '../../src/profiles';
 import type { StaticDescriptionQualityGradeLimitationCode } from '../../src/types/StaticDescriptionQuality';
 
 type ClauseExpectation = 'full' | 'partial' | 'none';
 
 interface Case {
   id: string;
-  profile?: SkillProfileId;
   language: string;
   description: string;
   expected: {
@@ -52,7 +50,7 @@ describe('static description quality benchmark', () => {
 
   for (const item of cases) {
     it(`${item.id}: ${item.notes}`, () => {
-      const profile = PROFILES[item.profile ?? 'generic'];
+      const profile = genericProfile;
       const result = computeStaticDescriptionQuality(item.description, {
         minLength: profile.description.minLength,
         maxLength: profile.description.maxLength,

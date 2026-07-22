@@ -869,18 +869,6 @@
             "default": true,
             "description": "Re-run validation whenever a SKILL.md file is saved.",
             "order": 2
-          },
-          "skillMdInspector.profile": {
-            "type": "string",
-            "default": "generic",
-            "enum": [
-              "generic",
-              "vscode",
-              "claude",
-              "codex"
-            ],
-            "description": "Validation profile applied to SKILL.md files.",
-            "order": 3
           }
         }
       },

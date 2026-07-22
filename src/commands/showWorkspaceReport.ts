@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { computeWorkspaceAnalysisOnline } from '../analysis/workspaceAnalysis';
 import { WorkspaceReportPanel } from '../ui/workspaceReportWebview';
 
-/** Command: open the workspace report (collisions, portability, resources). */
+/** Command: open the workspace report (collisions, resources). */
 export async function showWorkspaceReport(): Promise<void> {
   const result = await vscode.window.withProgress(
     {

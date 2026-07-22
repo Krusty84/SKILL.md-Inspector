@@ -612,7 +612,6 @@
   },
   {
     "id": "case-48",
-    "profile": "generic",
     "language": "en",
     "description": "Format technical engineering reports using company layout rules.",
     "expected": {
@@ -629,7 +628,6 @@
   },
   {
     "id": "case-49",
-    "profile": "vscode",
     "language": "en",
     "description": "Format inspection reports using company layout rules. Use when needed. Do not use for invoices.",
     "expected": {
@@ -642,11 +640,10 @@
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "VS Code profile: a trigger marker with only vague content has an explicit 74 ceiling."
+    "notes": "A trigger marker with only vague content has an explicit 74 ceiling."
   },
   {
     "id": "case-50",
-    "profile": "claude",
     "language": "en",
     "description": "Format tailored material for customer delivery. Use when customer delivery rules require it. Do not use for internal operations.",
     "expected": {
@@ -659,24 +656,7 @@
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Claude profile: missing a concrete artifact or domain prevents an acceptable-or-better grade."
-  },
-  {
-    "id": "case-51",
-    "profile": "codex",
-    "language": "en",
-    "description": "Generate SQL migration scripts for scheduled schema changes. Use when preparing a reviewed database release. Do not use for production hotfixes.",
-    "expected": {
-      "minScore": 100,
-      "maxScore": 100,
-      "minRawScore": 100,
-      "maxRawScore": 100,
-      "gradeLimitations": [],
-      "trigger": "full",
-      "boundary": "full",
-      "frontLoaded": true
-    },
-    "notes": "Codex profile: capability, concrete artifact, concrete trigger, and boundary remain eligible for excellent."
+    "notes": "Missing a concrete artifact or domain prevents an acceptable-or-better grade."
   },
   {
     "id": "case-52",

@@ -1,15 +1,15 @@
 # SKILL.md Inspector — Diagnostic Rules
 
 Every diagnostic the extension can emit is listed here with its **code**, **default
-severity**, the **profiles** it applies to, its **rationale**, a **bad** and **good**
-example, and whether an **auto-fix** (quick fix) exists.
+severity**, its **rationale**, a **bad** and **good** example, and whether an
+**auto-fix** (quick fix) exists.
 
 Rules are grouped by **kind** so you can tell a hard requirement from a
 recommendation at a glance:
 
 - **Specification** — the file is invalid or a reference is broken. These are errors.
-- **Compatibility** — the file is valid, but a target agent/profile has stricter
-  metadata or portability rules.
+- **Compatibility** — the file is valid, but less portable across machines and
+  platforms (link casing, absolute paths, unavailable remote links).
 - **Security** — the file points at something risky to follow or download.
 - **Quality** — recommendations that make a skill easier for an agent to discover and
   trigger. Never fatal.
@@ -17,7 +17,6 @@ recommendation at a glance:
   skill; shown so a crashed check never silently reduces coverage.
 
 Severities: **error** (blocks a passing status), **warning**, **information**.
-Profiles are `generic`, `vscode`, `claude`, `codex`; "all" means every profile.
 
 ---
 
@@ -25,7 +24,7 @@ Profiles are `generic`, `vscode`, `claude`, `codex`; "all" means every profile.
 
 ### `skill.frontmatter.missing`
 
-**error** · all profiles · auto-fix: yes (insert a frontmatter block)
+**error** · auto-fix: yes (insert a frontmatter block)
 
 A `SKILL.md` must start with a YAML frontmatter block delimited by `---`.
 
@@ -34,7 +33,7 @@ A `SKILL.md` must start with a YAML frontmatter block delimited by `---`.
 
 ### `skill.frontmatter.invalid`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
 The frontmatter block is present but is not valid YAML.
 
@@ -43,7 +42,7 @@ The frontmatter block is present but is not valid YAML.
 
 ### `skill.frontmatter.notAtTop`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
 The frontmatter must be the very first thing in the file (no prose or blank lines above it).
 
@@ -52,7 +51,7 @@ The frontmatter must be the very first thing in the file (no prose or blank line
 
 ### `skill.frontmatter.duplicateKey`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
 A top-level key appears more than once; YAML keeps only the last value, which is ambiguous.
 
@@ -61,7 +60,7 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 ### `skill.name.missing`
 
-**error** · all profiles · auto-fix: yes (insert `name`)
+**error** · auto-fix: yes (insert `name`)
 
 `name` is required — it identifies the skill.
 
@@ -70,7 +69,7 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 ### `skill.name.type`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
 `name` must be a string.
 
@@ -79,16 +78,16 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 ### `skill.name.tooLong`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
-`name` exceeds the profile's maximum length (default 64).
+`name` exceeds the configured maximum length (default 64).
 
 - Bad: a 90-character name.
 - Good: a concise `name` under the limit.
 
 ### `skill.name.format`
 
-**error** · all profiles · auto-fix: yes (convert to kebab-case)
+**error** · auto-fix: yes (convert to kebab-case)
 
 `name` must be lowercase letters, digits, and single hyphens, with no leading/trailing hyphen.
 
@@ -97,7 +96,7 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 ### `skill.description.missing`
 
-**error** · all profiles · auto-fix: yes (insert `description`)
+**error** · auto-fix: yes (insert `description`)
 
 `description` is required — it is what an agent matches against.
 
@@ -106,7 +105,7 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 ### `skill.description.type`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
 `description` must be a string. (No quality diagnostics are emitted for a wrongly-typed field.)
 
@@ -115,24 +114,24 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 ### `skill.description.tooLong`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
-`description` exceeds the active profile maximum (1024 characters by default).
+`description` exceeds the configured maximum (1024 characters by default).
 
 - Bad: a 2000-character description.
 - Good: a focused description under the limit.
 
 ### `skill.description.tooVerbose`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 `description` exceeds the recommended 500-character length but remains within
-the active profile maximum. Keep capability and trigger scope in
+the configured maximum. Keep capability and trigger scope in
 frontmatter and move detailed procedure to the Markdown body.
 
 ### `skill.description.overbroadTrigger`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 The description uses a conservative overbroad phrase in skill-selection
 context. Operational rules such as “Always verify the output” are not treated
@@ -140,7 +139,7 @@ as overbroad triggers. This finding limits Static Description Quality to 69.
 
 ### `skill.description.instructionHeavy`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 The description embeds a detailed workflow instead of summarizing capability
 and trigger scope. Detailed procedure belongs in the Markdown body. This
@@ -148,7 +147,7 @@ finding limits Static Description Quality to 74.
 
 ### `skill.link.missing`
 
-**error** · all profiles · auto-fix: yes (create the missing file)
+**error** · auto-fix: yes (create the missing file)
 
 A relative Markdown link points at a file that does not exist in the package.
 
@@ -157,11 +156,11 @@ A relative Markdown link points at a file that does not exist in the package.
 
 ---
 
-## Compatibility (portability across agent profiles)
+## Compatibility (portability)
 
 ### `skill.link.caseMismatch`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 A relative link matches a bundled file except for letter case. It resolves on
 case-insensitive filesystems (macOS, Windows) but breaks on case-sensitive ones
@@ -172,7 +171,7 @@ case-insensitive filesystems (macOS, Windows) but breaks on case-sensitive ones
 
 ### `skill.link.absolute`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 An absolute local path is not portable to another machine.
 
@@ -181,7 +180,7 @@ An absolute local path is not portable to another machine.
 
 ### `skill.link.remoteUnavailable`
 
-**warning** · all profiles · auto-fix: no · online check only
+**warning** · auto-fix: no · online check only
 
 An enabled online check reached a terminal HTTP response that indicates the link is
 unavailable. Terminal `4xx` responses other than `403`, and all terminal `5xx`
@@ -193,47 +192,11 @@ responses, produce this diagnostic. The message includes the terminal status.
 
 ### `skill.link.remoteCheckFailed`
 
-**information** · all profiles · auto-fix: no · online check only
+**information** · auto-fix: no · online check only
 
 The checker could not determine availability because of a timeout, DNS, connection,
 or TLS failure; an invalid redirect; a redirect loop; or more than five redirects.
 This diagnostic does not claim that the link is broken.
-
-### `skill.metadata.reservedWord`
-
-**warning** · claude · auto-fix: no
-
-`name`/`description` uses a word reserved by the target platform's metadata rules.
-
-- Bad: `description: Uses Anthropic models to …` (under the `claude` profile).
-- Good: describe the capability without the reserved word.
-
-### `skill.metadata.xmlTag`
-
-**warning** · claude · auto-fix: no
-
-`name`/`description` contains an XML-like tag, which some platforms reject in metadata.
-
-- Bad: `description: Wrap output in <tag> markers.`
-- Good: `description: Wrap output in "tag" markers.`
-
-### `skill.metadata.fieldType`
-
-**warning** · vscode, codex · auto-fix: no
-
-A profile-specific frontmatter field has the wrong type.
-
-- Bad: `user-invocable: "yes"` (expects a boolean, under the `vscode` profile).
-- Good: `user-invocable: true`
-
-### `skill.metadata.unknownKey`
-
-**warning** (or **error** where the profile's policy is stricter) · claude, codex · auto-fix: no
-
-A top-level frontmatter key is not recognized by the target profile.
-
-- Bad: `made-up-key: 1` under a profile whose unknown-key policy is not `allow`.
-- Good: remove the key or use a recognized one.
 
 ---
 
@@ -241,7 +204,7 @@ A top-level frontmatter key is not recognized by the target profile.
 
 ### `skill.link.escapesRoot`
 
-**error** (lexical escape) / **warning** (symlink escape) · all profiles · auto-fix: no (no create-file fix is offered)
+**error** (lexical escape) / **warning** (symlink escape) · auto-fix: no (no create-file fix is offered)
 
 A link resolves outside the skill package — a directory-traversal risk.
 
@@ -250,7 +213,7 @@ A link resolves outside the skill package — a directory-traversal risk.
 
 ### `skill.link.remoteSuspicious`
 
-**warning** (suspicious) / **information** (ordinary remote) · all profiles · auto-fix: no
+**warning** (suspicious) / **information** (ordinary remote) · auto-fix: no
 
 A remote link an agent might follow; insecure transport, credentials, raw IPs, shorteners, or
 executable/archive extensions are flagged as suspicious.
@@ -263,7 +226,7 @@ online checking is disabled.
 
 ### `skill.link.remoteCheckBlocked`
 
-**warning** · all profiles · auto-fix: no · online check only
+**warning** · auto-fix: no · online check only
 
 The URL was not requested because it failed SSRF safety validation. Examples include
 embedded credentials, malformed or local-only hosts, direct non-public addresses,
@@ -277,7 +240,7 @@ connection is attempted.
 
 ### `skill.name.folderMismatch`
 
-**warning** · all profiles · auto-fix: yes (rename the parent folder)
+**warning** · auto-fix: yes (rename the parent folder)
 
 A skill folder's name should match its `name` so it is easy to locate.
 
@@ -286,7 +249,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.tooShort`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 `description` is shorter than the recommended minimum (default 40), so an agent has little to match.
 
@@ -295,7 +258,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.vague`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 `description` uses vague wording ("powerful", "smart", "helps with …") instead of concrete detail.
 
@@ -304,7 +267,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.noVerb`
 
-**error** · all profiles · auto-fix: no
+**error** · auto-fix: no
 
 `description` has no clear action verb stating the capability.
 
@@ -313,7 +276,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.noTrigger`
 
-**warning** · all profiles · auto-fix: yes (insert a "Use when…" clause)
+**warning** · auto-fix: yes (insert a "Use when…" clause)
 
 `description` does not say _when_ to use the skill.
 
@@ -322,7 +285,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.noBoundary`
 
-**information** · all profiles · auto-fix: yes (insert a "Do not use when…" clause)
+**information** · auto-fix: yes (insert a "Do not use when…" clause)
 
 `description` does not say when _not_ to use the skill; a boundary sharpens triggering.
 
@@ -331,7 +294,7 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.notFrontLoaded`
 
-**information** · all profiles · auto-fix: no
+**information** · auto-fix: no
 
 The main capability is not stated in the first words, where it matches most reliably.
 
@@ -340,7 +303,7 @@ The main capability is not stated in the first words, where it matches most reli
 
 ### `skill.resource.unreferenced`
 
-**warning** · all profiles · auto-fix: yes (add a Markdown link)
+**warning** · auto-fix: yes (add a Markdown link)
 
 A file under `references/`, `scripts/`, `assets/`, or `templates/` is never referenced from `SKILL.md`.
 
@@ -361,7 +324,7 @@ change instruction or resource authoring-quality scores.
 
 ### `skill.token.body.limit`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 The Markdown body after YAML frontmatter exceeds 5,000 `o200k_base` tokens. YAML
 frontmatter is not counted. Large instruction bodies consume excessive agent context;
@@ -372,7 +335,7 @@ move detailed supporting material into focused reference files.
 
 ### `skill.token.body.lines`
 
-**warning** · all profiles · auto-fix: no
+**warning** · auto-fix: no
 
 The Markdown body after YAML frontmatter exceeds 500 lines. This diagnostic uses the
 same body line count as the existing instruction-authoring length finding.
@@ -382,7 +345,7 @@ same body line count as the existing instruction-authoring length finding.
 
 ### `skill.token.referenceFile.limit`
 
-**warning** above 10,000 / **error** above 25,000 · all profiles · auto-fix: no
+**warning** above 10,000 / **error** above 25,000 · auto-fix: no
 
 One readable text file recursively under the exact top-level `references/` directory
 exceeds its per-file budget. Referenced and unreferenced files are both measured.
@@ -393,7 +356,7 @@ exceeds its per-file budget. Referenced and unreferenced files are both measured
 
 ### `skill.token.references.limit`
 
-**warning** above 25,000 / **error** above 50,000 · all profiles · auto-fix: no
+**warning** above 25,000 / **error** above 50,000 · auto-fix: no
 
 All counted reference files together exceed the aggregate reference budget. This
 guards against a package whose individual references are acceptable but whose total
@@ -405,7 +368,7 @@ context is excessive.
 
 ### `skill.token.otherFiles.limit`
 
-**warning** above 25,000 / **error** above 100,000 · all profiles · auto-fix: no
+**warning** above 25,000 / **error** above 100,000 · auto-fix: no
 
 Readable non-standard text files outside `SKILL.md`, `references/`, `scripts/`, and
 `assets/` exceed their aggregate budget. For this rule, `templates/` and unknown
@@ -419,7 +382,7 @@ limits.
 
 ### `skill.body.missing`
 
-**warning** · all profiles · auto-fix: yes (insert a body template)
+**warning** · auto-fix: yes (insert a body template)
 
 There is no Markdown body after the frontmatter to document the workflow.
 
@@ -428,7 +391,7 @@ There is no Markdown body after the frontmatter to document the workflow.
 
 ### `skill.body.noExamples`
 
-**information** (or **warning** under strict body checks) · all profiles · auto-fix: no
+**information** (or **warning** under strict body checks) · auto-fix: no
 
 No "Examples" section. Governed by `skillMdInspector.body.strictness`.
 
@@ -437,7 +400,7 @@ No "Examples" section. Governed by `skillMdInspector.body.strictness`.
 
 ### `skill.body.noWhenToUse`
 
-**information** (or **warning** under strict body checks) · all profiles · auto-fix: no
+**information** (or **warning** under strict body checks) · auto-fix: no
 
 No "When to use" section.
 
@@ -446,7 +409,7 @@ No "When to use" section.
 
 ### `skill.body.suggestBoundary`
 
-**information** (or **warning** under strict body checks) · profiles that recommend it · auto-fix: no
+**information** (or **warning** under strict body checks) · not emitted by the generic policy, whose recommended sections are examples and when-to-use · auto-fix: no
 
 No boundary section, and no "Do not use when…" prose either.
 
@@ -455,9 +418,9 @@ No boundary section, and no "Do not use when…" prose either.
 
 ### `skill.body.suggestIO`
 
-**information** (or **warning** under strict body checks) · profiles that recommend it · auto-fix: no
+**information** (or **warning** under strict body checks) · not emitted by the generic policy, whose recommended sections are examples and when-to-use · auto-fix: no
 
-No inputs/outputs section for skills whose profile recommends documenting I/O.
+No inputs/outputs section when the recommended sections include documenting I/O.
 
 - Bad: a body that never describes inputs or outputs.
 - Good: an `## Inputs and outputs` section.
@@ -468,7 +431,7 @@ No inputs/outputs section for skills whose profile recommends documenting I/O.
 
 ### `skill.internal.ruleError`
 
-**information** · all profiles · auto-fix: no
+**information** · auto-fix: no
 
 A validation rule threw an exception and did not finish. The other rules still ran
 and their results are unaffected; only that one rule's checks are skipped for this
@@ -477,19 +440,3 @@ not a problem with your skill — please report the message if it persists.
 
 - Cause: an unexpected error inside a single validation rule.
 - Effect: that rule's diagnostics are missing for this file; every other check is normal.
-
----
-
-## Portability notes (not editor diagnostics)
-
-These surface in the **workspace portability report**, not the editor's Problems panel.
-
-### `skill.portability.claude.descriptionLong`
-
-**warning** · claude · auto-fix: no
-
-The `description` is longer than Claude's recommended soft maximum (500 characters), so it may be
-truncated when matched.
-
-- Bad: a 700-character description.
-- Good: tighten it under ~500 characters.

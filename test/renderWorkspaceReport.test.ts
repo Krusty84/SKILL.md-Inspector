@@ -54,13 +54,6 @@ function analysis(): WorkspaceAnalysis {
         information: 0,
         diagnostics: [],
         profile: 'generic',
-        profileCompatibility: { generic: 'pass', vscode: 'pass', claude: 'warning', codex: 'pass' },
-        portability: [
-          { profile: 'generic', status: 'pass', notes: [], diagnostics: [] },
-          { profile: 'vscode', status: 'pass', notes: [], diagnostics: [] },
-          { profile: 'claude', status: 'warning', notes: ['too long'], diagnostics: [] },
-          { profile: 'codex', status: 'pass', notes: [], diagnostics: [] },
-        ],
         resourceGraph: {
           nodes: [{ path: 'references/unused.md', kind: 'unreferenced', flags: [] }],
         },
@@ -107,7 +100,7 @@ function analysis(): WorkspaceAnalysis {
 }
 
 describe('renderWorkspaceReportHtml', () => {
-  it('renders the collision matrix, portability, and external-file issue count with a CSP', () => {
+  it('renders the collision matrix and external-file issue count with a CSP', () => {
     const html = renderWorkspaceReportHtml(analysis(), {
       nonce: 'n',
       cspSource: 'vscode-webview://x',
@@ -137,8 +130,6 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('Instruction authoring quality');
     expect(html).toContain('0/100 · poor');
     expect(html).toContain('Information');
-    expect(html).toContain('Format / portability compatibility');
-    expect(html).toContain('does not include general description or instruction-body quality');
     expect(html).toContain("<title>Workspace SKILL.md's Report</title>");
     expect(html).toContain('<strong>Folder:</strong> <code>/ws</code>');
   });
@@ -211,7 +202,7 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('&lt;img src=x');
   });
 
-  it('renders the minimal frontmatter-only regression without conflating compatibility and quality', () => {
+  it('renders the minimal frontmatter-only regression without conflating validation and quality', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'workspace-report-minimal-'));
     const skillPath = path.join(root, 'minimal-skill', 'SKILL.md');
     try {
@@ -236,7 +227,6 @@ describe('renderWorkspaceReportHtml', () => {
       expect(minimal.validationStatus).toBe('warning');
       expect(minimal.staticDescriptionQuality.label).toBe('acceptable');
       expect(minimal.authoringQuality.instructions).toMatchObject({ score: 0, label: 'poor' });
-      expect(minimal.profileCompatibility.generic).toBe('pass');
       expect(html).toContain('<td class="warn">warning</td>');
       expect(minimal.staticDescriptionQuality).toMatchObject({
         adjustedScore: 69,
@@ -250,8 +240,6 @@ describe('renderWorkspaceReportHtml', () => {
         'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
       );
       expect(html).toContain('0/100 · poor');
-      expect(html).toContain('Format / portability compatibility');
-      expect(html).toContain('<td class="ok">✓</td>');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

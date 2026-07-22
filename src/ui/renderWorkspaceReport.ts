@@ -5,9 +5,7 @@ import type {
   CollisionMetrics,
   NameConflict,
   SimilarNames,
-  PortabilityStatus,
 } from '../types/Workspace';
-import type { SkillProfileId } from '../types/SkillProfile';
 
 export interface RenderOptions {
   nonce: string;
@@ -19,9 +17,7 @@ export type WorkspaceReportScope =
   | { kind: 'workspace'; folderPath: string }
   | { kind: 'installed-agent'; agentLabel: string; folderPath: string };
 
-const PROFILES: SkillProfileId[] = ['generic', 'vscode', 'claude', 'codex'];
-
-/** Renders the workspace report (skills overview, collision matrix, and portability)
+/** Renders the workspace report (skills overview and collision matrix)
  * as a self-contained, theme-aware HTML document. */
 export function renderWorkspaceReportHtml(
   analysis: WorkspaceAnalysis,
@@ -67,12 +63,11 @@ export function renderWorkspaceReportHtml(
   ${renderScope(opts.scope)}
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
   <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
-  <p class="note">Format / portability compatibility checks profile-specific format constraints only; it does not include general description or instruction-body quality.</p>
 
   <h2>Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th rowspan="2">Name</th><th rowspan="2">Validation status</th><th rowspan="2">Adjusted description quality</th><th rowspan="2">Heuristic coverage</th><th rowspan="2">Instruction authoring quality</th><th rowspan="2">Errors</th><th rowspan="2">Warnings</th><th rowspan="2">Information</th><th rowspan="2">External file issues</th><th colspan="${PROFILES.length}">Format / portability compatibility</th></tr><tr>${PROFILES.map((p) => `<th>${p}</th>`).join('')}</tr></thead>
+      <thead><tr><th>Name</th><th>Validation status</th><th>Adjusted description quality</th><th>Heuristic coverage</th><th>Instruction authoring quality</th><th>Errors</th><th>Warnings</th><th>Information</th><th>External file issues</th></tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -101,14 +96,13 @@ function renderScope(scope: WorkspaceReportScope): string {
 }
 
 function renderSkillRow(skill: WorkspaceSkill): string {
-  const cells = PROFILES.map((profile) => statusCell(skill.profileCompatibility[profile])).join('');
   const quality = skill.staticDescriptionQuality;
   const instructions = skill.authoringQuality.instructions;
   const instructionQuality =
     instructions.state === 'scored'
       ? `${instructions.score}/100 · ${instructions.label}`
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${resourceIssueCell(skill)}${cells}</tr>`;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${resourceIssueCell(skill)}</tr>`;
 }
 
 function resourceIssueCell(skill: WorkspaceSkill): string {
@@ -201,13 +195,6 @@ function renderSimilarNames(similar: SimilarNames[]): string {
     )
     .join('');
   return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-function statusCell(status: PortabilityStatus | undefined): string {
-  if (status === 'pass') return '<td class="ok">✓</td>';
-  if (status === 'warning') return '<td class="warn">⚠</td>';
-  if (status === 'fail') return '<td class="fail">✗</td>';
-  return '<td>—</td>';
 }
 
 function escapeHtml(value: string): string {

@@ -61,7 +61,6 @@ export function analysisContextFromConfig(
 
 export function readConfig(scope?: vscode.Uri): InspectorConfig {
   const cfg = vscode.workspace.getConfiguration('skillMdInspector', scope);
-  const profileId = cfg.get<string>('profile', 'generic');
   const dictionaryResolution = resolveHeuristicDictionariesWithWarnings(
     readVisibleDictionaryValues(cfg),
   );
@@ -72,7 +71,7 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
     onlineCheckMaxConcurrency: clampOnlineCheckConcurrency(
       cfg.get<number>('links.onlineCheck.maxConcurrency', 4),
     ),
-    profile: resolveProfile(profileId, {
+    profile: resolveProfile({
       nameMaxLength: cfg.get<number>('name.maxLength'),
       descriptionMinLength: cfg.get<number>('description.minLength'),
       descriptionMaxLength: cfg.get<number>('description.maxLength'),

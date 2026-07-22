@@ -10,7 +10,6 @@ import { validateDescription } from './validateDescription';
 import { validateLinks } from './validateLinks';
 import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
-import { validateProfileMetadata } from './validateProfileMetadata';
 import { validateTokenBudgets } from './validateTokenBudgets';
 import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
 
@@ -23,10 +22,10 @@ export interface RunValidationsOptions {
 }
 
 /**
- * Runs every registered rule that applies to the profile, applies the profile's
- * severity overrides (Task 85), and returns the diagnostics in a deterministic
- * order (Task 82). With `skipFilesystem`, filesystem-dependent checks are omitted
- * so the pipeline is safe to run on every keystroke.
+ * Runs every registered rule, applies the profile's severity overrides
+ * (Task 85), and returns the diagnostics in a deterministic order (Task 82).
+ * With `skipFilesystem`, filesystem-dependent checks are omitted so the
+ * pipeline is safe to run on every keystroke.
  */
 export function runAllValidations(
   doc: SkillDocument,
@@ -101,7 +100,6 @@ export {
   validateLinks,
   validateResources,
   validateBody,
-  validateProfileMetadata,
   validateTokenBudgets,
 };
 export { toKebabCase, NAME_PATTERN } from './validateName';
