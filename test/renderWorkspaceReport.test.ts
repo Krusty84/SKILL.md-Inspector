@@ -134,6 +134,25 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('<strong>Folder:</strong> <code>/ws</code>');
   });
 
+  it('renders the generated-at timestamp when provided', () => {
+    const html = renderWorkspaceReportHtml(analysis(), {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+      generatedAt: 'STAMP-123',
+    });
+    expect(html).toContain('Generated: STAMP-123');
+  });
+
+  it('omits the generated-at line when no timestamp is provided', () => {
+    const html = renderWorkspaceReportHtml(analysis(), {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
+    expect(html).not.toContain('Generated:');
+  });
+
   it('shows OK when a skill has no external-file issues', () => {
     const model = analysis();
     model.skills[0].resourceGraph.nodes = [
