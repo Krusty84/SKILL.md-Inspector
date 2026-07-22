@@ -3,6 +3,7 @@ import type {
   StaticDescriptionQualityFinding,
   StaticDescriptionQualityLabel,
 } from '../types/StaticDescriptionQuality';
+import { renderToc, slugify, TOC_STYLES, type TocEntry } from './reportToc';
 
 export interface RenderOptions {
   nonce: string;
@@ -10,6 +11,23 @@ export interface RenderOptions {
   /** Local date & time string for when the report was generated. */
   generatedAt?: string;
 }
+
+const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
+  { id: 'validation-findings', label: 'Validation findings' },
+  { id: 'trigger-quality-breakdown', label: 'Trigger quality breakdown' },
+  { id: 'instruction-authoring-quality', label: 'Instruction authoring quality' },
+  { id: 'resource-authoring-quality', label: 'Resource authoring quality' },
+  { id: 'referenced-files', label: 'Referenced files' },
+  { id: 'unreferenced-files', label: 'Unreferenced files' },
+  {
+    id: 'token-usage',
+    label: 'Token usage',
+    children: [
+      { id: 'reference-files', label: 'Reference files' },
+      { id: 'non-standard-files', label: 'Non-standard files' },
+    ],
+  },
+];
 
 /** Renders the skill report as a self-contained, theme-aware HTML document. */
 export function renderReportHtml(report: SkillReport, opts: RenderOptions): string {
@@ -83,11 +101,14 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   .conf-low { color: var(--vscode-errorForeground, #f14c4c); }
   table { width: 100%; border-collapse: collapse; }
   th, td { border-bottom: 1px solid var(--vscode-panel-border); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
-  th { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }
+  th { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }${TOC_STYLES}
 </style>
 <title>Skill Report</title>
 </head>
 <body>
+  <div class="report-layout">
+  ${renderToc(SKILL_REPORT_SECTIONS)}
+  <main class="report-content">
   <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> ${descriptionBadge}</h1>
   ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
   <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
@@ -110,31 +131,33 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
       : ''
   }
 
-  <h2>Validation findings</h2>
+  <h2 id="validation-findings">Validation findings</h2>
   ${renderDiagnostics(report.diagnostics)}
 
-  <h2>Trigger quality breakdown</h2>
+  <h2 id="trigger-quality-breakdown">Trigger quality breakdown</h2>
   ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">Description quality was not scored — ${escapeHtml(q.notScoredReason)}.</p>`}
 
-  <h2>Instruction authoring quality</h2>
+  <h2 id="instruction-authoring-quality">Instruction authoring quality</h2>
   ${renderAuthoring(report.authoringQuality.instructions)}
-  <h2>Resource authoring quality</h2>
+  <h2 id="resource-authoring-quality">Resource authoring quality</h2>
   ${renderAuthoring(report.authoringQuality.resources)}
   <p class="note">Authoring quality is a separate structural hygiene measure and is not combined with description discoverability.</p>
 
-  <h2>Referenced files</h2>
+  <h2 id="referenced-files">Referenced files</h2>
   ${renderFileList(report.referencedFiles, 'No referenced resource files.')}
 
-  <h2>Unreferenced files</h2>
+  <h2 id="unreferenced-files">Unreferenced files</h2>
   ${renderFileList(report.unreferencedFiles, 'No unreferenced resource files.')}
 
-  <h2>Token usage (${escapeHtml(report.tokenUsage.encoding)})</h2>
+  <h2 id="token-usage">Token usage (${escapeHtml(report.tokenUsage.encoding)})</h2>
   <table><tbody>
     <tr><th>Content</th><th>Tokens</th><th>Lines</th></tr>
     <tr><td><code>SKILL.md</code> body</td><td>${formatNumber(report.tokenUsage.body.tokens)}</td><td>${formatNumber(report.tokenUsage.body.lines)}</td></tr>
   </tbody></table>
   ${renderTokenGroup('Reference files', report.tokenUsage.references)}
   ${renderTokenGroup('Non-standard files', report.tokenUsage.otherFiles)}
+  </main>
+  </div>
 </body>
 </html>`;
 }
@@ -219,7 +242,7 @@ function renderTokenGroup(label: string, group: SkillReport['tokenUsage']['refer
     rows.length > 0
       ? `<table><thead><tr><th>Path</th><th>Tokens</th></tr></thead><tbody>${rows}</tbody></table>`
       : '<p class="empty">No counted files.</p>';
-  return `<h3>${escapeHtml(label)} (${formatNumber(group.files.length)})</h3>${fileRows}<p><strong>Aggregate total: ${formatNumber(group.totalTokens)} tokens</strong></p>`;
+  return `<h3 id="${slugify(label)}">${escapeHtml(label)} (${formatNumber(group.files.length)})</h3>${fileRows}<p><strong>Aggregate total: ${formatNumber(group.totalTokens)} tokens</strong></p>`;
 }
 
 function formatNumber(value: number): string {

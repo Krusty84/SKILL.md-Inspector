@@ -6,6 +6,7 @@ import type {
   NameConflict,
   SimilarNames,
 } from '../types/Workspace';
+import { renderToc, TOC_STYLES, type TocEntry } from './reportToc';
 
 export interface RenderOptions {
   nonce: string;
@@ -18,6 +19,13 @@ export interface RenderOptions {
 export type WorkspaceReportScope =
   | { kind: 'workspace'; folderPath: string }
   | { kind: 'installed-agent'; agentLabel: string; folderPath: string };
+
+const WORKSPACE_REPORT_SECTIONS: readonly TocEntry[] = [
+  { id: 'skills', label: 'Skills' },
+  { id: 'duplicate-names', label: 'Duplicate names' },
+  { id: 'similar-names', label: 'Similar names' },
+  { id: 'collision-matrix', label: 'Collision matrix' },
+];
 
 /** Renders the workspace report (skills overview and collision matrix)
  * as a self-contained, theme-aware HTML document. */
@@ -56,18 +64,21 @@ export function renderWorkspaceReportHtml(
   .quality-adjustment { white-space: nowrap; }
   .grade-limitations { margin-top: 0.2rem; font-size: 0.82rem; }
   .grade-limitations summary { cursor: pointer; }
-  .grade-limitations ul { margin-top: 0.15rem; }
+  .grade-limitations ul { margin-top: 0.15rem; }${TOC_STYLES}
 </style>
 <title>${title}</title>
 </head>
 <body>
+  <div class="report-layout">
+  ${renderToc(WORKSPACE_REPORT_SECTIONS)}
+  <main class="report-content">
   <h1>${title}</h1>
   ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
   ${renderScope(opts.scope)}
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
   <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
 
-  <h2>Skills</h2>
+  <h2 id="skills">Skills</h2>
   <div class="scroll">
     <table>
       <thead><tr><th>Name</th><th>Validation status</th><th>Adjusted description quality</th><th>Heuristic coverage</th><th>Instruction authoring quality</th><th>Errors</th><th>Warnings</th><th>Information</th><th>External file issues</th></tr></thead>
@@ -75,15 +86,16 @@ export function renderWorkspaceReportHtml(
     </table>
   </div>
 
-  <h2>Duplicate names</h2>
+  <h2 id="duplicate-names">Duplicate names</h2>
   ${renderNameConflicts(analysis.nameConflicts)}
 
-  <h2>Similar names</h2>
+  <h2 id="similar-names">Similar names</h2>
   ${renderSimilarNames(analysis.similarNames)}
 
-  <h2>Collision matrix</h2>
+  <h2 id="collision-matrix">Collision matrix</h2>
   ${renderCollisions(analysis.collisions)}
-
+  </main>
+  </div>
 </body>
 </html>`;
 }

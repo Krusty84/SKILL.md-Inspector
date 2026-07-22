@@ -119,6 +119,11 @@ describe('renderReportHtml', () => {
     expect(html).toContain('Reference files (0)');
     expect(html).toContain('Non-standard files (0)');
     expect(html).toContain('Aggregate total: 0 tokens');
+    // Left-hand section navigation with anchor links to each section.
+    expect(html).toContain('class="report-toc"');
+    expect(html).toContain('href="#validation-findings"');
+    expect(html).toContain('href="#token-usage"');
+    expect(html).toContain('href="#reference-files"');
   });
 
   it('renders the generated-at timestamp when provided', () => {
@@ -199,12 +204,12 @@ describe('renderReportHtml', () => {
     expect(html).toContain('Instruction authoring quality');
     expect(html).toContain('0/100 · Poor');
     expect(html.indexOf('Instruction authoring quality')).toBeLessThan(
-      html.indexOf('<h2>Validation findings</h2>'),
+      html.indexOf('<h2 id="validation-findings">Validation findings</h2>'),
     );
     expect(html).toContain(
       'Suggestion: Write the instructions the agent should follow after the skill triggers.',
     );
-    expect(html).toContain('<h2>Validation findings</h2>');
+    expect(html).toContain('<h2 id="validation-findings">Validation findings</h2>');
     expect(html).toContain('Diagnostic code');
     expect(html.indexOf(DiagnosticCode.DescriptionNoTrigger)).toBeLessThan(
       html.indexOf(DiagnosticCode.DescriptionNoBoundary),

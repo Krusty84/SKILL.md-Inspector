@@ -132,6 +132,11 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('Information');
     expect(html).toContain("<title>Workspace SKILL.md's Report</title>");
     expect(html).toContain('<strong>Folder:</strong> <code>/ws</code>');
+    // Left-hand section navigation with anchor links to each section.
+    expect(html).toContain('class="report-toc"');
+    expect(html).toContain('href="#skills"');
+    expect(html).toContain('href="#collision-matrix"');
+    expect(html).toContain('<h2 id="collision-matrix">Collision matrix</h2>');
   });
 
   it('renders the generated-at timestamp when provided', () => {
