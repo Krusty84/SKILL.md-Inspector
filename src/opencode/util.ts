@@ -36,14 +36,6 @@ export function preview(value: unknown, max = 20000): string | undefined {
     ? `${text.slice(0, max)}\n… truncated ${text.length - max} characters`
     : text;
 }
-export function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 export function normalizeName(value: string): string {
   return value.trim().toLowerCase();
 }

@@ -3,12 +3,7 @@ import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
 import { readConfig } from '../config';
 import { discoverSkillPaths } from '../workspace/discoverSkills';
-import type {
-  NormalizedOpenCodeSession,
-  SessionViewModel,
-  SkillCandidate,
-  SkillMatch,
-} from './model';
+import type { NormalizedOpenCodeSession, SkillCandidate, SkillMatch } from './model';
 import { normalizeName } from './util';
 
 export async function attachSkillMatches(session: NormalizedOpenCodeSession): Promise<void> {
@@ -62,48 +57,4 @@ export async function attachSkillMatches(session: NormalizedOpenCodeSession): Pr
             };
     skill.matchingSkills = [match];
   }
-}
-
-export function buildSessionViewModel(session: NormalizedOpenCodeSession): SessionViewModel {
-  return {
-    session: {
-      title: session.title,
-      id: session.id,
-      parentId: session.parentId,
-      version: session.version,
-      model: session.model,
-      provider: session.provider,
-      agent: session.agent,
-      created: session.created,
-      updated: session.updated,
-      durationMs: session.metrics.sessionDurationMs,
-      details: session.details,
-      sanitization: session.sanitization,
-    },
-    metrics: session.metrics,
-    diagnostics: session.diagnostics,
-    nodes: session.nodes.map((n) => ({
-      id: n.id,
-      kind: n.kind,
-      parentId: n.parentId,
-      sourceOrder: n.sourceOrder,
-      label: n.label,
-      description: n.description,
-      start: n.start,
-      end: n.end,
-      durationMs: n.durationMs,
-      status: n.status,
-      toolName: n.toolName,
-      skillName: n.skillName,
-      callId: n.callId,
-      children: n.children,
-      preview: n.preview,
-      synthetic: n.synthetic,
-      incomplete: n.incomplete,
-      originalType: n.originalType,
-      details: n.details,
-    })),
-    skills: session.skills,
-    large: session.nodes.length > 500,
-  };
 }

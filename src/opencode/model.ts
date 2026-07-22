@@ -168,50 +168,6 @@ export interface SkillCandidate {
   staticDescriptionQuality?: number;
   profile?: string;
 }
-export interface SessionViewModel {
-  session: SessionHeaderViewModel;
-  metrics: OpenCodeMetrics;
-  diagnostics: OpenCodeParseDiagnostic[];
-  nodes: CompactNodeViewModel[];
-  skills: SkillLoadObservationViewModel[];
-  large: boolean;
-}
-export interface SessionHeaderViewModel {
-  title: string;
-  id?: string;
-  parentId?: string;
-  version?: string;
-  model?: string;
-  provider?: string;
-  agent?: string;
-  created?: number;
-  updated?: number;
-  durationMs?: number;
-  details: SessionDetails;
-  sanitization: SanitizationStatus;
-}
-export interface CompactNodeViewModel {
-  id: string;
-  kind: NodeKind;
-  parentId?: string;
-  sourceOrder: number;
-  label: string;
-  description?: string;
-  start?: number;
-  end?: number;
-  durationMs?: number;
-  status?: string;
-  toolName?: string;
-  skillName?: string;
-  callId?: string;
-  children: string[];
-  preview?: string;
-  synthetic?: boolean;
-  incomplete?: boolean;
-  originalType?: string;
-  details?: Record<string, unknown>;
-}
-export type SkillLoadObservationViewModel = SkillLoadObservation;
 export interface SessionSummary {
   uri: vscode.Uri;
   uriString: string;

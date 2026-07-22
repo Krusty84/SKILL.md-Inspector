@@ -20,6 +20,17 @@
   are now extracted and validated: missing definition targets are reported and
   existing ones count as referencing bundled resources.
 
+### Removed
+
+- The unused static HTML renderer for OpenCode session reports
+  (`renderOpenCodeSessionReportHtml`) and its orphaned support code: the
+  `buildSessionViewModel` mapper, the compact session view-model types, and the
+  `escapeHtml` helper in `src/opencode/util.ts`. The interactive timeline webview
+  is and remains the only shipped report path; this resolves the dead-code item
+  of audit finding N7. Trajectory behaviors the deleted render tests exercised
+  (agent/subtask labels, retry error previews, tool attachments) are now asserted
+  directly on the normalized session model.
+
 ### Fixed
 
 - **Independent navigator views**: acting in the WORKSPACE view no longer
