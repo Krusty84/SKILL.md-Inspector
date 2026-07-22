@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeStaticDescriptionQuality } from '../src/quality/staticDescriptionQuality';
 import { genericProfile } from '../src/profiles/genericProfile';
-import { codexProfile } from '../src/profiles/codexProfile';
 import type { SkillProfile } from '../src/types/SkillProfile';
 
 // Complete and front-loaded, but with NO "Do not use when..." boundary.
@@ -14,7 +13,7 @@ const opts = (p: SkillProfile) => ({
   weights: p.description.weights,
 });
 
-describe('profile-dependent static-description-quality weights', () => {
+describe('static-description-quality weights', () => {
   it('lets the generic profile reach excellent without a boundary', () => {
     const result = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
     expect(result.findings.find((f) => f.criterion === 'Boundary phrase')?.pointsEarned).toBe(0);
@@ -34,16 +33,6 @@ describe('profile-dependent static-description-quality weights', () => {
     expect(result.rawScore).toBe(75);
     expect(result.adjustedScore).toBeLessThanOrEqual(69);
     expect(result.label).toBe('acceptable');
-  });
-
-  it('weights the missing boundary more heavily under codex', () => {
-    const generic = computeStaticDescriptionQuality(NO_BOUNDARY, opts(genericProfile));
-    const codex = computeStaticDescriptionQuality(NO_BOUNDARY, opts(codexProfile));
-    if (generic.state !== 'scored' || codex.state !== 'scored') {
-      throw new Error('Expected valid descriptions to be scored');
-    }
-    expect(codex.score).toBeLessThan(generic.score);
-    expect(codex.label).not.toBe('excellent');
   });
 
   it('normalizes weights that do not sum to 100', () => {

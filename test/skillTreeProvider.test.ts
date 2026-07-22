@@ -86,18 +86,6 @@ function analysis(): WorkspaceAnalysis {
         information: 1,
         diagnostics: [],
         profile: 'generic',
-        profileCompatibility: {
-          generic: 'pass',
-          vscode: 'pass',
-          claude: 'pass',
-          codex: 'pass',
-        },
-        portability: [
-          { profile: 'generic', status: 'pass', notes: [], diagnostics: [] },
-          { profile: 'vscode', status: 'pass', notes: [], diagnostics: [] },
-          { profile: 'claude', status: 'pass', notes: [], diagnostics: [] },
-          { profile: 'codex', status: 'pass', notes: [], diagnostics: [] },
-        ],
         resourceGraph: { nodes: [] },
       },
     ],
@@ -116,7 +104,7 @@ async function loadedProvider(model = analysis()): Promise<SkillTreeProvider> {
 }
 
 describe('SkillTreeProvider workspace skill tooltip', () => {
-  it('separates validation and authoring quality from format compatibility', async () => {
+  it('renders validation and authoring quality details in the tooltip', async () => {
     vi.mocked(computeWorkspaceAnalysis).mockReturnValue({ rootDir: '/ws', analysis: analysis() });
     const provider = await loadedProvider();
     const node = provider.getChildren().find((candidate) => candidate.type === 'skill')!;
@@ -134,8 +122,6 @@ describe('SkillTreeProvider workspace skill tooltip', () => {
     );
     expect(tooltip).toContain('heuristic coverage high');
     expect(tooltip).toContain('Instruction authoring quality: 0/100 (poor)');
-    expect(tooltip).toContain('Format/portability compatibility: generic ✓');
-    expect(tooltip).toContain('do not include general description or instruction-body quality');
   });
 
   it('does not show adjustment details when no ceiling was applied', async () => {

@@ -5,7 +5,6 @@ import { analyzeSkill } from '../src/analysis/analyzeSkill';
 import { assessAuthoringQuality } from '../src/authoring/authoringQuality';
 import { withResources } from '../src/parser/parseSkillFile';
 import { computeStaticDescriptionQuality } from '../src/quality/staticDescriptionQuality';
-import { codexProfile } from '../src/profiles/codexProfile';
 import { genericProfile } from '../src/profiles/genericProfile';
 import type { SkillProfile } from '../src/types/SkillProfile';
 import { buildReportModel } from '../src/ui/reportModel';
@@ -91,11 +90,8 @@ describe('explicit not-scored quality state', () => {
     });
   });
 
-  it.each([
-    ['generic', genericProfile],
-    ['codex', codexProfile],
-  ])('propagates fixture states under the %s profile', (_name, profile) => {
-    const missingDescription = fixtureReport('json-formatter', profile);
+  it('propagates fixture states', () => {
+    const missingDescription = fixtureReport('json-formatter');
     expect(missingDescription.staticDescriptionQuality).toMatchObject({
       state: 'not-scored',
       score: null,
@@ -104,7 +100,7 @@ describe('explicit not-scored quality state', () => {
     });
     expect(missingDescription.authoringQuality.instructions.state).toBe('scored');
 
-    const malformed = fixtureReport('helper', profile);
+    const malformed = fixtureReport('helper');
     expect(malformed.staticDescriptionQuality).toMatchObject({
       state: 'not-scored',
       score: null,
@@ -118,7 +114,7 @@ describe('explicit not-scored quality state', () => {
       notScoredReason: 'frontmatter could not be parsed',
     });
 
-    const missingFrontmatter = fixtureReport('stuff', profile);
+    const missingFrontmatter = fixtureReport('stuff');
     expect(missingFrontmatter.staticDescriptionQuality).toMatchObject({
       state: 'not-scored',
       score: null,
@@ -152,7 +148,7 @@ describe('explicit not-scored quality state', () => {
     expect(result.resources).toMatchObject({ score: 90, label: 'excellent' });
   });
 
-  it('serializes the explicit state in skills index schema version 4', () => {
+  it('serializes the explicit state in skills index schema version 5', () => {
     const analysis = analyzeWorkspace(
       FIXTURE_ROOT,
       [fixturePath('json-formatter'), fixturePath('helper'), fixturePath('stuff')],
@@ -161,7 +157,7 @@ describe('explicit not-scored quality state', () => {
     const serialized = JSON.parse(JSON.stringify(buildSkillsIndex(analysis)));
 
     expect(serialized).toMatchObject({
-      schemaVersion: 4,
+      schemaVersion: 5,
       skills: expect.arrayContaining([
         expect.objectContaining({
           name: 'json-formatter',

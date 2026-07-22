@@ -8,7 +8,7 @@ import {
   resolveHeuristicDictionaries,
 } from '../src/quality/dictionaries';
 import { analyzeDescription } from '../src/quality/descriptionHeuristics';
-import { codexProfile, genericProfile } from '../src/profiles';
+import { genericProfile } from '../src/profiles';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
 import type { SkillProfile } from '../src/types/SkillProfile';
 import { renderWorkspaceReportHtml } from '../src/ui/renderWorkspaceReport';
@@ -111,23 +111,20 @@ describe('instruction-heavy description detection', () => {
 });
 
 describe('description hygiene fixture regressions', () => {
-  it.each([genericProfile, codexProfile])(
-    'detects the intended fixtures under the $label profile',
-    (profile) => {
-      expect(fixtureCodes('webhook-debugger', profile)).toEqual(
-        expect.arrayContaining([
-          DiagnosticCode.DescriptionOverbroadTrigger,
-          DiagnosticCode.DescriptionInstructionHeavy,
-          DiagnosticCode.DescriptionTooVerbose,
-        ]),
-      );
+  it('detects the intended fixtures', () => {
+    expect(fixtureCodes('webhook-debugger')).toEqual(
+      expect.arrayContaining([
+        DiagnosticCode.DescriptionOverbroadTrigger,
+        DiagnosticCode.DescriptionInstructionHeavy,
+        DiagnosticCode.DescriptionTooVerbose,
+      ]),
+    );
 
-      const report = fixtureCodes('report-generator', profile);
-      expect(report).toContain(DiagnosticCode.DescriptionOverbroadTrigger);
-      expect(report).toContain(DiagnosticCode.DescriptionTooLong);
-      expect(report).not.toContain(DiagnosticCode.DescriptionTooVerbose);
-    },
-  );
+    const report = fixtureCodes('report-generator');
+    expect(report).toContain(DiagnosticCode.DescriptionOverbroadTrigger);
+    expect(report).toContain(DiagnosticCode.DescriptionTooLong);
+    expect(report).not.toContain(DiagnosticCode.DescriptionTooVerbose);
+  });
 
   it.each(['api-error-triage', 'pdf-form-filler', 'changelog-writer', 'csv-cleaner'])(
     'keeps %s free of the new diagnostics',

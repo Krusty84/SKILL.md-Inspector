@@ -22,7 +22,7 @@ but not universally filesystem-independent.
 The canonical analysis pipeline is local, synchronous, and deterministic. An
 opt-in VS Code-facing augmentation can check remote-link availability after full
 analysis; it never participates in `analyzeSkill`, text-only validation, code
-actions, portability evaluation, or OpenCode matching. The extension does not
+actions, or OpenCode matching. The extension does not
 execute skills, agent binaries, or commands recorded in OpenCode exports.
 `src/llm/` contains an unused provider boundary; there is no runtime LLM integration.
 
@@ -42,14 +42,14 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |   |-- online/         # Optional SSRF-safe remote-link augmentation
 |   |-- opencode/       # OpenCode discovery, parsing, and normalization
 |   |-- parser/         # Frontmatter, Markdown, links, and resources
-|   |-- profiles/       # Generic, VS Code, Claude, and Codex policies
+|   |-- profiles/       # Generic validation policy
 |   |-- quality/        # Description heuristics and lexical dictionaries
 |   |-- templates/      # Built-in and user-configured templates
 |   |-- types/          # Shared domain models
 |   |-- ui/             # Tree providers, reports, and webview hosts
 |   |-- validation/     # Validation registry and rule implementations
 |   |-- webview/        # Browser code for the OpenCode timeline
-|   |-- workspace/      # Discovery, collisions, portability, and indexing
+|   |-- workspace/      # Discovery, collisions, and indexing
 |   |-- config.ts       # Effective VS Code configuration resolution
 |   `-- extension.ts    # Extension-host composition root
 |-- test/               # Unit, integration, property, and regression tests
@@ -121,7 +121,7 @@ and file entries are normalized and sorted before they reach validation or repor
 2. attach discovered resources when using full analysis;
 3. calculate offline `o200k_base` token metrics for the available scope;
 4. run the registered validation areas;
-5. apply the active profile and configured policy;
+5. apply the configured policy;
 6. return a `SkillDocument`, token-usage model, and tool-neutral `SkillDiagnostic`
    values.
 
@@ -133,8 +133,8 @@ There are two analysis modes:
   text for open, save, commands, reports, and workspace analysis.
 
 `src/validation/ruleRegistry.ts` provides stable validation areas for frontmatter,
-name, description, links, resources, body content, token budgets, and profile
-metadata. Token-budget policy consumes the already-calculated usage model rather
+name, description, links, resources, body content, and token budgets.
+Token-budget policy consumes the already-calculated usage model rather
 than reading files again. Diagnostic severity overrides are applied after rules
 run. Specification errors cannot be downgraded unless the user explicitly enables
 that behavior. Each registered rule runs behind an isolation boundary: if a rule
@@ -163,17 +163,14 @@ current. Changes, closes, and newer validations cancel or invalidate older work.
 Severity overrides and the existing stable diagnostic sort are applied to online
 diagnostics at the merge boundary.
 
-### Configuration, profiles, and dictionaries
+### Configuration, policy, and dictionaries
 
 `src/config.ts` reads effective `skillMdInspector.*` settings for a resource URI. It
-resolves one of four profiles from `src/profiles/`:
+resolves the generic validation policy from `src/profiles/`, applying user-setting
+overrides for name and description limits, description language, body strictness,
+and per-code severity behavior.
 
-- `generic` for baseline Agent Skill rules;
-- `vscode` for VS Code/Copilot-oriented metadata;
-- `claude` for Claude-oriented constraints;
-- `codex` for Codex-oriented metadata and instruction expectations.
-
-The resolved configuration contains the profile, resource directories, discovery
+The resolved configuration contains the policy, resource directories, discovery
 and resource exclusions, collision settings, severity policy, heuristic
 dictionaries, and the opt-in online-check flag and operation-wide concurrency limit.
 The extension manifest presents these settings in ordered groups for validation,
@@ -197,9 +194,8 @@ The project intentionally keeps several assessments separate:
 - Instruction authoring quality checks structural hygiene in the Markdown body.
 - Resource authoring quality checks resource references, script documentation, and
   unusually large files.
-- Validation reports rule violations for the active profile.
+- Validation reports rule violations for the configured policy.
 - Collision analysis compares skill names and descriptions within a workspace.
-- Portability checks the parsed format against every supported profile.
 
 These are heuristics, not evidence that an agent will select or correctly execute a
 skill. When input is missing or structurally untrustworthy, affected assessments use
@@ -217,8 +213,7 @@ shared checker session, preserving deduplication and the concurrency bound acros
 the whole workspace operation.
 
 For each readable skill, workspace analysis records diagnostics, quality results,
-profile compatibility, and a resource graph. After individual records exist, it
-computes:
+and a resource graph. After individual records exist, it computes:
 
 - exact normalized name conflicts;
 - confusingly similar names;
@@ -332,7 +327,7 @@ repository supplies no production provider or UI for this subsystem.
 
 ### Configuration refresh
 
-1. `readConfig` resolves the effective profile and policy values.
+1. `readConfig` resolves the effective policy values.
 2. Dictionary resolution replaces malformed entries with canonical defaults and
    returns warnings.
 3. A relevant configuration event clears resource and analysis caches.
@@ -378,7 +373,7 @@ a restart recognizable: the channel resets and the marker reappears.
 
 ## Key Design Decisions
 
-- **Keep the core reusable.** Parsing, validation, quality, collision, portability,
+- **Keep the core reusable.** Parsing, validation, quality, collision,
   and most OpenCode normalization avoid `vscode`; adapters own editor and workspace
   effects.
 - **Use diagnostics as the edit contract.** Rules describe problems and optional
@@ -388,7 +383,7 @@ a restart recognizable: the channel resets and the marker reappears.
 - **Keep network access outside the core.** `analyzeSkill` remains synchronous and
   deterministic; optional HTTP checks are injected, cancellable augmentation used
   only by VS Code-facing full-validation flows.
-- **Keep signals independent.** Validation, quality, collisions, portability, and
+- **Keep signals independent.** Validation, quality, collisions, and
   behavioral evaluation answer different questions and are not collapsed into a
   single architectural guarantee.
 - **Prefer deterministic output.** Stable rule order, sorted diagnostics, normalized
@@ -453,7 +448,7 @@ script.
 - Aggregate workspace analysis, the Skills panel, workspace report, and index export
   use only the first workspace folder. The Workspace navigator is multi-root.
 - Aggregate analysis reads saved files. Unsaved changes appear in live diagnostics
-  and the per-skill report, but not in collision, portability, or index results.
+  and the per-skill report, but not in collision or index results.
 - Full skill and workspace analysis uses synchronous Node filesystem operations.
   Cancellation is checked between skill files and between rows of the cross-skill
   collision loop, but not during one skill's resource scan or validation pipeline.
@@ -466,7 +461,7 @@ script.
   fresh full scan but do not receive equivalent watcher coverage.
 - Description heuristics and similarity tokenization are primarily English- and
   ASCII-oriented. Non-English input receives limited heuristic coverage.
-- Collision and portability checks do not execute skills in an agent. Optional
+- Collision checks do not execute skills in an agent. Optional
   remote-link checks establish availability only; they do not inspect or trust
   response content, and network failures remain indeterminate.
 - Installed-agent discovery is bounded to known or configured local roots and can

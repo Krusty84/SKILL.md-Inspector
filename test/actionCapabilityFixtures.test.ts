@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { analyzeSkill } from '../src/analysis/analyzeSkill';
 import { analyzeDescription } from '../src/quality/descriptionHeuristics';
 import { computeStaticDescriptionQuality } from '../src/quality/staticDescriptionQuality';
-import { codexProfile } from '../src/profiles/codexProfile';
 import { genericProfile } from '../src/profiles/genericProfile';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
 import type { SkillProfile } from '../src/types/SkillProfile';
@@ -70,16 +69,4 @@ describe('fixture-backed action capability detection', () => {
         ?.message,
     ).toContain(`"${capability}"`);
   });
-
-  it.each(['api-error-triage', 'pdf-form-filler'])(
-    'keeps %s action-capable under the Codex profile',
-    (name) => {
-      const result = inspectFixture(name, codexProfile);
-      expect(result.codes).not.toContain(DiagnosticCode.DescriptionNoVerb);
-      expect(result.analysis.frontLoadedIntent.found).toBe(true);
-      expect(result.quality.gradeLimitations.map((limitation) => limitation.code)).not.toContain(
-        'missing-action-capability',
-      );
-    },
-  );
 });

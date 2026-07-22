@@ -9,7 +9,6 @@ import {
   WHEN_TO_USE_SECTION,
   IO_SECTION,
 } from '../src/validation/bodySections';
-import { codexProfile } from '../src/profiles/codexProfile';
 
 function docWith(body: string, description = 'd'): SkillDocument {
   return {
@@ -106,7 +105,7 @@ describe('validateBody profile sections (Task 56)', () => {
     expect(validateBody(docWith(body), profileWith('recommended'))).toEqual([]);
   });
 
-  it('accepts concrete frontmatter trigger and boundary scope for the Codex profile', () => {
+  it('accepts concrete frontmatter trigger and boundary scope when boundaries and I/O are recommended', () => {
     const body = [
       '## Quick start',
       '',
@@ -120,7 +119,17 @@ describe('validateBody profile sections (Task 56)', () => {
     ].join('\n');
     const description =
       'Clean malformed CSV exports. Use when repairing inconsistent CSV rows. Do not use for spreadsheet analysis.';
-    expect(validateBody(docWith(body, description), codexProfile)).toEqual([]);
+    expect(
+      validateBody(
+        docWith(body, description),
+        profileWith('recommended', [
+          EXAMPLES_SECTION,
+          WHEN_TO_USE_SECTION,
+          BOUNDARY_SECTION,
+          IO_SECTION,
+        ]),
+      ),
+    ).toEqual([]);
   });
 
   it('requires concrete frontmatter boundary scope when the profile recommends boundaries', () => {

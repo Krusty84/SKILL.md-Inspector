@@ -225,8 +225,6 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         gradeLimitations,
         instructionSummary,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
-        `Format/portability compatibility: ${skill.portability.map((p) => `${p.profile} ${statusGlyph(p.status)}`).join(' · ')}  \n`,
-        `_Compatibility checks profile-specific format constraints; they do not include general description or instruction-body quality._  \n`,
         `_Description quality is deterministic and does not guarantee an agent will select this skill at runtime._`,
       ].join(''),
     );
@@ -283,6 +281,3 @@ function resourceIcon(kind: ResourceNode['kind']): string {
   }
 }
 
-function statusGlyph(status: 'pass' | 'warning' | 'fail'): string {
-  return status === 'pass' ? '✓' : status === 'warning' ? '⚠' : '✗';
-}

@@ -1,7 +1,7 @@
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
-import type { SkillProfile, SkillProfileId } from '../types/SkillProfile';
+import type { SkillProfile } from '../types/SkillProfile';
 import { DiagnosticCode } from '../types/DiagnosticCode';
 import { diag } from './util';
 import { validateFrontmatter } from './validateFrontmatter';
@@ -10,7 +10,6 @@ import { validateDescription } from './validateDescription';
 import { validateLinks } from './validateLinks';
 import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
-import { validateProfileMetadata } from './validateProfileMetadata';
 import { validateTokenBudgets } from './validateTokenBudgets';
 import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
 
@@ -27,14 +26,11 @@ export interface ValidationContext {
 
 /**
  * A registered validation rule (Task 84). Each rule wraps one validator area
- * (which may emit several diagnostic codes), so the pipeline is data-driven and a
- * profile can enable/disable a whole area via `appliesToProfiles`. Per-code
- * severity overrides and disabling are handled separately (Task 85).
+ * (which may emit several diagnostic codes), so the pipeline is data-driven.
+ * Per-code severity overrides and disabling are handled separately (Task 85).
  */
 export interface ValidationRule {
   id: string;
-  /** Profiles this rule runs for; `undefined` means every profile. */
-  appliesToProfiles?: SkillProfileId[];
   run(context: ValidationContext): SkillDiagnostic[];
 }
 
@@ -53,19 +49,15 @@ export const VALIDATION_RULES: ValidationRule[] = [
   },
   { id: 'body', run: ({ doc, profile, dictionaries }) => validateBody(doc, profile, dictionaries) },
   { id: 'token-budgets', run: ({ doc, tokenUsage }) => validateTokenBudgets(doc, tokenUsage) },
-  { id: 'profile-metadata', run: ({ doc, profile }) => validateProfileMetadata(doc, profile) },
 ];
 
-/** Runs the registered rules that apply to the context's profile, concatenated in registry order. */
+/** Runs the registered rules, concatenated in registry order. */
 export function runRules(
   context: ValidationContext,
   rules: ValidationRule[] = VALIDATION_RULES,
 ): SkillDiagnostic[] {
   const diagnostics: SkillDiagnostic[] = [];
   for (const rule of rules) {
-    if (rule.appliesToProfiles && !rule.appliesToProfiles.includes(context.profile.id)) {
-      continue;
-    }
     // Rule isolation: one rule throwing must not abort the run and leave the
     // editor's diagnostics stale. Contain the failure, surface it as a non-fatal
     // internal diagnostic so the coverage loss is visible, and keep going.

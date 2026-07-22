@@ -51,7 +51,7 @@ enforced by `test/fixtures/skillQualityFixtures.test.ts`.
 
 ## Machine-readable expectations
 
-The fixture regression test runs every fixture with the default `generic`
+The fixture regression test runs every fixture with the `generic`
 profile in full filesystem mode. For each entry it checks the frontmatter
 state, required and forbidden diagnostic codes, separate description and
 instruction assessment states and score ranges, required and forbidden

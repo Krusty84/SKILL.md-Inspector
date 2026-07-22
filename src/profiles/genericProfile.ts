@@ -1,7 +1,7 @@
 import type { SkillProfile } from '../types/SkillProfile';
 import { EXAMPLES_SECTION, WHEN_TO_USE_SECTION } from '../validation/bodySections';
 
-/** Baseline profile. Other MVP1 profiles extend these limits (brief §7.11). */
+/** The validation policy baseline; user settings can adjust these limits. */
 export const genericProfile: SkillProfile = {
   id: 'generic',
   label: 'Generic',
@@ -21,7 +21,7 @@ export const genericProfile: SkillProfile = {
       goodLength: 15,
     },
   },
-  // Minimal body expectations; runtime profiles recommend more.
+  // Minimal body expectations.
   body: {
     strictness: 'recommended',
     sections: [EXAMPLES_SECTION, WHEN_TO_USE_SECTION],

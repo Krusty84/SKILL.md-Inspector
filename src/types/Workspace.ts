@@ -10,23 +10,7 @@ export interface IndexDiagnostic {
   kind: SkillDiagnosticKind;
 }
 
-export type PortabilityStatus = 'pass' | 'warning' | 'fail';
 export type ValidationStatus = 'pass' | 'warning' | 'fail';
-
-/** A single diagnostic contributing to a profile's portability status (Task 42). */
-export interface PortabilityDiagnostic {
-  code: string;
-  severity: SkillDiagnosticSeverity;
-  message: string;
-}
-
-export interface PortabilityEntry {
-  profile: SkillProfileId;
-  status: PortabilityStatus;
-  notes: string[];
-  /** The error/warning diagnostics that produced this profile's status. */
-  diagnostics: PortabilityDiagnostic[];
-}
 
 export type ResourceNodeKind =
   | 'referenced' // a resource file linked from SKILL.md
@@ -65,8 +49,6 @@ export interface WorkspaceSkill {
   /** Every diagnostic (code, severity, kind), for the tree/report and index (Task 87). */
   diagnostics: IndexDiagnostic[];
   profile: SkillProfileId;
-  profileCompatibility: Record<SkillProfileId, PortabilityStatus>;
-  portability: PortabilityEntry[];
   resourceGraph: ResourceGraph;
 }
 
@@ -148,12 +130,11 @@ export interface SkillsIndexEntry {
   information: number;
   /** The machine-readable rule output: every diagnostic's code, severity, and kind (Task 87). */
   diagnostics: IndexDiagnostic[];
-  profileCompatibility: Record<string, PortabilityStatus>;
 }
 
 export interface SkillsIndex {
-  /** Version 4 adds explicit scored/not-scored quality assessment state. */
-  schemaVersion: 4;
+  /** Version 5 removes the per-profile compatibility map from entries. */
+  schemaVersion: 5;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }

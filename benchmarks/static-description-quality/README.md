@@ -5,7 +5,7 @@ This version-controlled corpus checks curated qualitative expectations for the d
 ## How this benchmark differs from the other corpora
 
 - **Synthetic description benchmark (this directory):** isolates description
-  wording and profile weights in `cases.json`. It does not parse a whole
+  wording and scorer weights in `cases.json`. It does not parse a whole
   `SKILL.md`, discover resources, or inspect instruction structure.
 - **Whole-file fixture regression corpus:**
   `fixtures/skills/expectations.json` analyzes every fixture with the generic
@@ -19,7 +19,6 @@ This version-controlled corpus checks curated qualitative expectations for the d
 
 Each case records:
 
-- `profile` — the scorer profile (`generic` when omitted for legacy corpus cases); the benchmark resolves that profile's length limits, language mode, and criterion weights rather than using the default scorer weights;
 - `description` and `language` (`en`, `ru`, `ja`, ...) — non-English cases must be reported as language-limited, never silently scored with the English dictionaries;
 - `expected.minScore` / `expected.maxScore` — a narrow band for the public adjusted score (25 points at most, enforced by the test) so weighting tweaks are tolerated but real scoring regressions fail;
 - optional `expected.minRawScore` / `expected.maxRawScore` and `expected.gradeLimitations` — checks for the additive criterion total and every explicit essential-completeness ceiling;

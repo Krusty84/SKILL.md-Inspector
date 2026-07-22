@@ -84,11 +84,7 @@ describe('package manifest context menus and templates', () => {
       {
         title: 'Validation',
         order: 1,
-        keys: [
-          'skillMdInspector.validation.enabled',
-          'skillMdInspector.validation.runOnSave',
-          'skillMdInspector.profile',
-        ],
+        keys: ['skillMdInspector.validation.enabled', 'skillMdInspector.validation.runOnSave'],
       },
       {
         title: 'Heuristics',
@@ -188,15 +184,14 @@ describe('package manifest context menus and templates', () => {
     expected.forEach((entry, index) => {
       expect(Object.keys(configuration[index].properties).sort()).toEqual([...entry.keys].sort());
     });
-    // Validation keeps the enable toggles above the Profile selector.
+    // Validation keeps the enable toggle above the on-save toggle.
     const validation = configuration[0].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    expect(validation['skillMdInspector.profile'].order).toBe(3);
-    // Every setting lives in exactly one section (46 total, no duplicates).
+    // Every setting lives in exactly one section (45 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(46);
-    expect(new Set(allKeys).size).toBe(46);
+    expect(allKeys.length).toBe(45);
+    expect(new Set(allKeys).size).toBe(45);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

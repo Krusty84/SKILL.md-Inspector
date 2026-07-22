@@ -1,31 +1,12 @@
 import type { SkillDiagnosticSeverity } from './SkillDiagnostic';
 
-export type SkillProfileId = 'generic' | 'vscode' | 'claude' | 'codex';
+export type SkillProfileId = 'generic';
 
 /** Language mode for description heuristics: force English, or auto-detect. */
 export type DescriptionLanguage = 'en' | 'auto';
 
 /** How strictly advisory body-section recommendations are surfaced. */
 export type BodyStrictness = 'off' | 'recommended' | 'strict';
-
-/** Expected value type for a recognized optional metadata field. */
-export interface MetadataFieldSpec {
-  type: 'string' | 'boolean' | 'string[]' | 'string|string[]';
-}
-
-/** Profile-specific frontmatter metadata rules (Claude/VS Code/Codex, brief §7.11). */
-export interface ProfileMetadataRules {
-  /** Words disallowed in `name`/`description` (matched whole-word, case-insensitive). */
-  reservedWords?: string[];
-  /** Flag XML-like tags in `name`/`description`. */
-  forbidXmlTags?: boolean;
-  /** Type specs for recognized optional fields, keyed by frontmatter key. */
-  fields?: Record<string, MetadataFieldSpec>;
-  /** Policy for top-level keys outside `name`/`description`/`fields`. */
-  unknownKeyPolicy?: 'allow' | 'warn' | 'error';
-  /** Extra recognized keys (beyond `name`/`description` and `fields`) for unknown-key analysis. */
-  knownKeys?: string[];
-}
 
 /** A recommended Markdown body section, matched by heading token or alias phrase. */
 export interface BodySectionSpec {
@@ -51,9 +32,8 @@ export interface StaticDescriptionQualityWeights {
 }
 
 /**
- * A validation profile bundles the tunable limits used by the rules. In MVP1
- * every profile shares the same rule logic and differs only in these limits;
- * the shape leaves room for profile-specific rule toggles later (MVP3).
+ * The validation policy: the tunable limits used by the rules, resolved from
+ * the generic baseline plus user-setting overrides.
  */
 export interface SkillProfile {
   id: SkillProfileId;
@@ -70,8 +50,6 @@ export interface SkillProfile {
     strictness: BodyStrictness;
     sections: BodySectionSpec[];
   };
-  /** Profile-specific frontmatter metadata rules. */
-  metadata?: ProfileMetadataRules;
   /**
    * Per-code severity overrides (Task 85): map a diagnostic code to a severity,
    * or to `'off'` to disable it. Specification-kind errors are protected unless

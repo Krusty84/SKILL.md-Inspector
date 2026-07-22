@@ -11,15 +11,6 @@ export const DiagnosticCode = {
   FrontmatterNotAtTop: 'skill.frontmatter.notAtTop',
   FrontmatterDuplicateKey: 'skill.frontmatter.duplicateKey',
 
-  // Profile-specific metadata rules
-  MetadataReservedWord: 'skill.metadata.reservedWord',
-  MetadataXmlTag: 'skill.metadata.xmlTag',
-  MetadataFieldType: 'skill.metadata.fieldType',
-  MetadataUnknownKey: 'skill.metadata.unknownKey',
-
-  // Portability notes (not editor diagnostics)
-  PortabilityClaudeDescriptionLong: 'skill.portability.claude.descriptionLong',
-
   // name
   NameMissing: 'skill.name.missing',
   NameType: 'skill.name.type',
@@ -94,16 +85,11 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.DescriptionType]: 'specification',
   [DiagnosticCode.DescriptionTooLong]: 'specification',
   [DiagnosticCode.LinkMissing]: 'specification',
-  // Compatibility — valid, but a target profile is stricter or less portable.
+  // Compatibility — valid, but less portable across machines and platforms.
   [DiagnosticCode.LinkCaseMismatch]: 'compatibility',
   [DiagnosticCode.LinkAbsolute]: 'compatibility',
   [DiagnosticCode.LinkRemoteUnavailable]: 'compatibility',
   [DiagnosticCode.LinkRemoteCheckFailed]: 'compatibility',
-  [DiagnosticCode.MetadataReservedWord]: 'compatibility',
-  [DiagnosticCode.MetadataXmlTag]: 'compatibility',
-  [DiagnosticCode.MetadataFieldType]: 'compatibility',
-  [DiagnosticCode.MetadataUnknownKey]: 'compatibility',
-  [DiagnosticCode.PortabilityClaudeDescriptionLong]: 'compatibility',
   // Security — a risky reference.
   [DiagnosticCode.LinkEscapesSkillRoot]: 'security',
   [DiagnosticCode.LinkRemoteSuspicious]: 'security',

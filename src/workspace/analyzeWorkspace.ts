@@ -4,7 +4,6 @@ import { analyzeSkill } from '../analysis/analyzeSkill';
 import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
 import { assessAuthoringQuality } from '../authoring/authoringQuality';
 import { buildResourceGraph } from './buildResourceGraph';
-import { evaluatePortability, toCompatibilityMap } from './portability';
 import { detectCollisions } from './detectSkillCollisions';
 import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
@@ -81,7 +80,7 @@ export function analyzeWorkspace(
 /** Builds the exportable index model (brief §13.6). */
 export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     generatedAt: new Date().toISOString(),
     skills: analysis.skills.map((skill) => ({
       name: skill.name,
@@ -94,7 +93,6 @@ export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
       warnings: skill.warnings,
       information: skill.information,
       diagnostics: skill.diagnostics,
-      profileCompatibility: skill.profileCompatibility,
     })),
   };
 }
@@ -148,8 +146,6 @@ function toWorkspaceSkill(
     tokenUsage.body.lines,
   );
 
-  const portability = evaluatePortability(document, options.dictionaries);
-
   return {
     name,
     path: toPosix(path.relative(rootDir, absolutePath)),
@@ -163,8 +159,6 @@ function toWorkspaceSkill(
     information,
     diagnostics: indexDiagnostics,
     profile: profile.id,
-    profileCompatibility: toCompatibilityMap(portability),
-    portability,
     resourceGraph,
   };
 }

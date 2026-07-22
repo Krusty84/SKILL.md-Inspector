@@ -1,23 +1,8 @@
-import type {
-  SkillProfile,
-  SkillProfileId,
-  DescriptionLanguage,
-  BodyStrictness,
-} from '../types/SkillProfile';
+import type { SkillProfile, DescriptionLanguage, BodyStrictness } from '../types/SkillProfile';
 import type { SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
 import { genericProfile } from './genericProfile';
-import { vscodeProfile } from './vscodeProfile';
-import { claudeProfile } from './claudeProfile';
-import { codexProfile } from './codexProfile';
 
-export const PROFILES: Record<SkillProfileId, SkillProfile> = {
-  generic: genericProfile,
-  vscode: vscodeProfile,
-  claude: claudeProfile,
-  codex: codexProfile,
-};
-
-/** Optional per-setting overrides applied on top of a profile's defaults. */
+/** Optional per-setting overrides applied on top of the profile's defaults. */
 export interface ProfileOverrides {
   nameMaxLength?: number;
   descriptionMinLength?: number;
@@ -29,11 +14,11 @@ export interface ProfileOverrides {
 }
 
 /**
- * Resolves a profile by id (falling back to generic) and applies any numeric
- * overrides sourced from user settings. Returns a fresh object.
+ * Applies any overrides sourced from user settings on top of the generic
+ * profile's defaults. Returns a fresh object.
  */
-export function resolveProfile(id: string, overrides: ProfileOverrides = {}): SkillProfile {
-  const base = PROFILES[id as SkillProfileId] ?? genericProfile;
+export function resolveProfile(overrides: ProfileOverrides = {}): SkillProfile {
+  const base = genericProfile;
   return {
     ...base,
     nameMaxLength: overrides.nameMaxLength ?? base.nameMaxLength,
@@ -55,4 +40,4 @@ export function resolveProfile(id: string, overrides: ProfileOverrides = {}): Sk
   };
 }
 
-export { genericProfile, vscodeProfile, claudeProfile, codexProfile };
+export { genericProfile };
