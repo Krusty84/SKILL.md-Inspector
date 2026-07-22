@@ -82,13 +82,18 @@ describe('package manifest context menus and templates', () => {
     const H = 'skillMdInspector.heuristics.dictionaryValues.';
     const expected = [
       {
-        title: 'Validation',
+        title: 'General',
         order: 1,
+        keys: ['skillMdInspector.general.timeFormat'],
+      },
+      {
+        title: 'Validation',
+        order: 2,
         keys: ['skillMdInspector.validation.enabled', 'skillMdInspector.validation.runOnSave'],
       },
       {
         title: 'Heuristics',
-        order: 2,
+        order: 3,
         keys: [
           `${H}acronyms`,
           `${H}actionVerbForms`,
@@ -113,7 +118,7 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Discovery & resources',
-        order: 3,
+        order: 4,
         keys: [
           'skillMdInspector.discovery.exclude',
           'skillMdInspector.resources.directories',
@@ -122,16 +127,16 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Severity',
-        order: 4,
+        order: 5,
         keys: [
           'skillMdInspector.severityOverrides',
           'skillMdInspector.severity.allowSpecificationOverrides',
         ],
       },
-      { title: 'Templates', order: 5, keys: ['skillMdInspector.templates'] },
+      { title: 'Templates', order: 6, keys: ['skillMdInspector.templates'] },
       {
         title: 'Content quality',
-        order: 6,
+        order: 7,
         keys: [
           'skillMdInspector.body.strictness',
           'skillMdInspector.description.language',
@@ -142,7 +147,7 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Collision detection',
-        order: 7,
+        order: 8,
         keys: [
           'skillMdInspector.collision.boundarySeparationWeight',
           'skillMdInspector.collision.ngramSize',
@@ -153,7 +158,7 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Links',
-        order: 8,
+        order: 9,
         keys: [
           'skillMdInspector.links.onlineCheck.enabled',
           'skillMdInspector.links.onlineCheck.maxConcurrency',
@@ -161,7 +166,7 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Views',
-        order: 9,
+        order: 10,
         keys: [
           'skillMdInspector.navigator.additionalRoots',
           'skillMdInspector.openCode.maxDiscoveredSessions',
@@ -172,7 +177,7 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Experimental',
-        order: 10,
+        order: 11,
         keys: ['skillMdInspector.experimental.llmReview.enabled'],
       },
     ];
@@ -185,13 +190,13 @@ describe('package manifest context menus and templates', () => {
       expect(Object.keys(configuration[index].properties).sort()).toEqual([...entry.keys].sort());
     });
     // Validation keeps the enable toggle above the on-save toggle.
-    const validation = configuration[0].properties;
+    const validation = configuration[1].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    // Every setting lives in exactly one section (45 total, no duplicates).
+    // Every setting lives in exactly one section (46 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(45);
-    expect(new Set(allKeys).size).toBe(45);
+    expect(allKeys.length).toBe(46);
+    expect(new Set(allKeys).size).toBe(46);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {
@@ -209,6 +214,15 @@ describe('package manifest context menus and templates', () => {
       minimum: 1,
       maximum: 10,
     });
+  });
+
+  it('offers a European/USA report time format defaulting to European', () => {
+    const timeFormat = configProperties['skillMdInspector.general.timeFormat'];
+    expect(timeFormat).toMatchObject({
+      type: 'string',
+      default: 'european',
+    });
+    expect(timeFormat.enum).toEqual(expect.arrayContaining(['european', 'usa']));
   });
 
   it('declares Explorer-like WORKSPACE toolbar and context actions without reusing Explorer internals', () => {
