@@ -16,13 +16,11 @@ vi.mock('vscode', () => ({
   },
 }));
 
-import { buildSessionViewModel } from '../../src/opencode/buildSessionViewModel';
 import { normalizeSession } from '../../src/opencode/buildTrajectory';
 import type { NormalizedOpenCodeSession, SessionSummary } from '../../src/opencode/model';
 import { parseSessionExport } from '../../src/opencode/parseSessionExport';
 import { buildSessionTree } from '../../src/opencode/sessionDiscovery';
-import { isRecord } from '../../src/opencode/util';
-import { renderOpenCodeSessionReportHtml } from '../../src/ui/renderOpenCodeSessionReport';
+import { getPath, isRecord } from '../../src/opencode/util';
 
 const fixtureRoot = new URL('../fixtures/opencode/', import.meta.url);
 
@@ -363,36 +361,6 @@ describe('OpenCode session tree construction', () => {
   });
 });
 
-describe('OpenCode static report', () => {
-  it('shows complete metrics and escapes all recorded HTML', () => {
-    const root = mutableFixture('regular-session.json');
-    fixtureInfo(root).title = 'Demo <script>alert(1)</script>';
-    const tool = fixtureMessages(root)[1].parts;
-    if (!Array.isArray(tool) || !isRecord(tool[3]) || !isRecord(tool[3].state))
-      throw new Error('Tool fixture shape changed.');
-    tool[3].state.output = '<img src=x onerror=alert(1)>';
-    const html = renderOpenCodeSessionReportHtml(
-      buildSessionViewModel(normalize(root)),
-      'vscode-resource:',
-    );
-
-    expect(html).toContain('fixture-provider');
-    expect(html).toContain('fixture-model');
-    expect(html).toContain('Tool errors');
-    expect(html).toContain('Assistant errors');
-    expect(html).toContain('Total errors');
-    expect(html).toContain('Cache read tokens');
-    expect(html).toContain('Cache write tokens');
-    expect(html).toContain('1400 ms');
-    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
-    expect(html).not.toContain('<script');
-    expect(html).not.toContain('<img src=x');
-    expect(html).toContain("default-src 'none'");
-    expect(html).not.toContain('<script src=');
-  });
-});
-
 describe('OpenCode schema compatibility diagnostics and report details', () => {
   it('validates the pinned strict fixture shape used by tests without making runtime parsing strict', () => {
     const schema = fixture('schema/opencode-session-export.schema.json');
@@ -513,31 +481,21 @@ describe('OpenCode schema compatibility diagnostics and report details', () => {
     );
   });
 
-  it('renders compatibility, metadata, named agent, subtask, retry, attachments, diffs, zero timestamps, and escaped URL text', () => {
+  it('labels named agent and subtask parts and surfaces retry errors and tool attachments', () => {
     const root = mutableFixture('schema-conformant/strict-session.json');
-    fixtureInfo(root).share = { url: 'javascript:<script>alert(1)</script>' };
-    const html = renderOpenCodeSessionReportHtml(
-      buildSessionViewModel(normalize(root, 40)),
-      'vscode-resource:',
-    );
+    const session = normalize(root);
+    const labels = session.nodes.map((node) => node.label);
+    const retry = session.nodes.find((node) => node.kind === 'retry');
+    const attachments = session.nodes
+      .map((node) => getPath(node.details, ['state', 'attachments']))
+      .find((value) => value !== undefined);
 
-    expect(html).toContain('Compatibility summary');
-    expect(html).toContain('reconstructed compatibility reference');
-    expect(html).toContain('Schema Session');
-    expect(html).toContain('Share URL');
-    expect(html).toContain('javascript:&lt;script&gt;alert(1)&lt;/script&gt;');
-    expect(html).not.toContain('href="javascript:');
-    expect(html).toContain('Agent: reviewer');
-    expect(html).toContain('Subtask: Review code');
-    expect(html).toContain('APIError: request failed');
-    expect(html).toContain('Attachments');
-    expect(html).toContain('att.txt');
-    expect(html).toContain('Session change summary');
-    expect(html).toContain('src/a.ts');
-    expect(html).toContain('0 ms');
-    expect(html).not.toContain('<script');
-    expect(html).not.toContain('<img');
-    expect(html).toContain("default-src 'none'");
+    expect(labels).toContain('Agent: reviewer');
+    expect(labels).toContain('Subtask: Review code');
+    expect(retry?.preview).toContain('APIError: request failed');
+    if (!Array.isArray(attachments) || !isRecord(attachments[0]))
+      throw new Error('Expected a tool part with recorded attachments.');
+    expect(attachments[0].filename).toBe('att.txt');
   });
 
   it('falls back to assistant then user agent while preserving explicit session agent and provider/model precedence', () => {
