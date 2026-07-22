@@ -121,6 +121,22 @@ describe('renderReportHtml', () => {
     expect(html).toContain('Aggregate total: 0 tokens');
   });
 
+  it('renders the generated-at timestamp when provided', () => {
+    const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\n');
+    const html = renderReportHtml(model, {
+      nonce: 'n',
+      cspSource: 'x',
+      generatedAt: 'STAMP-123',
+    });
+    expect(html).toContain('Generated: STAMP-123');
+  });
+
+  it('omits the generated-at line when no timestamp is provided', () => {
+    const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\n');
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(html).not.toContain('Generated:');
+  });
+
   it('escapes HTML in dynamic values to prevent injection', () => {
     const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\n');
     model.name = '<img src=x onerror=alert(1)>';

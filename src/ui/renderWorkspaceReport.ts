@@ -11,6 +11,8 @@ export interface RenderOptions {
   nonce: string;
   cspSource: string;
   scope: WorkspaceReportScope;
+  /** Local date & time string for when the report was generated. */
+  generatedAt?: string;
 }
 
 export type WorkspaceReportScope =
@@ -60,6 +62,7 @@ export function renderWorkspaceReportHtml(
 </head>
 <body>
   <h1>${title}</h1>
+  ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
   ${renderScope(opts.scope)}
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
   <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>

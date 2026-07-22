@@ -7,6 +7,8 @@ import type {
 export interface RenderOptions {
   nonce: string;
   cspSource: string;
+  /** Local date & time string for when the report was generated. */
+  generatedAt?: string;
 }
 
 /** Renders the skill report as a self-contained, theme-aware HTML document. */
@@ -87,6 +89,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 </head>
 <body>
   <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> ${descriptionBadge}</h1>
+  ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
   <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
   <div class="grid">
     ${card('Description quality', descriptionCard)}

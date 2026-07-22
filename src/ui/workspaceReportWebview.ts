@@ -42,6 +42,7 @@ export class WorkspaceReportPanel {
       nonce,
       cspSource: this.panel.webview.cspSource,
       scope,
+      generatedAt: new Date().toLocaleString(),
     });
   }
 }

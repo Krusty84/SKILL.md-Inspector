@@ -36,6 +36,7 @@ export class SkillReportPanel {
     this.panel.webview.html = renderReportHtml(report, {
       nonce,
       cspSource: this.panel.webview.cspSource,
+      generatedAt: new Date().toLocaleString(),
     });
   }
 }
