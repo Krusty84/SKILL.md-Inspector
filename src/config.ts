@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
 import type { SkillProfile, DescriptionLanguage, BodyStrictness } from './types/SkillProfile';
 import type { SkillDiagnosticSeverity } from './types/SkillDiagnostic';
+import type { TimestampFormat } from './types/TimestampFormat';
 import type { CollisionWeights } from './types/Workspace';
 import type { CollisionOptions } from './workspace/detectSkillCollisions';
 import {
@@ -41,6 +42,7 @@ export interface InspectorConfig {
   resourceDirectories: string[];
   onlineCheckEnabled: boolean;
   onlineCheckMaxConcurrency: number;
+  timeFormat: TimestampFormat;
 }
 
 export interface ConfigurationWarning {
@@ -71,6 +73,7 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
     onlineCheckMaxConcurrency: clampOnlineCheckConcurrency(
       cfg.get<number>('links.onlineCheck.maxConcurrency', 4),
     ),
+    timeFormat: cfg.get<TimestampFormat>('general.timeFormat', 'european'),
     profile: resolveProfile({
       nameMaxLength: cfg.get<number>('name.maxLength'),
       descriptionMinLength: cfg.get<number>('description.minLength'),

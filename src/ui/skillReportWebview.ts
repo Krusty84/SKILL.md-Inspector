@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import type { SkillReport } from './reportModel';
 import { renderReportHtml } from './renderReport';
+import { readConfig } from '../config';
+import { formatTimestamp } from './formatTimestamp';
 
 /** Manages the single read-only Skill Report webview panel. */
 export class SkillReportPanel {
@@ -36,7 +38,7 @@ export class SkillReportPanel {
     this.panel.webview.html = renderReportHtml(report, {
       nonce,
       cspSource: this.panel.webview.cspSource,
-      generatedAt: new Date().toLocaleString(),
+      generatedAt: formatTimestamp(new Date(), readConfig().timeFormat),
     });
   }
 }

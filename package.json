@@ -855,8 +855,27 @@
     },
     "configuration": [
       {
-        "title": "Validation",
+        "title": "General",
         "order": 1,
+        "properties": {
+          "skillMdInspector.general.timeFormat": {
+            "type": "string",
+            "enum": [
+              "european",
+              "usa"
+            ],
+            "enumDescriptions": [
+              "24-hour clock, 00:00–23:59 (e.g. 15/01/2026, 14:30:45).",
+              "12-hour clock with AM/PM (e.g. 1/15/2026, 2:30:45 PM)."
+            ],
+            "default": "european",
+            "description": "Time format for the \"Generated\" timestamp shown in generated reports. \"european\" uses a 24-hour clock; \"usa\" uses a 12-hour clock with AM/PM."
+          }
+        }
+      },
+      {
+        "title": "Validation",
+        "order": 2,
         "properties": {
           "skillMdInspector.validation.enabled": {
             "type": "boolean",
@@ -874,7 +893,7 @@
       },
       {
         "title": "Heuristics",
-        "order": 2,
+        "order": 3,
         "properties": {
           "skillMdInspector.heuristics.dictionaryValues.acronyms": {
             "type": "array",
@@ -1504,7 +1523,7 @@
       },
       {
         "title": "Discovery & resources",
-        "order": 3,
+        "order": 4,
         "properties": {
           "skillMdInspector.discovery.exclude": {
             "type": "array",
@@ -1550,7 +1569,7 @@
       },
       {
         "title": "Severity",
-        "order": 4,
+        "order": 5,
         "properties": {
           "skillMdInspector.severityOverrides": {
             "type": "object",
@@ -1575,7 +1594,7 @@
       },
       {
         "title": "Templates",
-        "order": 5,
+        "order": 6,
         "properties": {
           "skillMdInspector.templates": {
             "type": "array",
@@ -1627,7 +1646,7 @@
       },
       {
         "title": "Content quality",
-        "order": 6,
+        "order": 7,
         "properties": {
           "skillMdInspector.body.strictness": {
             "type": "string",
@@ -1667,7 +1686,7 @@
       },
       {
         "title": "Collision detection",
-        "order": 7,
+        "order": 8,
         "properties": {
           "skillMdInspector.collision.boundarySeparationWeight": {
             "type": "number",
@@ -1734,7 +1753,7 @@
       },
       {
         "title": "Links",
-        "order": 8,
+        "order": 9,
         "properties": {
           "skillMdInspector.links.onlineCheck.enabled": {
             "type": "boolean",
@@ -1752,7 +1771,7 @@
       },
       {
         "title": "Views",
-        "order": 9,
+        "order": 10,
         "properties": {
           "skillMdInspector.navigator.additionalRoots": {
             "type": "array",
@@ -1827,7 +1846,7 @@
       },
       {
         "title": "Experimental",
-        "order": 10,
+        "order": 11,
         "properties": {
           "skillMdInspector.experimental.llmReview.enabled": {
             "type": "boolean",

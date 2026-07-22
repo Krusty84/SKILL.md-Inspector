@@ -5,6 +5,8 @@ import {
   workspaceReportTitle,
   type WorkspaceReportScope,
 } from './renderWorkspaceReport';
+import { readConfig } from '../config';
+import { formatTimestamp } from './formatTimestamp';
 
 /** Manages the single read-only Workspace Skill Report webview panel. */
 export class WorkspaceReportPanel {
@@ -42,7 +44,7 @@ export class WorkspaceReportPanel {
       nonce,
       cspSource: this.panel.webview.cspSource,
       scope,
-      generatedAt: new Date().toLocaleString(),
+      generatedAt: formatTimestamp(new Date(), readConfig().timeFormat),
     });
   }
 }
