@@ -91,6 +91,11 @@
         "category": "SKILL.md Inspector"
       },
       {
+        "command": "skillMdInspector.configureSeverityOverrides",
+        "title": "Configure Severity Overrides",
+        "category": "SKILL.md Inspector"
+      },
+      {
         "command": "skillMdInspector.resetTemplates",
         "title": "Reset Templates to Defaults",
         "category": "SKILL.md Inspector"
@@ -1583,7 +1588,7 @@
               ]
             },
             "default": {},
-            "description": "Override the severity of diagnostics by code, or disable one with \"off\" (e.g. { \"skill.description.vague\": \"information\" }). Specification errors are protected unless skillMdInspector.severity.allowSpecificationOverrides is enabled."
+            "markdownDescription": "Override the severity of diagnostics by code, or disable one with `off` (e.g. `{ \"skill.description.vague\": \"information\" }`). Specification errors are protected unless `#skillMdInspector.severity.allowSpecificationOverrides#` is enabled.\n\n[Configure with a picker…](command:skillMdInspector.configureSeverityOverrides)"
           },
           "skillMdInspector.severity.allowSpecificationOverrides": {
             "type": "boolean",
