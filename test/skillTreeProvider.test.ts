@@ -87,6 +87,12 @@ function analysis(): WorkspaceAnalysis {
         diagnostics: [],
         profile: 'generic',
         resourceGraph: { nodes: [] },
+        tokenUsage: {
+          encoding: 'o200k_base',
+          body: { tokens: 0, lines: 0 },
+          references: { files: [], totalTokens: 0 },
+          otherFiles: { files: [], totalTokens: 0 },
+        },
       },
     ],
     collisions: [],

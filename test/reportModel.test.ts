@@ -186,6 +186,20 @@ describe('renderReportHtml', () => {
     expect(html).toContain(
       `Aggregate total: ${model.tokenUsage.otherFiles.totalTokens.toLocaleString('en-US')} tokens`,
     );
+
+    // Token usage is also summarized as a card at the top, beside the quality cards.
+    const summaryBody = model.tokenUsage.body.tokens.toLocaleString('en-US');
+    const summaryRefs = model.tokenUsage.references.totalTokens.toLocaleString('en-US');
+    const summaryOther = model.tokenUsage.otherFiles.totalTokens.toLocaleString('en-US');
+    const summaryTotal = (
+      model.tokenUsage.body.tokens +
+      model.tokenUsage.references.totalTokens +
+      model.tokenUsage.otherFiles.totalTokens
+    ).toLocaleString('en-US');
+    expect(html).toContain('<div class="label">Token usage</div>');
+    expect(html).toContain(
+      `${summaryTotal}<div class="token-breakdown">Body ${summaryBody} · Ref ${summaryRefs} · Other ${summaryOther}</div>`,
+    );
   });
 
   it('renders validation severity and ordered findings for a warning-only skill', () => {

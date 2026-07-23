@@ -2,6 +2,7 @@ import type { SkillProfileId } from './SkillProfile';
 import type { SkillDiagnosticSeverity, SkillDiagnosticKind } from './SkillDiagnostic';
 import type { StaticDescriptionQualityResult } from './StaticDescriptionQuality';
 import type { SkillAuthoringQuality } from '../authoring/authoringQuality';
+import type { SkillTokenUsage } from './SkillTokenUsage';
 
 /** A compact diagnostic carried into the tree/report models and the exported index (Task 87). */
 export interface IndexDiagnostic {
@@ -50,6 +51,8 @@ export interface WorkspaceSkill {
   diagnostics: IndexDiagnostic[];
   profile: SkillProfileId;
   resourceGraph: ResourceGraph;
+  /** Full o200k_base token metrics (SKILL.md body plus reference and other bundled files). */
+  tokenUsage: SkillTokenUsage;
 }
 
 export type CollisionRisk = 'High' | 'Medium' | 'Low';

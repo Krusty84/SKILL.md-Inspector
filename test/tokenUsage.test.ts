@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { analyzeSkill } from '../src/analysis/analyzeSkill';
 import { countO200kTokens } from '../src/analysis/o200kTokenizer';
+import { totalSkillTokens } from '../src/analysis/tokenUsage';
 import { genericProfile } from '../src/profiles';
 import { DiagnosticCode } from '../src/types/DiagnosticCode';
 
@@ -22,6 +23,16 @@ describe('o200k_base token metrics', () => {
     expect(countO200kTokens('hello world')).toBe(2);
     expect(countO200kTokens('hello world')).toBe(2);
     expect(countO200kTokens('<|endoftext|>')).toBeGreaterThan(1);
+  });
+
+  it('totalSkillTokens sums the body, reference, and other-file totals', () => {
+    const usage = {
+      encoding: 'o200k_base' as const,
+      body: { tokens: 320, lines: 12 },
+      references: { files: [], totalTokens: 80 },
+      otherFiles: { files: [], totalTokens: 15 },
+    };
+    expect(totalSkillTokens(usage)).toBe(415);
   });
 
   it('counts only the Markdown body after frontmatter', () => {
