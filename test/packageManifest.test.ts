@@ -555,6 +555,18 @@ describe('heuristic dictionary manifest consistency', () => {
       }),
     );
   });
+
+  it('declares the severity-overrides picker command and links it from the setting', () => {
+    expect(packageJson.contributes.commands).toContainEqual(
+      expect.objectContaining({
+        command: 'skillMdInspector.configureSeverityOverrides',
+        title: 'Configure Severity Overrides',
+      }),
+    );
+    expect(configProperties['skillMdInspector.severityOverrides'].markdownDescription).toContain(
+      'command:skillMdInspector.configureSeverityOverrides',
+    );
+  });
 });
 
 describe('OpenCode manifest consistency', () => {

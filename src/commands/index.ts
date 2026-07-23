@@ -10,6 +10,7 @@ import { exportSkillsIndex } from './exportSkillsIndex';
 import { openTemplateSettings } from './openTemplateSettings';
 import { resetTemplates } from './resetTemplates';
 import { openHeuristicDictionarySettings } from './openHeuristicDictionarySettings';
+import { configureSeverityOverrides } from './configureSeverityOverrides';
 
 /** Registers all extension commands and ties their disposables to `context`. */
 export function registerCommands(
@@ -48,6 +49,9 @@ export function registerCommands(
     vscode.commands.registerCommand(
       'skillMdInspector.openHeuristicDictionarySettings',
       openHeuristicDictionarySettings,
+    ),
+    vscode.commands.registerCommand('skillMdInspector.configureSeverityOverrides', () =>
+      configureSeverityOverrides(),
     ),
   );
 }
