@@ -57,6 +57,12 @@ function analysis(): WorkspaceAnalysis {
         resourceGraph: {
           nodes: [{ path: 'references/unused.md', kind: 'unreferenced', flags: [] }],
         },
+        tokenUsage: {
+          encoding: 'o200k_base',
+          body: { tokens: 320, lines: 12 },
+          references: { files: [], totalTokens: 80 },
+          otherFiles: { files: [], totalTokens: 15 },
+        },
       },
     ],
     collisions: [
@@ -111,6 +117,11 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('0.84');
     expect(html).toContain('High');
     expect(html).toContain('External file issues');
+    expect(html).toContain('<th>Token usage</th>');
+    // Total (320 body + 80 references + 15 other files) plus the compact breakdown.
+    expect(html).toContain(
+      '<td>415<div class="token-breakdown">Body 320 · Ref 80 · Other 15</div></td>',
+    );
     expect(html).toContain('<td class="warn">1 issue</td>');
     expect(html).not.toContain('references/unused.md');
     expect(html).not.toContain('Resource graphs');

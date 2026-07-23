@@ -4,6 +4,7 @@ import type {
   StaticDescriptionQualityLabel,
 } from '../types/StaticDescriptionQuality';
 import { renderToc, slugify, TOC_STYLES, type TocEntry } from './reportToc';
+import { totalSkillTokens } from '../analysis/tokenUsage';
 
 export interface RenderOptions {
   nonce: string;
@@ -55,6 +56,8 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
   const instructionCardLabel =
     instructions.state === 'scored' ? 'Instruction authoring quality' : 'Instruction structure';
+  const tokens = report.tokenUsage;
+  const tokenCardValue = `${formatNumber(totalSkillTokens(tokens))}<div class="token-breakdown">Body ${formatNumber(tokens.body.tokens)} · Ref ${formatNumber(tokens.references.totalTokens)} · Other ${formatNumber(tokens.otherFiles.totalTokens)}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -81,6 +84,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   .value.warn { color: var(--vscode-editorWarning-foreground, #cca700); }
   .score { font-size: 2.4rem; font-weight: 700; }
   .score .max { font-size: 1rem; font-weight: 400; opacity: 0.6; }
+  .token-breakdown { font-size: 0.72rem; font-weight: 400; opacity: 0.7; margin-top: 0.2rem; line-height: 1.4; }
   ul { list-style: none; padding-left: 0; }
   li { padding: 0.3rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
   .mark { font-weight: 700; width: 1rem; flex: none; }
@@ -118,6 +122,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
+    ${card('Token usage', tokenCardValue)}
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
     ${card('Warnings', String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
     ${card('Information', String(report.informationCount))}

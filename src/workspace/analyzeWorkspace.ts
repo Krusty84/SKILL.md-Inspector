@@ -160,6 +160,7 @@ function toWorkspaceSkill(
     diagnostics: indexDiagnostics,
     profile: profile.id,
     resourceGraph,
+    tokenUsage,
   };
 }
 

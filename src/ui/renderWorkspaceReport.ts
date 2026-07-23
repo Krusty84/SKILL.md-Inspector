@@ -7,6 +7,7 @@ import type {
   SimilarNames,
 } from '../types/Workspace';
 import { renderToc, TOC_STYLES, type TocEntry } from './reportToc';
+import { totalSkillTokens } from '../analysis/tokenUsage';
 
 export interface RenderOptions {
   nonce: string;
@@ -62,6 +63,7 @@ export function renderWorkspaceReportHtml(
   .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
   .conf-low { opacity: 0.7; }
   .quality-adjustment { white-space: nowrap; }
+  .token-breakdown { font-size: 0.78rem; opacity: 0.7; margin-top: 0.15rem; line-height: 1.4; }
   .grade-limitations { margin-top: 0.2rem; font-size: 0.82rem; }
   .grade-limitations summary { cursor: pointer; }
   .grade-limitations ul { margin-top: 0.15rem; }${TOC_STYLES}
@@ -81,7 +83,7 @@ export function renderWorkspaceReportHtml(
   <h2 id="skills">Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th>Name</th><th>Validation status</th><th>Adjusted description quality</th><th>Heuristic coverage</th><th>Instruction authoring quality</th><th>Errors</th><th>Warnings</th><th>Information</th><th>External file issues</th></tr></thead>
+      <thead><tr><th>Name</th><th>Validation status</th><th>Adjusted description quality</th><th>Heuristic coverage</th><th>Instruction authoring quality</th><th>Errors</th><th>Warnings</th><th>Information</th><th>Token usage</th><th>External file issues</th></tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -117,7 +119,15 @@ function renderSkillRow(skill: WorkspaceSkill): string {
     instructions.state === 'scored'
       ? `${instructions.score}/100 · ${instructions.label}`
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${resourceIssueCell(skill)}</tr>`;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${renderTokenCell(skill.tokenUsage)}${resourceIssueCell(skill)}</tr>`;
+}
+
+function renderTokenCell(usage: WorkspaceSkill['tokenUsage']): string {
+  const total = formatNumber(totalSkillTokens(usage));
+  const breakdown = `Body ${formatNumber(usage.body.tokens)} · Ref ${formatNumber(
+    usage.references.totalTokens,
+  )} · Other ${formatNumber(usage.otherFiles.totalTokens)}`;
+  return `<td>${total}<div class="token-breakdown">${breakdown}</div></td>`;
 }
 
 function resourceIssueCell(skill: WorkspaceSkill): string {
@@ -223,4 +233,8 @@ function escapeHtml(value: string): string {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatNumber(value: number): string {
+  return escapeHtml(value.toLocaleString('en-US'));
 }

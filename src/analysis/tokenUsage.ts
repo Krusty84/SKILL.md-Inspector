@@ -159,6 +159,11 @@ export function measureSkillTokenUsage(
   };
 }
 
+/** Combined token footprint: SKILL.md body plus every counted reference and other file. */
+export function totalSkillTokens(usage: SkillTokenUsage): number {
+  return usage.body.tokens + usage.references.totalTokens + usage.otherFiles.totalTokens;
+}
+
 function tokenGroupFor(relativePath: string): 'references' | 'otherFiles' | undefined {
   const normalized = normalizePosix(relativePath);
   if (normalized.startsWith('references/')) return 'references';
