@@ -40,6 +40,11 @@ export type TfidfVector = Map<string, number>;
  * Builds smoothed TF-IDF vectors for a corpus. Smoothing
  * (idf = ln((1+N)/(1+df)) + 1) keeps shared terms non-zero even in tiny
  * corpora, so two identical descriptions score a cosine of 1.
+ *
+ * Corpus dependence (inherent to TF-IDF, documented rather than "fixed"): the
+ * document frequencies span the whole scanned corpus, so adding or removing
+ * unrelated skills shifts every idf slightly and can move a given pair's
+ * cosine — and therefore its composite collision score — by a few hundredths.
  */
 export function tfidfVectors(corpusTokens: string[][]): TfidfVector[] {
   const n = corpusTokens.length;

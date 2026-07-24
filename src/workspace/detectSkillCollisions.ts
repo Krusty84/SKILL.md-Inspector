@@ -58,6 +58,16 @@ export interface CollisionOptions {
  * displayed similarity is rounded to two decimals and the risk band is derived
  * from that same rounded value. Pairs at or above the threshold are returned,
  * highest similarity first.
+ *
+ * Which metrics see capability verbs (plan 4 — deliberate asymmetry, do not
+ * "fix"): the **Jaccard** token sets exclude tokens whose normalized base is a
+ * registered action verb — many skills legitimately share verbs (review,
+ * validate, lint), and scope is what they operate *on*. The **TF-IDF cosine**
+ * keeps verbs because corpus-wide document frequency already tempers common
+ * ones; the **char n-gram** metric runs over the normalized, stopword-filtered
+ * content tokens (verbs included) rather than the raw text, so template prose
+ * cannot dominate it; and `sharedTerms` reporting keeps verbs so the report
+ * still explains what overlapped.
  */
 export function detectCollisions(
   skills: SkillDescriptor[],
@@ -80,7 +90,15 @@ export function detectCollisions(
     ),
   );
   const vectors = tfidfVectors(tokens).map(normedVector);
-  const ngramVectors = skills.map((skill) => charNgramVector(skill.description, ngramSize));
+  // N-grams over the normalized content tokens, not the raw description: the
+  // metric's purpose is spelling/morphological variation between *content*
+  // words, and raw text let shared template prose read as scope overlap.
+  const ngramVectors = tokens.map((list) => charNgramVector(list.join(' '), ngramSize));
+  // Jaccard compares what the skills operate on, so capability verbs are
+  // excluded (kept in TF-IDF and sharedTerms — see the function docs). A
+  // verbs-only description yields an empty set, which jaccard() scores 0.
+  const verbBases = new Set(dictionaries.actionVerbs);
+  const jaccardTokens = tokens.map((list) => list.filter((token) => !verbBases.has(token)));
   const boundaries = skills.map((skill) => boundaryFeatures(skill.description, dictionaries));
   const collisions: SkillCollision[] = [];
 
@@ -93,7 +111,7 @@ export function detectCollisions(
     for (let j = i + 1; j < skills.length; j++) {
       const metrics: CollisionMetrics = {
         cosine: cosineNormed(vectors[i], vectors[j]),
-        jaccard: jaccard(tokens[i], tokens[j]),
+        jaccard: jaccard(jaccardTokens[i], jaccardTokens[j]),
         charNgram: cosineNormed(ngramVectors[i], ngramVectors[j]),
         nameSimilarity: nameSimilarity(skills[i].name, skills[j].name),
         boundarySeparation: boundarySeparationOf(boundaries[i], boundaries[j]),

@@ -185,7 +185,10 @@ The extension deliberately reports distinct signals:
   excessive length, repetition, and unclosed code fences.
 - **Resource authoring quality** identifies unreferenced files, undocumented scripts,
   and unusually large bundled resources.
-- **Collision risk** compares descriptions and names across the workspace.
+- **Collision risk** compares descriptions and names across the workspace. Pair
+  similarities are computed against the whole scanned corpus (TF-IDF document
+  frequencies), so adding or removing unrelated skills can shift a pair's score
+  by a few hundredths.
 
 When required input is missing or cannot be trusted, description or instruction
 quality is shown as **Not scored** instead of silently assigning zero. Resource

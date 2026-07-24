@@ -41,13 +41,48 @@
     "turn"
   ],
   "actionVerbForms": {
-    "apply": ["apply", "applies", "applying", "applied"],
-    "build": ["build", "builds", "building", "built"],
-    "debug": ["debug", "debugs", "debugging", "debugged"],
-    "format": ["format", "formats", "formatting", "formatted"],
-    "read": ["read", "reads", "reading"],
-    "run": ["run", "runs", "running", "ran"],
-    "write": ["write", "writes", "writing", "wrote", "written"]
+    "apply": [
+      "apply",
+      "applies",
+      "applying",
+      "applied"
+    ],
+    "build": [
+      "build",
+      "builds",
+      "building",
+      "built"
+    ],
+    "debug": [
+      "debug",
+      "debugs",
+      "debugging",
+      "debugged"
+    ],
+    "format": [
+      "format",
+      "formats",
+      "formatting",
+      "formatted"
+    ],
+    "read": [
+      "read",
+      "reads",
+      "reading"
+    ],
+    "run": [
+      "run",
+      "runs",
+      "running",
+      "ran"
+    ],
+    "write": [
+      "write",
+      "writes",
+      "writing",
+      "wrote",
+      "written"
+    ]
   },
   "vagueTerms": [
     "help",
@@ -152,7 +187,14 @@
     "firmware",
     "protocol"
   ],
-  "lowSignalArtifactTerms": ["file", "data", "code", "document", "content", "information"],
+  "lowSignalArtifactTerms": [
+    "file",
+    "data",
+    "code",
+    "document",
+    "content",
+    "information"
+  ],
   "multiWordArtifacts": [
     "inspection report",
     "release notes",
@@ -209,7 +251,12 @@
     "fem",
     "python"
   ],
-  "uppercaseOnlyAcronyms": ["can", "step", "pr", "ci"],
+  "uppercaseOnlyAcronyms": [
+    "can",
+    "step",
+    "pr",
+    "ci"
+  ],
   "positiveTriggerPhrases": [
     "use this skill when",
     "use this when",
@@ -236,7 +283,10 @@
     "not designed for",
     "not suitable for"
   ],
-  "exclusiveTriggerPhrases": ["only use when", "only use for"],
+  "exclusiveTriggerPhrases": [
+    "only use when",
+    "only use for"
+  ],
   "restrictiveBoundaryPhrases": [
     "limited to",
     "only for",
@@ -338,14 +388,39 @@
     "specific"
   ],
   "irregularSingularForms": {
-    "analysis": ["analyses"],
-    "bus": ["buses"],
-    "crisis": ["crises"],
-    "index": ["indices"],
-    "matrix": ["matrices"],
-    "movie": ["movies"],
-    "series": ["series"],
-    "thesis": ["theses"]
+    "analysis": [
+      "analyses"
+    ],
+    "api": [
+      "apis"
+    ],
+    "axis": [
+      "axes"
+    ],
+    "bus": [
+      "buses"
+    ],
+    "crisis": [
+      "crises"
+    ],
+    "index": [
+      "indices"
+    ],
+    "matrix": [
+      "matrices"
+    ],
+    "movie": [
+      "movies"
+    ],
+    "series": [
+      "series"
+    ],
+    "thesis": [
+      "theses"
+    ],
+    "vertex": [
+      "vertices"
+    ]
   },
   "collisionStopwords": [
     "the",
@@ -391,6 +466,18 @@
     "out",
     "up",
     "via",
-    "per"
+    "per",
+    "ask",
+    "asks",
+    "asked",
+    "help",
+    "helps",
+    "want",
+    "wants",
+    "need",
+    "needs",
+    "work",
+    "works",
+    "about"
   ]
 }
