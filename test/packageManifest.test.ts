@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
 import catalog from '../src/quality/defaultHeuristicDictionaries.json';
+import { activatesFor } from './helpers/activationContract';
 
 // `contributes.configuration` is an array of titled categories (labeled sections in
 // the Settings UI); merge their property maps so a setting can be looked up by id
@@ -332,15 +333,21 @@ describe('package manifest context menus and templates', () => {
         icon: '$(folder-opened)',
       }),
     );
-    expect(packageJson.activationEvents).toContain(
-      'onCommand:skillMdInspector.workspace.selectSkillsFolder',
+    // Implicit activation (VS Code ≥ 1.74) or an explicit onCommand entry both satisfy this.
+    expect(activatesFor(packageJson, 'onCommand:skillMdInspector.workspace.selectSkillsFolder')).toBe(
+      true,
     );
-    expect(packageJson.contributes.viewsWelcome).toContainEqual({
-      view: 'skillMdInspectorWorkspace',
-      contents:
-        'No SKILLs folder is selected.\n\n[Select SKILLs Folder](command:skillMdInspector.workspace.selectSkillsFolder)',
-      when: 'workspaceFolderCount == 0',
-    });
+    // Assert the durable wiring (view, condition, command link) rather than the
+    // exact welcome prose, which is free to change.
+    expect(packageJson.contributes.viewsWelcome).toContainEqual(
+      expect.objectContaining({
+        view: 'skillMdInspectorWorkspace',
+        contents: expect.stringContaining(
+          '(command:skillMdInspector.workspace.selectSkillsFolder)',
+        ),
+        when: 'workspaceFolderCount == 0',
+      }),
+    );
   });
 
   it('keeps WORKSPACE file, folder, and root menus scoped like VS Code Explorer', () => {
@@ -643,13 +650,16 @@ describe('OpenCode manifest consistency', () => {
   });
 
   it('activates for the OpenCode view and command palette entry points', () => {
-    expect(packageJson.activationEvents).toEqual(
-      expect.arrayContaining([
-        'onView:skillMdInspectorOpenCodeSessions',
-        'onCommand:skillMdInspector.openCode.selectSessionsFolder',
-        'onCommand:skillMdInspector.openCode.openReport',
-        'onCommand:skillMdInspector.openCode.openRawJson',
-      ]),
-    );
+    // Since VS Code 1.74, contributed views and commands activate the extension
+    // implicitly; explicit entries are only required for older engines.
+    const entryPoints = [
+      'onView:skillMdInspectorOpenCodeSessions',
+      'onCommand:skillMdInspector.openCode.selectSessionsFolder',
+      'onCommand:skillMdInspector.openCode.openReport',
+      'onCommand:skillMdInspector.openCode.openRawJson',
+    ];
+    for (const event of entryPoints) {
+      expect(activatesFor(packageJson, event), event).toBe(true);
+    }
   });
 });

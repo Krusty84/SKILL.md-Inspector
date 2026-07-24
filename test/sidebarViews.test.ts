@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
+import { activatesFor } from './helpers/activationContract';
 
 describe('sidebar view contributions', () => {
   it('declares independent SKILL.md Inspector views and preserves the analysis panel', () => {
-    expect(packageJson.contributes.viewsContainers.activitybar[0].title).toBe('SKILL.md INSPECTOR');
+    expect(packageJson.contributes.viewsContainers.activitybar[0].title).toBe('SKILL.md Inspector');
     expect(packageJson.contributes.views.skillMdInspector).toEqual([
       expect.objectContaining({ id: 'skillMdInspectorFavorites', name: 'FAVORITES' }),
       expect.objectContaining({ id: 'skillMdInspectorWorkspace', name: 'WORKSPACE' }),
@@ -28,9 +29,11 @@ describe('sidebar view contributions', () => {
       .flat()
       .map((view) => view.id);
 
-    expect(packageJson.activationEvents).toEqual(
-      expect.arrayContaining(viewIds.map((viewId) => `onView:${viewId}`)),
-    );
+    // Since VS Code 1.74, contributed views activate the extension implicitly;
+    // explicit onView: entries are only required for older engines.
+    for (const viewId of viewIds) {
+      expect(activatesFor(packageJson, `onView:${viewId}`), `onView:${viewId}`).toBe(true);
+    }
   });
 
   it('keeps favorites actions scoped to the favorites view title and inspector submenu', () => {

@@ -233,6 +233,11 @@ flows, and constraints, see [ARCHITECTURE.md](ARCHITECTURE.md). Release history 
   mixed public/private DNS answers, HTTPS-to-HTTP redirects, and unsafe redirect
   targets. It connects directly to a validated address and does not use ambient
   proxy configuration; restrictive networks may therefore produce check failures.
+- Token and line metrics, including the fixed content-budget diagnostics, are
+  measured with the open `o200k_base` encoding as a deterministic offline proxy.
+  Claude's production tokenizer is not `o200k_base`, so counts near a budget
+  threshold can differ by roughly ±10–20%; read budget thresholds with that
+  tolerance rather than as exact production counts.
 - Workspace aggregate analysis currently uses only the first workspace folder.
 - Full skill analysis depends partly on local Node filesystem APIs, so remote or
   virtual workspaces are not uniformly supported.
