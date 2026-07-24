@@ -122,7 +122,7 @@ async function editOverride(code: string): Promise<void> {
     return;
   }
   if (action.value === 'remove') {
-    await removeOverrideAtScope(code);
+    await removeOverrideEverywhere(code);
     return;
   }
   const severity = await pickSeverity(code);
@@ -212,8 +212,13 @@ async function commitOverride(
   vscode.window.showInformationMessage(`SKILL.md Inspector: set ${code} → ${severity}.`);
 }
 
-/** Remove flow: delete an override from whichever scope(s) define it. */
-async function removeOverrideAtScope(code: string): Promise<void> {
+/**
+ * Remove flow: delete an override from EVERY scope that defines it. `severityOverrides` is
+ * window-scoped, so the same code can live in both User and Workspace settings; removing it from only one
+ * leaves the other in VS Code's merged value, so a "deleted" override would still apply. Clearing all
+ * defining scopes guarantees the merged value truly loses the key.
+ */
+async function removeOverrideEverywhere(code: string): Promise<void> {
   const scopes = resolveScopesFor(code);
   if (scopes.length === 0) {
     vscode.window.showInformationMessage(
@@ -221,12 +226,14 @@ async function removeOverrideAtScope(code: string): Promise<void> {
     );
     return;
   }
-  const scope = await pickScope(scopes, `Remove ${code} from which settings?`);
-  if (!scope) {
-    return;
+  for (const scope of scopes) {
+    await writeMap(scope, removeOverride(readScopeMap(scope), code));
   }
-  await writeMap(scope, removeOverride(readScopeMap(scope), code));
-  vscode.window.showInformationMessage(`SKILL.md Inspector: removed override for ${code}.`);
+  vscode.window.showInformationMessage(
+    `SKILL.md Inspector: removed override for ${code} (${scopes
+      .map((scope) => scope.label)
+      .join(' and ')}).`,
+  );
 }
 
 /** Clear flow: drop the whole overrides map from a chosen scope after confirmation. */

@@ -143,6 +143,29 @@ describe('configureSeverityOverrides command', () => {
     expect(hoisted.update).toHaveBeenCalledWith(OVERRIDES_KEY, undefined, GLOBAL);
   });
 
+  it('removes an override from EVERY scope that defines it (User + Workspace), with no scope prompt', async () => {
+    // Regression: a value set in more than one scope must be cleared from all of them, otherwise VS Code's
+    // merged get() still returns it and a "deleted" override keeps applying to reports and diagnostics.
+    primeConfig({
+      overrides: { [DiagnosticCode.DescriptionVague]: 'information' },
+      inspect: {
+        globalValue: { [DiagnosticCode.DescriptionVague]: 'information' },
+        workspaceValue: { [DiagnosticCode.DescriptionVague]: 'information' },
+      },
+    });
+    hoisted.showQuickPick
+      .mockResolvedValueOnce({ action: 'edit', code: DiagnosticCode.DescriptionVague })
+      .mockResolvedValueOnce({ value: 'remove' });
+
+    await configureSeverityOverrides();
+
+    // Removed from both scopes (last key in each → undefined); only 2 QuickPicks, i.e. no scope prompt.
+    expect(hoisted.update).toHaveBeenCalledWith(OVERRIDES_KEY, undefined, GLOBAL);
+    expect(hoisted.update).toHaveBeenCalledWith(OVERRIDES_KEY, undefined, 2);
+    expect(hoisted.update).toHaveBeenCalledTimes(2);
+    expect(hoisted.showQuickPick).toHaveBeenCalledTimes(2);
+  });
+
   it('clears all overrides after a modal confirmation', async () => {
     primeConfig({
       overrides: { [DiagnosticCode.DescriptionVague]: 'information' },
