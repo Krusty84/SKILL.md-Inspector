@@ -845,5 +845,44 @@
       "frontLoaded": false
     },
     "notes": "Boundary-first ordering with the capability verb in the second sentence no longer takes the missing-capability cap."
+  },
+  {
+    "id": "case-65",
+    "language": "de",
+    "description": "Formatiert PDF-Rechnungen in das Standardlayout. Verwenden bei der Monatsabrechnung. Nicht verwenden f\u00fcr gescannte Bilder.",
+    "expected": {
+      "minScore": 35,
+      "maxScore": 55,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "German (Latin script) is detected via stopword profiles and marked language-limited; the structural score stands without full-confidence semantic findings."
+  },
+  {
+    "id": "case-66",
+    "language": "fr",
+    "description": "Extrait les tableaux des rapports PDF et les convertit en CSV. \u00c0 utiliser pour les donn\u00e9es tabulaires. Ne pas utiliser pour les documents scann\u00e9s.",
+    "expected": {
+      "minScore": 35,
+      "maxScore": 55,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "French (Latin script) is detected via stopword profiles and marked language-limited."
+  },
+  {
+    "id": "case-67",
+    "language": "es",
+    "description": "Genera informes PDF a partir de facturas de clientes. Usar cuando se procesan facturas. No usar para im\u00e1genes escaneadas.",
+    "expected": {
+      "minScore": 35,
+      "maxScore": 55,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Spanish (Latin script) is detected via stopword profiles and marked language-limited."
   }
 ]
