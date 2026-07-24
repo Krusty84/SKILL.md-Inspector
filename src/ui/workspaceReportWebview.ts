@@ -17,7 +17,7 @@ export class WorkspaceReportPanel {
   private constructor() {
     this.panel = vscode.window.createWebviewPanel(
       'skillMdInspector.workspaceReport',
-      'Workspace Skill Report',
+      'Workspace SKILL.md Report',
       vscode.ViewColumn.Active,
       { enableScripts: false, retainContextWhenHidden: true },
     );

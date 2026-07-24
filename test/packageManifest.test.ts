@@ -32,7 +32,7 @@ describe('package manifest context menus and templates', () => {
     expect(activeWhen).not.toContain('sideBarFocus');
   });
 
-  it('keeps only per-skill actions in the editor submenu, Show Skill Report under Validate Current Skill', () => {
+  it('keeps only per-skill actions in the editor submenu, Validate Current Skill above Show Skill Report', () => {
     const items = packageJson.contributes.menus['skillMdInspector/context'];
     const commands = items.map((item) => item.command);
     expect(commands).toEqual(
@@ -55,7 +55,7 @@ describe('package manifest context menus and templates', () => {
     ]) {
       expect(commands).not.toContain(removed);
     }
-    // Show Skill Report sits directly under Validate Current Skill (same group, consecutive order).
+    // Validate Current Skill sits directly above Show Skill Report (same group, consecutive order).
     const groupOf = Object.fromEntries(items.map((item) => [item.command, item.group]));
     expect(groupOf['skillMdInspector.validateCurrentSkill']).toBe('1_validation@1');
     expect(groupOf['skillMdInspector.showSkillReport']).toBe('1_validation@2');
@@ -93,8 +93,30 @@ describe('package manifest context menus and templates', () => {
         keys: ['skillMdInspector.validation.enabled', 'skillMdInspector.validation.runOnSave'],
       },
       {
-        title: 'Heuristics',
+        title: 'Content quality',
         order: 3,
+        keys: [
+          'skillMdInspector.body.strictness',
+          'skillMdInspector.description.language',
+          'skillMdInspector.description.maxLength',
+          'skillMdInspector.description.minLength',
+          'skillMdInspector.name.maxLength',
+        ],
+      },
+      {
+        title: 'Collision detection',
+        order: 4,
+        keys: [
+          'skillMdInspector.collision.boundarySeparationWeight',
+          'skillMdInspector.collision.ngramSize',
+          'skillMdInspector.collision.threshold',
+          'skillMdInspector.collision.weights',
+          'skillMdInspector.names.similarityThreshold',
+        ],
+      },
+      {
+        title: 'Heuristics',
+        order: 5,
         keys: [
           `${H}acronyms`,
           `${H}actionVerbForms`,
@@ -119,7 +141,7 @@ describe('package manifest context menus and templates', () => {
       },
       {
         title: 'Discovery & resources',
-        order: 4,
+        order: 6,
         keys: [
           'skillMdInspector.discovery.exclude',
           'skillMdInspector.resources.directories',
@@ -127,44 +149,22 @@ describe('package manifest context menus and templates', () => {
         ],
       },
       {
-        title: 'Severity',
-        order: 5,
-        keys: [
-          'skillMdInspector.severityOverrides',
-          'skillMdInspector.severity.allowSpecificationOverrides',
-        ],
-      },
-      { title: 'Templates', order: 6, keys: ['skillMdInspector.templates'] },
-      {
-        title: 'Content quality',
-        order: 7,
-        keys: [
-          'skillMdInspector.body.strictness',
-          'skillMdInspector.description.language',
-          'skillMdInspector.description.maxLength',
-          'skillMdInspector.description.minLength',
-          'skillMdInspector.name.maxLength',
-        ],
-      },
-      {
-        title: 'Collision detection',
-        order: 8,
-        keys: [
-          'skillMdInspector.collision.boundarySeparationWeight',
-          'skillMdInspector.collision.ngramSize',
-          'skillMdInspector.collision.threshold',
-          'skillMdInspector.collision.weights',
-          'skillMdInspector.names.similarityThreshold',
-        ],
-      },
-      {
         title: 'Links',
-        order: 9,
+        order: 7,
         keys: [
           'skillMdInspector.links.onlineCheck.enabled',
           'skillMdInspector.links.onlineCheck.maxConcurrency',
         ],
       },
+      {
+        title: 'Severity',
+        order: 8,
+        keys: [
+          'skillMdInspector.severityOverrides',
+          'skillMdInspector.severity.allowSpecificationOverrides',
+        ],
+      },
+      { title: 'Templates', order: 9, keys: ['skillMdInspector.templates'] },
       {
         title: 'Views',
         order: 10,
@@ -175,11 +175,6 @@ describe('package manifest context menus and templates', () => {
           'skillMdInspector.openCode.maxSessionFileSizeMb',
           'skillMdInspector.openCode.scanRecursively',
         ],
-      },
-      {
-        title: 'Experimental',
-        order: 11,
-        keys: ['skillMdInspector.experimental.llmReview.enabled'],
       },
     ];
     // Sections appear in the declared order with ascending `order`.
@@ -194,10 +189,10 @@ describe('package manifest context menus and templates', () => {
     const validation = configuration[1].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    // Every setting lives in exactly one section (46 total, no duplicates).
+    // Every setting lives in exactly one section (45 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(46);
-    expect(new Set(allKeys).size).toBe(46);
+    expect(allKeys.length).toBe(45);
+    expect(new Set(allKeys).size).toBe(45);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {
@@ -423,6 +418,13 @@ describe('package manifest context menus and templates', () => {
     ).not.toContain('activeViewlet');
 
     const skillItemMenu = packageJson.contributes.menus['skillMdInspector/workspaceFileSkillContext'];
+    expect(skillItemMenu.map((item) => item.command)).toEqual([
+      'skillMdInspector.validateCurrentSkill',
+      'skillMdInspector.showSkillReport',
+      'skillMdInspector.insertTemplate',
+      'skillMdInspector.improveDescriptionLocally',
+      'skillMdInspector.toggleFavorite',
+    ]);
     expect(skillItemMenu).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ command: 'skillMdInspector.validateCurrentSkill' }),
@@ -505,9 +507,9 @@ describe('package manifest context menus and templates', () => {
       ),
     ).toEqual([
       'skillMdInspector.validateCurrentSkill',
+      'skillMdInspector.showSkillReport',
       'skillMdInspector.insertTemplate',
       'skillMdInspector.improveDescriptionLocally',
-      'skillMdInspector.showSkillReport',
       'skillMdInspector.toggleFavorite',
     ]);
 

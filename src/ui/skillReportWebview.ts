@@ -13,7 +13,7 @@ export class SkillReportPanel {
   private constructor() {
     this.panel = vscode.window.createWebviewPanel(
       'skillMdInspector.report',
-      'Skill Report',
+      'SKILL.md Report',
       vscode.ViewColumn.Beside,
       { enableScripts: false, retainContextWhenHidden: true },
     );
