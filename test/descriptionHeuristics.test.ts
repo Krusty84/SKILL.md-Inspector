@@ -136,25 +136,28 @@ describe('descriptionHeuristics', () => {
 
   it.each([
     'A test case for API behavior. Use when debugging failures.',
-    'Formatting rules for source files. Use when reviewing style.',
     'A report containing generated output. Use when reviewing results.',
-  ])('does not treat a later noun or adjective as action evidence: %s', (description) => {
+  ])('counts lexical capability evidence but never as front-loaded intent: %s', (description) => {
+    // Capability *presence* is lexical over the first two sentences (plan 2):
+    // "test"/"generated" count even in noun position — accepted ambiguity.
+    // Front-loaded intent stays positional and is not credited here.
     const analysis = analyzeDescription(description);
-    expect(analysis.actionVerb.found).toBe(false);
+    expect(analysis.actionVerb.found).toBe(true);
     expect(analysis.frontLoadedIntent.found).toBe(false);
   });
 
   it.each([
     'Converting CSV exports into clean JSON tables. Use when converting data.',
     'Formatting JSON guidelines for authors. Use when writing docs.',
-  ])('does not treat a leading gerund noun phrase as front-loaded capability: %s', (description) => {
-    // A leading gerund is deliberately not credited as a positional capability:
-    // "Converting CSV exports" (verb phrase) is indistinguishable from
-    // "Formatting JSON guidelines" (noun phrase) by nearby-artifact heuristics, so
-    // neither earns positional-verb credit. The imperative "Convert…" does.
+  ])('credits a leading gerund as front-loaded capability: %s', (description) => {
+    // Reversed by plan 2: a gerund-led opening names a capability. The verb
+    // phrase ("Converting CSV exports") and the noun phrase ("Formatting JSON
+    // guidelines") are lexically indistinguishable, and both are now accepted
+    // rather than both rejected.
     const analysis = analyzeDescription(description);
-    expect(analysis.actionVerb.found).toBe(false);
-    expect(analysis.frontLoadedIntent.found).toBe(false);
+    expect(analysis.actionVerb.found).toBe(true);
+    expect(analysis.frontLoadedIntent.found).toBe(true);
+    expect(analysis.frontLoadedIntent.pattern).toBe('capability-first');
   });
 
   it('applies positional matching to custom action verbs', () => {
@@ -169,12 +172,14 @@ describe('descriptionHeuristics', () => {
     expect(
       analyzeDescription('Use this skill when frobnicating API widgets.', custom).actionVerb.found,
     ).toBe(true);
-    expect(
-      analyzeDescription(
-        'A frobnicate example for API widgets. Use when reviewing failures.',
-        custom,
-      ).actionVerb.found,
-    ).toBe(false);
+    // Presence is lexical over the first two sentences, so the noun mention
+    // counts; positional front-loading still requires a capability frame.
+    const nounMention = analyzeDescription(
+      'A frobnicate example for API widgets. Use when reviewing failures.',
+      custom,
+    );
+    expect(nounMention.actionVerb.found).toBe(true);
+    expect(nounMention.frontLoadedIntent.found).toBe(false);
   });
 
   it('matches typographic apostrophes in boundary phrases', () => {

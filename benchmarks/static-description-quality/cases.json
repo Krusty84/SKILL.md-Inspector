@@ -619,7 +619,9 @@
       "maxScore": 69,
       "minRawScore": 75,
       "maxRawScore": 75,
-      "gradeLimitations": ["missing-usage-trigger"],
+      "gradeLimitations": [
+        "missing-usage-trigger"
+      ],
       "trigger": "none",
       "boundary": "none",
       "frontLoaded": true
@@ -635,7 +637,9 @@
       "maxScore": 74,
       "minRawScore": 85,
       "maxRawScore": 85,
-      "gradeLimitations": ["vague-usage-trigger"],
+      "gradeLimitations": [
+        "vague-usage-trigger"
+      ],
       "trigger": "partial",
       "boundary": "full",
       "frontLoaded": true
@@ -651,7 +655,9 @@
       "maxScore": 59,
       "minRawScore": 60,
       "maxRawScore": 80,
-      "gradeLimitations": ["missing-concrete-artifact"],
+      "gradeLimitations": [
+        "missing-concrete-artifact"
+      ],
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
@@ -667,7 +673,9 @@
       "maxScore": 69,
       "minRawScore": 90,
       "maxRawScore": 100,
-      "gradeLimitations": ["echoed-scope-content"],
+      "gradeLimitations": [
+        "echoed-scope-content"
+      ],
       "trigger": "full",
       "boundary": "full",
       "frontLoaded": true
@@ -687,5 +695,155 @@
       "frontLoaded": true
     },
     "notes": "Distinct scopes that share tokens ('Python 2' vs 'Python 3') must keep their digits and not trip the keyword-stuffing echo cap."
+  },
+  {
+    "id": "case-54",
+    "language": "en",
+    "description": "Formatting PDF invoices and expense reports into the standard accounting layout. Use when preparing month-end financial documents. Do not use for scanned images.",
+    "expected": {
+      "minScore": 85,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Gerund-led opening counts as the stated capability (plan 2; previously capped at 59 with a noVerb error)."
+  },
+  {
+    "id": "case-55",
+    "language": "en",
+    "description": "A skill that extracts tables from PDF reports and converts them to CSV. Use when the user needs tabular data out of PDF files. Do not use for scanned documents.",
+    "expected": {
+      "minScore": 85,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "\"A skill that <verbs>\" noun-phrase subject frame counts as capability (previously capped at 59)."
+  },
+  {
+    "id": "case-56",
+    "language": "en",
+    "description": "For mechanical CAD teams. Converts STEP assemblies to lightweight JT previews. Use when reviewers need visual checks. Do not use for FEA meshes.",
+    "expected": {
+      "minScore": 75,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": false
+    },
+    "notes": "Capability verb in the second sentence lifts the missing-capability cap; front-loading honestly stays unmet."
+  },
+  {
+    "id": "case-57",
+    "language": "en",
+    "description": "Convert DWG drawings to PDF. Use this skill whenever the user shares CAD drawings. Do not use for STEP models.",
+    "expected": {
+      "minScore": 85,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "\"whenever\" now matches the usage-trigger grammar (previously trigger none, 69)."
+  },
+  {
+    "id": "case-58",
+    "language": "en",
+    "description": "Extract structured data from CAN bus logs. This skill should be used when analyzing vehicle telemetry captures. It should not be used for simulated traces.",
+    "expected": {
+      "minScore": 85,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Passive \"should (not) be used when/for\" matches the grammar for both clauses (previously 65 with neither)."
+  },
+  {
+    "id": "case-59",
+    "language": "en",
+    "description": "Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms. When Claude needs to fill in a PDF form, or programmatically process, generate, or analyze PDF documents.",
+    "expected": {
+      "minScore": 60,
+      "maxScore": 85,
+      "trigger": "full",
+      "boundary": "none",
+      "frontLoaded": false
+    },
+    "notes": "Anthropic-published pdf-skill style: gerund capabilities and a sentence-initial \"When Claude ...\" trigger score honestly; deductions remain for the missing boundary, vague \"comprehensive\", and front-loading (previously 30/poor)."
+  },
+  {
+    "id": "case-60",
+    "language": "en",
+    "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files). Triggers include any mention of Word doc, docx, or requests to produce professional documents with tables of contents and headings. Do not use for PDFs or spreadsheets.",
+    "expected": {
+      "minScore": 80,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Anthropic-published docx-skill style: \"whenever the user wants to\" and \"Triggers include\" both match the grammar (previously 50/weak)."
+  },
+  {
+    "id": "case-61",
+    "language": "en",
+    "description": "Format the format of formats formatting PDF. Use when invoice PDF report. Do not use when contract Word document.",
+    "expected": {
+      "minScore": 80,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Documented limitation: keyword stuffing with *disjoint* trigger/boundary token sets still scores well \u2014 inherent to lexical analysis (see plan 2 non-goals). The echoed-scope variant is capped by case-52."
+  },
+  {
+    "id": "case-62",
+    "language": "en",
+    "description": "Extract tables from PDF reports. Use when <trigger context>. Do not use when <boundary>.",
+    "expected": {
+      "minScore": 40,
+      "maxScore": 59,
+      "gradeLimitations": [
+        "unfilled-placeholder",
+        "vague-usage-trigger"
+      ],
+      "trigger": "partial",
+      "boundary": "partial",
+      "frontLoaded": true
+    },
+    "notes": "Unfilled template placeholders are non-content and cap the score at 59 (previously 100/excellent for the improver's own output)."
+  },
+  {
+    "id": "case-63",
+    "language": "en",
+    "description": "Parse DBC files into JSON. The tool crashes when the user provides malformed frames.",
+    "expected": {
+      "minScore": 55,
+      "maxScore": 74,
+      "gradeLimitations": [
+        "missing-usage-trigger"
+      ],
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true
+    },
+    "notes": "Non-usage \"when the user\" sentence earns no trigger credit under the usage-context guard (previously 85/good with full credit)."
+  },
+  {
+    "id": "case-64",
+    "language": "en",
+    "description": "Do not use when handling invoices. Formats inspection reports using standard rules. Use when standardizing reports.",
+    "expected": {
+      "minScore": 75,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": false
+    },
+    "notes": "Boundary-first ordering with the capability verb in the second sentence no longer takes the missing-capability cap."
   }
 ]

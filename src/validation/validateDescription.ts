@@ -110,11 +110,14 @@ export function validateDescription(
     );
   }
 
+  // Advisory, not fatal: capability phrasing is a quality concern, and the
+  // detector is heuristic (gerunds, noun phrases, and second-sentence verbs are
+  // recognized, but other legitimate phrasings may not be).
   if (!analysis.actionVerb.found) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionNoVerb,
-        'error',
+        'warning',
         '`description` does not contain a clear action verb (e.g. "format", "analyze", "generate").',
         range,
       ),

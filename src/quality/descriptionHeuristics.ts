@@ -88,16 +88,23 @@ export function analyzeDescription(
   };
 }
 
+/**
+ * True when a sentence is about *using the skill* (rather than incidentally
+ * containing "when the user …"): an explicit "use this skill", a passive
+ * "should/must/can/will be used", or a "trigger(s) when" statement.
+ */
+const USAGE_CONTEXT_PATTERN =
+  /\b(?:use|using|invoke|activate|select|choose)\s+(?:this|the)\s+skill\b|\b(?:this\s+skill|it)\b[^.!?;]{0,80}\b(?:used|invoked|activated|selected|chosen|considered)\b|\b(?:should|must|can|will)\b[^.!?;]{0,40}\bbe\s+(?:used|invoked|activated|selected|chosen|considered)\b|\btrigger(?:s|ed)?\s+when\b/iu;
+
 export function analyzeOverbroadTrigger(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): OverbroadTriggerAnalysis {
-  const usageContext =
-    /\b(?:use|using|invoke|activate|select|choose)\s+(?:this|the)\s+skill\b|\b(?:this\s+skill|it)\b[^.!?;]{0,80}\b(?:used|invoked|activated|selected|chosen|considered)\b|\b(?:should|must|can|will)\b[^.!?;]{0,40}\bbe\s+(?:used|invoked|activated|selected|chosen|considered)\b|\btrigger(?:s|ed)?\s+when\b/iu;
   const sentences = description.match(/[^.!?;\n]+(?:[.!?;]+|$)/g) ?? [];
   const matchedPhrases = dictionaries.overbroadTriggerPhrases.filter((phrase) =>
     sentences.some(
-      (sentence) => usageContext.test(sentence) && overbroadPhraseRegex(phrase).test(sentence),
+      (sentence) =>
+        USAGE_CONTEXT_PATTERN.test(sentence) && overbroadPhraseRegex(phrase).test(sentence),
     ),
   );
   return matchedPhrases.length > 0
@@ -240,12 +247,22 @@ function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries): Phras
   const token = tokens.find((entry) => forms.has(entry));
   return token ? { found: true, matched: token } : { found: false };
 }
+/**
+ * Capability presence for the action-verb criterion: a positional match in the
+ * leading sentence wins; otherwise any capability verb form (gerunds included)
+ * within the *first two* sentences counts. A verb buried past the second
+ * sentence still reads as "capability not stated up front".
+ */
 function matchDescriptionVerb(
   description: string,
   dictionaries: HeuristicDictionaries,
 ): PhraseMatch {
   const match = matchLeadingCapability(description, dictionaries);
-  return match.found ? { found: true, matched: match.matched } : { found: false };
+  if (match.found) {
+    return { found: true, matched: match.matched };
+  }
+  const firstTwoSentences = description.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
+  return matchVerb(tokenize(firstTwoSentences), dictionaries);
 }
 
 function matchLeadingCapability(
@@ -254,21 +271,29 @@ function matchLeadingCapability(
 ): LeadingCapabilityMatch {
   const leading = description.split(/(?<=[.!?])\s+/)[0] ?? '';
   const tokens = tokenize(leading);
-  const { forms, toBase } = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms);
+  const { forms } = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms);
+  // Gerund-led openings ("Formatting PDF invoices…") count as a stated
+  // capability. A gerund noun phrase ("Formatting rules for authors") is
+  // lexically indistinguishable and is accepted as capability evidence too.
   const candidate = (
     tokenIndex: number,
     position: LeadingCapabilityMatch['position'],
-    allowGerund: boolean,
   ): LeadingCapabilityMatch | undefined => {
     const token = tokens[tokenIndex];
-    const base = token ? toBase.get(token) : undefined;
-    if (!token || !forms.has(token) || (!allowGerund && token !== base && token.endsWith('ing'))) {
+    if (!token || !forms.has(token)) {
       return undefined;
     }
     return { found: true, matched: token, tokenIndex, position };
   };
   const startsWith = (prefix: readonly string[]): boolean =>
     prefix.every((token, index) => tokens[index] === token);
+  const subjectFrame = (): LeadingCapabilityMatch | undefined => {
+    // a/an/this (skill|tool|toolkit) [that|which] <verb>
+    if (!['a', 'an', 'this'].includes(tokens[0] ?? '')) return undefined;
+    if (!['skill', 'tool', 'toolkit'].includes(tokens[1] ?? '')) return undefined;
+    const verbIndex = tokens[2] === 'that' || tokens[2] === 'which' ? 3 : 2;
+    return candidate(verbIndex, 'subject');
+  };
   const after = (
     prefix: readonly string[],
     position: LeadingCapabilityMatch['position'],
@@ -279,11 +304,12 @@ function matchLeadingCapability(
       [] as string[],
       ['the', 'user', 'needs', 'to'],
       ['the', 'user', 'asks', 'to'],
+      ['the', 'user', 'wants', 'to'],
       ['asked', 'to'],
     ];
     for (const frame of frames) {
       if (frame.every((token, index) => tokens[start + index] === token)) {
-        const match = candidate(start + frame.length, position, true);
+        const match = candidate(start + frame.length, position);
         if (match) return match;
       }
     }
@@ -291,11 +317,14 @@ function matchLeadingCapability(
   };
 
   return (
-    candidate(0, 'direct', false) ??
-    (startsWith(['this', 'skill']) ? candidate(2, 'subject', false) : undefined) ??
+    candidate(0, 'direct') ??
+    subjectFrame() ??
     after(['use', 'this', 'skill', 'when'], 'use-when') ??
+    after(['use', 'this', 'skill', 'whenever'], 'use-when') ??
     after(['use', 'this', 'when'], 'use-when') ??
+    after(['use', 'this', 'whenever'], 'use-when') ??
     after(['use', 'when'], 'use-when') ??
+    after(['use', 'whenever'], 'use-when') ??
     after(['when', 'asked', 'to'], 'when-asked') ??
     after(['only', 'use', 'when'], 'trigger') ??
     after(['trigger', 'when'], 'trigger') ?? { found: false }
@@ -309,6 +338,76 @@ interface Candidate extends ScopeClauseAnalysis {
   marker: string;
   absoluteOffset: number;
 }
+
+/**
+ * Built-in scope-marker grammar (plan 2 Part B). The dictionary phrase lists
+ * remain fully honored as *additive* configuration; these patterns recognize the
+ * marker shapes an exact-phrase list cannot enumerate ("use this skill
+ * whenever…", "should be used when…", "designed for…", "triggers include…").
+ */
+const USAGE_VERB = String.raw`(?:use[ds]?|using|invoke[ds]?|invoking|appl(?:y|ies|ied|ying)|trigger(?:s|ed)?|runs?|ran)`;
+const SAME_SENTENCE_GAP = String.raw`[^.!?;\n]{0,60}?`;
+const NEGATION = String.raw`(?:do\s+not|don['’]t|never|should\s+not|shouldn['’]t|must\s+not|mustn['’]t|cannot|can['’]t|won['’]t|not(?:\s+to)?\s+be)`;
+/** `<usage verb> … <scope conjunction>` within one sentence. */
+const POSITIVE_USAGE_GRAMMAR = new RegExp(
+  String.raw`\b${USAGE_VERB}\b${SAME_SENTENCE_GAP}\b(?:whenever|when|for|if)\b`,
+  'giu',
+);
+/** `designed/intended/ideal/best/suitable/appropriate for`. */
+const QUALIFIED_FOR_GRAMMAR = /\b(?:designed|intended|ideal|best|suitable|appropriate)\s+for\b/giu;
+const TRIGGERS_INCLUDE_GRAMMAR = /\btriggers?\s+include\b/giu;
+/** Bare agent-condition markers; usage-context guarded (plan 2 Part C). */
+const AGENT_WHEN_GRAMMAR = /\bwhen(?:ever)?\s+(?:the\s+user|claude|you|asked)\b/giu;
+/** `<negation> … use(d) … <scope conjunction>` within one sentence. */
+const NEGATIVE_USAGE_GRAMMAR = new RegExp(
+  String.raw`\b${NEGATION}\b${SAME_SENTENCE_GAP}\buse[ds]?\b${SAME_SENTENCE_GAP}\b(?:whenever|when|for|if|on)\b`,
+  'giu',
+);
+/** Unfilled template placeholders never count as scope content. */
+const PLACEHOLDER_SPAN = /<[^<>\n]{1,60}>/g;
+
+interface SentenceSpan {
+  start: number;
+  end: number;
+}
+
+/** Sentence extents using the clause-terminator convention (`.` only before whitespace/end). */
+function sentenceSpans(text: string): SentenceSpan[] {
+  const spans: SentenceSpan[] = [];
+  let start = 0;
+  for (const match of text.matchAll(/[!?;\n]|\.(?=\s|$)/g)) {
+    const end = (match.index ?? 0) + match[0].length;
+    spans.push({ start, end });
+    start = end;
+  }
+  if (start < text.length) {
+    spans.push({ start, end: text.length });
+  }
+  return spans;
+}
+
+/**
+ * A bare `when the user` / `when claude`-style marker only counts as a usage
+ * trigger when its sentence is about using the skill: either the marker opens
+ * the sentence ("When asked to…", "When Claude needs…") or the sentence carries
+ * explicit usage context. "The tool crashes when the user provides malformed
+ * frames" earns nothing.
+ */
+function agentWhenAllowed(
+  description: string,
+  index: number,
+  sentences: readonly SentenceSpan[],
+): boolean {
+  const sentence = sentences.find((span) => index >= span.start && index < span.end);
+  if (!sentence) {
+    return true;
+  }
+  if (description.slice(sentence.start, index).trim() === '') {
+    return true;
+  }
+  return USAGE_CONTEXT_PATTERN.test(description.slice(sentence.start, sentence.end));
+}
+
 export function assessScopeClause(
   description: string,
   kind: 'trigger' | 'boundary',
@@ -329,20 +428,64 @@ export function assessScopeClause(
     kind === 'trigger'
       ? [...dictionaries.negativeBoundaryPhrases, ...dictionaries.restrictiveBoundaryPhrases]
       : [];
-  const occurrences: Array<{ marker: string; index: number; end: number }> = [];
+  // Negated-usage spans exclude any positive marker they cover, so "should not
+  // be used when X" never earns positive-trigger credit through the grammar.
+  const negatedSpans =
+    kind === 'trigger' ? [...description.matchAll(NEGATIVE_USAGE_GRAMMAR)] : [];
+  const sentences = sentenceSpans(description);
+  const allowed = (marker: string, index: number, end: number): boolean => {
+    if (
+      excluded.some((negative) =>
+        phraseRegex(negative, 'i').test(
+          description.slice(Math.max(0, index - negative.length - 2), end),
+        ),
+      )
+    ) {
+      return false;
+    }
+    if (
+      negatedSpans.some((span) => {
+        const spanStart = span.index ?? 0;
+        return index < spanStart + span[0].length && spanStart < end;
+      })
+    ) {
+      return false;
+    }
+    if (kind === 'trigger' && /^when\b/i.test(marker)) {
+      return agentWhenAllowed(description, index, sentences);
+    }
+    return true;
+  };
+  const bySpan = new Map<string, { marker: string; index: number; end: number }>();
+  const add = (marker: string, index: number, end: number): void => {
+    if (!allowed(marker, index, end)) {
+      return;
+    }
+    const key = `${index}:${end}`;
+    if (!bySpan.has(key)) {
+      bySpan.set(key, { marker, index, end });
+    }
+  };
   for (const marker of markers)
     for (const match of description.matchAll(phraseRegex(marker, 'gi'))) {
       const index = match.index ?? 0;
-      if (
-        excluded.some((negative) =>
-          phraseRegex(negative, 'i').test(
-            description.slice(Math.max(0, index - negative.length - 2), index + match[0].length),
-          ),
-        )
-      )
-        continue;
-      occurrences.push({ marker, index, end: index + match[0].length });
+      add(marker, index, index + match[0].length);
     }
+  const grammarSources =
+    kind === 'trigger'
+      ? [
+          POSITIVE_USAGE_GRAMMAR,
+          QUALIFIED_FOR_GRAMMAR,
+          TRIGGERS_INCLUDE_GRAMMAR,
+          AGENT_WHEN_GRAMMAR,
+        ]
+      : [NEGATIVE_USAGE_GRAMMAR];
+  for (const source of grammarSources)
+    for (const match of description.matchAll(source)) {
+      const index = match.index ?? 0;
+      add(match[0].toLowerCase().replace(/\s+/g, ' '), index, index + match[0].length);
+    }
+  const occurrences = [...bySpan.values()];
   const candidates = occurrences
     .map((occurrence): Candidate => {
       const nextMarker =
@@ -367,9 +510,11 @@ export function assessScopeClause(
         .replace(/['’](?:s|t|re|ve|ll|d|m)\b/gi, '');
       // Single-token evidence needs the original casing: ambiguous acronyms (STEP, CI)
       // only count when written in uppercase, which tokenize() would erase.
+      // Unfilled template placeholders ("<trigger context>") are stripped first:
+      // the marker may be found, but a placeholder is never scope content.
       const stopwords = new Set(dictionaries.scopeStopwords);
       const scopeVagueTerms = new Set(dictionaries.scopeVagueTerms);
-      const pairs = (clauseText.match(/[\p{L}\p{N}]+/gu) ?? [])
+      const pairs = (clauseText.replace(PLACEHOLDER_SPAN, ' ').match(/[\p{L}\p{N}]+/gu) ?? [])
         .map((raw) => ({ raw, lower: raw.toLowerCase() }))
         .filter((pair) => !stopwords.has(pair.lower));
       const contentTokens = pairs.map((pair) => pair.lower);
