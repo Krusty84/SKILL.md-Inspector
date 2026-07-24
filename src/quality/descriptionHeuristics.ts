@@ -345,9 +345,13 @@ interface Candidate extends ScopeClauseAnalysis {
  * marker shapes an exact-phrase list cannot enumerate ("use this skill
  * whenever…", "should be used when…", "designed for…", "triggers include…").
  */
-const USAGE_VERB = String.raw`(?:use[ds]?|using|invoke[ds]?|invoking|appl(?:y|ies|ied|ying)|trigger(?:s|ed)?|runs?|ran)`;
+/** Shared usage-verb family; positive and negated grammars stay symmetric (plan 5 Part A). */
+const USAGE_VERB_CORE = String.raw`use[ds]?|using|invoke[ds]?|invoking|appl(?:y|ies|ied|ying)|trigger(?:s|ed)?|runs?|ran`;
+const USAGE_VERB = String.raw`(?:${USAGE_VERB_CORE})`;
+/** The negated grammar also covers the remaining gerunds ("avoid running when…"). */
+const NEGATED_USAGE_VERB = String.raw`(?:${USAGE_VERB_CORE}|running|triggering)`;
 const SAME_SENTENCE_GAP = String.raw`[^.!?;\n]{0,60}?`;
-const NEGATION = String.raw`(?:do\s+not|don['’]t|never|should\s+not|shouldn['’]t|must\s+not|mustn['’]t|cannot|can['’]t|won['’]t|not(?:\s+to)?\s+be)`;
+const NEGATION = String.raw`(?:do\s+not|don['’]t|never|should\s+not|shouldn['’]t|must\s+not|mustn['’]t|cannot|can['’]t|won['’]t|avoid(?:s|ed|ing)?|not(?:\s+to)?\s+be)`;
 /** `<usage verb> … <scope conjunction>` within one sentence. */
 const POSITIVE_USAGE_GRAMMAR = new RegExp(
   String.raw`\b${USAGE_VERB}\b${SAME_SENTENCE_GAP}\b(?:whenever|when|for|if)\b`,
@@ -358,11 +362,28 @@ const QUALIFIED_FOR_GRAMMAR = /\b(?:designed|intended|ideal|best|suitable|approp
 const TRIGGERS_INCLUDE_GRAMMAR = /\btriggers?\s+include\b/giu;
 /** Bare agent-condition markers; usage-context guarded (plan 2 Part C). */
 const AGENT_WHEN_GRAMMAR = /\bwhen(?:ever)?\s+(?:the\s+user|claude|you|asked)\b/giu;
-/** `<negation> … use(d) … <scope conjunction>` within one sentence. */
+/**
+ * `<negation> … <usage verb> … <scope conjunction>` within one sentence. Does
+ * double duty: negated-span *exclusion* for trigger detection and *boundary*
+ * grammar source, so "Never invoke for merge commits" both loses trigger credit
+ * and gains a boundary through this one pattern.
+ */
 const NEGATIVE_USAGE_GRAMMAR = new RegExp(
-  String.raw`\b${NEGATION}\b${SAME_SENTENCE_GAP}\buse[ds]?\b${SAME_SENTENCE_GAP}\b(?:whenever|when|for|if|on)\b`,
+  String.raw`\b${NEGATION}\b${SAME_SENTENCE_GAP}\b${NEGATED_USAGE_VERB}\b${SAME_SENTENCE_GAP}\b(?:whenever|when|for|if|on)\b`,
   'giu',
 );
+/**
+ * A `for`-conjunction followed by a quantity/duration/size expression describes
+ * behavior ("Runs for 10 minutes"), not usage scope (plan 5 Part B).
+ */
+const DURATION_AFTER_FOR =
+  /^\s*(?:up\s+to\s+|about\s+|around\s+)?\d+(?:\.\d+)?\s*(?:seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|ms|kb|mb|gb|tb|files?|rows?|pages?|items?)\b/i;
+/**
+ * Bare third-person usage verbs describe what the tool does ("Applies fixes
+ * if…"), so they only count as triggers in sentences with explicit usage
+ * context. Imperative/base forms and passives stay unguarded (plan 5 Part B).
+ */
+const THIRD_PERSON_USAGE = new Set(['uses', 'runs', 'applies', 'invokes', 'triggers']);
 /** Unfilled template placeholders never count as scope content. */
 const PLACEHOLDER_SPAN = /<[^<>\n]{1,60}>/g;
 
@@ -386,6 +407,25 @@ function sentenceSpans(text: string): SentenceSpan[] {
   return spans;
 }
 
+function sentenceContaining(
+  index: number,
+  sentences: readonly SentenceSpan[],
+): SentenceSpan | undefined {
+  return sentences.find((span) => index >= span.start && index < span.end);
+}
+
+function hasUsageContextAt(
+  description: string,
+  index: number,
+  sentences: readonly SentenceSpan[],
+): boolean {
+  const sentence = sentenceContaining(index, sentences);
+  if (!sentence) {
+    return false;
+  }
+  return USAGE_CONTEXT_PATTERN.test(description.slice(sentence.start, sentence.end));
+}
+
 /**
  * A bare `when the user` / `when claude`-style marker only counts as a usage
  * trigger when its sentence is about using the skill: either the marker opens
@@ -398,7 +438,7 @@ function agentWhenAllowed(
   index: number,
   sentences: readonly SentenceSpan[],
 ): boolean {
-  const sentence = sentences.find((span) => index >= span.start && index < span.end);
+  const sentence = sentenceContaining(index, sentences);
   if (!sentence) {
     return true;
   }
@@ -483,7 +523,23 @@ export function assessScopeClause(
   for (const source of grammarSources)
     for (const match of description.matchAll(source)) {
       const index = match.index ?? 0;
-      add(match[0].toLowerCase().replace(/\s+/g, ' '), index, index + match[0].length);
+      const end = index + match[0].length;
+      // Behavior-statement guards (plan 5 Part B): "Runs for 10 minutes" and
+      // "Applies fixes if…" describe what the tool does, not when to use it.
+      if (
+        (source === POSITIVE_USAGE_GRAMMAR || source === QUALIFIED_FOR_GRAMMAR) &&
+        /\bfor$/i.test(match[0]) &&
+        DURATION_AFTER_FOR.test(description.slice(end))
+      ) {
+        continue;
+      }
+      if (source === POSITIVE_USAGE_GRAMMAR) {
+        const verb = match[0].match(/^\p{L}+/u)?.[0].toLowerCase() ?? '';
+        if (THIRD_PERSON_USAGE.has(verb) && !hasUsageContextAt(description, index, sentences)) {
+          continue;
+        }
+      }
+      add(match[0].toLowerCase().replace(/\s+/g, ' '), index, end);
     }
   const occurrences = [...bySpan.values()];
   const candidates = occurrences
