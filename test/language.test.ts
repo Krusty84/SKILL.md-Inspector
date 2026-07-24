@@ -68,10 +68,25 @@ describe('isProbablyNonEnglish', () => {
       'Da capo notation cleanup for MusicXML scores. Use when engraving parts.',
       'Generate release notes from merged pull requests and linked tickets.',
       'Use this skill whenever the user wants to create, read, edit, or manipulate Word documents.',
+      // Cross-language homographs (plan 5 Part C): article/particle lookalikes
+      // alone must never flag terse English as foreign.
+      'Renders para-virtualized VM images. No console output. No GUI.',
+      'Inspect die casting molds von Bosch. Compare die wear patterns across lots.',
+      'Map Los Angeles transit data. No API key required. Se habla support available.',
     ];
     for (const control of englishControls) {
       expect(isProbablyNonEnglish(control), control).toBe(false);
     }
+  });
+
+  it('leaves Dutch unflagged (documented gap, no profile)', () => {
+    // Dutch function words (de/het/een) are homograph-heavy; a Dutch profile
+    // needs its own precision work and is deliberately out of scope (plan 5).
+    expect(
+      isProbablyNonEnglish(
+        'Formatteert PDF-facturen naar de standaardindeling. Gebruiken bij de maandelijkse afsluiting. Niet gebruiken voor gescande afbeeldingen.',
+      ),
+    ).toBe(false);
   });
 
   it('never flags any English benchmark description (bulk zero-false-positive gate)', () => {

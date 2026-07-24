@@ -22,13 +22,32 @@ const ENGLISH_PROFILE = new Set(
   'the a an and for with when to use not of in on is are do'.split(' '),
 );
 
-const FOREIGN_PROFILES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ['de', new Set('der die das und für nicht mit von bei werden wird verwenden eine einen ist'.split(' '))],
-  ['fr', new Set('le la les des une pour pas avec dans est sont utiliser ne du au aux'.split(' '))],
-  ['es', new Set('el la los las una para con cuando desde usar no se por es son'.split(' '))],
-  ['it', new Set('il lo la gli le una per con quando usare non di da è sono'.split(' '))],
-  ['pt', new Set('o os as um uma para com quando usar não de da do é são'.split(' '))],
-]);
+/**
+ * Each foreign profile splits into **unique** markers (diacritic-bearing or
+ * genuinely English-rare words) and **homograph** markers (words that also occur
+ * in English technical prose: "die casting", "von Bosch", "para-virtualized",
+ * "No GUI", "per file", the EST/MIT tokens…). At least one unique marker must
+ * hit before a profile can flag; homographs then only add supporting weight
+ * (plan 5 Part C). Dutch has no profile — its function words (de/het/een) are
+ * homograph-heavy and need their own precision work, so Dutch is scored as
+ * English (documented gap).
+ */
+interface ForeignProfile {
+  unique: ReadonlySet<string>;
+  homograph: ReadonlySet<string>;
+}
+
+function profile(unique: string, homograph: string): ForeignProfile {
+  return { unique: new Set(unique.split(' ')), homograph: new Set(homograph.split(' ')) };
+}
+
+const FOREIGN_PROFILES: readonly ForeignProfile[] = [
+  profile('für nicht werden wird verwenden ist und eine einen', 'der die das mit von bei'), // de
+  profile('pour pas avec dans ne aux utiliser sont', 'le la les des une est du au'), // fr
+  profile('cuando usar desde según imágenes', 'el la los las una para con no se por es son'), // es
+  profile('usare gli perché è sono quando', 'il lo la le una per con non di da'), // it
+  profile('usar quando não são é', 'o os as um uma para com de da do'), // pt
+];
 
 /** Below this many word tokens the profile stage is undecidable. */
 const MIN_DECIDABLE_TOKENS = 5;
@@ -60,18 +79,29 @@ function hasDominantForeignProfile(text: string): boolean {
       englishHits += 1;
     }
   }
-  for (const profile of FOREIGN_PROFILES.values()) {
+  for (const { unique, homograph } of FOREIGN_PROFILES) {
+    let uniqueHits = 0;
     let hits = 0;
     const distinct = new Set<string>();
     for (const token of tokens) {
-      if (profile.has(token)) {
+      if (unique.has(token)) {
+        uniqueHits += 1;
+        hits += 1;
+        distinct.add(token);
+      } else if (homograph.has(token)) {
         hits += 1;
         distinct.add(token);
       }
     }
-    // Clear-margin rule: enough hits, enough distinct markers, and a strictly
-    // better hit count than English over the same tokens. When in doubt, false.
-    if (hits >= MIN_FOREIGN_HITS && distinct.size >= MIN_DISTINCT_FOREIGN_MARKERS && hits > englishHits) {
+    // Clear-margin rule: at least one unique marker, enough hits, enough
+    // distinct markers, and a strictly better hit count than English over the
+    // same tokens. When in doubt, false.
+    if (
+      uniqueHits >= 1 &&
+      hits >= MIN_FOREIGN_HITS &&
+      distinct.size >= MIN_DISTINCT_FOREIGN_MARKERS &&
+      hits > englishHits
+    ) {
       return true;
     }
   }
