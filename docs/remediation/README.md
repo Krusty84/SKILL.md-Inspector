@@ -14,6 +14,7 @@ implement it end to end, including reproducing the problem before fixing it.
 | 2 | [Description evidence extraction overhaul](plan-2-description-evidence.md) | `src/quality/descriptionHeuristics.ts`, `src/validation/validateDescription.ts`, `benchmarks/` | 1 |
 | 3 | [Language detection for Latin-script languages](plan-3-language-detection.md) | `src/quality/language.ts`, `package.json` (setting text), `benchmarks/` | 1 (2 recommended) |
 | 4 | [Collision boilerplate damping + morphology fixes](plan-4-collision-and-morphology.md) | `src/workspace/*`, `src/quality/wordForms.ts`, `src/quality/defaultHeuristicDictionaries.json` | 1 |
+| 5 | [Scope-grammar negation symmetry + trigger/language precision](plan-5-grammar-negation-and-language-precision.md) | `src/quality/descriptionHeuristics.ts`, `src/quality/language.ts`, `benchmarks/` | 1–4 merged |
 
 **Why this order.** Plan 1 makes the test suite green; every later plan uses "full suite
 passes" as an acceptance gate, which is meaningless while pre-existing failures remain.
@@ -22,6 +23,13 @@ Plans 2, 3, and 4 are independent in *code*, but 2 and 3 both append cases to
 `src/quality/defaultHeuristicDictionaries.json` — run them **sequentially** (each new
 session starts from the merged result of the previous one) to avoid pointless merge
 conflicts. If you must parallelize, pair 3 with 4, never 2 with 3.
+
+Plan 5 was added after an adversarial re-evaluation of the merged Plans 1–4: the new
+trigger grammar and language profiles fixed all the original false negatives but
+introduced three precision holes (negated usage verbs read as positive triggers,
+duration/conditional statements read as triggers, and English text flagged non-English
+via cross-language homographs). It touches the same files as Plans 2–3, so it must run
+alone, on top of their merged result.
 
 ## How to run a plan in an isolated session
 
