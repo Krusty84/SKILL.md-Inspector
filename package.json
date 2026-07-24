@@ -1192,7 +1192,19 @@
               "out",
               "up",
               "via",
-              "per"
+              "per",
+              "ask",
+              "asks",
+              "asked",
+              "help",
+              "helps",
+              "want",
+              "wants",
+              "need",
+              "needs",
+              "work",
+              "works",
+              "about"
             ],
             "description": "Common terms removed before workspace description collision similarity is calculated.",
             "items": {
@@ -1248,6 +1260,12 @@
               "analysis": [
                 "analyses"
               ],
+              "api": [
+                "apis"
+              ],
+              "axis": [
+                "axes"
+              ],
               "bus": [
                 "buses"
               ],
@@ -1268,6 +1286,9 @@
               ],
               "thesis": [
                 "theses"
+              ],
+              "vertex": [
+                "vertices"
               ]
             },
             "description": "Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.",
@@ -1670,7 +1691,7 @@
               "auto"
             ],
             "default": "auto",
-            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" detects a non-English description and marks its quality score as language-limited."
+            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" marks the quality score as language-limited when it detects a non-Latin script (Cyrillic, CJK, …) or a common Latin-script language (German, French, Spanish, Italian, Portuguese) via stopword profiles. Other languages may still be scored as English."
           },
           "skillMdInspector.description.maxLength": {
             "type": "number",

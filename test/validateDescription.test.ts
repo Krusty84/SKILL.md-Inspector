@@ -58,7 +58,9 @@ describe('validateDescription', () => {
       parseSkillFile('/ws/skills/demo/SKILL.md', content),
       genericProfile,
     ).find((diagnostic) => diagnostic.code === DiagnosticCode.DescriptionNoVerb);
-    expect(noVerb?.severity).toBe('error');
+    // Advisory since plan 2: the capability detector is heuristic, so a missing
+    // verb warns instead of blocking.
+    expect(noVerb?.severity).toBe('warning');
   });
 
   it('reports a description over the maximum length as an error', () => {
@@ -138,7 +140,9 @@ describe('validateDescription', () => {
     const removed = resolveHeuristicDictionaries({
       actionVerbs: DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs.filter((verb) => verb !== 'format'),
     });
-    expect(codes('Format inspection reports. Use when standardizing reports.', removed)).toContain(
+    // "auditing" keeps the first two sentences free of other registry verbs, so
+    // removing "format" is what decides the diagnostic.
+    expect(codes('Format inspection reports. Use when auditing documents.', removed)).toContain(
       DiagnosticCode.DescriptionNoVerb,
     );
   });

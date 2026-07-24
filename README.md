@@ -185,7 +185,10 @@ The extension deliberately reports distinct signals:
   excessive length, repetition, and unclosed code fences.
 - **Resource authoring quality** identifies unreferenced files, undocumented scripts,
   and unusually large bundled resources.
-- **Collision risk** compares descriptions and names across the workspace.
+- **Collision risk** compares descriptions and names across the workspace. Pair
+  similarities are computed against the whole scanned corpus (TF-IDF document
+  frequencies), so adding or removing unrelated skills can shift a pair's score
+  by a few hundredths.
 
 When required input is missing or cannot be trusted, description or instruction
 quality is shown as **Not scored** instead of silently assigning zero. Resource
@@ -233,6 +236,11 @@ flows, and constraints, see [ARCHITECTURE.md](ARCHITECTURE.md). Release history 
   mixed public/private DNS answers, HTTPS-to-HTTP redirects, and unsafe redirect
   targets. It connects directly to a validated address and does not use ambient
   proxy configuration; restrictive networks may therefore produce check failures.
+- Token and line metrics, including the fixed content-budget diagnostics, are
+  measured with the open `o200k_base` encoding as a deterministic offline proxy.
+  Claude's production tokenizer is not `o200k_base`, so counts near a budget
+  threshold can differ by roughly ±10–20%; read budget thresholds with that
+  tolerance rather than as exact production counts.
 - Workspace aggregate analysis currently uses only the first workspace folder.
 - Full skill analysis depends partly on local Node filesystem APIs, so remote or
   virtual workspaces are not uniformly supported.

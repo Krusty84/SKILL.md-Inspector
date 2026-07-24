@@ -198,7 +198,7 @@ describe('navigator manifest', () => {
   it('declares containers, views, commands, menus, and additional roots schema', () => {
     expect(packageJson.contributes.viewsContainers.activitybar[0]).toMatchObject({
       id: 'skillMdInspector',
-      title: 'SKILL.md INSPECTOR',
+      title: 'SKILL.md Inspector',
       icon: 'media/skill-md-inspector.svg',
     });
     expect(packageJson.contributes.viewsContainers.panel[0]).toMatchObject({
@@ -212,10 +212,10 @@ describe('navigator manifest', () => {
       'skillMdInspectorOpenCodeSessions',
     ]);
     expect(packageJson.contributes.views.skillMdInspector.map((view) => view.name)).toEqual([
+      'FAVORITES',
       'WORKSPACE',
       'INSTALLED AGENTS',
       'OPENCODE SESSIONS',
-      'FAVORITES',
     ]);
     expect(packageJson.contributes.views.skillMdInspectorPanel[0].id).toBe(
       'skillMdInspectorSkills',

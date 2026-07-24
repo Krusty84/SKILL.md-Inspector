@@ -3,10 +3,16 @@
     "group": "quality-ladder",
     "tier": "broken",
     "frontmatter": "missing",
-    "requiredDiagnostics": ["skill.frontmatter.missing"],
+    "requiredDiagnostics": [
+      "skill.frontmatter.missing"
+    ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "not-scored" },
-    "instructionQuality": { "state": "not-scored" },
+    "descriptionQuality": {
+      "state": "not-scored"
+    },
+    "instructionQuality": {
+      "state": "not-scored"
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": [],
     "limitations": [
@@ -17,10 +23,16 @@
     "group": "quality-ladder",
     "tier": "broken",
     "frontmatter": "invalid",
-    "requiredDiagnostics": ["skill.frontmatter.invalid"],
+    "requiredDiagnostics": [
+      "skill.frontmatter.invalid"
+    ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "not-scored" },
-    "instructionQuality": { "state": "not-scored" },
+    "descriptionQuality": {
+      "state": "not-scored"
+    },
+    "instructionQuality": {
+      "state": "not-scored"
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": []
   },
@@ -36,9 +48,19 @@
       "skill.body.noWhenToUse"
     ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 0,
+      "maxScore": 29
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [],
     "limitations": [
       "Contradictory step ordering and whether the prose is useful are semantic judgments outside deterministic structural scoring."
@@ -49,17 +71,30 @@
     "tier": "mediocre",
     "frontmatter": "valid",
     "requiredDiagnostics": [
-      "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.vague"
     ],
-    "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
-    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
-    "requiredInstructionFindings": ["Placeholders", "Empty section"],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 30,
+      "maxScore": 59
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 60,
+      "maxScore": 74
+    },
+    "requiredInstructionFindings": [
+      "Placeholders",
+      "Empty section"
+    ],
     "forbiddenInstructionFindings": [],
     "limitations": [
-      "The mutually contradictory drafting rules remain a human-review example; deterministic instruction quality checks structure and hygiene only."
+      "The mutually contradictory drafting rules remain a human-review example; deterministic instruction quality checks structure and hygiene only.",
+      "Since the evidence-extraction overhaul, \"I help you write emails\" states a lexical capability (write), so no noVerb diagnostic; the description still scores weak on trigger and vagueness."
     ]
   },
   "report-generator": {
@@ -73,23 +108,49 @@
       "skill.body.noExamples"
     ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 45,
+      "maxScore": 69
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [],
     "limitations": [
-      "Circular or unhelpful prose is semantic unless it crosses a deterministic repetition or structure threshold."
+      "Circular or unhelpful prose is semantic unless it crosses a deterministic repetition or structure threshold.",
+      "Evidence extraction now credits the capability and the (overbroad) trigger clause; the overbroad-usage-scope ceiling of 69 is the score defense, alongside tooLong and vague diagnostics."
     ]
   },
   "git-commit-helper": {
     "group": "quality-ladder",
     "tier": "decent",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.body.noExamples"],
-    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "requiredDiagnostics": [
+      "skill.body.noExamples"
+    ],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -109,8 +170,16 @@
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": [
       "Substantive body",
@@ -128,15 +197,27 @@
     "group": "quality-ladder",
     "tier": "very-good",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.body.noExamples"],
+    "requiredDiagnostics": [
+      "skill.body.noExamples"
+    ],
     "forbiddenDiagnostics": [
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -159,8 +240,16 @@
       "skill.description.noBoundary",
       "skill.description.vague"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": [
       "Substantive body",
@@ -188,8 +277,16 @@
       "skill.description.noBoundary",
       "skill.resource.unreferenced"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": [
       "Substantive body",
@@ -204,10 +301,20 @@
     ],
     "resourceExpectations": {
       "requiredFindings": [],
-      "forbiddenFindings": ["Undocumented script", "Unreferenced resource", "Large resource"],
+      "forbiddenFindings": [
+        "Undocumented script",
+        "Unreferenced resource",
+        "Large resource"
+      ],
       "requiredNodes": [
-        { "path": "references/field-types.md", "kind": "referenced" },
-        { "path": "scripts/fill_form.py", "kind": "referenced" }
+        {
+          "path": "references/field-types.md",
+          "kind": "referenced"
+        },
+        {
+          "path": "scripts/fill_form.py",
+          "kind": "referenced"
+        }
       ]
     },
     "limitations": [
@@ -218,22 +325,48 @@
     "group": "defect-zoo",
     "tier": "broken",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.description.missing"],
+    "requiredDiagnostics": [
+      "skill.description.missing"
+    ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "not-scored" },
-    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
-    "requiredInstructionFindings": ["Substantive instructions", "Examples"],
+    "descriptionQuality": {
+      "state": "not-scored"
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 60,
+      "maxScore": 74
+    },
+    "requiredInstructionFindings": [
+      "Substantive instructions",
+      "Examples"
+    ],
     "forbiddenInstructionFindings": []
   },
   "sql-optimizer": {
     "group": "defect-zoo",
     "tier": "broken",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.name.missing"],
-    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "requiredDiagnostics": [
+      "skill.name.missing"
+    ],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -247,11 +380,24 @@
     "group": "defect-zoo",
     "tier": "poor",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.name.folderMismatch", "skill.name.format"],
+    "requiredDiagnostics": [
+      "skill.name.folderMismatch",
+      "skill.name.format"
+    ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 0,
+      "maxScore": 29
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [],
     "limitations": [
       "The unsafe retry-with-sudo advice is intentionally outside deterministic structural analysis and requires human review."
@@ -261,11 +407,27 @@
     "group": "defect-zoo",
     "tier": "poor",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.description.vague"],
-    "forbiddenDiagnostics": ["skill.frontmatter.missing", "skill.frontmatter.invalid"],
-    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
-    "instructionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
-    "requiredInstructionFindings": ["Unclosed code fence", "Examples"],
+    "requiredDiagnostics": [
+      "skill.description.vague"
+    ],
+    "forbiddenDiagnostics": [
+      "skill.frontmatter.missing",
+      "skill.frontmatter.invalid"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 30,
+      "maxScore": 65
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 0,
+      "maxScore": 29
+    },
+    "requiredInstructionFindings": [
+      "Unclosed code fence",
+      "Examples"
+    ],
     "forbiddenInstructionFindings": []
   },
   "webhook-debugger": {
@@ -277,20 +439,47 @@
       "skill.description.overbroadTrigger"
     ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
-    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
-    "requiredInstructionFindings": ["Substantive instructions", "Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 40,
+      "maxScore": 69
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 60,
+      "maxScore": 74
+    },
+    "requiredInstructionFindings": [
+      "Substantive instructions",
+      "Examples"
+    ],
     "forbiddenInstructionFindings": []
   },
   "k8s-log-analyzer": {
     "group": "defect-zoo",
     "tier": "mediocre",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.name.folderMismatch", "skill.name.tooLong"],
-    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "requiredDiagnostics": [
+      "skill.name.folderMismatch",
+      "skill.name.tooLong"
+    ],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -304,11 +493,26 @@
     "group": "defect-zoo",
     "tier": "mediocre",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.name.folderMismatch"],
-    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
-    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "requiredDiagnostics": [
+      "skill.name.folderMismatch"
+    ],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 30,
+      "maxScore": 59
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -322,16 +526,28 @@
     "group": "defect-zoo",
     "tier": "decent",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.body.noExamples"],
+    "requiredDiagnostics": [
+      "skill.body.noExamples"
+    ],
     "forbiddenDiagnostics": [
       "skill.name.folderMismatch",
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -345,14 +561,24 @@
     "group": "defect-zoo",
     "tier": "decent",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.name.folderMismatch"],
+    "requiredDiagnostics": [
+      "skill.name.folderMismatch"
+    ],
     "forbiddenDiagnostics": [
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 30,
+      "maxScore": 59
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": [
       "Substantive body",
@@ -370,15 +596,27 @@
     "group": "defect-zoo",
     "tier": "good",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.link.missing"],
+    "requiredDiagnostics": [
+      "skill.link.missing"
+    ],
     "forbiddenDiagnostics": [
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -389,10 +627,20 @@
     ],
     "resourceExpectations": {
       "requiredFindings": [],
-      "forbiddenFindings": ["Undocumented script", "Unreferenced resource", "Large resource"],
+      "forbiddenFindings": [
+        "Undocumented script",
+        "Unreferenced resource",
+        "Large resource"
+      ],
       "requiredNodes": [
-        { "path": "references/theme-guide.md", "kind": "missing" },
-        { "path": "scripts/build.py", "kind": "missing" }
+        {
+          "path": "references/theme-guide.md",
+          "kind": "missing"
+        },
+        {
+          "path": "scripts/build.py",
+          "kind": "missing"
+        }
       ]
     }
   },
@@ -400,11 +648,28 @@
     "group": "defect-zoo",
     "tier": "mediocre",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.body.noExamples"],
-    "forbiddenDiagnostics": ["skill.description.noVerb", "skill.description.noTrigger"],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 30, "maxScore": 59 },
-    "requiredInstructionFindings": ["Examples", "Length", "Repetitive instructions"],
+    "requiredDiagnostics": [
+      "skill.body.noExamples"
+    ],
+    "forbiddenDiagnostics": [
+      "skill.description.noVerb",
+      "skill.description.noTrigger"
+    ],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 30,
+      "maxScore": 59
+    },
+    "requiredInstructionFindings": [
+      "Examples",
+      "Length",
+      "Repetitive instructions"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -416,15 +681,27 @@
     "group": "defect-zoo",
     "tier": "good",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.body.noExamples"],
+    "requiredDiagnostics": [
+      "skill.body.noExamples"
+    ],
     "forbiddenDiagnostics": [
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -447,8 +724,16 @@
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
     "requiredInstructionFindings": [],
     "forbiddenInstructionFindings": [
       "Substantive body",
@@ -466,15 +751,27 @@
     "group": "legacy",
     "tier": "good",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.body.noExamples"],
+    "requiredDiagnostics": [
+      "skill.body.noExamples"
+    ],
     "forbiddenDiagnostics": [
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -495,24 +792,48 @@
       "skill.description.vague"
     ],
     "forbiddenDiagnostics": [],
-    "descriptionQuality": { "state": "scored", "minScore": 0, "maxScore": 29 },
-    "instructionQuality": { "state": "scored", "minScore": 60, "maxScore": 74 },
-    "requiredInstructionFindings": ["Substantive instructions", "Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 0,
+      "maxScore": 29
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 60,
+      "maxScore": 74
+    },
+    "requiredInstructionFindings": [
+      "Substantive instructions",
+      "Examples"
+    ],
     "forbiddenInstructionFindings": []
   },
   "pdf-report-formatter": {
     "group": "legacy",
     "tier": "good",
     "frontmatter": "valid",
-    "requiredDiagnostics": ["skill.resource.unreferenced", "skill.body.noExamples"],
+    "requiredDiagnostics": [
+      "skill.resource.unreferenced",
+      "skill.body.noExamples"
+    ],
     "forbiddenDiagnostics": [
       "skill.description.noVerb",
       "skill.description.noTrigger",
       "skill.description.noBoundary"
     ],
-    "descriptionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "instructionQuality": { "state": "scored", "minScore": 90, "maxScore": 100 },
-    "requiredInstructionFindings": ["Examples"],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 90,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
     "forbiddenInstructionFindings": [
       "Substantive body",
       "Substantive instructions",
@@ -522,11 +843,22 @@
       "Repetitive instructions"
     ],
     "resourceExpectations": {
-      "requiredFindings": ["Unreferenced resource"],
-      "forbiddenFindings": ["Undocumented script", "Large resource"],
+      "requiredFindings": [
+        "Unreferenced resource"
+      ],
+      "forbiddenFindings": [
+        "Undocumented script",
+        "Large resource"
+      ],
       "requiredNodes": [
-        { "path": "references/report-style-guide.md", "kind": "referenced" },
-        { "path": "references/unused-notes.md", "kind": "unreferenced" }
+        {
+          "path": "references/report-style-guide.md",
+          "kind": "referenced"
+        },
+        {
+          "path": "references/unused-notes.md",
+          "kind": "unreferenced"
+        }
       ]
     }
   }

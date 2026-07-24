@@ -26,7 +26,8 @@ export type StaticDescriptionQualityGradeLimitationCode =
   | 'missing-concrete-artifact'
   | 'overbroad-usage-scope'
   | 'instruction-heavy-description'
-  | 'echoed-scope-content';
+  | 'echoed-scope-content'
+  | 'unfilled-placeholder';
 
 /** An explicit policy ceiling applied after the additive criterion score. */
 export interface StaticDescriptionQualityGradeLimitation {

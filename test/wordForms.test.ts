@@ -43,6 +43,24 @@ describe('singularize (Task 31)', () => {
     expect(singularize('movies')).toBe('movie'); // not "movy"
     expect(singularize('buses')).toBe('bus');
   });
+
+  it('folds apis/axes/vertices despite the -is/-us/-ss and -xes guards (plan 4)', () => {
+    expect(normalizeContentToken('apis')).toBe('api'); // "API" vs "APIs" must merge
+    expect(normalizeContentToken('axes')).toBe('axis'); // not "ax"
+    expect(normalizeContentToken('vertices')).toBe('vertex'); // not "vertice"
+    expect(singularize('apis')).toBe('api');
+    expect(singularize('axes')).toBe('axis');
+    expect(singularize('vertices')).toBe('vertex');
+  });
+
+  it('keeps the -is/-us/-ss guard protecting genuine singulars (plan 4 blast-radius audit)', () => {
+    for (const word of ['analysis', 'status', 'corpus', 'basis', 'iris', 'class', 'apis']) {
+      // every protected word except the new irregulars must stay unchanged
+      if (word === 'apis') continue;
+      expect(singularize(word), word).toBe(word);
+    }
+    expect(singularize('indexes')).toBe('index'); // regular -xes still folds
+  });
 });
 
 describe('buildVerbForms', () => {

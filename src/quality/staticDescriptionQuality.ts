@@ -244,6 +244,18 @@ function assessGradeLimitations(
     });
   }
 
+  // An unfinished template must not read as a specified description: a scope
+  // clause whose only "content" is an angle-bracket placeholder (the shape the
+  // built-in improver emits) marks the description as not yet filled in.
+  if (hasUnfilledPlaceholderClause(analysis)) {
+    limitations.push({
+      code: 'unfilled-placeholder',
+      ceiling: 59,
+      reason:
+        'A scope clause still contains an unfilled template placeholder such as "<trigger context>", so the adjusted score cannot exceed 59.',
+    });
+  }
+
   if (!analysis.actionVerb.found) {
     limitations.push({
       code: 'missing-action-capability',
@@ -333,6 +345,22 @@ function assessCoverage(
 function clausePoints(clause: DescriptionAnalysis['triggerClause'], maxPoints: number): number {
   if (clause.contentFound) return maxPoints;
   return clause.markerFound ? Math.round(maxPoints * 0.25) : 0;
+}
+
+const UNFILLED_PLACEHOLDER = /<[^<>\n]{1,60}>/;
+
+/**
+ * True when a scope clause has its marker but its content is nothing except an
+ * angle-bracket template placeholder ("Use when <trigger context>"). Real
+ * content beside a placeholder does not count as unfilled.
+ */
+function hasUnfilledPlaceholderClause(analysis: DescriptionAnalysis): boolean {
+  return [analysis.triggerClause, analysis.boundaryClause].some(
+    (clause) =>
+      clause.markerFound &&
+      !clause.contentFound &&
+      UNFILLED_PLACEHOLDER.test(clause.clauseText ?? ''),
+  );
 }
 
 /**

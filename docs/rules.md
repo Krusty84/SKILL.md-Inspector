@@ -267,9 +267,11 @@ A skill folder's name should match its `name` so it is easy to locate.
 
 ### `skill.description.noVerb`
 
-**error** · auto-fix: no
+**warning** · auto-fix: no
 
-`description` has no clear action verb stating the capability.
+`description` has no clear action verb stating the capability in its first two
+sentences (any inflection counts, including gerund and noun-phrase openings such
+as "Formatting invoices…" or "A skill that extracts…").
 
 - Bad: `description: A helper for reports.`
 - Good: `description: Format inspection reports.`

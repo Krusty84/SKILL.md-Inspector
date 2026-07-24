@@ -90,6 +90,13 @@ export function extractArtifacts(
  * Text following positive trigger markers ("Use when…", "Use for…"), in document
  * order (Task 38). Negative boundary clauses are removed first so their embedded
  * "use when" fragment is never captured as a positive trigger.
+ *
+ * Deliberately list-based: the quality layer's `assessScopeClause` additionally
+ * recognizes a marker *grammar* ("should be used when…", "designed for…"), but
+ * collision clause extraction stays on the configurable dictionary lists so the
+ * workspace-level trigger/boundary vocabulary remains stable, user-editable, and
+ * cheap over many skills. Grammar-only phrasings simply contribute their tokens
+ * to the domain sets instead of a dedicated clause.
  */
 export function extractPositiveTriggers(
   description: string,
