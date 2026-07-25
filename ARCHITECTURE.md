@@ -56,9 +56,11 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |-- benchmarks/         # Static Description Quality benchmark corpus
 |-- evaluation/         # Example behavioral-evaluation suites
 |-- fixtures/           # Sample skills used by tests and development
-|-- docs/rules.md       # User-facing diagnostic-code catalog
+|-- docs/               # Diagnostic-code catalog and remediation records
 |-- scripts/            # Repository maintenance utilities
 |-- esbuild.js          # Extension-host and webview build definitions
+|-- opencode-session-export.schema.json
+|                       # Reconstructed OpenCode compatibility schema
 |-- package.json        # Extension manifest, settings, views, and scripts
 `-- vitest.config.ts    # Test configuration
 ```
@@ -172,11 +174,19 @@ and per-code severity behavior.
 
 The resolved configuration contains the policy, resource directories, discovery
 and resource exclusions, collision settings, severity policy, heuristic
-dictionaries, and the opt-in online-check flag and operation-wide concurrency limit.
-The extension manifest presents these settings in ordered groups for validation,
-heuristics, discovery and resources, severity, templates, content quality, collision
-detection, links, views, and experimental concerns. Grouping affects the Settings
-UI, not runtime configuration precedence.
+dictionaries, report time format, and the opt-in online-check flag and
+operation-wide concurrency limit. The extension manifest presents these settings in
+ordered groups for general behavior, validation, heuristics, discovery and
+resources, severity, templates, content quality, collision detection, links, views,
+and experimental concerns. Grouping affects the Settings UI, not runtime
+configuration precedence.
+
+`src/commands/configureSeverityOverrides.ts` provides a guided editor for the
+per-code override map. Its VS Code-independent model derives choices from the
+diagnostic-code catalog, excludes internal rule-failure diagnostics, and mirrors the
+protection that prevents specification errors from being silently downgraded.
+Changes are written to user or workspace settings and flow through the normal
+configuration refresh path.
 
 `src/quality/defaultHeuristicDictionaries.json` is the canonical data source for
 action verbs, artifacts, trigger and boundary phrases, vague language, morphology,
@@ -196,6 +206,25 @@ The project intentionally keeps several assessments separate:
   unusually large files.
 - Validation reports rule violations for the configured policy.
 - Collision analysis compares skill names and descriptions within a workspace.
+
+`src/quality/descriptionHeuristics.ts` produces the shared `DescriptionAnalysis`
+consumed by description validation and Static Description Quality. Scope evidence
+combines configurable phrase dictionaries with a built-in, sentence-bounded grammar.
+The grammar keeps positive and negated usage forms symmetric, prevents a negated
+usage clause from earning trigger credit, and rejects unfilled placeholders or
+duration/behavior statements as concrete scope. Artifact and scope comparisons share
+the verb-form and singularization rules in `src/quality/wordForms.ts`.
+
+In `auto` mode, `src/quality/language.ts` marks semantic coverage as limited for
+non-Latin-script descriptions and for high-confidence German, French, Spanish,
+Italian, or Portuguese stopword profiles. The detector deliberately favors
+precision: short or ambiguous Latin-script text remains on the English analysis
+path.
+
+`src/validation/bodyEvidence.ts` parses Markdown structure once for instruction
+quality. Example credit requires concrete AST evidence such as a non-empty fenced
+code block, an explicit input/output or before/after pair, or a qualifying quick
+start or minimal-reproduction section; a heading alone is not evidence.
 
 These are heuristics, not evidence that an agent will select or correctly execute a
 skill. When input is missing or structurally untrustworthy, affected assessments use
@@ -220,20 +249,27 @@ and a resource graph. After individual records exist, it computes:
 - description collisions using token, character, and name similarity signals;
 - boundary-based reductions when descriptions declare mutually exclusive scopes.
 
-Collision detection precomputes per-skill TF-IDF norms, character n-grams, and
-boundary features before entering the quadratic pair comparison. It checks
-cancellation between comparison rows, and workspace analysis marks the result as
-cancelled rather than presenting a partial collision scan as complete.
+Collision detection normalizes configurable verb and plural forms, then precomputes
+per-skill TF-IDF norms, character n-grams over normalized content, and boundary
+features before entering the quadratic pair comparison. Token Jaccard excludes
+registered capability verbs to damp shared template wording; TF-IDF, explanatory
+shared terms, and content n-grams retain them. Because TF-IDF document frequencies
+come from the complete scanned corpus, adding or removing another skill can shift a
+pair's score slightly. The loop checks cancellation between comparison rows, and
+workspace analysis marks the result as cancelled rather than presenting a partial
+collision scan as complete.
 
 The same `WorkspaceAnalysis` model feeds the Skills tree and workspace report.
-`buildSkillsIndex` projects it into schema-version-4 JSON for export as
+`buildSkillsIndex` projects it into schema-version-5 JSON for export as
 `skills.index.json`.
 
 The per-skill report is different: it analyzes the active editor buffer and can
 therefore include unsaved changes. Reports render escaped, script-disabled HTML in
-the extension host. Its token section displays the body metric plus deterministic
-per-file and aggregate metrics from the same full-analysis token model used by
-validation.
+the extension host. The skill and workspace reports share script-free anchor
+navigation from `src/ui/reportToc.ts`, show a generated timestamp using the configured
+clock style, and summarize token usage. The per-skill token section displays the body
+metric plus deterministic per-file and aggregate metrics from the same full-analysis
+token model used by validation.
 
 ### Navigation and file operations
 
@@ -386,6 +422,9 @@ a restart recognizable: the channel resets and the marker reappears.
 - **Keep signals independent.** Validation, quality, collisions, and
   behavioral evaluation answer different questions and are not collapsed into a
   single architectural guarantee.
+- **Share evidence, not outcomes.** Validation and quality scoring consume the same
+  description and body evidence models, while retaining separate severities, scores,
+  and presentation.
 - **Prefer deterministic output.** Stable rule order, sorted diagnostics, normalized
   configuration, and sorted discovery results support reproducible reports and
   tests.
@@ -453,14 +492,18 @@ script.
   Cancellation is checked between skill files and between rows of the cross-skill
   collision loop, but not during one skill's resource scan or validation pipeline.
 - Token-budget thresholds are fixed policy. Resource token totals exist only after
-  full analysis; text-only analysis never infers missing groups as zero.
+  full analysis; text-only analysis never infers missing groups as zero. The
+  `o200k_base` tokenizer is a deterministic offline proxy rather than a guarantee of
+  the counts produced by every target agent.
 - Path-oriented analysis does not uniformly support remote or virtual filesystem
   providers. The Workspace navigator and OpenCode reader are more broadly URI-based.
 - Resource file watchers cover only `references`, `scripts`, `assets`, and
   `templates`. Custom configured resource directory names are discovered during a
   fresh full scan but do not receive equivalent watcher coverage.
-- Description heuristics and similarity tokenization are primarily English- and
-  ASCII-oriented. Non-English input receives limited heuristic coverage.
+- Description dictionaries remain English-oriented, and collision tokenization is
+  primarily ASCII-oriented. Automatic coverage limiting recognizes non-Latin
+  scripts and five profiled Latin-script languages; unprofiled languages, including
+  Dutch, can still be analyzed as English.
 - Collision checks do not execute skills in an agent. Optional
   remote-link checks establish availability only; they do not inspect or trust
   response content, and network failures remain indeterminate.

@@ -785,16 +785,16 @@
           "group": "1_validation@1"
         },
         {
+          "command": "skillMdInspector.showSkillReport",
+          "group": "1_validation@2"
+        },
+        {
           "command": "skillMdInspector.insertTemplate",
           "group": "2_editing@1"
         },
         {
           "command": "skillMdInspector.improveDescriptionLocally",
           "group": "2_editing@2"
-        },
-        {
-          "command": "skillMdInspector.showSkillReport",
-          "group": "3_reports@1"
         },
         {
           "command": "skillMdInspector.toggleFavorite",
@@ -807,16 +807,16 @@
           "group": "1_validation@1"
         },
         {
+          "command": "skillMdInspector.showSkillReport",
+          "group": "1_validation@2"
+        },
+        {
           "command": "skillMdInspector.insertTemplate",
           "group": "2_editing@1"
         },
         {
           "command": "skillMdInspector.improveDescriptionLocally",
           "group": "2_editing@2"
-        },
-        {
-          "command": "skillMdInspector.showSkillReport",
-          "group": "3_reports@1"
         },
         {
           "command": "skillMdInspector.toggleFavorite",
@@ -830,7 +830,7 @@
         },
         {
           "command": "skillMdInspector.showSkillReport",
-          "group": "3_reports@1"
+          "group": "1_validation@2"
         },
         {
           "command": "skillMdInspector.toggleFavorite",
@@ -897,8 +897,115 @@
         }
       },
       {
-        "title": "Heuristics",
+        "title": "Content quality",
         "order": 3,
+        "properties": {
+          "skillMdInspector.body.strictness": {
+            "type": "string",
+            "enum": [
+              "off",
+              "recommended",
+              "strict"
+            ],
+            "default": "recommended",
+            "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
+          },
+          "skillMdInspector.description.language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "auto"
+            ],
+            "default": "auto",
+            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" marks the quality score as language-limited when it detects a non-Latin script (Cyrillic, CJK, …) or a common Latin-script language (German, French, Spanish, Italian, Portuguese) via stopword profiles. Other languages may still be scored as English."
+          },
+          "skillMdInspector.description.maxLength": {
+            "type": "number",
+            "default": 1024,
+            "description": "Maximum allowed length of the description field."
+          },
+          "skillMdInspector.description.minLength": {
+            "type": "number",
+            "default": 40,
+            "description": "Minimum recommended length of the description field."
+          },
+          "skillMdInspector.name.maxLength": {
+            "type": "number",
+            "default": 64,
+            "description": "Maximum allowed length of the name field."
+          }
+        }
+      },
+      {
+        "title": "Collision detection",
+        "order": 4,
+        "properties": {
+          "skillMdInspector.collision.boundarySeparationWeight": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How strongly mutually-exclusive \"Do not use for...\" boundaries reduce the composite collision score (0 = ignore boundaries, 1 = fully cancel overlap when scopes are mutually excluded)."
+          },
+          "skillMdInspector.collision.ngramSize": {
+            "type": "number",
+            "default": 3,
+            "minimum": 2,
+            "maximum": 5,
+            "description": "Character n-gram size used by the collision character-similarity metric."
+          },
+          "skillMdInspector.collision.threshold": {
+            "type": "number",
+            "default": 0.4,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
+          },
+          "skillMdInspector.collision.weights": {
+            "type": "object",
+            "properties": {
+              "jaccard": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of pairwise token Jaccard."
+              },
+              "cosine": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of TF-IDF cosine."
+              },
+              "charNgram": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of character n-gram similarity."
+              },
+              "nameSimilarity": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Weight of skill-name similarity."
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "jaccard": 0.3,
+              "cosine": 0.3,
+              "charNgram": 0.2,
+              "nameSimilarity": 0.2
+            },
+            "description": "Relative weights blended into the composite collision score. Normalized to sum to 1 at runtime, so only the ratios matter."
+          },
+          "skillMdInspector.names.similarityThreshold": {
+            "type": "number",
+            "default": 0.8,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
+          }
+        }
+      },
+      {
+        "title": "Heuristics",
+        "order": 5,
         "properties": {
           "skillMdInspector.heuristics.dictionaryValues.acronyms": {
             "type": "array",
@@ -1549,7 +1656,7 @@
       },
       {
         "title": "Discovery & resources",
-        "order": 4,
+        "order": 6,
         "properties": {
           "skillMdInspector.discovery.exclude": {
             "type": "array",
@@ -1594,8 +1701,26 @@
         }
       },
       {
+        "title": "Links",
+        "order": 7,
+        "properties": {
+          "skillMdInspector.links.onlineCheck.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Check remote-link availability during full validation. Enabling this sends HTTP requests to URLs referenced by SKILL.md files."
+          },
+          "skillMdInspector.links.onlineCheck.maxConcurrency": {
+            "type": "integer",
+            "default": 4,
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Maximum number of concurrent remote-link requests across one complete validation operation."
+          }
+        }
+      },
+      {
         "title": "Severity",
-        "order": 5,
+        "order": 8,
         "properties": {
           "skillMdInspector.severityOverrides": {
             "type": "object",
@@ -1620,7 +1745,7 @@
       },
       {
         "title": "Templates",
-        "order": 6,
+        "order": 9,
         "properties": {
           "skillMdInspector.templates": {
             "type": "array",
@@ -1667,131 +1792,6 @@
               },
               "additionalProperties": false
             }
-          }
-        }
-      },
-      {
-        "title": "Content quality",
-        "order": 7,
-        "properties": {
-          "skillMdInspector.body.strictness": {
-            "type": "string",
-            "enum": [
-              "off",
-              "recommended",
-              "strict"
-            ],
-            "default": "recommended",
-            "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
-          },
-          "skillMdInspector.description.language": {
-            "type": "string",
-            "enum": [
-              "en",
-              "auto"
-            ],
-            "default": "auto",
-            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" marks the quality score as language-limited when it detects a non-Latin script (Cyrillic, CJK, …) or a common Latin-script language (German, French, Spanish, Italian, Portuguese) via stopword profiles. Other languages may still be scored as English."
-          },
-          "skillMdInspector.description.maxLength": {
-            "type": "number",
-            "default": 1024,
-            "description": "Maximum allowed length of the description field."
-          },
-          "skillMdInspector.description.minLength": {
-            "type": "number",
-            "default": 40,
-            "description": "Minimum recommended length of the description field."
-          },
-          "skillMdInspector.name.maxLength": {
-            "type": "number",
-            "default": 64,
-            "description": "Maximum allowed length of the name field."
-          }
-        }
-      },
-      {
-        "title": "Collision detection",
-        "order": 8,
-        "properties": {
-          "skillMdInspector.collision.boundarySeparationWeight": {
-            "type": "number",
-            "default": 0.5,
-            "minimum": 0,
-            "maximum": 1,
-            "description": "How strongly mutually-exclusive \"Do not use for...\" boundaries reduce the composite collision score (0 = ignore boundaries, 1 = fully cancel overlap when scopes are mutually excluded)."
-          },
-          "skillMdInspector.collision.ngramSize": {
-            "type": "number",
-            "default": 3,
-            "minimum": 2,
-            "maximum": 5,
-            "description": "Character n-gram size used by the collision character-similarity metric."
-          },
-          "skillMdInspector.collision.threshold": {
-            "type": "number",
-            "default": 0.4,
-            "minimum": 0,
-            "maximum": 1,
-            "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
-          },
-          "skillMdInspector.collision.weights": {
-            "type": "object",
-            "properties": {
-              "jaccard": {
-                "type": "number",
-                "minimum": 0,
-                "description": "Weight of pairwise token Jaccard."
-              },
-              "cosine": {
-                "type": "number",
-                "minimum": 0,
-                "description": "Weight of TF-IDF cosine."
-              },
-              "charNgram": {
-                "type": "number",
-                "minimum": 0,
-                "description": "Weight of character n-gram similarity."
-              },
-              "nameSimilarity": {
-                "type": "number",
-                "minimum": 0,
-                "description": "Weight of skill-name similarity."
-              }
-            },
-            "additionalProperties": false,
-            "default": {
-              "jaccard": 0.3,
-              "cosine": 0.3,
-              "charNgram": 0.2,
-              "nameSimilarity": 0.2
-            },
-            "description": "Relative weights blended into the composite collision score. Normalized to sum to 1 at runtime, so only the ratios matter."
-          },
-          "skillMdInspector.names.similarityThreshold": {
-            "type": "number",
-            "default": 0.8,
-            "minimum": 0,
-            "maximum": 1,
-            "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
-          }
-        }
-      },
-      {
-        "title": "Links",
-        "order": 9,
-        "properties": {
-          "skillMdInspector.links.onlineCheck.enabled": {
-            "type": "boolean",
-            "default": false,
-            "description": "Check remote-link availability during full validation. Enabling this sends HTTP requests to URLs referenced by SKILL.md files."
-          },
-          "skillMdInspector.links.onlineCheck.maxConcurrency": {
-            "type": "integer",
-            "default": 4,
-            "minimum": 1,
-            "maximum": 10,
-            "description": "Maximum number of concurrent remote-link requests across one complete validation operation."
           }
         }
       },
@@ -1867,17 +1867,6 @@
             "type": "boolean",
             "default": true,
             "description": "Scan the selected OpenCode sessions folder recursively."
-          }
-        }
-      },
-      {
-        "title": "Experimental",
-        "order": 11,
-        "properties": {
-          "skillMdInspector.experimental.llmReview.enabled": {
-            "type": "boolean",
-            "default": false,
-            "description": "Reserved for future LLM-assisted review. Not implemented in MVP1."
           }
         }
       }
