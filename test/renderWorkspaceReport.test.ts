@@ -37,7 +37,7 @@ function analysis(): WorkspaceAnalysis {
           instructions: {
             state: 'scored',
             score: 0,
-            label: 'poor',
+            label: 'defects',
             findings: [
               {
                 criterion: 'Substantive body',
@@ -47,7 +47,7 @@ function analysis(): WorkspaceAnalysis {
               },
             ],
           },
-          resources: { score: 90, label: 'excellent', findings: [] },
+          resources: { score: 90, label: 'minor-issues', findings: [] },
         },
         errors: 0,
         warnings: 1,
@@ -80,6 +80,7 @@ function analysis(): WorkspaceAnalysis {
         sharedTerms: ['format', 'report'],
         risk: 'High',
         confidence: 'high',
+        textCoverage: 'full',
         recommendation: 'Merge or differentiate.',
       },
     ],
@@ -138,8 +139,10 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('No concrete usage-trigger content is present.');
     expect(html).toContain('Heuristic coverage');
     expect(html).toContain('>medium</td>');
-    expect(html).toContain('Instruction authoring quality');
-    expect(html).toContain('0/100 · poor');
+    expect(html).toContain('<th title="Structural defects in the Markdown body');
+    expect(html).toContain('>Hygiene</th>');
+    expect(html).toContain('0/100 · Defects');
+    expect(html).not.toContain('text coverage: low');
     expect(html).toContain('Information');
     expect(html).toContain("<title>Workspace SKILL.md's Report</title>");
     expect(html).toContain('<strong>Folder:</strong> <code>/ws</code>');
@@ -261,7 +264,10 @@ describe('renderWorkspaceReportHtml', () => {
 
       expect(minimal.validationStatus).toBe('warning');
       expect(minimal.staticDescriptionQuality.label).toBe('acceptable');
-      expect(minimal.authoringQuality.instructions).toMatchObject({ score: 0, label: 'poor' });
+      expect(minimal.authoringQuality.instructions).toMatchObject({
+        score: 0,
+        label: 'defects',
+      });
       expect(html).toContain('<td class="warn">warning</td>');
       expect(minimal.staticDescriptionQuality).toMatchObject({
         adjustedScore: 69,
@@ -274,7 +280,7 @@ describe('renderWorkspaceReportHtml', () => {
       expect(html).toContain(
         'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
       );
-      expect(html).toContain('0/100 · poor');
+      expect(html).toContain('0/100 · Defects');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

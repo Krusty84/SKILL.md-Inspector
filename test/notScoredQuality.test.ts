@@ -145,10 +145,10 @@ describe('explicit not-scored quality state', () => {
 
     const result = assessAuthoringQuality(withDiscoveredResource);
     expect(result.instructions.state).toBe('not-scored');
-    expect(result.resources).toMatchObject({ score: 90, label: 'excellent' });
+    expect(result.resources).toMatchObject({ score: 90, label: 'minor-issues' });
   });
 
-  it('serializes the explicit state in skills index schema version 5', () => {
+  it('serializes the explicit state in skills index schema version 6', () => {
     const analysis = analyzeWorkspace(
       FIXTURE_ROOT,
       [fixturePath('json-formatter'), fixturePath('helper'), fixturePath('stuff')],
@@ -157,7 +157,7 @@ describe('explicit not-scored quality state', () => {
     const serialized = JSON.parse(JSON.stringify(buildSkillsIndex(analysis)));
 
     expect(serialized).toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: 6,
       skills: expect.arrayContaining([
         expect.objectContaining({
           name: 'json-formatter',
@@ -204,7 +204,7 @@ describe('explicit not-scored quality state', () => {
       expect(html).not.toContain('Instruction structure: 0/100');
     }
     expect(skillHtml).toContain(
-      'Description quality: Not scored — frontmatter could not be parsed',
+      'Description completeness: Not scored — frontmatter could not be parsed',
     );
     expect(skillHtml).toContain(
       'Instruction structure</div><div class="value ">Not scored — frontmatter could not be parsed',

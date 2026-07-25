@@ -1149,7 +1149,7 @@
               "translate",
               "turn"
             ],
-            "description": "Base verbs recognized as concrete capabilities in description diagnostics, Static Description Quality, local improvement, and collision features.",
+            "description": "Base verbs recognized as concrete capabilities in description diagnostics, description completeness, local improvement, and collision features.",
             "items": {
               "type": "string"
             }
@@ -1647,7 +1647,7 @@
               "robust",
               "comprehensive"
             ],
-            "description": "Words and phrases treated as vague in description diagnostics and Static Description Quality.",
+            "description": "Words and phrases treated as vague in description diagnostics and description completeness.",
             "items": {
               "type": "string"
             }

@@ -46,8 +46,26 @@
 
 ### Changed
 
-- `skills.index.json` now has `schemaVersion` 5: entries no longer contain the
-  `profileCompatibility` map.
+- **The two headline scores are now named after what they measure.** No scoring
+  arithmetic changed — every score is byte-identical — only labels and headings:
+  - Authoring quality labels are no longer `excellent | good | acceptable | weak |
+    poor` but `clean | minor-issues | issues | defects`. The checks look for
+    structural defects, so the labels no longer read as praise for the content,
+    and `clean` now requires a full 100 (no findings at all) instead of 90+.
+  - "Instruction / Resource authoring quality" is now "Authoring hygiene
+    (instructions)" / "Authoring hygiene (resources)"; the report section anchors
+    are unchanged. "Heuristic Static Description Quality" is now "Description
+    completeness". Both carry a one-sentence definition in a tooltip and hover:
+    completeness counts convention coverage, hygiene counts structural defects,
+    and neither judges whether the instructions are correct or safe.
+  - Workspace report columns are now "Completeness" and "Hygiene".
+- Collision results carry `textCoverage: 'full' | 'low'`. `low` means fewer than
+  3 comparable content tokens on one side (typically non-Latin script), where all
+  three text metrics return 0 and the similarity is derived mostly from the skill
+  names; the report and tree now say so instead of showing a bare number.
+- `skills.index.json` now has `schemaVersion` 6: collision objects gained the
+  `textCoverage` field. Version 5 removed the `profileCompatibility` map from
+  entries.
 
 ### Fixed
 

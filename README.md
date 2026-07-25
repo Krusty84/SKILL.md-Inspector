@@ -18,9 +18,9 @@ disabled by default and is the only validation feature that sends network reques
 - **Fix common problems quickly** — insert required fields or a complete template,
   convert names to kebab-case, add trigger and boundary clauses, create missing
   linked files, and reference untracked resources.
-- **Review separate quality signals** — inspect Static Description Quality,
-  instruction authoring quality, resource authoring quality, validation status, and
-  heuristic coverage without combining them into a misleading aggregate score.
+- **Review separate quality signals** — inspect description completeness, authoring
+  hygiene for instructions and bundled resources, validation status, and heuristic
+  coverage without combining them into a misleading aggregate score.
 - **Measure packaged context offline** — view exact `o200k_base` token and line
   metrics for the `SKILL.md` body, reference files, and non-standard text files,
   with validation diagnostics when fixed content budgets are exceeded.
@@ -36,7 +36,7 @@ disabled by default and is the only validation feature that sends network reques
   resource directories and exclusion globs, define custom templates, and tune the
   heuristic dictionaries used by description and collision analysis.
 
-Static Description Quality is a transparent text heuristic, not a prediction that an
+Description completeness is a transparent text heuristic, not a prediction that an
 agent will select a skill. OpenCode skill matches and subsequent tool calls show
 temporal proximity, not causation or instruction compliance.
 
@@ -91,7 +91,7 @@ Use the **SKILL.md Skills** panel for a compact analysis tree, or run:
 | ----------------------------- | -------------------------------------------------------------------------- |
 | **Validate Workspace Skills** | Validate every discovered `SKILL.md` and publish results to Problems.      |
 | **Show Workspace Report**     | Review name conflicts, description collisions, and resources.              |
-| **Export Skills Index**       | Write schema-version-5 `skills.index.json` to the first workspace root.    |
+| **Export Skills Index**       | Write schema-version-6 `skills.index.json` to the first workspace root.    |
 | **Refresh Skills**            | Rebuild the cached Skills panel analysis.                                  |
 
 Workspace report generation and index export can be cancelled. They analyze saved
@@ -178,21 +178,31 @@ for a template example.
 The extension deliberately reports distinct signals:
 
 - **Validation status** reflects emitted errors and warnings.
-- **Static Description Quality** scores deterministic evidence such as an action,
-  trigger, artifact, boundary, front-loaded intent, specificity, and useful length.
-- **Instruction authoring quality** detects structural hygiene problems such as an
-  empty body, placeholders, weak example evidence, empty or duplicate sections,
-  excessive length, repetition, and unclosed code fences.
-- **Resource authoring quality** identifies unreferenced files, undocumented scripts,
-  and unusually large bundled resources.
+- **Description completeness** counts how many of 7 structural conventions the
+  description satisfies: a capability verb, a usage trigger, a concrete artifact, a
+  boundary, front-loaded intent, low vagueness, and useful length. It measures
+  convention coverage against closed dictionaries, so a description that reads well
+  but words those conventions unusually can still score low; the number is not a
+  judgement of how useful the wording is. Internally, and in the exported index, the
+  field is still named `staticDescriptionQuality`.
+- **Authoring hygiene** counts structural defects, reported separately for the
+  Markdown body (an empty body, placeholders, weak example evidence, empty or
+  duplicate sections, excessive length, repetition, unclosed code fences) and for
+  bundled resources (unreferenced files, undocumented scripts, unusually large
+  files). It does **not** assess whether the instructions are correct, complete, or
+  safe: a tidy body of harmful or meaningless instructions scores `clean`. Labels
+  are `clean` (no findings at all), `minor-issues`, `issues`, and `defects`.
+  Internally the field is still named `authoringQuality`.
 - **Collision risk** compares descriptions and names across the workspace. Pair
   similarities are computed against the whole scanned corpus (TF-IDF document
   frequencies), so adding or removing unrelated skills can shift a pair's score
-  by a few hundredths.
+  by a few hundredths. A pair marked `text coverage: low` had fewer than 3
+  comparable content tokens — typically a non-Latin script the text metrics cannot
+  read — so its similarity comes mostly from the skill names.
 
-When required input is missing or cannot be trusted, description or instruction
-quality is shown as **Not scored** instead of silently assigning zero. Resource
-quality remains independent when resource discovery succeeds.
+When required input is missing or cannot be trusted, description completeness or
+instruction hygiene is shown as **Not scored** instead of silently assigning zero.
+Resource hygiene remains independent when resource discovery succeeds.
 
 ## Development
 
@@ -210,7 +220,7 @@ Additional commands:
 | -------------------------------------- | ------------------------------------------------------------------ |
 | `npm run watch`                        | Rebuild extension and OpenCode webview bundles during development. |
 | `npm run test:eval`                    | Run the offline behavioral-evaluation tests.                       |
-| `npm run benchmark:static`             | Run the curated Static Description Quality benchmark.              |
+| `npm run benchmark:static`             | Run the curated description-completeness benchmark.                |
 | `npm run check:heuristic-dictionaries` | Verify dictionary defaults match the extension manifest.           |
 | `npm run sync:heuristic-dictionaries`  | Synchronize manifest defaults after catalog changes.               |
 

@@ -7,6 +7,12 @@ import type {
   SimilarNames,
 } from '../types/Workspace';
 import { renderToc, TOC_STYLES, type TocEntry } from './reportToc';
+import {
+  AUTHORING_HYGIENE_DEFINITION,
+  DESCRIPTION_COMPLETENESS_DEFINITION,
+  LOW_TEXT_COVERAGE_DEFINITION,
+  authoringLabelText,
+} from './metricDefinitions';
 import { totalSkillTokens } from '../analysis/tokenUsage';
 
 export interface RenderOptions {
@@ -63,6 +69,7 @@ export function renderWorkspaceReportHtml(
   .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
   .conf-low { opacity: 0.7; }
   .quality-adjustment { white-space: nowrap; }
+  .coverage-note { opacity: 0.7; font-size: 0.85em; white-space: nowrap; }
   .token-breakdown { font-size: 0.78rem; opacity: 0.7; margin-top: 0.15rem; line-height: 1.4; }
   .grade-limitations { margin-top: 0.2rem; font-size: 0.82rem; }
   .grade-limitations summary { cursor: pointer; }
@@ -78,12 +85,12 @@ export function renderWorkspaceReportHtml(
   ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
   ${renderScope(opts.scope)}
   <p>${analysis.skills.length} skill(s) · ${analysis.collisions.length} potential collision(s)</p>
-  <p class="note">Static Description Quality is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
+  <p class="note">Description completeness is a deterministic heuristic; it does not guarantee runtime skill selection. Collision risk is shown with a separate confidence in the textual evidence.</p>
 
   <h2 id="skills">Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th>Name</th><th>Validation status</th><th>Adjusted description quality</th><th>Heuristic coverage</th><th>Instruction authoring quality</th><th>Errors</th><th>Warnings</th><th>Information</th><th>Token usage</th><th>External file issues</th></tr></thead>
+      <thead><tr><th>Name</th><th>Validation status</th><th title="${DESCRIPTION_COMPLETENESS_DEFINITION}">Completeness</th><th>Heuristic coverage</th><th title="${AUTHORING_HYGIENE_DEFINITION}">Hygiene</th><th>Errors</th><th>Warnings</th><th>Information</th><th>Token usage</th><th>External file issues</th></tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -117,7 +124,7 @@ function renderSkillRow(skill: WorkspaceSkill): string {
   const instructions = skill.authoringQuality.instructions;
   const instructionQuality =
     instructions.state === 'scored'
-      ? `${instructions.score}/100 · ${instructions.label}`
+      ? `${instructions.score}/100 · ${authoringLabelText(instructions.label)}`
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
   return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${renderTokenCell(skill.tokenUsage)}${resourceIssueCell(skill)}</tr>`;
 }
@@ -174,10 +181,21 @@ function renderCollisions(collisions: SkillCollision[]): string {
   const rows = collisions
     .map(
       (c) =>
-        `<tr><td><code>${escapeHtml(c.a)}</code></td><td><code>${escapeHtml(c.b)}</code></td><td>${c.similarity.toFixed(2)}</td><td>${metricsSummary(c.metrics)}</td><td>${escapeHtml(c.sharedTerms.join(', '))}</td><td class="risk-${c.risk}">${c.risk}</td><td class="conf-${c.confidence}">${c.confidence}</td><td>${escapeHtml(c.recommendation)}</td></tr>`,
+        `<tr><td><code>${escapeHtml(c.a)}</code></td><td><code>${escapeHtml(c.b)}</code></td><td>${c.similarity.toFixed(2)}${textCoverageMarker(c.textCoverage)}</td><td>${metricsSummary(c.metrics)}</td><td>${escapeHtml(c.sharedTerms.join(', '))}</td><td class="risk-${c.risk}">${c.risk}</td><td class="conf-${c.confidence}">${c.confidence}</td><td>${escapeHtml(c.recommendation)}</td></tr>`,
     )
     .join('');
   return `<div class="scroll"><table><thead><tr><th>Skill A</th><th>Skill B</th><th>Similarity</th><th>Metrics</th><th>Shared terms</th><th>Risk</th><th>Confidence</th><th>Recommendation</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/**
+ * Caveats a similarity the text metrics could not really contribute to: with
+ * fewer than 3 comparable content tokens the composite is essentially the name
+ * similarity, so identical and unrelated descriptions score the same.
+ */
+function textCoverageMarker(coverage: SkillCollision['textCoverage']): string {
+  return coverage === 'low'
+    ? ` <span class="coverage-note" title="${LOW_TEXT_COVERAGE_DEFINITION}">· text coverage: low</span>`
+    : '';
 }
 
 /** Compact per-metric breakdown behind the composite similarity. */

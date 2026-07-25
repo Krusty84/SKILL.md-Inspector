@@ -10,6 +10,11 @@ import type {
   ResourceNode,
 } from '../types/Workspace';
 import { loadingTreeItem, SingleFlight } from './treeLoading';
+import {
+  AUTHORING_HYGIENE_DEFINITION,
+  DESCRIPTION_COMPLETENESS_DEFINITION,
+  LOW_TEXT_COVERAGE_DEFINITION,
+} from './metricDefinitions';
 
 type TreeNode =
   | { type: 'message'; text: string }
@@ -91,11 +96,13 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         item.description = `${c.risk} · ${c.similarity.toFixed(2)} · ${c.confidence} conf`;
         const sep =
           m.boundarySeparation > 0 ? `, boundary sep ${m.boundarySeparation.toFixed(2)}` : '';
+        const coverage =
+          c.textCoverage === 'low' ? `\nText coverage low — ${LOW_TEXT_COVERAGE_DEFINITION}` : '';
         item.tooltip =
           `Risk ${c.risk} · confidence ${c.confidence}\n` +
           `Metrics — Jaccard ${m.jaccard.toFixed(2)}, cosine ${m.cosine.toFixed(2)}, ` +
           `char n-gram ${m.charNgram.toFixed(2)}, name ${m.nameSimilarity.toFixed(2)}${sep}\n` +
-          `Shared: ${c.sharedTerms.join(', ')}\n${c.recommendation}`;
+          `Shared: ${c.sharedTerms.join(', ')}${coverage}\n${c.recommendation}`;
         item.iconPath = new vscode.ThemeIcon(riskIcon(c.risk));
         return item;
       }
@@ -195,7 +202,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     const instructions = skill.authoringQuality.instructions;
     const scoreAdjustment =
       quality.state === 'scored' && quality.rawScore !== quality.adjustedScore
-        ? `Raw Static Description Quality: ${quality.rawScore}/100  \n`
+        ? `Raw description completeness: ${quality.rawScore}/100  \n`
         : '';
     const gradeLimitations =
       quality.state === 'scored' && quality.gradeLimitations.length > 0
@@ -208,14 +215,14 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         : '';
     const descriptionSummary =
       quality.state === 'scored'
-        ? `Adjusted Static Description Quality: ${quality.adjustedScore}/100 (${quality.label}) · heuristic coverage ${quality.coverage}  \n`
-        : `Description quality: Not scored — ${escapeMarkdown(quality.notScoredReason)}  \n`;
+        ? `Adjusted description completeness: ${quality.adjustedScore}/100 (${quality.label}) · heuristic coverage ${quality.coverage}  \n`
+        : `Description completeness: Not scored — ${escapeMarkdown(quality.notScoredReason)}  \n`;
     const instructionSummary =
       instructions.state === 'scored'
-        ? `Instruction authoring quality: ${instructions.score}/100 (${instructions.label})  \n`
+        ? `Authoring hygiene: ${instructions.score}/100 (${instructions.label})  \n`
         : `Instruction structure: Not scored — ${escapeMarkdown(instructions.notScoredReason)}  \n`;
     const treeScore = quality.state === 'scored' ? String(quality.adjustedScore) : 'Not scored';
-    item.description = `Validation ${skill.validationStatus} · SDQ ${treeScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
+    item.description = `Validation ${skill.validationStatus} · Completeness ${treeScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
     item.tooltip = new vscode.MarkdownString(
       [
         `**${escapeMarkdown(skill.name)}**  \n`,
@@ -225,7 +232,8 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         gradeLimitations,
         instructionSummary,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
-        `_Description quality is deterministic and does not guarantee an agent will select this skill at runtime._`,
+        `_Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION} It is deterministic and does not guarantee an agent will select this skill at runtime._  \n`,
+        `_Authoring hygiene: ${AUTHORING_HYGIENE_DEFINITION}_`,
       ].join(''),
     );
     item.iconPath = new vscode.ThemeIcon(

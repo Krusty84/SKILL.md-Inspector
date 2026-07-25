@@ -3,6 +3,7 @@ import type {
   CollisionRisk,
   CollisionConfidence,
   CollisionMetrics,
+  CollisionTextCoverage,
   CollisionWeights,
 } from '../types/Workspace';
 import {
@@ -38,6 +39,9 @@ export const DEFAULT_COLLISION_WEIGHTS: CollisionWeights = {
 export const DEFAULT_COLLISION_THRESHOLD = 0.4;
 export const DEFAULT_NGRAM_SIZE = 3;
 export const DEFAULT_BOUNDARY_SEPARATION_WEIGHT = 0.5;
+
+/** Fewest normalized content tokens a side may contribute before the text metrics stop meaning anything. */
+const MIN_COMPARABLE_TOKENS = 3;
 
 export interface CollisionOptions {
   /** Minimum composite similarity to report a collision (brief §13.2: Low starts at 0.40). */
@@ -138,6 +142,7 @@ export function detectCollisions(
           tokens[j],
           metrics,
         ),
+        textCoverage: textCoverageFor(tokens[i], tokens[j]),
         recommendation: recommendationFor(risk),
       });
     }
@@ -175,6 +180,18 @@ function confidenceFor(
     return 'high'; // ample tokens and the metrics agree
   }
   return 'medium';
+}
+
+/**
+ * Whether Jaccard, cosine, and the char n-gram actually had text to compare
+ * (plan 6). `tokenizeContent` keeps only Latin word characters, so a Cyrillic or
+ * CJK description reduces to a near-empty token set: all three text metrics
+ * return 0 and the composite is effectively `nameSimilarity` alone, which makes
+ * identical and unrelated descriptions score the same. The flag lets the report
+ * say so instead of presenting a bare number.
+ */
+function textCoverageFor(tokensA: string[], tokensB: string[]): CollisionTextCoverage {
+  return Math.min(tokensA.length, tokensB.length) < MIN_COMPARABLE_TOKENS ? 'low' : 'full';
 }
 
 /**

@@ -39,10 +39,10 @@ const GOOD_BODY = [
 ].join('\n');
 
 describe('assessAuthoringQuality instructions', () => {
-  it('labels a substantive body as good with score 100', () => {
+  it('labels a substantive body with no findings as clean at score 100', () => {
     const result = assessAuthoringQuality(doc(GOOD_BODY));
     expect(result.instructions.score).toBe(100);
-    expect(result.instructions.label).toBe('excellent');
+    expect(result.instructions.label).toBe('clean');
     expect(result.instructions.findings).toEqual([]);
   });
 
@@ -52,7 +52,7 @@ describe('assessAuthoringQuality instructions', () => {
     expect(result.instructions.findings[0].criterion).toBe('Substantive body');
     expect(result.instructions.findings[0].severity).toBe('major');
     expect(result.instructions.score).toBe(0);
-    expect(result.instructions.label).toBe('poor');
+    expect(result.instructions.label).toBe('defects');
   });
 
   it('flags a headings-only body as major', () => {
@@ -63,7 +63,7 @@ describe('assessAuthoringQuality instructions', () => {
       result.instructions.findings.find((f) => f.criterion === 'Substantive body')?.severity,
     ).toBe('major');
     expect(result.instructions.score).toBe(0);
-    expect(result.instructions.label).toBe('poor');
+    expect(result.instructions.label).toBe('defects');
   });
 
   it('flags TODO placeholders but not TODO inside code fences', () => {
@@ -237,7 +237,7 @@ describe('assessAuthoringQuality instructions', () => {
       expect.objectContaining({ criterion: 'Substantive instructions' }),
     );
     expect(result.instructions.score).toBeLessThanOrEqual(80);
-    expect(result.instructions.label).not.toBe('excellent');
+    expect(result.instructions.label).not.toBe('clean');
   });
 
   it('does not let example detection hide a fenced-only instruction body', () => {
@@ -376,14 +376,14 @@ describe('assessAuthoringQuality resources', () => {
   it('does not penalize a skill with no bundled resources', () => {
     const result = assessAuthoringQuality(doc(GOOD_BODY));
     expect(result.resources.score).toBe(100);
-    expect(result.resources.label).toBe('excellent');
+    expect(result.resources.label).toBe('clean');
     expect(result.resources.findings).toEqual([]);
   });
 
-  it('scores clean resources as good', () => {
+  it('labels referenced, right-sized resources clean', () => {
     const result = assessAuthoringQuality(doc(GOOD_BODY, [resource({})]));
     expect(result.resources.score).toBe(100);
-    expect(result.resources.label).toBe('excellent');
+    expect(result.resources.label).toBe('clean');
   });
 
   it('penalizes an unreferenced script more than an unreferenced reference file', () => {

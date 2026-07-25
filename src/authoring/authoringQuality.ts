@@ -9,7 +9,13 @@ import { buildVerbForms } from '../quality/wordForms';
 import { analyzeBodyEvidence } from '../validation/bodyEvidence';
 import { countTextLines } from '../analysis/textMetrics';
 
-export type AuthoringLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
+/**
+ * Deliberately non-evaluative: these checks count structural defects, so the
+ * band names describe the defect load and never praise the content. `clean`
+ * means no findings at all — an `excellent`-style top band would let a body
+ * with a real finding read as top marks.
+ */
+export type AuthoringLabel = 'clean' | 'minor-issues' | 'issues' | 'defects';
 
 export type AuthoringSeverity = 'major' | 'moderate' | 'minor';
 
@@ -130,12 +136,16 @@ function notScoredInstructions(reason: string): InstructionQualityResult {
   };
 }
 
+/**
+ * Bands the same score the arithmetic above produces. The top band requires a
+ * full 100 rather than 90+: the smallest possible finding costs 10 points, so
+ * `clean` is reachable only with an empty findings list.
+ */
 function authoringLabelFor(score: number): AuthoringLabel {
-  if (score >= 90) return 'excellent';
-  if (score >= 75) return 'good';
-  if (score >= 60) return 'acceptable';
-  if (score >= 30) return 'weak';
-  return 'poor';
+  if (score >= 100) return 'clean';
+  if (score >= 75) return 'minor-issues';
+  if (score >= 30) return 'issues';
+  return 'defects';
 }
 
 function assessInstructions(

@@ -93,7 +93,7 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionOverbroadTrigger,
         'warning',
-        `\`description\` claims an overbroad usage scope ("${analysis.overbroadTrigger.matched}"). Narrow when the skill should trigger. Static Description Quality is capped at 69.`,
+        `\`description\` claims an overbroad usage scope ("${analysis.overbroadTrigger.matched}"). Narrow when the skill should trigger. Description completeness is capped at 69.`,
         range,
       ),
     );
@@ -104,7 +104,7 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionInstructionHeavy,
         'warning',
-        '`description` embeds a detailed workflow. Frontmatter should describe capability and trigger scope; detailed procedure belongs in the Markdown body. Static Description Quality is capped at 74.',
+        '`description` embeds a detailed workflow. Frontmatter should describe capability and trigger scope; detailed procedure belongs in the Markdown body. Description completeness is capped at 74.',
         range,
       ),
     );

@@ -115,8 +115,8 @@ describe('workspace discovery + analysis', () => {
     expect(minimal.staticDescriptionQuality.gradeLimitations).toContainEqual(
       expect.objectContaining({ code: 'missing-usage-trigger', ceiling: 69 }),
     );
-    expect(minimal.authoringQuality.instructions).toMatchObject({ score: 0, label: 'poor' });
-    expect(minimal.authoringQuality.resources).toMatchObject({ score: 100, label: 'excellent' });
+    expect(minimal.authoringQuality.instructions).toMatchObject({ score: 0, label: 'defects' });
+    expect(minimal.authoringQuality.resources).toMatchObject({ score: 100, label: 'clean' });
   });
 
   it('detects a collision between the two report formatters', () => {
@@ -151,7 +151,7 @@ describe('workspace discovery + analysis', () => {
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
     const entry = index.skills.find((s) => s.name === 'pdf-report-formatter')!;
-    expect(index.schemaVersion).toBe(5);
+    expect(index.schemaVersion).toBe(6);
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
     expect(entry.validationStatus).toBe('warning');
     expect(entry.staticDescriptionQuality).toMatchObject({

@@ -60,6 +60,14 @@ export type CollisionRisk = 'High' | 'Medium' | 'Low';
 /** How much textual evidence backs a collision result (Task 80). */
 export type CollisionConfidence = 'high' | 'medium' | 'low';
 
+/**
+ * Whether the text metrics behind a collision had comparable content to work
+ * with. Distinct from `CollisionConfidence`: confidence weighs how much the
+ * whole result can be trusted, coverage says whether the *text* metrics ran on
+ * anything at all.
+ */
+export type CollisionTextCoverage = 'full' | 'low';
+
 /** The individual normalized metrics behind a composite collision score (each 0..1). */
 export interface CollisionMetrics {
   /** TF-IDF cosine over the whole corpus (corpus-dependent). */
@@ -93,6 +101,12 @@ export interface SkillCollision {
   risk: CollisionRisk;
   /** How much textual evidence backs the risk assessment — distinct from risk (Task 80). */
   confidence: CollisionConfidence;
+  /**
+   * `low` when the text metrics had almost nothing to compare (fewer than 3
+   * normalized content tokens on either side, typically non-Latin script), so
+   * `similarity` reflects the skill names more than the descriptions.
+   */
+  textCoverage: CollisionTextCoverage;
   recommendation: string;
 }
 
@@ -136,8 +150,8 @@ export interface SkillsIndexEntry {
 }
 
 export interface SkillsIndex {
-  /** Version 5 removes the per-profile compatibility map from entries. */
-  schemaVersion: 5;
+  /** Version 6 adds `textCoverage` to collision objects. */
+  schemaVersion: 6;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }
