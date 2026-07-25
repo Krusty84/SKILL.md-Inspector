@@ -1,3 +1,21 @@
+/**
+ * Deterministic 0–100 description score: seven weighted criteria plus visible
+ * policy ceilings (`gradeLimitations`), never hidden deductions.
+ *
+ * Known limitation — keyword stuffing. A description that lists capability verbs
+ * and artifact nouns without saying anything can still score highly:
+ *
+ *     Analyze validate generate format convert review data reports files.
+ *     Use when analyzing reports for users. Do not use for spreadsheets.
+ *
+ * Every criterion is satisfied on the surface, and `echoed-scope-content` does
+ * not fire because the trigger and boundary name different things. Plan 9 Part B
+ * deliberately does not address this: the ceilings it gates are the ones driven
+ * by dictionary *misses*, and this description has genuine dictionary evidence.
+ * Closing it needs an evidence model that can tell a stated capability from a
+ * listed one, which is a separate problem. Recorded here and in docs/rules.md so
+ * it is not mistaken for something this module handles.
+ */
 import { analyzeDescription, type DescriptionAnalysis } from './descriptionHeuristics';
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
 import { normalizeContentToken } from './wordForms';
@@ -19,6 +37,23 @@ export interface StaticDescriptionQualityOptions {
   language?: DescriptionLanguage;
   weights?: StaticDescriptionQualityWeights;
   dictionaries?: HeuristicDictionaries;
+}
+
+/**
+ * Names the word the registry does not know and the setting that fixes it, so a
+ * vocabulary gap reads as a gap in the tool's configuration rather than as a
+ * defect in the user's description (plan 9 Part B3). The quick fix in
+ * `src/codeActions/skillCodeActions.ts` performs the same edit in one click.
+ */
+function unrecognizedVocabularyMessage(
+  word: string,
+  setting: 'actionVerbs' | 'artifactHints',
+): string {
+  const kind = setting === 'actionVerbs' ? 'capability verb' : 'concrete artifact';
+  return (
+    `No recognized ${kind}; "${word}" reads like one but is not in the configured ` +
+    `vocabulary. Add it to skillMdInspector.heuristics.dictionaryValues.${setting} to score it fully.`
+  );
 }
 
 /** Points allotted to each criterion (brief §10.1). Sum = 100. */
@@ -94,15 +129,30 @@ export function scoreAnalysis(
     goodLengthMax,
   );
 
+  // Structural-only evidence earns half the criterion (plan 9 Part B3): the tool
+  // genuinely is less sure than when it matched a configured verb, so the score
+  // says so — but it no longer claims the capability is *absent*.
+  const capability = analysis.capabilityEvidence;
+  const structuralArtifactOnly = !analysis.concreteArtifact && analysis.artifactEvidence.structural;
   const findings: StaticDescriptionQualityFinding[] = [
     finding(
       'Action verb / capability',
-      analysis.actionVerb.found ? weights.actionVerb : 0,
+      capability.dictionary
+        ? weights.actionVerb
+        : capability.structural
+          ? Math.round(weights.actionVerb / 2)
+          : 0,
       weights.actionVerb,
-      analysis.actionVerb.found
+      capability.dictionary
         ? `States the capability with "${analysis.actionVerb.matched}".`
-        : 'No action verb — start with a capability such as "format" or "generate".',
-      analysis.actionVerb.found ? undefined : 'Lead with a capability verb.',
+        : capability.structural
+          ? unrecognizedVocabularyMessage(capability.structuralTerm ?? '', 'actionVerbs')
+          : 'No action verb — start with a capability such as "format" or "generate".',
+      capability.dictionary
+        ? undefined
+        : capability.structural
+          ? `Add "${capability.structuralTerm}" to skillMdInspector.heuristics.dictionaryValues.actionVerbs.`
+          : 'Lead with a capability verb.',
     ),
     finding(
       'Usage trigger phrase',
@@ -117,12 +167,25 @@ export function scoreAnalysis(
     ),
     finding(
       'Concrete artifact / domain',
-      analysis.concreteArtifact ? weights.concreteArtifact : 0,
+      analysis.concreteArtifact
+        ? weights.concreteArtifact
+        : structuralArtifactOnly
+          ? Math.round(weights.concreteArtifact / 2)
+          : 0,
       weights.concreteArtifact,
       analysis.concreteArtifact
         ? 'Names a concrete artifact or domain.'
-        : 'No concrete artifact — say what the skill operates on.',
-      analysis.concreteArtifact ? undefined : 'Name the artifact (e.g. "PDF reports").',
+        : structuralArtifactOnly
+          ? unrecognizedVocabularyMessage(
+              analysis.artifactEvidence.structuralTerm ?? '',
+              'artifactHints',
+            )
+          : 'No concrete artifact — say what the skill operates on.',
+      analysis.concreteArtifact
+        ? undefined
+        : structuralArtifactOnly
+          ? `Add "${analysis.artifactEvidence.structuralTerm}" to skillMdInspector.heuristics.dictionaryValues.artifactHints.`
+          : 'Name the artifact (e.g. "PDF reports").',
     ),
     finding(
       'Boundary phrase',
@@ -271,14 +334,20 @@ function assessGradeLimitations(
     });
   }
 
-  if (!analysis.actionVerb.found) {
+  // Plan 9 Part B3. These two ceilings used to follow from dictionary membership
+  // alone, which made "not in my list" proof that the thing is *absent* — an
+  // invalid inference no amount of dictionary growth fixes, and the reason a
+  // synonym cost two label bands. They now require the absence of *both*
+  // dictionary and structural evidence. The criterion still only pays half for
+  // structural-only evidence, so the score stays honest about being less sure.
+  if (!analysis.capabilityEvidence.dictionary && !analysis.capabilityEvidence.structural) {
     limitations.push({
       code: 'missing-action-capability',
       ceiling: 59,
       reason: 'No action capability is present, so the adjusted score cannot exceed 59.',
     });
   }
-  if (!analysis.concreteArtifact) {
+  if (!analysis.concreteArtifact && !analysis.artifactEvidence.structural) {
     limitations.push({
       code: 'missing-concrete-artifact',
       ceiling: 59,

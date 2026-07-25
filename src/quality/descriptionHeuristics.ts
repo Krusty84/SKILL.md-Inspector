@@ -20,6 +20,31 @@ export interface ArtifactEvidence {
   strength: 'none' | 'supported-low-signal' | 'high-signal';
   matchedTerms: string[];
   supportingTerms: string[];
+  /**
+   * A token *shaped* like a domain term regardless of dictionary membership
+   * (plan 9 Part B2): `CamelCase`, a short all-caps code, a filename, a
+   * hyphenated compound, or a mid-sentence proper noun. Independent of `found`,
+   * which stays dictionary-driven — this is what keeps a dictionary miss from
+   * being treated as proof that no artifact was named.
+   */
+  structural: boolean;
+  /** The token that produced `structural`, for the diagnostic that names it. */
+  structuralTerm?: string;
+}
+/**
+ * Capability evidence, split by where it came from (plan 9 Part B1).
+ *
+ * The two are reported separately because they carry different confidence:
+ * `dictionary` means a configured capability verb was matched, `structural`
+ * means the opening clause is *shaped* like a capability statement using a word
+ * the registry does not know. Only the absence of both licenses the
+ * `missing-action-capability` ceiling.
+ */
+export interface CapabilityEvidence {
+  dictionary: boolean;
+  structural: boolean;
+  /** The unrecognized candidate, so a finding can name it and offer to register it. */
+  structuralTerm?: string;
 }
 export interface FrontLoadedIntentResult {
   found: boolean;
@@ -48,6 +73,7 @@ export interface DescriptionAnalysis {
   wordCount: number;
   leadingText: string;
   actionVerb: PhraseMatch;
+  capabilityEvidence: CapabilityEvidence;
   exclusiveTriggerPhrase: PhraseMatch;
   concreteArtifact: boolean;
   artifactEvidence: ArtifactEvidence;
@@ -69,13 +95,15 @@ export function analyzeDescription(
   const triggerClause = assessScopeClause(trimmed, 'trigger', dictionaries);
   const boundaryClause = assessScopeClause(trimmed, 'boundary', dictionaries);
   const artifactEvidence = analyzeArtifactEvidence(trimmed, dictionaries);
+  const actionVerb = matchDescriptionVerb(trimmed, dictionaries);
   return {
     raw,
     trimmed,
     length: trimmed.length,
     wordCount: trimmed.split(/\s+/).filter(Boolean).length,
     leadingText: trimmed.split(/\s+/).slice(0, 12).join(' ').toLowerCase(),
-    actionVerb: matchDescriptionVerb(trimmed, dictionaries),
+    actionVerb,
+    capabilityEvidence: analyzeCapabilityEvidence(trimmed, actionVerb, dictionaries),
     exclusiveTriggerPhrase: matchPhrase(trimmed, dictionaries.exclusiveTriggerPhrases),
     concreteArtifact: artifactEvidence.found,
     artifactEvidence,
@@ -180,6 +208,123 @@ export function hasActionVerb(
 ): PhraseMatch {
   return matchVerb(tokenize(description), dictionaries);
 }
+
+/**
+ * Word shapes an English predicate plausibly takes. Deliberately permissive on
+ * the suffix and strict on everything around it (see `structuralCapability`):
+ * the shape alone is weak evidence, and the position is what makes it evidence
+ * at all.
+ */
+const VERBISH_SHAPE = /(?:e|es|s|ify|ise|ize|ate|ing|[bcdfgklmnprtwx])$/i;
+/** Bare pronoun/auxiliary openings that are never a capability, whatever follows. */
+const NEVER_CAPABILITY = new Set([
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'has',
+  'have',
+  'had',
+  'do',
+  'does',
+  'did',
+  'can',
+  'will',
+  'would',
+  'should',
+  'could',
+  'may',
+  'might',
+  'must',
+  'it',
+  'we',
+  'i',
+]);
+
+/**
+ * Plan 9 Part B1. True when the first sentence opens like a capability statement
+ * even though its verb is unknown to the registry: an out-of-dictionary word in
+ * the predicate slot, followed closely by something to act on.
+ *
+ * Four conditions, all required. The first token must not be a function word
+ * (that is what rejects "This skill helps with various tasks" and "A helpful
+ * skill"), must not be an all-caps acronym, must have a plausible verb shape,
+ * and must be followed within three tokens by a non-function word. Together
+ * these accept "Pull tables from PDF invoices" and "Frobnicate the widgets for
+ * shipment" without accepting a bare noun phrase.
+ *
+ * This is not a part-of-speech tagger and does not pretend to be one. It is the
+ * narrowest signal that distinguishes "the author stated a capability I do not
+ * recognize" from "the author stated no capability", which is the only
+ * distinction the ceiling needs.
+ */
+function structuralCapability(
+  description: string,
+  dictionaries: HeuristicDictionaries,
+): string | undefined {
+  const leading = description.split(/(?<=[.!?])\s+/)[0] ?? '';
+  const rawTokens = leading.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) ?? [];
+  if (rawTokens.length < 2) {
+    return undefined;
+  }
+  const [first = '', ...rest] = rawTokens;
+  const candidate = first.toLowerCase();
+  const functionWords = new Set([
+    ...dictionaries.frontLoadedFillerTerms,
+    ...dictionaries.scopeStopwords,
+  ]);
+  // Vague words are never a capability statement, however verb-shaped they are:
+  // "Helps with documents" and "Makes everything better" are the brief's own
+  // examples of saying nothing. Compared against the singular/base form too, so
+  // "Helps" is caught by the "help" entry that both lists already carry.
+  const vagueWords = new Set([...dictionaries.vagueTerms, ...dictionaries.scopeVagueTerms]);
+  const isEmpty = (token: string): boolean => {
+    const base = singularize(token, dictionaries.irregularSingularForms);
+    return (
+      functionWords.has(token) ||
+      functionWords.has(base) ||
+      vagueWords.has(token) ||
+      vagueWords.has(base)
+    );
+  };
+  if (isEmpty(candidate) || NEVER_CAPABILITY.has(candidate)) {
+    return undefined;
+  }
+  // An all-caps opening is a name or an acronym ("PDF reports…"), not a verb.
+  // A sentence-capitalized word is the normal imperative shape, so only reject
+  // tokens that are *entirely* uppercase.
+  if (first.length > 1 && first === first.toUpperCase()) {
+    return undefined;
+  }
+  if (!VERBISH_SHAPE.test(candidate)) {
+    return undefined;
+  }
+  // Something to act on, and it must be substantive: "Makes everything better"
+  // has a verb-shaped opening but names nothing, which is the difference between
+  // an unrecognized capability and no capability.
+  const object = rest
+    .slice(0, 3)
+    .find((token) => !isEmpty(token.toLowerCase()) && token.length > 1);
+  return object ? candidate : undefined;
+}
+
+/** Dictionary and structural capability evidence, reported separately. */
+export function analyzeCapabilityEvidence(
+  description: string,
+  actionVerb: PhraseMatch = matchDescriptionVerb(description, DEFAULT_HEURISTIC_DICTIONARIES),
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): CapabilityEvidence {
+  if (actionVerb.found) {
+    return { dictionary: true, structural: false };
+  }
+  const structuralTerm = structuralCapability(description, dictionaries);
+  return structuralTerm
+    ? { dictionary: false, structural: true, structuralTerm }
+    : { dictionary: false, structural: false };
+}
 export function isFrontLoaded(
   leadingText: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
@@ -215,9 +360,33 @@ export function analyzeFrontLoadedIntent(
         : leadingCapability.position === 'direct' || leadingCapability.position === 'subject'
           ? 'capability-first'
           : undefined;
-  return prefix && capability && concrete
-    ? { found: true, pattern: prefix, matchedCapability: capability, matchedObject: object }
-    : { found: false };
+  if (prefix && capability && concrete) {
+    return { found: true, pattern: prefix, matchedCapability: capability, matchedObject: object };
+  }
+  // Same defect as the ceilings, in a second place (plan 9 Part B): this criterion
+  // asks whether the capability is stated *up front*, which is exactly what
+  // structural evidence measures, so a word the registry does not know must not
+  // read as "no capability in the first words". Without this, "Pull tables from
+  // PDF invoices…" loses the front-loaded criterion too and lands at 80 rather
+  // than the 90 the plan requires — the synonym penalty, just smaller.
+  const structuralTerm = structuralCapability(description, dictionaries);
+  if (structuralTerm && !leadingCapability.found) {
+    const structuralObject = tokenize(leading)
+      .slice(1)
+      .find(
+        (token) =>
+          token.length > 2 && !filler.has(token) && !dictionaries.vagueTerms.includes(token),
+      );
+    if (structuralObject) {
+      return {
+        found: true,
+        pattern: 'capability-first',
+        matchedCapability: structuralTerm,
+        matchedObject: structuralObject,
+      };
+    }
+  }
+  return { found: false };
 }
 export function hasPositiveTriggerPhrase(
   description: string,
@@ -268,7 +437,10 @@ function matchDescriptionVerb(
   if (match.found) {
     return { found: true, matched: match.matched };
   }
-  const firstTwoSentences = description.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
+  const firstTwoSentences = description
+    .split(/(?<=[.!?])\s+/)
+    .slice(0, 2)
+    .join(' ');
   return matchVerb(tokenize(firstTwoSentences), dictionaries);
 }
 
@@ -501,8 +673,7 @@ export function assessScopeClause(
   const excluded = kind === 'trigger' ? boundaryMarkers(dictionaries) : [];
   // Negated-usage spans exclude any positive marker they cover, so "should not
   // be used when X" never earns positive-trigger credit through the grammar.
-  const negatedSpans =
-    kind === 'trigger' ? [...description.matchAll(NEGATIVE_USAGE_GRAMMAR)] : [];
+  const negatedSpans = kind === 'trigger' ? [...description.matchAll(NEGATIVE_USAGE_GRAMMAR)] : [];
   const sentences = sentenceSpans(description);
   const allowed = (marker: string, index: number, end: number): boolean => {
     if (
@@ -670,11 +841,18 @@ export function analyzeArtifactEvidence(
     acronymMatches(text, term, dictionaries.uppercaseOnlyAcronyms),
   );
   matchedTerms.push(...phraseTerms, ...acronymTerms);
-  // A file extension needs at least one letter — "3.14" / "1.20" are numbers, not files.
-  if (/\.(?!\d+\b)[a-z0-9]{2,4}\b/i.test(text)) matchedTerms.push('file extension');
+  if (matchesFilename(text)) matchedTerms.push('file extension');
+  const structuralTerm = structuralArtifact(text, dictionaries);
   const unique = [...new Set(matchedTerms)].sort();
   if (unique.length)
-    return { found: true, strength: 'high-signal', matchedTerms: unique, supportingTerms: [] };
+    return {
+      found: true,
+      strength: 'high-signal',
+      matchedTerms: unique,
+      supportingTerms: [],
+      structural: structuralTerm !== undefined,
+      ...(structuralTerm ? { structuralTerm } : {}),
+    };
   const lows = [...low].filter((term) => forms.has(term));
   const supports = tokens.filter(
     (token) =>
@@ -685,14 +863,245 @@ export function analyzeArtifactEvidence(
       ) ||
         dictionaries.artifactSupportTerms.includes(token)),
   );
+  const structural = structuralTerm !== undefined;
   return lows.length && supports.length
     ? {
         found: true,
         strength: 'supported-low-signal',
         matchedTerms: lows.sort(),
         supportingTerms: [...new Set(supports)].sort(),
+        structural,
+        ...(structuralTerm ? { structuralTerm } : {}),
       }
-    : { found: false, strength: 'none', matchedTerms: [], supportingTerms: [] };
+    : {
+        found: false,
+        strength: 'none',
+        matchedTerms: [],
+        supportingTerms: [],
+        structural,
+        ...(structuralTerm ? { structuralTerm } : {}),
+      };
+}
+
+/**
+ * Extensions common enough that `word.ext` is a filename rather than a sentence
+ * that happens to contain a dot. Kept deliberately short: the point is to stop
+ * treating any dotted pair as evidence, not to enumerate every format.
+ */
+const KNOWN_EXTENSIONS = new Set([
+  'md',
+  'markdown',
+  'txt',
+  'json',
+  'jsonc',
+  'yaml',
+  'yml',
+  'toml',
+  'ini',
+  'env',
+  'csv',
+  'tsv',
+  'xml',
+  'html',
+  'htm',
+  'css',
+  'scss',
+  'js',
+  'jsx',
+  'ts',
+  'tsx',
+  'py',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'swift',
+  'c',
+  'h',
+  'cpp',
+  'cs',
+  'sh',
+  'bash',
+  'zsh',
+  'ps1',
+  'sql',
+  'graphql',
+  'proto',
+  'pdf',
+  'docx',
+  'doc',
+  'dotx',
+  'xlsx',
+  'xls',
+  'xlsm',
+  'xltx',
+  'pptx',
+  'ppt',
+  'potx',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'svg',
+  'webp',
+  'tiff',
+  'ico',
+  'mp3',
+  'mp4',
+  'wav',
+  'zip',
+  'tar',
+  'gz',
+  'log',
+  'lock',
+  'cfg',
+  'conf',
+  'ipynb',
+  'parquet',
+  'sqlite',
+  'db',
+  'step',
+  'stl',
+  'dxf',
+  'dwg',
+  'iges',
+  'igs',
+  'obj',
+  'stp',
+]);
+
+/**
+ * Plan 9 Part B2. The old `/\.(?!\d+\b)[a-z0-9]{2,4}\b/i` counted *any* dotted
+ * pair as artifact evidence, so "Process foo.bar items" cleared the
+ * concrete-artifact ceiling — an escape hatch wide enough for vacuous prose.
+ *
+ * Now a dot only counts as a filename when it is either a standalone extension
+ * (`.pdf`, with no word character before the dot) or a `word.ext` pair whose
+ * extension is a known one. `keybindings.json` and `CLAUDE.md` still match;
+ * `foo.bar` and version numbers like `3.14` do not.
+ */
+function matchesFilename(text: string): boolean {
+  for (const match of text.matchAll(/(\p{L}[\p{L}\p{N}_-]*)?\.([a-z0-9]{1,8})\b/giu)) {
+    const extension = match[2].toLowerCase();
+    if (/^\d+$/.test(extension)) {
+      continue;
+    }
+    // A standalone extension (" .pdf") is a format reference on its own; a
+    // preceding word makes it a filename only if the extension is recognized.
+    if (match[1] === undefined ? extension.length >= 2 : KNOWN_EXTENSIONS.has(extension)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** True for a multi-letter token written entirely in capitals. */
+function isAllCaps(token: string | undefined): boolean {
+  return token !== undefined && token.length > 1 && /^\p{Lu}+$/u.test(token);
+}
+
+/** Short all-caps codes that are ordinary English words, not domain terms. */
+const COMMON_UPPERCASE_WORDS = new Set([
+  'a',
+  'i',
+  'an',
+  'as',
+  'at',
+  'be',
+  'by',
+  'do',
+  'go',
+  'if',
+  'in',
+  'is',
+  'it',
+  'no',
+  'of',
+  'on',
+  'or',
+  'so',
+  'to',
+  'up',
+  'us',
+  'we',
+  'all',
+  'and',
+  'any',
+  'but',
+  'can',
+  'for',
+  'not',
+  'the',
+  'use',
+  'you',
+  'from',
+  'that',
+  'this',
+  'when',
+  'with',
+  'note',
+  'todo',
+]);
+
+/**
+ * Plan 9 Part B2. A token *shaped* like a domain term, whatever the dictionary
+ * knows: `PascalCase`/`CamelCase` (OpenAPI, Dockerfile, PowerPoint), a short
+ * all-caps code that is not an ordinary word (DBC, ECU), a filename, a
+ * hyphenated compound (load-case), or a proper noun capitalized mid-sentence
+ * (Slack, Terraform, Kubernetes).
+ *
+ * The mid-sentence rule is what keeps this from firing on every sentence-initial
+ * capital, which would make the check vacuous.
+ */
+function structuralArtifact(text: string, dictionaries: HeuristicDictionaries): string | undefined {
+  if (matchesFilename(text)) {
+    const filename = text.match(/\p{L}[\p{L}\p{N}_-]*\.[a-z0-9]{1,8}\b/iu)?.[0];
+    if (filename) return filename;
+  }
+  const vague = new Set(dictionaries.vagueTerms);
+  const sentences = text.split(/(?<=[.!?])\s+|\n+/);
+  for (const sentence of sentences) {
+    const tokens = [...sentence.matchAll(/[\p{L}\p{N}][\p{L}\p{N}_-]*/gu)];
+    for (const [index, match] of tokens.entries()) {
+      const token = match[0];
+      const lower = token.toLowerCase();
+      if (vague.has(lower) || dictionaries.scopeStopwords.includes(lower)) {
+        continue;
+      }
+      // CamelCase / PascalCase: an internal capital after a lowercase letter.
+      if (/^\p{Lu}?[\p{Ll}\p{N}]+\p{Lu}/u.test(token)) {
+        return token;
+      }
+      // A short all-caps code (DBC, ECU), but *only* when it stands alone among
+      // lowercase words. Task 72 established that "any run of uppercase letters"
+      // is not an artifact, and shouting is what that run usually is: "Format
+      // IMPORTANT THINGS" and "Generate GOOD RESULTS" are emphasis, not domain
+      // codes. Isolation is what separates the two, and the 5-character bound
+      // keeps ordinary words (THINGS, RESULTS) out on length alone.
+      if (
+        token.length >= 2 &&
+        token.length <= 5 &&
+        token === token.toUpperCase() &&
+        /^\p{Lu}+$/u.test(token) &&
+        !COMMON_UPPERCASE_WORDS.has(lower) &&
+        !isAllCaps(tokens[index - 1]?.[0]) &&
+        !isAllCaps(tokens[index + 1]?.[0])
+      ) {
+        return token;
+      }
+      // A hyphenated compound noun, but not a hyphenated adjective phrase
+      // ("well-formed"): require both halves to be at least three characters.
+      if (/^\p{L}{3,}(?:-\p{L}{3,})+$/u.test(token)) {
+        return token;
+      }
+      // A proper noun capitalized mid-sentence.
+      if (index > 0 && /^\p{Lu}[\p{Ll}]{2,}$/u.test(token)) {
+        return token;
+      }
+    }
+  }
+  return undefined;
 }
 function acronymMatches(
   text: string,

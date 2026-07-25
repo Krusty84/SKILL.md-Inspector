@@ -851,26 +851,26 @@
     "language": "de",
     "description": "Formatiert PDF-Rechnungen in das Standardlayout. Verwenden bei der Monatsabrechnung. Nicht verwenden f\u00fcr gescannte Bilder.",
     "expected": {
-      "minScore": 35,
-      "maxScore": 55,
+      "minScore": 55,
+      "maxScore": 75,
       "trigger": "none",
       "boundary": "none",
-      "frontLoaded": false
+      "frontLoaded": true
     },
-    "notes": "German (Latin script) is detected via stopword profiles and marked language-limited; the structural score stands without full-confidence semantic findings."
+    "notes": "German (Latin script) is detected via stopword profiles and marked language-limited. Plan 9 Part B reads \"Formatiert PDF-Rechnungen\" as a stated capability through its structural shape rather than the (English) verb registry, so the band moved up from 35-55 and frontLoaded is now true; the capability criterion still pays only half, and missing-usage-trigger still applies. Latin-script only by construction: the same sentence in Cyrillic scores 20 and keeps both ceilings."
   },
   {
     "id": "case-66",
     "language": "fr",
     "description": "Extrait les tableaux des rapports PDF et les convertit en CSV. \u00c0 utiliser pour les donn\u00e9es tabulaires. Ne pas utiliser pour les documents scann\u00e9s.",
     "expected": {
-      "minScore": 35,
-      "maxScore": 55,
+      "minScore": 55,
+      "maxScore": 75,
       "trigger": "none",
       "boundary": "none",
-      "frontLoaded": false
+      "frontLoaded": true
     },
-    "notes": "French (Latin script) is detected via stopword profiles and marked language-limited."
+    "notes": "French (Latin script) is detected via stopword profiles and marked language-limited. Same plan 9 Part B effect as case-65: \"Extrait les tableaux\" earns structural capability evidence, half the criterion, and no missing-action-capability ceiling."
   },
   {
     "id": "case-67",
@@ -1050,5 +1050,109 @@
       "maxRawScore": 90
     },
     "notes": "Verbatim shipped xlsx description: its opening 'any time' clause is the trigger (plan 7 Part D)."
+  },
+  {
+    "id": "case-78",
+    "language": "en",
+    "description": "Pull tables from PDF invoices. Use when the user needs invoice line items. Do not use for images.",
+    "notes": "Plan 9's headline case: the synonym twin of a dictionary-verb description. \"Pull\" is not a registered capability verb, so this scored 59/weak against 100/excellent for the \"Extract tables\u2026\" wording \u2014 41 points and two label bands for a synonym. Structural capability evidence keeps the missing-action-capability ceiling off and pays half the criterion, which is the honest difference in confidence.",
+    "expected": {
+      "minScore": 80,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 80,
+      "maxRawScore": 100,
+      "gradeLimitations": []
+    }
+  },
+  {
+    "id": "case-79",
+    "language": "en",
+    "description": "Frobnicate the widgets for shipment. Use when the user needs widgets frobnicated. Do not use for gadgets.",
+    "notes": "Structural capability only, with an invented verb: the opening is shaped like a capability statement, so no missing-action-capability ceiling and half the criterion. The finding names \"frobnicate\" and the setting that would score it fully. There is no artifact evidence, so that ceiling still applies.",
+    "expected": {
+      "minScore": 49,
+      "maxScore": 69,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 60,
+      "maxRawScore": 80,
+      "gradeLimitations": [
+        "missing-concrete-artifact"
+      ]
+    }
+  },
+  {
+    "id": "case-80",
+    "language": "en",
+    "description": "Generate deliverables from OpenAPI definitions. Use when the upstream service changes. Do not use for handwritten wikis.",
+    "notes": "Structural artifact evidence in isolation: \"OpenAPI\" is PascalCase and unknown to artifactHints, and the description deliberately avoids every dictionary artifact term (an earlier draft said \"contract\" and \"schemas\", both of which are registered and gave it full credit for the wrong reason). The concrete-artifact ceiling no longer fires on a description that plainly names what it operates on, and the criterion pays half.",
+    "expected": {
+      "minScore": 80,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 80,
+      "maxRawScore": 100,
+      "gradeLimitations": []
+    }
+  },
+  {
+    "id": "case-81",
+    "language": "en",
+    "description": "Analyze validate generate format convert review data reports files. Use when analyzing reports for users. Do not use for spreadsheets.",
+    "notes": "Anti-gaming pin (plan 9 Part B4), and a recorded limitation rather than a solved problem: verb stuffing still scores 100. It has genuine dictionary evidence, so the structural fallback is not what lets it through, and echoed-scope-content does not fire because the trigger and boundary name different scopes. Pinned so a future change has to notice it. See docs/rules.md.",
+    "expected": {
+      "minScore": 90,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 90,
+      "maxRawScore": 100,
+      "gradeLimitations": []
+    }
+  },
+  {
+    "id": "case-82",
+    "language": "en",
+    "description": "This skill helps with various tasks and improves things.",
+    "notes": "Anti-gaming pin (plan 9 Part B4): vacuous prose must stay \"poor\" now that the ceilings are escapable. The opening token is a function word, so there is no structural capability evidence and both dictionary ceilings apply.",
+    "expected": {
+      "minScore": 5,
+      "maxScore": 25,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false,
+      "minRawScore": 5,
+      "maxRawScore": 25,
+      "gradeLimitations": [
+        "missing-action-capability",
+        "missing-concrete-artifact",
+        "missing-usage-trigger"
+      ]
+    }
+  },
+  {
+    "id": "case-83",
+    "language": "en",
+    "description": "Process foo.bar items for the caller. Use when items arrive. Do not use for batches.",
+    "notes": "Acceptance criterion 5: the old artifact escape hatch counted any dotted pair as a filename, so \"foo.bar\" cleared the concrete-artifact ceiling. A dot now needs a known extension or no preceding word character, so this keeps the ceiling.",
+    "expected": {
+      "minScore": 49,
+      "maxScore": 69,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 60,
+      "maxRawScore": 80,
+      "gradeLimitations": [
+        "missing-concrete-artifact"
+      ]
+    }
   }
 ]
