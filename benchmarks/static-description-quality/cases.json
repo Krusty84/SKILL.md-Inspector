@@ -884,5 +884,23 @@
       "frontLoaded": false
     },
     "notes": "Spanish (Latin script) is detected via stopword profiles and marked language-limited."
+  },
+  {
+    "id": "case-68",
+    "language": "en",
+    "description": "Format technical PDF inspection reports using the documented company layout rules, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix ordering, covering headings, captions, tables, figure numbering, and appendix orderingxxx. Use when asked to standardize inspection reports. Do not use for spreadsheets.",
+    "expected": {
+      "minScore": 59,
+      "maxScore": 59,
+      "minRawScore": 85,
+      "maxRawScore": 85,
+      "gradeLimitations": [
+        "over-maximum-length"
+      ],
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true
+    },
+    "notes": "Over the 1024-character profile maximum: complete evidence totals 85, but a specification error caps the public grade at weak."
   }
 ]

@@ -32,7 +32,8 @@ export type StaticDescriptionQualityGradeLimitationCode =
   | 'overbroad-usage-scope'
   | 'instruction-heavy-description'
   | 'echoed-scope-content'
-  | 'unfilled-placeholder';
+  | 'unfilled-placeholder'
+  | 'over-maximum-length';
 
 /** An explicit policy ceiling applied after the additive criterion score. */
 export interface StaticDescriptionQualityGradeLimitation {

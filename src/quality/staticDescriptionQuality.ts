@@ -186,6 +186,7 @@ export function scoreAnalysis(
   const gradeLimitations = assessGradeLimitations(
     analysis,
     options.dictionaries ?? DEFAULT_HEURISTIC_DICTIONARIES,
+    maxLength,
   );
   const adjustedScore = gradeLimitations.reduce(
     (score, limitation) => Math.min(score, limitation.ceiling),
@@ -228,8 +229,22 @@ function notScoredResult(reason: string): StaticDescriptionQualityResult {
 function assessGradeLimitations(
   analysis: DescriptionAnalysis,
   dictionaries: HeuristicDictionaries,
+  maxLength: number,
 ): StaticDescriptionQualityGradeLimitation[] {
   const limitations: StaticDescriptionQualityGradeLimitation[] = [];
+
+  // A description the specification rejects is not an acceptable description.
+  // `scoreLength` already zeroes the length criterion, but that costs only its
+  // own weight, which left a hard `skill.description.tooLong` error scoring 90
+  // and labelled "excellent" (plan 7 Part B).
+  if (analysis.length > maxLength) {
+    limitations.push({
+      code: 'over-maximum-length',
+      ceiling: 59,
+      reason:
+        'The description exceeds the configured maximum length, which is a specification error, so the adjusted score cannot exceed 59.',
+    });
+  }
 
   // Keyword stuffing defense: when the usage trigger and boundary echo the same
   // scope (e.g. "Use when PDF. Do not use when PDF."), neither clause adds real
