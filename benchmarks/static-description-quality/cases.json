@@ -902,5 +902,154 @@
       "frontLoaded": true
     },
     "notes": "Over the 1024-character profile maximum: complete evidence totals 85, but a specification error caps the public grade at weak."
+  },
+  {
+    "id": "case-69",
+    "language": "en",
+    "description": "Format spreadsheet workbooks against the finance template. Use this skill any time a spreadsheet file is the input. Do not use for PDF exports.",
+    "expected": {
+      "minScore": 90,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 90,
+      "maxRawScore": 100
+    },
+    "notes": "Recognized trigger form: 'any time' (plan 7 Part D)."
+  },
+  {
+    "id": "case-70",
+    "language": "en",
+    "description": "Format spreadsheet workbooks against the finance template. Use this skill in cases where the user edits a workbook. Do not use for PDF exports.",
+    "expected": {
+      "minScore": 90,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 90,
+      "maxRawScore": 100
+    },
+    "notes": "Recognized trigger form: 'in cases where' (plan 7 Part D)."
+  },
+  {
+    "id": "case-71",
+    "language": "en",
+    "description": "Format spreadsheet workbooks against the finance template. Use this skill wherever a workbook is involved. Do not use for PDF exports.",
+    "expected": {
+      "minScore": 90,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 90,
+      "maxRawScore": 100
+    },
+    "notes": "Recognized trigger form: 'wherever' (plan 7 Part D)."
+  },
+  {
+    "id": "case-72",
+    "language": "en",
+    "description": "Format spreadsheet workbooks against the finance template. Reach for this skill when the user edits a workbook. Do not use for PDF exports.",
+    "expected": {
+      "minScore": 90,
+      "maxScore": 100,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": true,
+      "minRawScore": 90,
+      "maxRawScore": 100
+    },
+    "notes": "Recognized usage lead-in: 'Reach for this skill' (plan 7 Part D)."
+  },
+  {
+    "id": "case-73",
+    "language": "en",
+    "description": "Cleans stale build caches from CI runners. Runs for 10 minutes on large repositories.",
+    "expected": {
+      "minScore": 69,
+      "maxScore": 69,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true,
+      "minRawScore": 75,
+      "maxRawScore": 75,
+      "gradeLimitations": [
+        "missing-usage-trigger"
+      ]
+    },
+    "notes": "Precision guard: a duration after 'for' is behavior, not a usage trigger."
+  },
+  {
+    "id": "case-74",
+    "language": "en",
+    "description": "Lints YAML pipeline manifests. Applies fixes if the schema check reports an error.",
+    "expected": {
+      "minScore": 69,
+      "maxScore": 69,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true,
+      "minRawScore": 75,
+      "maxRawScore": 75,
+      "gradeLimitations": [
+        "missing-usage-trigger"
+      ]
+    },
+    "notes": "Precision guard: a bare third-person conditional is behavior, not a usage trigger."
+  },
+  {
+    "id": "case-75",
+    "language": "en",
+    "description": "Decodes malformed video frames into raw buffers. The tool crashes when the user provides truncated frames.",
+    "expected": {
+      "minScore": 15,
+      "maxScore": 35,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": false,
+      "minRawScore": 15,
+      "maxRawScore": 35,
+      "gradeLimitations": [
+        "missing-action-capability",
+        "missing-concrete-artifact",
+        "missing-usage-trigger"
+      ]
+    },
+    "notes": "Precision guard: an incidental 'when the user' outside usage context earns nothing."
+  },
+  {
+    "id": "case-76",
+    "language": "en",
+    "description": "Normalizes sensor telemetry into CSV exports. Trigger on telemetry ingestion requests.",
+    "expected": {
+      "minScore": 69,
+      "maxScore": 69,
+      "trigger": "none",
+      "boundary": "none",
+      "frontLoaded": true,
+      "minRawScore": 75,
+      "maxRawScore": 75,
+      "gradeLimitations": [
+        "missing-usage-trigger"
+      ]
+    },
+    "notes": "Known gap: bare 'on' stays unrecognized so 'Operates on large files' cannot fire."
+  },
+  {
+    "id": "case-77",
+    "language": "en",
+    "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path \u2014 even casually (like \"the xlsx in my downloads\") \u2014 and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved.",
+    "expected": {
+      "minScore": 70,
+      "maxScore": 90,
+      "trigger": "full",
+      "boundary": "full",
+      "frontLoaded": false,
+      "minRawScore": 70,
+      "maxRawScore": 90
+    },
+    "notes": "Verbatim shipped xlsx description: its opening 'any time' clause is the trigger (plan 7 Part D)."
   }
 ]

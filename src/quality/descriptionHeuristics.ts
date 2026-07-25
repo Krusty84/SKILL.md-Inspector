@@ -92,9 +92,16 @@ export function analyzeDescription(
  * True when a sentence is about *using the skill* (rather than incidentally
  * containing "when the user …"): an explicit "use this skill", a passive
  * "should/must/can/will be used", or a "trigger(s) when" statement.
+ *
+ * The lead-in verb family covers the phrasings production skills actually use —
+ * "Reach for this skill when…", "Consult this skill when…" — because plan 5's
+ * precision guard silently cost that recall: any lead-in outside the list made
+ * `agentWhenAllowed` reject an unmistakable "when the user" marker (plan 7
+ * Part D). Widening it also widens `analyzeOverbroadTrigger`, which is
+ * intentional: an overbroad claim is overbroad however it is introduced.
  */
 const USAGE_CONTEXT_PATTERN =
-  /\b(?:use|using|invoke|activate|select|choose)\s+(?:this|the)\s+skill\b|\b(?:this\s+skill|it)\b[^.!?;]{0,80}\b(?:used|invoked|activated|selected|chosen|considered)\b|\b(?:should|must|can|will)\b[^.!?;]{0,40}\bbe\s+(?:used|invoked|activated|selected|chosen|considered)\b|\btrigger(?:s|ed)?\s+when\b/iu;
+  /\b(?:use|using|invoke|activate|select|choose|reach\s+for|consult|refer\s+to|load|read)\s+(?:this|the)\s+skill\b|\b(?:this\s+skill|it)\b[^.!?;]{0,80}\b(?:used|invoked|activated|selected|chosen|considered)\b|\b(?:should|must|can|will)\b[^.!?;]{0,40}\bbe\s+(?:used|invoked|activated|selected|chosen|considered)\b|\btrigger(?:s|ed)?\s+when\b/iu;
 
 export function analyzeOverbroadTrigger(
   description: string,
@@ -352,9 +359,22 @@ const USAGE_VERB = String.raw`(?:${USAGE_VERB_CORE})`;
 const NEGATED_USAGE_VERB = String.raw`(?:${USAGE_VERB_CORE}|running|triggering)`;
 const SAME_SENTENCE_GAP = String.raw`[^.!?;\n]{0,60}?`;
 const NEGATION = String.raw`(?:do\s+not|don['’]t|never|should\s+not|shouldn['’]t|must\s+not|mustn['’]t|cannot|can['’]t|won['’]t|avoid(?:s|ed|ing)?|not(?:\s+to)?\s+be)`;
+/**
+ * Scope conjunctions a usage clause can hang off. Longer forms precede their
+ * prefixes so the alternation never truncates a match ("whenever" before
+ * "when"). `any time`, `in cases where`, `wherever`, and `on any` are the
+ * phrasings real skills use that an exact-phrase list never enumerated (plan 7
+ * Part D).
+ *
+ * Bare `on` is deliberately absent even though the negated grammar accepts it:
+ * "Operates on large files" describes behavior, not usage scope, so only the
+ * narrower `on any` is recognized. "Trigger on spreadsheet requests" therefore
+ * stays unrecognized — a known gap, not an oversight.
+ */
+const SCOPE_CONJUNCTION = String.raw`(?:whenever|when|wherever|for|if|any\s?time|in\s+cases?\s+where|on\s+any)`;
 /** `<usage verb> … <scope conjunction>` within one sentence. */
 const POSITIVE_USAGE_GRAMMAR = new RegExp(
-  String.raw`\b${USAGE_VERB}\b${SAME_SENTENCE_GAP}\b(?:whenever|when|for|if)\b`,
+  String.raw`\b${USAGE_VERB}\b${SAME_SENTENCE_GAP}\b${SCOPE_CONJUNCTION}\b`,
   'giu',
 );
 /** `designed/intended/ideal/best/suitable/appropriate for`. */
