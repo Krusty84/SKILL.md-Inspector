@@ -1004,20 +1004,19 @@
     "language": "en",
     "description": "Decodes malformed video frames into raw buffers. The tool crashes when the user provides truncated frames.",
     "expected": {
-      "minScore": 15,
-      "maxScore": 35,
+      "minScore": 40,
+      "maxScore": 60,
       "trigger": "none",
       "boundary": "none",
-      "frontLoaded": false,
-      "minRawScore": 15,
-      "maxRawScore": 35,
+      "frontLoaded": true,
+      "minRawScore": 40,
+      "maxRawScore": 60,
       "gradeLimitations": [
-        "missing-action-capability",
         "missing-concrete-artifact",
         "missing-usage-trigger"
       ]
     },
-    "notes": "Precision guard: an incidental 'when the user' outside usage context earns nothing."
+    "notes": "Precision guard: an incidental 'when the user' outside usage context earns nothing. Plan 9 recognizes 'decodes' as the capability it plainly is, so the band moved up and missing-action-capability no longer applies; the trigger expectation it guards is unchanged."
   },
   {
     "id": "case-76",

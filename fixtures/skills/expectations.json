@@ -387,8 +387,8 @@
     "forbiddenDiagnostics": [],
     "descriptionQuality": {
       "state": "scored",
-      "minScore": 0,
-      "maxScore": 29
+      "minScore": 40,
+      "maxScore": 59
     },
     "instructionQuality": {
       "state": "scored",
@@ -502,8 +502,8 @@
     ],
     "descriptionQuality": {
       "state": "scored",
-      "minScore": 30,
-      "maxScore": 59
+      "minScore": 85,
+      "maxScore": 100
     },
     "instructionQuality": {
       "state": "scored",
@@ -571,8 +571,8 @@
     ],
     "descriptionQuality": {
       "state": "scored",
-      "minScore": 30,
-      "maxScore": 59
+      "minScore": 90,
+      "maxScore": 100
     },
     "instructionQuality": {
       "state": "scored",
