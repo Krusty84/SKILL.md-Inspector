@@ -448,6 +448,24 @@ function agentWhenAllowed(
   return USAGE_CONTEXT_PATTERN.test(description.slice(sentence.start, sentence.end));
 }
 
+/**
+ * Every phrase that bounds the described scope, for the boundary criterion.
+ *
+ * This deliberately includes `scopeRestrictionPhrases` ("only for X", "limited
+ * to X") while the collision layer's exclusion set deliberately excludes them
+ * (plan 7 Part A). Both are correct for their own question: "Only for PDF files"
+ * *does* bound what the skill covers, so it earns the boundary criterion here,
+ * but it does not say PDF is *excluded*, so it must not separate two colliding
+ * PDF skills over in `workspace/collisionFeatures.ts`. Do not unify the two.
+ */
+function boundaryMarkers(dictionaries: HeuristicDictionaries): string[] {
+  return [
+    ...dictionaries.negativeBoundaryPhrases,
+    ...dictionaries.restrictiveBoundaryPhrases,
+    ...dictionaries.scopeRestrictionPhrases,
+  ];
+}
+
 export function assessScopeClause(
   description: string,
   kind: 'trigger' | 'boundary',
@@ -457,17 +475,10 @@ export function assessScopeClause(
     ...new Set(
       kind === 'trigger'
         ? [...dictionaries.positiveTriggerPhrases, ...dictionaries.exclusiveTriggerPhrases]
-        : [
-            ...dictionaries.negativeBoundaryPhrases,
-            ...dictionaries.restrictiveBoundaryPhrases,
-            ...dictionaries.exclusiveTriggerPhrases,
-          ],
+        : [...boundaryMarkers(dictionaries), ...dictionaries.exclusiveTriggerPhrases],
     ),
   ].sort();
-  const excluded =
-    kind === 'trigger'
-      ? [...dictionaries.negativeBoundaryPhrases, ...dictionaries.restrictiveBoundaryPhrases]
-      : [];
+  const excluded = kind === 'trigger' ? boundaryMarkers(dictionaries) : [];
   // Negated-usage spans exclude any positive marker they cover, so "should not
   // be used when X" never earns positive-trigger credit through the grammar.
   const negatedSpans =

@@ -256,3 +256,38 @@ describe('detectCollisions cancellation and determinism (P3)', () => {
     expect(all).toHaveLength((corpus.length * (corpus.length - 1)) / 2);
   });
 });
+
+describe('scope restrictions no longer damp a true positive (plan 7 Part A)', () => {
+  const restricted = [
+    {
+      name: 'pdf-invoice-formatter',
+      description: 'Format PDF invoices using the company layout rules. Only for PDF files.',
+    },
+    {
+      name: 'pdf-invoice-styler',
+      description: 'Format PDF invoices using the company layout rules. Only for PDF files.',
+    },
+  ];
+
+  it('reports two skills restricted to the same artifact as a high-similarity collision', () => {
+    const [collision] = detectCollisions(restricted);
+    expect(collision).toBeDefined();
+    expect(collision.metrics.boundarySeparation).toBe(0);
+    expect(collision.similarity).toBeGreaterThanOrEqual(0.75);
+  });
+
+  it('still damps a genuinely mutually-exclusive pair', () => {
+    const mutual = [
+      {
+        name: 'python2-migrator',
+        description: 'Migrate Python 2 modules to modern syntax. Do not use for Python 3 code.',
+      },
+      {
+        name: 'python3-refactorer',
+        description: 'Refactor Python 3 modules for new APIs. Do not use for Python 2 code.',
+      },
+    ];
+    const [collision] = detectCollisions(mutual, { threshold: 0 });
+    expect(collision.metrics.boundarySeparation).toBeGreaterThan(0);
+  });
+});

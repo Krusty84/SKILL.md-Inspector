@@ -13,6 +13,7 @@ export const HEURISTIC_LIST_DICTIONARY_KEYS = [
   'negativeBoundaryPhrases',
   'exclusiveTriggerPhrases',
   'restrictiveBoundaryPhrases',
+  'scopeRestrictionPhrases',
   'overbroadTriggerPhrases',
   'frontLoadedFillerTerms',
   'scopeStopwords',
@@ -44,6 +45,7 @@ export interface HeuristicDictionaries {
   negativeBoundaryPhrases: readonly string[];
   exclusiveTriggerPhrases: readonly string[];
   restrictiveBoundaryPhrases: readonly string[];
+  scopeRestrictionPhrases: readonly string[];
   overbroadTriggerPhrases: readonly string[];
   frontLoadedFillerTerms: readonly string[];
   scopeStopwords: readonly string[];
