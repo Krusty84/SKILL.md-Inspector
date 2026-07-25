@@ -17,12 +17,19 @@ import type { StaticDescriptionQualityResult } from '../../src/types/StaticDescr
 /**
  * Minimum acceptable median score over the production corpus.
  *
- * Owned by plan 8: set to the value measured on the tree that landed this
- * corpus, so the gate documents today's reality instead of an aspiration.
- * TODO(plan-9): raise to 75 once the dictionaries and clause grammar are
- * widened. Do not lower this constant to make a change pass.
+ * Raised from plan 8's placeholder of 60 by plan 9, which widened the
+ * dictionaries and stopped a dictionary miss from capping the score: the measured
+ * median moved 60 -> 79 and the mean 62.9 -> 76.7.
+ *
+ * The gate is 75, not the measured 79, and the four points are deliberate. 75 is
+ * the "good" label boundary, so the assertion means something a reader can state
+ * — *half of the reference implementations of this format grade as good or
+ * better* — rather than restating one sample. It also leaves room for the corpus
+ * to grow: its own rules require adding verbatim entries and forbid removing
+ * low-scoring ones, so a gate pinned to today's exact median would fight the
+ * corpus it guards. Do not lower this constant to make a change pass.
  */
-export const MEDIAN_SCORE_GATE = 60;
+export const MEDIAN_SCORE_GATE = 75;
 
 interface ProductionSkill {
   id: string;

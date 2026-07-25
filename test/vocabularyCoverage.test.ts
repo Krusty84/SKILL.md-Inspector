@@ -122,6 +122,21 @@ describe('action-verb vocabulary coverage', () => {
     expect(DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs.length).toBeGreaterThanOrEqual(140);
   });
 
+  it('pairs every -ize/-yze verb with its -ise/-yse spelling', () => {
+    // Exhaustive rather than a sample: the whole point is that no locale is left
+    // scoring as if it had stated no capability, and a spot check would let the
+    // next added verb quietly reintroduce that.
+    const verbs = new Set(DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs);
+    const missing = [...verbs]
+      .filter((verb) => verb.endsWith('ize') || verb.endsWith('yze'))
+      .map((verb) => ({
+        verb,
+        twin: `${verb.slice(0, -3)}${verb.endsWith('ize') ? 'ise' : 'yse'}`,
+      }))
+      .filter(({ twin }) => !verbs.has(twin));
+    expect(missing).toEqual([]);
+  });
+
   it('keeps the verb list free of duplicates and of non-lowercase entries', () => {
     const verbs = DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs;
     expect(new Set(verbs).size).toBe(verbs.length);
@@ -203,7 +218,7 @@ describe('artifact vocabulary coverage', () => {
 });
 
 describe('a recognized verb scores the description it belongs to', () => {
-  it('scores the dictionary-verb form of the plan\'s example highly', () => {
+  it("scores the dictionary-verb form of the plan's example highly", () => {
     // Its synonym twin ("Pull tables from…") is asserted in
     // structuralEvidence.test.ts: closing that 41-point gap is Part B's job, not
     // something dictionary growth can do.

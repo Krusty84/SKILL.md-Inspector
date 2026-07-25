@@ -41,3 +41,12 @@ Each case records:
 Review additions with a human author: include difficult phrasing, near-misses, negation interplay, and language limitations rather than formulaic variants of one template. Run `npm run benchmark:static`; update an expectation only when the intended heuristic policy changes, and say so in the commit message.
 
 The additive `rawScore` is always the sum of the per-criterion findings. The public `score` and label use `adjustedScore`, which may be capped when an essential signal is absent: missing concrete usage-trigger content (69), a vague trigger tail (74), or missing capability/artifact evidence (59). Each cap appears in `gradeLimitations`; there are no hidden deductions. A missing boundary does not create an essential ceiling for the Generic profile, and body quality is outside this benchmark.
+
+The two 59-point ceilings need both kinds of evidence to be absent. Since plan 9, a word
+outside the configured dictionaries no longer proves the thing is missing: an opening
+shaped like a capability statement, or a token shaped like a domain term, keeps the ceiling
+off and earns half the criterion. `case-78` through `case-83` cover that boundary from both
+sides — the synonym that used to cost two label bands, structural capability and artifact
+evidence in isolation, and the gaming cases that must not benefit. `case-81` is pinned at
+100 on purpose: verb stuffing is a **known limitation**, documented in
+[../../docs/rules.md](../../docs/rules.md), not something the corpus claims is solved.

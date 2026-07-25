@@ -44,6 +44,17 @@
     `benchmarks/README.md` records what each corpus is allowed to prove — a failing
     calibration or collision gate means the metric is wrong, not that the corpus
     needs adjusting.
+- **Two quick fixes that register an unrecognized word** instead of leaving an
+  unexplained grade: **Add "…" to recognized action verbs** and **Add "…" to
+  recognized artifacts**. They write
+  `skillMdInspector.heuristics.dictionaryValues.actionVerbs` / `.artifactHints` in
+  workspace settings (user settings when no workspace is open) and never edit your
+  file. The addition is appended to the effective list, so the built-in entries are
+  preserved; neither fix is ever auto-applied.
+- **`skill.description.noArtifact`** (information): the description names something
+  artifact-shaped that the configured `artifactHints` do not contain. The
+  description is fine and the dictionary is incomplete, so the artifact criterion
+  pays half until the word is registered.
 
 ### Removed
 
@@ -71,6 +82,29 @@
 
 ### Changed
 
+- **A word outside the built-in dictionaries no longer decides your grade.** Two
+  independent changes, and the description score on real shipped skills moved from a
+  median of 60 to 79 (mean 62.9 → 76.7) as a result:
+  - The seed dictionaries grew: 39 → 168 action verbs (including `-ise`/`-yse`
+    spellings, so British English no longer scores as if it stated no capability),
+    68 → 256 artifact hints, 10 → 74 multi-word artifacts. Harvested from real
+    published skills rather than brainstormed. Words that name what a skill operates
+    *on* (`chart`, `model`, `index`, `label`, `profile`, `query`, `benchmark`) went
+    to the artifact lists, not the verb list, so collision analysis keeps that
+    signal.
+  - A dictionary miss is no longer treated as proof of absence. `Pull tables from
+    PDF invoices…` used to score 59/weak against 100/excellent for
+    `Extract tables from…` — 41 points and two label bands for a synonym. An opening
+    shaped like a capability statement, or a token shaped like a domain term, now
+    keeps the 59-point ceiling off and earns half the criterion, with a finding
+    naming the word and the setting that would score it fully.
+  - Non-English descriptions benefit too: `Formatiert PDF-Rechnungen…` is read as a
+    stated capability. Latin-script only, and still marked language-limited.
+  - Not fixed, and now documented in `docs/rules.md`: keyword stuffing still scores
+    highly, because it has genuine dictionary evidence rather than a dictionary miss.
+- A file extension is recognized more strictly: `Process foo.bar items` no longer
+  counts as naming a concrete artifact, while `keybindings.json` and `CLAUDE.md`
+  still do.
 - **The two headline scores are now named after what they measure.** No scoring
   arithmetic changed — every score is byte-identical — only labels and headings:
   - Authoring quality labels are no longer `excellent | good | acceptable | weak |
