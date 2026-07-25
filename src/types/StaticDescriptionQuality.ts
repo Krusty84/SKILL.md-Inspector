@@ -5,6 +5,11 @@ import type { QualityAssessmentState } from './QualityAssessment';
  * `quality/staticDescriptionQuality.ts` and surfaced in the skill report,
  * workspace analysis, and the exported skills index. Declared here so the
  * scoring module can attach without touching the rest of the model.
+ *
+ * The field names are the stable contract for `skills.index.json` consumers; the
+ * UI presents the score as **Description completeness** because what it measures
+ * is how many of 7 structural conventions the wording satisfies. The labels below
+ * band that 0–100 coverage score. See `ui/metricDefinitions.ts`.
  */
 export type StaticDescriptionQualityLabel = 'excellent' | 'good' | 'acceptable' | 'weak' | 'poor';
 

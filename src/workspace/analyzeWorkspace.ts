@@ -80,7 +80,7 @@ export function analyzeWorkspace(
 /** Builds the exportable index model (brief §13.6). */
 export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     generatedAt: new Date().toISOString(),
     skills: analysis.skills.map((skill) => ({
       name: skill.name,

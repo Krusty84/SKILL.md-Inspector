@@ -9,11 +9,11 @@ const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
 
 const descriptions = {
   actionVerbs:
-    'Base verbs recognized as concrete capabilities in description diagnostics, Static Description Quality, local improvement, and collision features.',
+    'Base verbs recognized as concrete capabilities in description diagnostics, description completeness, local improvement, and collision features.',
   actionVerbForms:
     'Explicit surface forms for action verbs. Keys are base verbs and values are recognized forms; explicit entries take precedence over regular morphology.',
   vagueTerms:
-    'Words and phrases treated as vague in description diagnostics and Static Description Quality.',
+    'Words and phrases treated as vague in description diagnostics and description completeness.',
   artifactHints:
     'High-signal artifact and domain terms used by description quality and collision feature extraction.',
   lowSignalArtifactTerms:

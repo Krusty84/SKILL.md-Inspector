@@ -68,7 +68,7 @@ describe('buildReportModel', () => {
     expect(model.staticDescriptionQuality.label).toBe('poor');
   });
 
-  it('keeps the substantive engineering report formatter fixture excellent', () => {
+  it('keeps the substantive engineering report formatter fixture at minor issues', () => {
     const fixturePath = path.resolve('fixtures/skills/engineering-report-formatter/SKILL.md');
     const content = fs.readFileSync(fixturePath, 'utf8');
     const { document, diagnostics, tokenUsage } = analyzeSkill(
@@ -78,8 +78,9 @@ describe('buildReportModel', () => {
     );
     const model = buildReportModel(document, diagnostics, genericProfile, tokenUsage);
 
+    // One minor finding costs 10 points, so a real finding can never read as clean.
     expect(model.authoringQuality.instructions.score).toBe(90);
-    expect(model.authoringQuality.instructions.label).toBe('excellent');
+    expect(model.authoringQuality.instructions.label).toBe('minor-issues');
   });
 
   it('reports warnings without treating description or authoring quality as validation', () => {
@@ -102,7 +103,7 @@ describe('buildReportModel', () => {
     expect(model.warningCount).toBe(2);
     expect(model.informationCount).toBe(1);
     expect(model.authoringQuality.instructions.score).toBe(0);
-    expect(model.authoringQuality.instructions.label).toBe('poor');
+    expect(model.authoringQuality.instructions.label).toBe('defects');
     expect(model.authoringQuality.resources.score).toBe(100);
   });
 });
@@ -114,7 +115,7 @@ describe('renderReportHtml', () => {
     expect(html).toContain('Content-Security-Policy');
     expect(html).toContain('nonce-abc123');
     expect(html).toContain('demo');
-    expect(html).toContain('Static Description Quality');
+    expect(html).toContain('Description completeness');
     expect(html).toContain(`${model.staticDescriptionQuality.score}`);
     expect(html).toContain('Reference files (0)');
     expect(html).toContain('Non-standard files (0)');
@@ -215,9 +216,9 @@ describe('renderReportHtml', () => {
 
     expect(html).toContain('Validation status: VALID WITH WARNINGS');
     expect(html).not.toContain('>PASS<');
-    expect(html).toContain('Instruction authoring quality');
-    expect(html).toContain('0/100 · Poor');
-    expect(html.indexOf('Instruction authoring quality')).toBeLessThan(
+    expect(html).toContain('Authoring hygiene');
+    expect(html).toContain('0/100 · Defects');
+    expect(html.indexOf('Authoring hygiene')).toBeLessThan(
       html.indexOf('<h2 id="validation-findings">Validation findings</h2>'),
     );
     expect(html).toContain(
@@ -236,7 +237,7 @@ describe('renderReportHtml', () => {
       label: 'acceptable',
       rawScore: 75,
     });
-    expect(html).toContain('Heuristic Static Description Quality 69/100 · Acceptable');
+    expect(html).toContain('Description completeness 69/100 · Acceptable');
     expect(html).toContain('Raw criterion score: <strong>75/100</strong>');
     expect(html).toContain('Adjusted score after ceilings: <strong>69/100</strong>');
     expect(html).toContain('<code>missing-usage-trigger</code> — ceiling: 69/100');

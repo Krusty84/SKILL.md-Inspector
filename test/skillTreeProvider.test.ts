@@ -48,6 +48,11 @@ vi.mock('../src/analysis/workspaceAnalysis', () => ({ computeWorkspaceAnalysis: 
 import * as vscode from 'vscode';
 import { computeWorkspaceAnalysis } from '../src/analysis/workspaceAnalysis';
 import { SkillTreeProvider } from '../src/ui/skillTreeProvider';
+import {
+  AUTHORING_HYGIENE_DEFINITION,
+  DESCRIPTION_COMPLETENESS_DEFINITION,
+  LOW_TEXT_COVERAGE_DEFINITION,
+} from '../src/ui/metricDefinitions';
 import type { WorkspaceAnalysis } from '../src/types/Workspace';
 
 function analysis(): WorkspaceAnalysis {
@@ -78,8 +83,8 @@ function analysis(): WorkspaceAnalysis {
           limitations: [],
         },
         authoringQuality: {
-          instructions: { state: 'scored', score: 0, label: 'poor', findings: [] },
-          resources: { score: 100, label: 'excellent', findings: [] },
+          instructions: { state: 'scored', score: 0, label: 'defects', findings: [] },
+          resources: { score: 100, label: 'clean', findings: [] },
         },
         errors: 0,
         warnings: 2,
@@ -119,15 +124,18 @@ describe('SkillTreeProvider workspace skill tooltip', () => {
 
     expect(item.description).toContain('Validation warning');
     expect(tooltip).toContain('Validation status: warning');
-    expect(tooltip).toContain('Adjusted Static Description Quality: 69/100 (acceptable)');
-    expect(tooltip).toContain('Raw Static Description Quality: 75/100');
+    expect(tooltip).toContain('Adjusted description completeness: 69/100 (acceptable)');
+    expect(tooltip).toContain('Raw description completeness: 75/100');
     expect(tooltip).toContain('Grade limitations:');
     expect(tooltip).toContain('missing-usage-trigger — ceiling 69/100');
     expect(tooltip).toContain(
       'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
     );
     expect(tooltip).toContain('heuristic coverage high');
-    expect(tooltip).toContain('Instruction authoring quality: 0/100 (poor)');
+    expect(tooltip).toContain('Authoring hygiene: 0/100 (defects)');
+    // Each metric name is followed by what it actually measures.
+    expect(tooltip).toContain(DESCRIPTION_COMPLETENESS_DEFINITION);
+    expect(tooltip).toContain(AUTHORING_HYGIENE_DEFINITION);
   });
 
   it('does not show adjustment details when no ceiling was applied', async () => {
@@ -143,8 +151,8 @@ describe('SkillTreeProvider workspace skill tooltip', () => {
     const item = provider.getTreeItem(node);
     const tooltip = (item.tooltip as { value: string }).value;
 
-    expect(tooltip).toContain('Adjusted Static Description Quality: 100/100 (excellent)');
-    expect(tooltip).not.toContain('Raw Static Description Quality:');
+    expect(tooltip).toContain('Adjusted description completeness: 100/100 (excellent)');
+    expect(tooltip).not.toContain('Raw description completeness:');
     expect(tooltip).not.toContain('Grade limitations:');
   });
 
@@ -174,12 +182,53 @@ describe('SkillTreeProvider workspace skill tooltip', () => {
     const item = provider.getTreeItem(node);
     const tooltip = (item.tooltip as { value: string }).value;
 
-    expect(item.description).toContain('SDQ Not scored');
-    expect(tooltip).toContain('Description quality: Not scored — description is missing');
+    expect(item.description).toContain('Completeness Not scored');
+    expect(tooltip).toContain('Description completeness: Not scored — description is missing');
     expect(tooltip).toContain(
       'Instruction structure: Not scored — frontmatter could not be parsed',
     );
     expect(tooltip).not.toMatch(/(?:null|undefined)\/100/);
+  });
+});
+
+describe('SkillTreeProvider collision tooltip', () => {
+  function withCollision(textCoverage: 'full' | 'low') {
+    const model = analysis();
+    model.collisions = [
+      {
+        a: 'otchet-formatter',
+        b: 'otchet-generator',
+        similarity: 0.17,
+        metrics: {
+          cosine: 0,
+          jaccard: 0,
+          charNgram: 0,
+          nameSimilarity: 0.85,
+          boundarySeparation: 0,
+        },
+        sharedTerms: [],
+        risk: 'Low',
+        confidence: 'low',
+        textCoverage,
+        recommendation: 'Minor overlap — verify the trigger contexts do not compete.',
+      },
+    ];
+    return model;
+  }
+
+  async function collisionTooltip(textCoverage: 'full' | 'low'): Promise<string> {
+    const provider = await loadedProvider(withCollision(textCoverage));
+    const group = provider.getChildren().find((candidate) => candidate.type === 'collisions')!;
+    const [collision] = provider.getChildren(group);
+    return provider.getTreeItem(collision).tooltip as string;
+  }
+
+  it('caveats a similarity the text metrics could not contribute to', async () => {
+    expect(await collisionTooltip('low')).toContain(LOW_TEXT_COVERAGE_DEFINITION);
+  });
+
+  it('stays quiet when the descriptions were comparable', async () => {
+    expect(await collisionTooltip('full')).not.toContain('Text coverage low');
   });
 });
 

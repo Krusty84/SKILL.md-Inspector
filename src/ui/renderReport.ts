@@ -4,6 +4,13 @@ import type {
   StaticDescriptionQualityLabel,
 } from '../types/StaticDescriptionQuality';
 import { renderToc, slugify, TOC_STYLES, type TocEntry } from './reportToc';
+import {
+  AUTHORING_HYGIENE_DEFINITION,
+  AUTHORING_HYGIENE_INSTRUCTIONS_HEADING,
+  AUTHORING_HYGIENE_RESOURCES_HEADING,
+  DESCRIPTION_COMPLETENESS_DEFINITION,
+  authoringLabelText,
+} from './metricDefinitions';
 import { totalSkillTokens } from '../analysis/tokenUsage';
 
 export interface RenderOptions {
@@ -13,11 +20,13 @@ export interface RenderOptions {
   generatedAt?: string;
 }
 
+// The section ids are load-bearing (existing anchors and links); only the
+// visible labels were renamed to match what the checks actually measure.
 const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
   { id: 'validation-findings', label: 'Validation findings' },
   { id: 'trigger-quality-breakdown', label: 'Trigger quality breakdown' },
-  { id: 'instruction-authoring-quality', label: 'Instruction authoring quality' },
-  { id: 'resource-authoring-quality', label: 'Resource authoring quality' },
+  { id: 'instruction-authoring-quality', label: AUTHORING_HYGIENE_INSTRUCTIONS_HEADING },
+  { id: 'resource-authoring-quality', label: AUTHORING_HYGIENE_RESOURCES_HEADING },
   { id: 'referenced-files', label: 'Referenced files' },
   { id: 'unreferenced-files', label: 'Unreferenced files' },
   {
@@ -44,18 +53,18 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   const instructions = report.authoringQuality.instructions;
   const descriptionBadge =
     q.state === 'scored'
-      ? `<span class="badge ${scoreBadgeClass(q.label)}">Heuristic Static Description Quality ${q.adjustedScore}/100 · ${escapeHtml(capitalize(q.label))}</span>`
-      : `<span class="badge q-not-scored">Description quality: Not scored — ${escapeHtml(q.notScoredReason)}</span>`;
+      ? `<span class="badge ${scoreBadgeClass(q.label)}" title="${DESCRIPTION_COMPLETENESS_DEFINITION}">Description completeness ${q.adjustedScore}/100 · ${escapeHtml(capitalize(q.label))}</span>`
+      : `<span class="badge q-not-scored">Description completeness: Not scored — ${escapeHtml(q.notScoredReason)}</span>`;
   const descriptionCard =
     q.state === 'scored'
       ? `<span class="score">${q.adjustedScore}<span class="max"> / 100</span></span>`
       : `Not scored — ${escapeHtml(q.notScoredReason)}`;
   const instructionCard =
     instructions.state === 'scored'
-      ? `${instructions.score}/100 · ${escapeHtml(capitalize(instructions.label))}`
+      ? `${instructions.score}/100 · ${authoringLabelText(instructions.label)}`
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
   const instructionCardLabel =
-    instructions.state === 'scored' ? 'Instruction authoring quality' : 'Instruction structure';
+    instructions.state === 'scored' ? 'Authoring hygiene' : 'Instruction structure';
   const tokens = report.tokenUsage;
   const tokenCardValue = `${formatNumber(totalSkillTokens(tokens))}<div class="token-breakdown">Body ${formatNumber(tokens.body.tokens)} · Ref ${formatNumber(tokens.references.totalTokens)} · Other ${formatNumber(tokens.otherFiles.totalTokens)}</div>`;
 
@@ -115,10 +124,10 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   <main class="report-content">
   <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> ${descriptionBadge}</h1>
   ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
-  <p class="note">A deterministic heuristic that estimates how discoverable the description is. It does not guarantee that an agent will select this skill at runtime.</p>
+  <p class="note">Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION} It is deterministic and does not guarantee that an agent will select this skill at runtime.</p>
   <div class="grid">
-    ${card('Description quality', descriptionCard)}
-    ${card(instructionCardLabel, instructionCard)}
+    ${card('Description completeness', descriptionCard, '', DESCRIPTION_COMPLETENESS_DEFINITION)}
+    ${card(instructionCardLabel, instructionCard, '', AUTHORING_HYGIENE_DEFINITION)}
     ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
     ${card('Profile', escapeHtml(report.profileLabel))}
     ${card('Description', `${report.descriptionLength} chars`)}
@@ -140,13 +149,13 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   ${renderDiagnostics(report.diagnostics)}
 
   <h2 id="trigger-quality-breakdown">Trigger quality breakdown</h2>
-  ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">Description quality was not scored — ${escapeHtml(q.notScoredReason)}.</p>`}
+  ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">Description completeness was not scored — ${escapeHtml(q.notScoredReason)}.</p>`}
 
-  <h2 id="instruction-authoring-quality">Instruction authoring quality</h2>
+  <h2 id="instruction-authoring-quality">${AUTHORING_HYGIENE_INSTRUCTIONS_HEADING}</h2>
   ${renderAuthoring(report.authoringQuality.instructions)}
-  <h2 id="resource-authoring-quality">Resource authoring quality</h2>
+  <h2 id="resource-authoring-quality">${AUTHORING_HYGIENE_RESOURCES_HEADING}</h2>
   ${renderAuthoring(report.authoringQuality.resources)}
-  <p class="note">Authoring quality is a separate structural hygiene measure and is not combined with description discoverability.</p>
+  <p class="note">Authoring hygiene: ${AUTHORING_HYGIENE_DEFINITION} It is reported on its own and never combined with description completeness.</p>
 
   <h2 id="referenced-files">Referenced files</h2>
   ${renderFileList(report.referencedFiles, 'No referenced resource files.')}
@@ -184,8 +193,10 @@ function renderGradeLimitations(quality: SkillReport['staticDescriptionQuality']
   return `<div class="adjustments"><strong>Grade limitations and score adjustments</strong>${scoreSummary}<ul>${limitations}</ul></div>`;
 }
 
-function card(label: string, value: string, valueClass = ''): string {
-  return `<div class="card"><div class="label">${label}</div><div class="value ${valueClass}">${value}</div></div>`;
+/** `title` is a static definition string, never user content, so it is not escaped. */
+function card(label: string, value: string, valueClass = '', title = ''): string {
+  const tooltip = title === '' ? '' : ` title="${title}"`;
+  return `<div class="card"${tooltip}><div class="label">${label}</div><div class="value ${valueClass}">${value}</div></div>`;
 }
 
 function renderFinding(finding: StaticDescriptionQualityFinding): string {
@@ -226,7 +237,7 @@ function renderAuthoring(
               `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}<br /><span class="msg">Suggestion: ${escapeHtml(finding.suggestion)}</span></span></li>`,
           )
           .join('')}</ul>`;
-  return `<p><strong>${result.score}/100 · ${escapeHtml(capitalize(result.label))}</strong></p>${findings}`;
+  return `<p><strong>${result.score}/100 · ${authoringLabelText(result.label)}</strong></p>${findings}`;
 }
 
 function renderFileList(files: string[], emptyMessage: string): string {

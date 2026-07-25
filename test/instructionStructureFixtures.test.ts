@@ -33,13 +33,13 @@ describe('fixture-backed instruction structure analysis', () => {
     );
   });
 
-  it('finds length and repetition in release-automation and reduces it to weak', () => {
+  it('finds length and repetition in release-automation and reduces it to issues', () => {
     const result = inspectFixture('release-automation');
     expect(result.findings.map((finding) => finding.criterion)).toEqual(
       expect.arrayContaining(['Length', 'Repetitive instructions']),
     );
     expect(result.score).toBeLessThanOrEqual(50);
-    expect(result.label).toBe('weak');
+    expect(result.label).toBe('issues');
   });
 
   it.each(['api-error-triage', 'pdf-form-filler', 'changelog-writer', 'bug-repro-minimizer'])(

@@ -53,7 +53,7 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |   |-- config.ts       # Effective VS Code configuration resolution
 |   `-- extension.ts    # Extension-host composition root
 |-- test/               # Unit, integration, property, and regression tests
-|-- benchmarks/         # Static Description Quality benchmark corpus
+|-- benchmarks/         # Description-completeness benchmark corpus
 |-- evaluation/         # Example behavioral-evaluation suites
 |-- fixtures/           # Sample skills used by tests and development
 |-- docs/               # Diagnostic-code catalog and remediation records
@@ -199,16 +199,18 @@ extension from starting.
 
 The project intentionally keeps several assessments separate:
 
-- Static Description Quality scores deterministic wording evidence and reports
-  coverage and grade limitations.
-- Instruction authoring quality checks structural hygiene in the Markdown body.
-- Resource authoring quality checks resource references, script documentation, and
-  unusually large files.
+- Description completeness (`staticDescriptionQuality`) scores deterministic wording
+  evidence against 7 structural conventions and reports coverage and grade
+  limitations.
+- Authoring hygiene (`authoringQuality`) counts structural defects, separately for
+  the Markdown body and for resource references, script documentation, and unusually
+  large files. Its labels (`clean`, `minor-issues`, `issues`, `defects`) describe the
+  defect load, not the merit of the content.
 - Validation reports rule violations for the configured policy.
 - Collision analysis compares skill names and descriptions within a workspace.
 
 `src/quality/descriptionHeuristics.ts` produces the shared `DescriptionAnalysis`
-consumed by description validation and Static Description Quality. Scope evidence
+consumed by description validation and description completeness. Scope evidence
 combines configurable phrase dictionaries with a built-in, sentence-bounded grammar.
 The grammar keeps positive and negated usage forms symmetric, prevents a negated
 usage clause from earning trigger credit, and rejects unfilled placeholders or
