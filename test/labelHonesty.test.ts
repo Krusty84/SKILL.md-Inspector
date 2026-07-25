@@ -150,6 +150,18 @@ const CYRILLIC_PAIR = [
   { name: 'otchet-generator', description: 'Создаёт технические отчёты из журналов.' },
 ];
 
+/**
+ * Fewer than three comparable tokens on either side, which is what the
+ * low-coverage flag is actually about. Plan 10 Part D widened tokenization to any
+ * Unicode letter, so CYRILLIC_PAIR no longer qualifies — its text is now read
+ * rather than discarded. This pair keeps the mechanism covered: the `length > 2`
+ * filter drops these two-character words, so nothing survives to compare.
+ */
+const TOO_SHORT_PAIR = [
+  { name: 'jp-a', description: '報告 を 作成' },
+  { name: 'jp-b', description: '報告 を 整理' },
+];
+
 const LATIN_PAIR = [
   {
     name: 'pdf-report-formatter',
@@ -192,11 +204,18 @@ describe('workspace report columns say what they measure', () => {
     expect(html).toContain(AUTHORING_HYGIENE_DEFINITION);
   });
 
-  it('marks a Cyrillic-only pair whose similarity is really name similarity', () => {
-    const collisions = detectCollisions(CYRILLIC_PAIR, LOW_THRESHOLD);
+  it('marks a pair the text metrics could not read', () => {
+    // threshold 0, because since plan 10 a pair carried only by name similarity
+    // cannot exceed that metric's 0.05 weight — which is the point of the reweight.
+    const collisions = detectCollisions(TOO_SHORT_PAIR, { threshold: 0 });
     const html = render(collisions);
     expect(html).toContain('text coverage: low');
     expect(html).toContain(LOW_TEXT_COVERAGE_DEFINITION);
+  });
+
+  it('no longer marks Cyrillic as unreadable, since plan 10 tokenizes it', () => {
+    const html = render(detectCollisions(CYRILLIC_PAIR, LOW_THRESHOLD));
+    expect(html).not.toContain('text coverage: low');
   });
 
   it('leaves a pair the text metrics could actually read unmarked', () => {
@@ -207,10 +226,19 @@ describe('workspace report columns say what they measure', () => {
 
 describe('detectCollisions reports its own text coverage', () => {
   it('flags low coverage when neither description yields comparable tokens', () => {
-    const [collision] = detectCollisions(CYRILLIC_PAIR, LOW_THRESHOLD);
+    const [collision] = detectCollisions(TOO_SHORT_PAIR, { threshold: 0 });
     // All three text metrics returned 0; the composite is name similarity alone.
     expect(collision.metrics).toMatchObject({ cosine: 0, jaccard: 0, charNgram: 0 });
     expect(collision.textCoverage).toBe('low');
+  });
+
+  it('reads Cyrillic text instead of discarding it (plan 10 Part D)', () => {
+    // Before, tokenizeContent kept only [a-z0-9], so both of these scored 0 on
+    // every text metric and the composite was name similarity alone — identical
+    // and unrelated Russian descriptions were indistinguishable.
+    const [collision] = detectCollisions(CYRILLIC_PAIR, LOW_THRESHOLD);
+    expect(collision.textCoverage).toBe('full');
+    expect(collision.metrics.charNgram).toBeGreaterThan(0);
   });
 
   it('reports full coverage for descriptions with comparable tokens', () => {

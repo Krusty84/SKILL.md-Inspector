@@ -24,6 +24,8 @@ export const HEURISTIC_LIST_DICTIONARY_KEYS = [
 export const HEURISTIC_MAPPING_DICTIONARY_KEYS = [
   'actionVerbForms',
   'irregularSingularForms',
+  'capabilitySynonymGroups',
+  'artifactSynonymGroups',
 ] as const;
 
 export type HeuristicListDictionaryKey = (typeof HEURISTIC_LIST_DICTIONARY_KEYS)[number];
@@ -52,6 +54,31 @@ export interface HeuristicDictionaries {
   scopeVagueTerms: readonly string[];
   irregularSingularForms: StringArrayMap;
   collisionStopwords: readonly string[];
+  /**
+   * Capability verbs that mean the same thing for *scope* purposes, keyed by
+   * group id (plan 10 Part B). Collision analysis folds each extracted capability
+   * to its group before comparing, because genuine collisions are usually
+   * paraphrases: without folding, `extract`/`retrieve` look as unrelated as
+   * `extract`/`bake`.
+   *
+   * Groups must be disjoint — a verb in two groups makes the lookup
+   * order-dependent — which `capabilityGroupOf` asserts and a test pins.
+   *
+   * Members that are not in `actionVerbs` are inert rather than wrong: a
+   * capability is only extracted when its base is a registered verb, so an
+   * unregistered member simply never comes up. They are kept deliberately, so
+   * that a verb a user adds through the plan 9 quick fix starts folding
+   * immediately instead of needing this table edited too.
+   */
+  capabilitySynonymGroups: StringArrayMap;
+  /**
+   * Artifacts that name the same kind of object, keyed by group id (plan 10
+   * Part B). `spreadsheet`, `xlsx` and `workbook` are one artifact for scope
+   * purposes, so two skills that name different words for the same thing still
+   * read as operating on it. Same disjointness rule as
+   * `capabilitySynonymGroups`.
+   */
+  artifactSynonymGroups: StringArrayMap;
 }
 
 export type HeuristicDictionaryValues = Partial<Record<HeuristicDictionaryKey, unknown>> &

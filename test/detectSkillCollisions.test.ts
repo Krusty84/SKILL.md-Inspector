@@ -48,7 +48,9 @@ describe('detectCollisions threshold before rounding (Task 30)', () => {
   // Put the whole composite weight on name similarity so it can be driven to an
   // exact value: nameSimilarity = 1 - editDistance/maxLen, with equal-length names.
   const onlyName = {
-    weights: { jaccard: 0, cosine: 0, charNgram: 0, nameSimilarity: 1 },
+    // scopeOverlap: 0 is required to isolate one metric — an omitted key takes its
+    // default weight, which is the migration path for pre-plan-10 user settings.
+    weights: { scopeOverlap: 0, jaccard: 0, cosine: 0, charNgram: 0, nameSimilarity: 1 },
     boundarySeparationWeight: 0,
     threshold: 0.4,
   };
@@ -109,7 +111,9 @@ describe('detectCollisions metric stability (Task 34)', () => {
 describe('detectCollisions risk banding on the displayed similarity', () => {
   it('bands risk from the rounded similarity (0.799 -> 0.80 -> High)', () => {
     const onlyName = {
-      weights: { jaccard: 0, cosine: 0, charNgram: 0, nameSimilarity: 1 },
+      // scopeOverlap: 0 is required to isolate one metric — an omitted key takes its
+    // default weight, which is the migration path for pre-plan-10 user settings.
+    weights: { scopeOverlap: 0, jaccard: 0, cosine: 0, charNgram: 0, nameSimilarity: 1 },
       boundarySeparationWeight: 0,
       threshold: 0.4,
     };
@@ -208,9 +212,14 @@ describe('detectCollisions confidence (Task 80)', () => {
 
 describe('riskFor', () => {
   it('maps similarity to risk bands', () => {
+    // Edges re-derived from the labeled corpus distribution in plan 10 Part E; the
+    // old 0.80/0.60 pair was unreachable except by near-verbatim duplication, which
+    // left a single usable band. See the `riskFor` docstring for the derivation.
     expect(riskFor(0.85)).toBe('High');
-    expect(riskFor(0.7)).toBe('Medium');
-    expect(riskFor(0.45)).toBe('Low');
+    expect(riskFor(0.4)).toBe('High');
+    expect(riskFor(0.39)).toBe('Medium');
+    expect(riskFor(0.35)).toBe('Medium');
+    expect(riskFor(0.34)).toBe('Low');
   });
 });
 

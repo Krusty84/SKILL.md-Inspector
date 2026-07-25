@@ -10,6 +10,8 @@ export interface VerbForms {
 
 const VERB_FORMS_CACHE = new WeakMap<readonly string[], WeakMap<object, VerbForms>>();
 const SINGULAR_FORMS_CACHE = new WeakMap<object, ReadonlyMap<string, string>>();
+const CAPABILITY_GROUP_CACHE = new WeakMap<object, ReadonlyMap<string, string>>();
+const ARTIFACT_GROUP_CACHE = new WeakMap<object, ReadonlyMap<string, string>>();
 
 /**
  * Builds morphology for the active verb registry. Explicit forms win; regular
@@ -105,6 +107,80 @@ export function normalizeContentToken(
     token,
   );
   return singularize(verb ?? token, dictionaries.irregularSingularForms);
+}
+
+/**
+ * The scope-equivalence group a capability verb belongs to (plan 10 Part B), or
+ * the verb itself when it is unmapped — an unknown verb is its own group, never
+ * silently merged into another.
+ *
+ * Collision analysis compares groups rather than verbs because genuine collisions
+ * are usually paraphrases: `extract`/`retrieve` and `create`/`generate` name one
+ * capability each, and comparing surface verbs scores them as unrelated.
+ *
+ * Memoized on the dictionary object, like `buildVerbForms` and `singularize`, so
+ * the O(n²) collision loop does a map lookup rather than rebuilding the index.
+ */
+export function capabilityGroupOf(
+  base: string,
+  dictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): string {
+  return capabilityGroupMap(dictionaries.capabilitySynonymGroups).get(base) ?? base;
+}
+
+/**
+ * The scope-equivalence group an artifact term belongs to (plan 10 Part B), or the
+ * term itself when unmapped. `spreadsheet`, `xlsx` and `workbook` name one kind of
+ * object; comparing surface terms scores two skills that both work on workbooks as
+ * operating on different things.
+ */
+export function artifactGroupOf(
+  term: string,
+  dictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): string {
+  return groupIndex(dictionaries.artifactSynonymGroups, ARTIFACT_GROUP_CACHE).get(term) ?? term;
+}
+
+/**
+ * Verb-to-group index. A verb listed in two groups would make the result depend
+ * on object key order, so the first mapping wins and the collision is reported by
+ * `capabilitySynonymGroupConflicts` rather than resolved silently.
+ */
+function capabilityGroupMap(groups: StringArrayMap): ReadonlyMap<string, string> {
+  return groupIndex(groups, CAPABILITY_GROUP_CACHE);
+}
+
+/** Member-to-group index, memoized on the group table object. */
+function groupIndex(
+  groups: StringArrayMap,
+  cache: WeakMap<object, ReadonlyMap<string, string>>,
+): ReadonlyMap<string, string> {
+  const cached = cache.get(groups);
+  if (cached) return cached;
+  const result = new Map<string, string>();
+  for (const [group, members] of Object.entries(groups)) {
+    for (const member of members) {
+      if (!result.has(member)) result.set(member, group);
+    }
+  }
+  cache.set(groups, result);
+  return result;
+}
+
+/**
+ * Members appearing in more than one capability group, as
+ * `member -> [group, ...]`. Empty for a well-formed table; a test asserts that,
+ * and a user-supplied table is surfaced through the dictionary warnings rather
+ * than throwing.
+ */
+export function synonymGroupConflicts(groups: StringArrayMap): Map<string, string[]> {
+  const byMember = new Map<string, string[]>();
+  for (const [group, members] of Object.entries(groups)) {
+    for (const member of members) {
+      byMember.set(member, [...(byMember.get(member) ?? []), group]);
+    }
+  }
+  return new Map([...byMember].filter(([, groups]) => groups.length > 1));
 }
 
 function singularFormMap(forms: StringArrayMap): ReadonlyMap<string, string> {

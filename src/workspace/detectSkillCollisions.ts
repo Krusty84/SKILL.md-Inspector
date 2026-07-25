@@ -17,7 +17,7 @@ import {
   nameSimilarity,
 } from './similarity';
 import { normalizeContentToken } from '../quality/wordForms';
-import { boundaryFeatures, boundarySeparationOf } from './collisionFeatures';
+import { boundaryFeatures, boundarySeparationOf, scopeOverlapOf } from './collisionFeatures';
 import {
   DEFAULT_HEURISTIC_DICTIONARIES,
   type HeuristicDictionaries,
@@ -28,15 +28,38 @@ export interface SkillDescriptor {
   description: string;
 }
 
-/** Default blend of the four normalized similarity metrics (need not sum to 1). */
-export const DEFAULT_COLLISION_WEIGHTS: CollisionWeights = {
-  jaccard: 0.3,
-  cosine: 0.3,
-  charNgram: 0.2,
-  nameSimilarity: 0.2,
+/**
+ * Default blend of the normalized similarity metrics (need not sum to 1).
+ *
+ * `scopeOverlap` leads because it is the only metric that models the question
+ * being asked; cosine and Jaccard stay as corroborating lexical evidence.
+ * `nameSimilarity` fell from 0.20 to 0.05 in plan 10: it is a tiebreaker, not
+ * evidence. At 0.20 it contributed 0.14 to `report-builder` vs `report-breaker`
+ * — zero shared content tokens — and shared naming conventions (`pdf-*`,
+ * `*-writer`) inflated every pair in a tidy workspace.
+ */
+export const DEFAULT_COLLISION_WEIGHTS: Required<CollisionWeights> = {
+  scopeOverlap: 0.7,
+  cosine: 0.13,
+  jaccard: 0.07,
+  charNgram: 0.05,
+  nameSimilarity: 0.05,
 };
 
-export const DEFAULT_COLLISION_THRESHOLD = 0.4;
+/**
+ * Minimum composite similarity to report a collision, recalibrated by plan 10
+ * Part E from the observed distribution of the labeled corpus rather than chosen a
+ * priori.
+ *
+ * Was 0.40, which suited a composite dominated by lexical overlap. The scope-led
+ * composite scores lower across the board — a pair with no shared artifact scores
+ * near 0 rather than picking up 0.2 of incidental token overlap — so 0.40 reported
+ * almost nothing. At 0.30 the corpus gives precision 1.00 and recall 0.33; the
+ * next step down, 0.25, buys recall 0.42 at precision 0.83. Precision was
+ * preferred: a collision warning the author disagrees with costs more trust than a
+ * missed one.
+ */
+export const DEFAULT_COLLISION_THRESHOLD = 0.3;
 export const DEFAULT_NGRAM_SIZE = 3;
 export const DEFAULT_BOUNDARY_SEPARATION_WEIGHT = 0.5;
 
@@ -56,9 +79,11 @@ export interface CollisionOptions {
 
 /**
  * Detects pairs of skills whose scope overlaps (brief §13.2). Each pair gets a
- * deterministic composite score blending token Jaccard, TF-IDF cosine, character
- * n-gram, and name similarity, reduced when the skills' negative boundaries
- * separate their scopes. The raw composite is compared to the threshold; the
+ * deterministic composite score led by scope overlap — whether the two skills do
+ * the same kind of thing to the same kind of object — corroborated by token
+ * Jaccard, TF-IDF cosine, and character n-gram similarity, with name similarity
+ * as a tiebreaker, reduced when the skills' negative boundaries separate their
+ * scopes. The raw composite is compared to the threshold; the
  * displayed similarity is rounded to two decimals and the risk band is derived
  * from that same rounded value. Pairs at or above the threshold are returned,
  * highest similarity first.
@@ -72,6 +97,13 @@ export interface CollisionOptions {
  * content tokens (verbs included) rather than the raw text, so template prose
  * cannot dominate it; and `sharedTerms` reporting keeps verbs so the report
  * still explains what overlapped.
+ *
+ * Plan 10 added `scopeOverlap` and made it the leading term. The four lexical
+ * metrics all measure surface overlap, which on the labeled corpus was
+ * *anti-correlated* with genuine collision: paraphrases share little text, and
+ * two skills that merely share an artifact share a lot of it. They are kept as
+ * corroborating evidence — and because users have tuned their weights — but they
+ * are no longer what decides a collision. See `scopeOverlapOf`.
  */
 export function detectCollisions(
   skills: SkillDescriptor[],
@@ -103,6 +135,8 @@ export function detectCollisions(
   // verbs-only description yields an empty set, which jaccard() scores 0.
   const verbBases = new Set(dictionaries.actionVerbs);
   const jaccardTokens = tokens.map((list) => list.filter((token) => !verbBases.has(token)));
+  // The same O(n) pre-pass now carries the capability-group and artifact sets, so
+  // the pair loop stays a set intersection (plan 10 Part A).
   const boundaries = skills.map((skill) => boundaryFeatures(skill.description, dictionaries));
   const collisions: SkillCollision[] = [];
 
@@ -113,14 +147,23 @@ export function detectCollisions(
       break;
     }
     for (let j = i + 1; j < skills.length; j++) {
+      const scope = scopeOverlapOf(boundaries[i], boundaries[j]);
       const metrics: CollisionMetrics = {
+        scopeOverlap: scope.value,
         cosine: cosineNormed(vectors[i], vectors[j]),
         jaccard: jaccard(jaccardTokens[i], jaccardTokens[j]),
         charNgram: cosineNormed(ngramVectors[i], ngramVectors[j]),
         nameSimilarity: nameSimilarity(skills[i].name, skills[j].name),
         boundarySeparation: boundarySeparationOf(boundaries[i], boundaries[j]),
       };
-      const composite = compositeScore(metrics, weights, boundaryWeight);
+      // Blind only when there was nothing to compare, not when the comparison
+      // returned zero (see compositeScore).
+      const composite = compositeScore(
+        metrics,
+        weights,
+        boundaryWeight,
+        scope.degenerate && scope.value === 0,
+      );
       if (composite < threshold) {
         continue;
       }
@@ -141,6 +184,7 @@ export function detectCollisions(
           tokens[i],
           tokens[j],
           metrics,
+          scope.degenerate,
         ),
         textCoverage: textCoverageFor(tokens[i], tokens[j]),
         recommendation: recommendationFor(risk),
@@ -151,9 +195,32 @@ export function detectCollisions(
   return collisions.sort((x, y) => y.similarity - x.similarity);
 }
 
+/**
+ * Risk bands, recalibrated by plan 10 Part E from the observed corpus
+ * distribution.
+ *
+ * The old edges (High >= 0.80, Medium >= 0.60) were calibrated to an empty region:
+ * byte-identical descriptions scored 0.80, changing one word dropped to 0.48, and
+ * a genuine paraphrase reached 0.36 — so `High` and `Medium` were unreachable
+ * except by near-verbatim duplication and in practice there was a single band.
+ *
+ * Observed COLLIDE scores on benchmarks/collision-pairs (26 pairs, 12 labeled
+ * COLLIDE), ascending:
+ *
+ *     0.01 0.02 0.05 0.09 0.13 0.17 0.19 0.27 0.30 0.30 0.35 0.41
+ *
+ * and the labeled DISTINCT pairs top out at 0.28. The edges below put real pairs
+ * in every band: `Low` starts at the 0.30 threshold, `Medium` at 0.35 (the
+ * strongest two collisions in the corpus), `High` at 0.40 (the single strongest,
+ * `pdf-extract` / `pdf-reader`). Every DISTINCT pair stays below `Low`. Identical
+ * descriptions still score 1.0 and read `High`.
+ *
+ * These are narrow because the corpus is: re-derive them, do not widen them by
+ * eye, if the score distribution moves.
+ */
 export function riskFor(similarity: number): CollisionRisk {
-  if (similarity >= 0.8) return 'High';
-  if (similarity >= 0.6) return 'Medium';
+  if (similarity >= 0.4) return 'High';
+  if (similarity >= 0.35) return 'Medium';
   return 'Low';
 }
 
@@ -168,11 +235,18 @@ function confidenceFor(
   tokensA: string[],
   tokensB: string[],
   metrics: CollisionMetrics,
+  degenerateScope: boolean,
 ): CollisionConfidence {
   const minLength = Math.min(descA.trim().length, descB.trim().length);
   const minTokens = Math.min(tokensA.length, tokensB.length);
   if (minLength < 30 || minTokens < 3) {
     return 'low'; // too little text to trust the overlap
+  }
+  // One side named no capability or no artifact, so `scopeOverlap` is an
+  // evidence-gap estimate rather than a comparison (plan 10 Part A). The number is
+  // still reported; the confidence says not to lean on it.
+  if (degenerateScope) {
+    return 'low';
   }
   const sims = [metrics.cosine, metrics.jaccard, metrics.charNgram];
   const spread = Math.max(...sims) - Math.min(...sims);
@@ -200,25 +274,67 @@ function textCoverageFor(tokensA: string[], tokensB: string[]): CollisionTextCov
  */
 function compositeScore(
   metrics: CollisionMetrics,
-  weights: CollisionWeights,
+  weights: Required<CollisionWeights>,
   boundaryWeight: number,
+  scopeIsBlind = false,
 ): number {
-  const base =
-    weights.jaccard * metrics.jaccard +
-    weights.cosine * metrics.cosine +
-    weights.charNgram * metrics.charNgram +
-    weights.nameSimilarity * metrics.nameSimilarity;
+  // When the scope metric had nothing to read — neither description named an
+  // artifact or a capability the dictionaries recognize — its zero is absence of
+  // evidence, not evidence of absence. Counting it as a zero at the leading weight
+  // would cap such a pair at 0.30 however identical the two descriptions are, which
+  // is what happened to non-Latin text: the dictionaries are English, so scope is
+  // blind, and two *identical* Russian descriptions scored 0.29.
+  //
+  // A measured zero is different and is kept: `pdf-read` / `pdf-write` both state
+  // artifacts and capabilities, and those capabilities genuinely do not overlap.
+  // `ScopeOverlap.degenerate` is what tells the two apart.
+  const textTotal = weights.jaccard + weights.cosine + weights.charNgram;
+  const textScore =
+    textTotal > 0
+      ? (weights.jaccard * metrics.jaccard +
+          weights.cosine * metrics.cosine +
+          weights.charNgram * metrics.charNgram) /
+        textTotal
+      : 0;
+  // `nameSimilarity` keeps its absolute weight in both branches: it is a
+  // tiebreaker, not evidence, and letting it absorb a share of the scope weight
+  // would put two unrelated skills with similar names (`report-builder` /
+  // `report-breaker`, no shared content tokens at all) back where plan 10 found
+  // them.
+  const nameTerm = weights.nameSimilarity * metrics.nameSimilarity;
+  const base = scopeIsBlind
+    ? // Scope is blind, so the only evidence left is that the two descriptions are
+      // worded alike — which on the labeled corpus is chance-level evidence of
+      // collision (cosine 0.470, Jaccard 0.494, char n-gram 0.527 AUC). It is
+      // therefore squared: it carries the composite only when agreement is close to
+      // total. Two identical Cyrillic descriptions still score ~0.99, while two
+      // unrelated skills sharing house template prose stay well below the threshold
+      // instead of being promoted by the freed weight.
+      (weights.scopeOverlap + textTotal) * textScore * textScore + nameTerm
+    : weights.scopeOverlap * metrics.scopeOverlap + textTotal * textScore + nameTerm;
   const adjusted = base * (1 - boundaryWeight * metrics.boundarySeparation);
   return Math.min(1, Math.max(0, adjusted));
 }
 
-/** Scales the weights so they sum to 1; falls back to the defaults if non-positive. */
-function normalizeWeights(weights: CollisionWeights): CollisionWeights {
-  const sum = weights.jaccard + weights.cosine + weights.charNgram + weights.nameSimilarity;
+/**
+ * Scales the weights so they sum to 1; falls back to the defaults if non-positive.
+ *
+ * A weights object with **no** `scopeOverlap` key is a user setting written
+ * against the pre-plan-10 schema. The missing key takes the default 0.45, not 0:
+ * reading it as 0 would leave every user who ever customized their weights on the
+ * old surface-overlap metric, which is the defect plan 10 exists to remove. Their
+ * four explicit values are still honored, and the sum normalization means the
+ * relative balance they chose between those four survives.
+ */
+function normalizeWeights(weights: CollisionWeights): Required<CollisionWeights> {
+  const scopeOverlap = weights.scopeOverlap ?? DEFAULT_COLLISION_WEIGHTS.scopeOverlap;
+  const sum =
+    scopeOverlap + weights.jaccard + weights.cosine + weights.charNgram + weights.nameSimilarity;
   if (sum <= 0) {
     return normalizeWeights(DEFAULT_COLLISION_WEIGHTS);
   }
   return {
+    scopeOverlap: scopeOverlap / sum,
     jaccard: weights.jaccard / sum,
     cosine: weights.cosine / sum,
     charNgram: weights.charNgram / sum,
@@ -239,6 +355,7 @@ function recommendationFor(risk: CollisionRisk): string {
 
 function roundMetrics(metrics: CollisionMetrics): CollisionMetrics {
   return {
+    scopeOverlap: round2(metrics.scopeOverlap),
     cosine: round2(metrics.cosine),
     jaccard: round2(metrics.jaccard),
     charNgram: round2(metrics.charNgram),
