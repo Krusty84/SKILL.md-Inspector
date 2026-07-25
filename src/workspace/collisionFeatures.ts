@@ -87,9 +87,27 @@ export function extractArtifacts(
 }
 
 /**
- * Text following positive trigger markers ("Use when…", "Use for…"), in document
- * order (Task 38). Negative boundary clauses are removed first so their embedded
- * "use when" fragment is never captured as a positive trigger.
+ * Markers whose clause names a scope the skill *excludes*. `scopeRestrictionPhrases`
+ * ("only for X", "limited to X") are deliberately absent: they name the skill's own
+ * scope, so treating them as exclusions inverts their meaning and damps the
+ * composite of two skills that both say "Only for PDF files" — i.e. of a true
+ * positive (plan 7 Part A).
+ *
+ * The quality layer scores those same phrases as boundary markers, which is
+ * correct there and must not be "unified" with this list — see the note on
+ * `BOUNDARY_MARKER_KEYS` in `quality/descriptionHeuristics.ts`.
+ */
+function exclusionMarkers(dictionaries: HeuristicDictionaries): string[] {
+  return [...dictionaries.negativeBoundaryPhrases, ...dictionaries.restrictiveBoundaryPhrases];
+}
+
+/**
+ * Text following positive trigger markers ("Use when…", "Use for…", "Only for…"),
+ * in document order (Task 38). Exclusion clauses are removed first so their
+ * embedded "use when" fragment is never captured as a positive trigger.
+ *
+ * `scopeRestrictionPhrases` count as positive-trigger markers here: a skill that
+ * says "Only for PDF files" has told you its trigger scope (plan 7 Part A).
  *
  * Deliberately list-based: the quality layer's `assessScopeClause` additionally
  * recognizes a marker *grammar* ("should be used when…", "designed for…"), but
@@ -102,13 +120,11 @@ export function extractPositiveTriggers(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): string[] {
-  const withoutBoundaries = stripClauses(description, [
-    ...dictionaries.negativeBoundaryPhrases,
-    ...dictionaries.restrictiveBoundaryPhrases,
-  ]);
+  const withoutBoundaries = stripClauses(description, exclusionMarkers(dictionaries));
   return extractClauses(withoutBoundaries, [
     ...dictionaries.positiveTriggerPhrases,
     ...dictionaries.exclusiveTriggerPhrases,
+    ...dictionaries.scopeRestrictionPhrases,
   ]);
 }
 
@@ -117,10 +133,7 @@ export function extractNegativeBoundaries(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): string[] {
-  return extractClauses(description, [
-    ...dictionaries.negativeBoundaryPhrases,
-    ...dictionaries.restrictiveBoundaryPhrases,
-  ]);
+  return extractClauses(description, exclusionMarkers(dictionaries));
 }
 
 /** One description's domain and negative-boundary token sets, precomputed once. */
@@ -176,12 +189,13 @@ function contentWords(text: string): string[] {
   return text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
 }
 
-/** Normalized content tokens with negative boundary clauses removed. */
+/**
+ * Normalized content tokens with exclusion clauses removed. An "only for X"
+ * clause is *not* stripped, so its tokens stay in the domain set — which is what
+ * makes two "Only for PDF files" skills read as overlapping (plan 7 Part A).
+ */
 function domainTokens(description: string, dictionaries: HeuristicDictionaries): Set<string> {
-  const withoutBoundaries = stripClauses(description, [
-    ...dictionaries.negativeBoundaryPhrases,
-    ...dictionaries.restrictiveBoundaryPhrases,
-  ]);
+  const withoutBoundaries = stripClauses(description, exclusionMarkers(dictionaries));
   return new Set(
     tokenizeContent(withoutBoundaries, dictionaries.collisionStopwords).map((token) =>
       normalizeContentToken(token, dictionaries),
@@ -189,12 +203,9 @@ function domainTokens(description: string, dictionaries: HeuristicDictionaries):
   );
 }
 
-/** Normalized content tokens taken only from the negative boundary clauses. */
+/** Normalized content tokens taken only from the exclusion clauses. */
 function boundaryTokens(description: string, dictionaries: HeuristicDictionaries): Set<string> {
-  const clauses = extractClauses(description, [
-    ...dictionaries.negativeBoundaryPhrases,
-    ...dictionaries.restrictiveBoundaryPhrases,
-  ]).join(' ');
+  const clauses = extractClauses(description, exclusionMarkers(dictionaries)).join(' ');
   return new Set(
     tokenizeContent(clauses, dictionaries.collisionStopwords).map((token) =>
       normalizeContentToken(token, dictionaries),

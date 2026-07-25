@@ -133,6 +133,7 @@ describe('package manifest context menus and templates', () => {
           `${H}overbroadTriggerPhrases`,
           `${H}positiveTriggerPhrases`,
           `${H}restrictiveBoundaryPhrases`,
+          `${H}scopeRestrictionPhrases`,
           `${H}scopeStopwords`,
           `${H}scopeVagueTerms`,
           `${H}uppercaseOnlyAcronyms`,
@@ -189,10 +190,10 @@ describe('package manifest context menus and templates', () => {
     const validation = configuration[1].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    // Every setting lives in exactly one section (45 total, no duplicates).
+    // Every setting lives in exactly one section (46 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(45);
-    expect(new Set(allKeys).size).toBe(45);
+    expect(allKeys.length).toBe(46);
+    expect(new Set(allKeys).size).toBe(46);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

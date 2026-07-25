@@ -51,6 +51,25 @@ describe('resolveHeuristicDictionaries', () => {
     );
   });
 
+  it('keeps scope restrictions separate from exclusion phrases (plan 7 Part A)', () => {
+    expect(DEFAULT_HEURISTIC_DICTIONARIES.scopeRestrictionPhrases).toEqual([
+      'limited to',
+      'only for',
+    ]);
+    // The exclusion list keeps only phrases that genuinely remove a scope.
+    expect(DEFAULT_HEURISTIC_DICTIONARIES.restrictiveBoundaryPhrases).toEqual([
+      'exclude',
+      'excluding',
+      'except when',
+      'except for',
+    ]);
+  });
+
+  it('resolves the new list from user settings like any other dictionary', () => {
+    const resolved = resolveHeuristicDictionaries({ scopeRestrictionPhrases: ['  Solely For '] });
+    expect(resolved.scopeRestrictionPhrases).toEqual(['solely for']);
+  });
+
   it('normalizes complete list values with trimming, lowercasing, and deduplication', () => {
     const resolved = resolveHeuristicDictionaries({
       vagueTerms: ['  Sparkly ', 'sparkly'],

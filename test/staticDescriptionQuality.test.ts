@@ -318,6 +318,19 @@ describe('computeStaticDescriptionQuality', () => {
     expect(lengthFinding?.pointsEarned).toBeLessThan(10);
   });
 
+  /**
+   * A complete, well-formed description padded to an exact character length, so
+   * length is the only criterion under test.
+   */
+  const atLength = (length: number): string => {
+    const head = 'Format technical PDF inspection reports using the documented company layout rules';
+    const tail = '. Use when asked to standardize inspection reports. Do not use for spreadsheets.';
+    const padding = ', covering headings, captions, tables, figure numbering, and appendix ordering';
+    let body = head;
+    while (body.length + padding.length + tail.length <= length) body += padding;
+    return body + 'x'.repeat(length - body.length - tail.length) + tail;
+  };
+
   it('penalizes length gradually and zeroes out over the maximum', () => {
     const good = (text: string) =>
       computeStaticDescriptionQuality(text).findings.find((f) => f.criterion === 'Good length')!
@@ -349,6 +362,39 @@ describe('computeStaticDescriptionQuality', () => {
     expect(goodLengthPoints(501)).toBe(6);
     expect(goodLengthPoints(700)).toBe(3);
     expect(goodLengthPoints(701)).toBe(0);
+  });
+
+  it('ceilings a description the specification rejects as too long (plan 7 Part B)', () => {
+    // A hard `skill.description.tooLong` error used to cost only the length
+    // criterion, leaving the description at 90/"excellent".
+    const overLength = atLength(1100);
+    const result = computeStaticDescriptionQuality(overLength, { maxLength: 1024 });
+
+    expect(result.state).toBe('scored');
+    expect(result.gradeLimitations.map((limitation) => limitation.code)).toContain(
+      'over-maximum-length',
+    );
+    expect(result.adjustedScore).toBe(59);
+    // The ceiling is a policy cap, not a deduction: the additive evidence is
+    // untouched and still sums to the raw score (90 before this ceiling existed).
+    expect(result.rawScore).toBe(90);
+    expect(result.findings.reduce((sum, f) => sum + f.pointsEarned, 0)).toBe(result.rawScore);
+  });
+
+  it('leaves a description exactly at the maximum uncapped (plan 7 Part B)', () => {
+    const atMax = atLength(1024);
+    expect(atMax).toHaveLength(1024);
+    const result = computeStaticDescriptionQuality(atMax, { maxLength: 1024 });
+
+    expect(result.gradeLimitations.map((limitation) => limitation.code)).not.toContain(
+      'over-maximum-length',
+    );
+    // One character more is over the line.
+    expect(
+      computeStaticDescriptionQuality(atLength(1025), { maxLength: 1024 }).gradeLimitations.map(
+        (limitation) => limitation.code,
+      ),
+    ).toContain('over-maximum-length');
   });
 
   it('keeps the recommended band coherent when minLength exceeds the default ceiling', () => {

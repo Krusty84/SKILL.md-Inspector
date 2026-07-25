@@ -1510,8 +1510,6 @@
             "type": "array",
             "scope": "resource",
             "default": [
-              "limited to",
-              "only for",
               "exclude",
               "excluding",
               "except when",
@@ -1648,6 +1646,18 @@
               "comprehensive"
             ],
             "description": "Words and phrases treated as vague in description diagnostics and description completeness.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skillMdInspector.heuristics.dictionaryValues.scopeRestrictionPhrases": {
+            "type": "array",
+            "scope": "resource",
+            "default": [
+              "limited to",
+              "only for"
+            ],
+            "description": "Phrases such as only for or limited to that name the skill scope rather than exclude one; they earn boundary credit in scoring but are not collision exclusions.",
             "items": {
               "type": "string"
             }

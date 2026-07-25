@@ -288,12 +288,14 @@
     "only use for"
   ],
   "restrictiveBoundaryPhrases": [
-    "limited to",
-    "only for",
     "exclude",
     "excluding",
     "except when",
     "except for"
+  ],
+  "scopeRestrictionPhrases": [
+    "limited to",
+    "only for"
   ],
   "overbroadTriggerPhrases": [
     "always use this skill",

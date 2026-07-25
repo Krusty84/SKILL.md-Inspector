@@ -32,6 +32,8 @@ const descriptions = {
     'Phrases that act as both a positive usage trigger and an exclusive boundary.',
   restrictiveBoundaryPhrases:
     'Non-negative phrases that restrict scope for boundary detection and scoring.',
+  scopeRestrictionPhrases:
+    'Phrases such as only for or limited to that name the skill scope rather than exclude one; they earn boundary credit in scoring but are not collision exclusions.',
   overbroadTriggerPhrases:
     'Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.',
   frontLoadedFillerTerms:

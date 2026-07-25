@@ -83,6 +83,50 @@ describe('extractNegativeBoundaries (Task 39)', () => {
   });
 });
 
+describe('scope restrictions are not exclusions (plan 7 Part A)', () => {
+  const onlyForA = 'Format PDF invoices using the company layout rules. Only for PDF files.';
+  const onlyForB = 'Format PDF invoices using the company layout rules. Only for PDF files.';
+
+  it('does not read "only for X" / "limited to X" as an excluded scope', () => {
+    expect(extractNegativeBoundaries('Format PDF invoices. Only for PDF files.')).toEqual([]);
+    expect(extractNegativeBoundaries('Format invoices. Limited to PDF files.')).toEqual([]);
+  });
+
+  it('keeps genuine exclusions, negative and restrictive alike', () => {
+    expect(extractNegativeBoundaries('Format PDF invoices. Do not use for spreadsheets.')).toEqual([
+      'spreadsheets',
+    ]);
+    expect(extractNegativeBoundaries('Format invoices. Except for scanned PDFs.')).toEqual([
+      'scanned PDFs',
+    ]);
+    expect(extractNegativeBoundaries('Format invoices. Excluding scanned PDFs.')).toEqual([
+      'scanned PDFs',
+    ]);
+  });
+
+  it('reads the restricted scope as a positive trigger instead', () => {
+    expect(extractPositiveTriggers('Format PDF invoices. Only for PDF files.')).toEqual([
+      'PDF files',
+    ]);
+  });
+
+  it('does not separate two skills that both restrict scope to the same artifact', () => {
+    // Both skills say "Only for PDF files" — maximally colliding, so the
+    // boundary adjustment must not damp them at all.
+    expect(boundarySeparation(onlyForA, onlyForB)).toBe(0);
+  });
+
+  it('leaves the restricted scope in the domain set', () => {
+    // The clause's tokens must survive into the domain, otherwise two skills
+    // restricted to the same artifact would lose that shared evidence.
+    const separation = boundarySeparation(
+      onlyForA,
+      'Format PDF invoices using the company layout rules. Do not use for PDF files.',
+    );
+    expect(separation).toBeGreaterThan(0);
+  });
+});
+
 describe('boundarySeparation (Task 40)', () => {
   it('is high when each skill excludes the other skill scope', () => {
     const value = boundarySeparation(

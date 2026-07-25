@@ -247,6 +247,32 @@ describe('workspace discovery + analysis', () => {
     expect(lastDone).toBe(1);
   });
 
+  it('marks the scan cancelled when the token trips in the similar-names phase', () => {
+    // Every file is analyzed, so only the cross-skill tail sees the cancelled
+    // token; the result must still not read as a complete comparison.
+    const paths = discoverSkillPaths(root); // 3 skills
+    const cancel = { isCancellationRequested: false };
+    const analysis = analyzeWorkspace(
+      root,
+      paths,
+      genericProfile,
+      undefined,
+      undefined,
+      undefined,
+      {
+        cancel,
+        onProgress: (done, total) => {
+          if (done === total) {
+            cancel.isCancellationRequested = true;
+          }
+        },
+      },
+    );
+    expect(analysis.skills).toHaveLength(3);
+    expect(analysis.cancelled).toBe(true);
+    expect(analysis.similarNames).toEqual([]);
+  });
+
   it('reports progress for every skill on a completed scan (Task 65)', () => {
     const paths = discoverSkillPaths(root); // 3 skills
     const seen: Array<[number, number]> = [];

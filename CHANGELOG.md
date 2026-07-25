@@ -19,6 +19,10 @@
 - Reference-style Markdown links (`[text][id]` with `[id]: references/file.md`)
   are now extracted and validated: missing definition targets are reported and
   existing ones count as referencing bundled resources.
+- **`skillMdInspector.heuristics.dictionaryValues.scopeRestrictionPhrases`**: the
+  phrases that name a skill's own scope (`only for`, `limited to`), split out of
+  `restrictiveBoundaryPhrases`. They still earn the boundary criterion in
+  description scoring, but no longer act as exclusions in collision analysis.
 
 ### Removed
 
@@ -69,6 +73,35 @@
 
 ### Fixed
 
+- **`only for X` / `limited to X` no longer damp a true collision.** Those
+  phrases name the skill's scope, but collision analysis pooled them with the
+  exclusion phrases, so two skills that both say "Only for PDF files" — i.e. a
+  maximal overlap — had their composite reduced. The restricted scope now stays
+  in the domain set and reads as a positive trigger; genuine `do not use for` /
+  `except for` exclusions keep their full damping.
+- **A description that fails validation as too long no longer scores in the top
+  band.** Exceeding the configured `maxLength` zeroed the length criterion but
+  imposed no ceiling, so a specification error still read as 90/"excellent". It
+  now carries an `over-maximum-length` grade limitation with a ceiling of 59,
+  matching the other essential failures. A description exactly at the maximum is
+  unaffected, and the raw criterion score is unchanged.
+- **A cancelled workspace scan no longer blocks on the similar-names pass.**
+  `detectSimilarNames` now takes the same cancellation token as the collision
+  detector and stops between rows, returning in under a millisecond at n=1000
+  instead of ~2 s, and the analysis is marked partial when the token trips in
+  either cross-skill phase. It also skips the edit distance for name pairs whose
+  lengths differ by more than the threshold allows, which cannot change the
+  result.
+- **Common trigger phrasings are recognized.** `any time` / `anytime`,
+  `in cases where`, `wherever`, and `on any` now count as scope conjunctions, and
+  `Reach for`, `Consult`, `Refer to`, `Load`, and `Read this skill` count as
+  usage lead-ins — previously only `use`-family lead-ins did, so an explicit
+  "Use this skill any time a spreadsheet is the input" earned no trigger at all.
+  The precision guards are unchanged: duration statements ("Runs for 10
+  minutes"), bare third-person conditionals ("Applies fixes if…"), incidental
+  "when the user" outside a usage context, and negated usage all still earn
+  nothing. Bare `on` remains deliberately unrecognized so "Operates on large
+  files" cannot fire.
 - **Independent navigator views**: acting in the WORKSPACE view no longer
   refreshes the FAVORITES, INSTALLED AGENTS, and OPENCODE SESSIONS views.
   - Adding or removing a workspace root folder re-fires VS Code's

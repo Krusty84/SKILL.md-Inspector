@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   analyzeDescription,
+  assessScopeClause,
   hasActionVerb,
   isFrontLoaded,
   tokenize,
@@ -199,6 +200,34 @@ describe('descriptionHeuristics', () => {
     expect(isFrontLoaded('analyze when needed')).toBe(false); // verb, no meaningful task
     expect(isFrontLoaded('analyze and help when needed')).toBe(false);
     expect(isFrontLoaded('a general utility for teams that can analyze many things')).toBe(false);
+  });
+});
+
+describe('scope restrictions keep boundary credit (plan 7 Part A)', () => {
+  // The collision layer stopped treating these as exclusions; the quality layer
+  // must keep crediting them, because "only for X" does bound the skill's scope.
+  // See `boundaryMarkers` in src/quality/descriptionHeuristics.ts.
+  it.each([
+    'Format PDF invoices using the company layout rules. Only for PDF files.',
+    'Format invoices using the company layout rules. Limited to PDF files.',
+  ])('credits the boundary criterion for %s', (description) => {
+    expect(assessScopeClause(description, 'boundary').contentFound).toBe(true);
+  });
+
+  it('still credits genuine exclusions', () => {
+    expect(
+      assessScopeClause('Format invoices. Do not use for spreadsheets.', 'boundary').contentFound,
+    ).toBe(true);
+    expect(
+      assessScopeClause('Format invoices. Except for scanned PDFs.', 'boundary').contentFound,
+    ).toBe(true);
+  });
+
+  it('keeps a restricted-scope clause out of the trigger clause', () => {
+    // "Only for X" is a boundary marker here, so it must not also be harvested
+    // as the positive trigger — that is the collision layer's reading.
+    const analysis = analyzeDescription('Format PDF invoices. Only for PDF files.');
+    expect(analysis.triggerClause.contentFound).toBe(false);
   });
 });
 
