@@ -9,6 +9,7 @@ import { isPathInsideDir } from '../parser/linkPaths';
 import { toKebabCase, isSafeFolderRenameTarget } from '../validation/validateName';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
+import { REGISTRABLE_WORD } from '../validation/validateDescription';
 import {
   DESCRIPTION_PLACEHOLDER,
   USE_WHEN_CLAUSE,
@@ -145,9 +146,57 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
       case QuickFixId.AddResourceLink:
         return this.addResourceLink(diagnostic, document, context);
 
+      case QuickFixId.AddActionVerbToDictionary:
+        return this.addToDictionary(
+          diagnostic,
+          document,
+          context,
+          'actionVerbs',
+          'recognized action verbs',
+        );
+
+      case QuickFixId.AddArtifactToDictionary:
+        return this.addToDictionary(
+          diagnostic,
+          document,
+          context,
+          'artifactHints',
+          'recognized artifacts',
+        );
+
       default:
         return undefined;
     }
+  }
+
+  /**
+   * Offers to register an unrecognized word in a heuristic dictionary setting
+   * (plan 9 Part C). This edits configuration, not the user's file, so it is
+   * deliberately never `isPreferred`: an auto-applied fix must not write global
+   * or workspace settings.
+   */
+  private addToDictionary(
+    diagnostic: SkillDiagnostic,
+    document: vscode.TextDocument,
+    context: vscode.CodeActionContext,
+    key: 'actionVerbs' | 'artifactHints',
+    label: string,
+  ): vscode.CodeAction | undefined {
+    const word = diagnostic.data?.word;
+    // The producing diagnostic already sanitizes, but the check is repeated here
+    // because this value ends up in user settings and in a matching pattern: the
+    // quick fix must not depend on its caller having been careful.
+    if (typeof word !== 'string' || !REGISTRABLE_WORD.test(word)) {
+      return undefined;
+    }
+    const action = this.newAction(`Add "${word}" to ${label}`, diagnostic, context);
+    action.isPreferred = false;
+    action.command = {
+      command: 'skillMdInspector.addHeuristicDictionaryWord',
+      title: action.title,
+      arguments: [{ uri: document.uri.toString(), key, word }],
+    };
+    return action;
   }
 
   private replaceKeyLine(
@@ -239,9 +288,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     const action = this.newAction(title, diagnostic, context);
     action.edit = new vscode.WorkspaceEdit();
     const valueStart = new vscode.Position(valueRange.startLine, valueRange.startCharacter);
-    const firstChar = document.getText(
-      new vscode.Range(valueStart, valueStart.translate(0, 1)),
-    );
+    const firstChar = document.getText(new vscode.Range(valueStart, valueStart.translate(0, 1)));
     if (firstChar === '"' || firstChar === "'") {
       // Quoted scalar: appending after the value lands outside the quotes and
       // breaks the YAML. Rebuild the whole entry with the combined value, safely

@@ -284,6 +284,21 @@ finding naming the word and the setting to add it to. The quick fix
 **Add "…" to recognized action verbs** performs that edit. The same applies to
 `artifactHints` for concrete-artifact evidence.
 
+### `skill.description.noArtifact`
+
+**information** · auto-fix: yes (adds the word to the recognized artifacts setting)
+
+`description` names something artifact-shaped — `PascalCase`, a short all-caps
+code, a filename, a hyphenated compound, or a mid-sentence proper noun — that the
+configured `artifactHints` do not contain. The description is fine; the
+dictionary is incomplete, so the concrete-artifact criterion pays half until the
+word is registered. Only emitted when nothing in the dictionary matched.
+
+- Cause: `description: Generate deliverables from OpenAPI definitions.` with
+  `OpenAPI` unregistered.
+- Fix: **Add "OpenAPI" to recognized artifacts**, which writes the workspace (or
+  user) setting — it never edits your file.
+
 ### `skill.description.noTrigger`
 
 **warning** · auto-fix: yes (insert a "Use when…" clause)

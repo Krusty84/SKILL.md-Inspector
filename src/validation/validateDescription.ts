@@ -8,6 +8,22 @@ import { diag, keyRange } from './util';
 
 const RECOMMENDED_DESCRIPTION_MAX_LENGTH = 500;
 
+/**
+ * Words that may be offered for registration in a heuristic dictionary (plan 9
+ * Part C step 4).
+ *
+ * Security: the candidate comes from an arbitrary `SKILL.md`, and the quick fix
+ * writes it into user settings where it is compiled into matching patterns. Only
+ * a letter/digit-led token of letters, digits, apostrophes and hyphens is
+ * allowed, capped at 41 characters — anything else means no `data.word`, so no
+ * quick fix is offered at all rather than a sanitized guess being written.
+ */
+export const REGISTRABLE_WORD = /^[\p{L}\p{N}][\p{L}\p{N}'-]{0,40}$/u;
+
+function registrableWord(word: string | undefined): string | undefined {
+  return word !== undefined && REGISTRABLE_WORD.test(word) ? word : undefined;
+}
+
 export function validateDescription(
   doc: SkillDocument,
   profile: SkillProfile,
@@ -113,15 +129,52 @@ export function validateDescription(
   // Advisory, not fatal: capability phrasing is a quality concern, and the
   // detector is heuristic (gerunds, noun phrases, and second-sentence verbs are
   // recognized, but other legitimate phrasings may not be).
+  //
+  // When the opening *is* shaped like a capability statement but its verb is
+  // unregistered, the diagnostic names the word and carries it as `data.word` so
+  // the quick fix can offer to register it (plan 9 Part C). That case is
+  // information-level: the description is fine, the dictionary is incomplete.
   if (!analysis.actionVerb.found) {
+    const unregistered = registrableWord(analysis.capabilityEvidence.structuralTerm);
     diagnostics.push(
-      diag(
-        DiagnosticCode.DescriptionNoVerb,
-        'warning',
-        '`description` does not contain a clear action verb (e.g. "format", "analyze", "generate").',
-        range,
-      ),
+      unregistered
+        ? diag(
+            DiagnosticCode.DescriptionNoVerb,
+            'information',
+            `\`description\` opens with "${unregistered}", which reads like a capability verb but is not in the configured vocabulary. Add it to score the capability criterion fully.`,
+            range,
+            {
+              quickFixId: QuickFixId.AddActionVerbToDictionary,
+              data: { word: unregistered },
+            },
+          )
+        : diag(
+            DiagnosticCode.DescriptionNoVerb,
+            'warning',
+            '`description` does not contain a clear action verb (e.g. "format", "analyze", "generate").',
+            range,
+          ),
     );
+  }
+
+  // Same shape for the artifact side, on the existing vague-description channel's
+  // sibling: only offered when nothing in the dictionary matched.
+  if (!analysis.concreteArtifact && analysis.artifactEvidence.structural) {
+    const unregistered = registrableWord(analysis.artifactEvidence.structuralTerm);
+    if (unregistered) {
+      diagnostics.push(
+        diag(
+          DiagnosticCode.DescriptionNoArtifact,
+          'information',
+          `\`description\` names "${unregistered}", which reads like a concrete artifact but is not in the configured vocabulary. Add it to score the artifact criterion fully.`,
+          range,
+          {
+            quickFixId: QuickFixId.AddArtifactToDictionary,
+            data: { word: unregistered },
+          },
+        ),
+      );
+    }
   }
 
   if (!analysis.triggerClause.contentFound) {
