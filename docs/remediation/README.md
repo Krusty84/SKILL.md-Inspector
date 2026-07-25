@@ -6,7 +6,13 @@ morphology, glob matching). Each plan is written to be **fully self-contained**:
 isolated Claude (or human) session with no prior context can pick up one plan file and
 implement it end to end, including reproducing the problem before fixing it.
 
-## Plans and recommended order
+There are two waves. **Plans 1–5 are complete and merged** — they fixed defects found in
+the first two evaluation rounds. **Plans 6–10 are open** and come from the
+[round-3 evaluation](../algorithm-quality-evaluation-round3.md), which asked a different
+question: assuming the code is correct, do the reported numbers mean what their labels
+claim? See [Wave 2](#wave-2--measurement-validity-plans-610-open) below.
+
+## Wave 1 — defect remediation (plans 1–5, merged)
 
 | # | Plan | Primary files | Depends on |
 |---|------|---------------|------------|
@@ -30,6 +36,45 @@ introduced three precision holes (negated usage verbs read as positive triggers,
 duration/conditional statements read as triggers, and English text flagged non-English
 via cross-language homographs). It touches the same files as Plans 2–3, so it must run
 alone, on top of their merged result.
+
+## Wave 2 — measurement validity (plans 6–10, open)
+
+Wave 1 asked "is the code defective?". Wave 2 assumes it is not, and asks whether the
+three headline numbers the UI shows — Static Description Quality, collision similarity,
+Instruction Quality — measure what their labels claim. Measured answers: 9 of 14 shipped
+production skill descriptions score *weak* or *poor*; collision detection catches 0 of 6
+genuine collisions at the default threshold; lorem ipsum scores 90/"excellent" for
+instruction quality.
+
+| # | Plan | Implements | Primary files | Depends on |
+|---|------|-----------|---------------|------------|
+| 6 | [Honest labels](plan-6-honest-labels.md) | P1 | `src/authoring/authoringQuality.ts`, `src/ui/render*.ts` | — |
+| 7 | [Four concrete defects](plan-7-concrete-defects.md) | P2 | `src/workspace/collisionFeatures.ts`, `src/quality/staticDescriptionQuality.ts`, `src/quality/descriptionHeuristics.ts`, `src/workspace/detectNameConflicts.ts` | — |
+| 8 | [Falsifiable corpora](plan-8-falsifiable-corpora.md) | P5 | `benchmarks/`, `test/benchmarks/`, `package.json` | — |
+| 9 | [Vocabulary + ceilings](plan-9-vocabulary-and-ceilings.md) | P3 | `src/quality/defaultHeuristicDictionaries.json`, `src/quality/descriptionHeuristics.ts`, `src/codeActions/skillCodeActions.ts` | 8, 7-D |
+| 10 | [Collision discrimination](plan-10-collision-discrimination.md) | P4 | `src/workspace/collisionFeatures.ts`, `src/workspace/detectSkillCollisions.ts`, `src/workspace/similarity.ts` | 8, 7-A |
+
+**Why this order.** Plans 6, 7 and 8 are mutually independent and each ships on its own —
+start with 6 (cheapest, largest trust gain, zero scoring change), then 7 (four unrelated
+small defects), then 8.
+
+**Plan 8 is deliberately renumbered ahead of the work it supports.** The round-3 report
+lists it last as P5, but the two corpora it builds are the *acceptance gates* for Plans 9
+and 10. Building them afterwards would mean tuning the scorers against targets that do
+not exist yet, which is how the current benchmark ended up asserting the behavior the
+implementation already had. Plan 8 lands the corpora with thresholds set to today's
+**measured** values plus `TODO(plan-9)` / `TODO(plan-10)` markers; Plans 9 and 10 each
+ratchet their own threshold up as their acceptance criterion.
+
+Plans 9 and 10 are independent of each other in code and may run in parallel, with one
+caveat: Plan 9 expands `actionVerbs`, which feeds the Jaccard exclusion set in
+`detectSkillCollisions.ts`, so whichever lands second should re-run
+`npm run benchmark:collisions` and record the shift.
+
+**Shared-file conflicts within wave 2:** Plans 7 and 9 both edit
+`defaultHeuristicDictionaries.json` and `descriptionHeuristics.ts`; Plans 7 and 10 both
+edit `collisionFeatures.ts`. Run 7 to completion first — both later plans list it as a
+dependency for exactly this reason.
 
 ## How to run a plan in an isolated session
 
@@ -60,6 +105,11 @@ Each plan contains:
   (`test/benchmarks/staticDescriptionQuality.test.ts`). The harness enforces: corpus
   size ≥ 45, and every case's `maxScore - minScore ≤ 25`. Cases assert score band,
   clause states (`trigger`/`boundary`: `full|partial|none`), and `frontLoaded`.
+  Plan 8 adds two further corpora with a different contract — `description-calibration`
+  (verbatim real descriptions; never edited to score better) and `collision-pairs`
+  (labeled pairs scored by recall/precision/AUC). A failure in either means the *metric*
+  is wrong; only the static corpus's expectations may be re-recorded, and only with a
+  stated policy reason. See `benchmarks/README.md` once Plan 8 has landed.
 - **Purity constraints.** Everything under `src/quality/`, `src/workspace/`,
   `src/analysis/`, `src/validation/` is deliberately `vscode`-free and deterministic
   (no LLM calls, no network, no randomness). Keep it that way.
@@ -72,3 +122,9 @@ The reproduction numbers quoted in the plans come from directly executing the sh
 modules (bundled with esbuild, run under node) against realistic and adversarial
 inputs — not from the existing unit tests. Where a plan says "currently scores 59",
 that was measured, not estimated.
+
+For wave 2 this is not incidental. The round-3 evaluation deliberately **ignored the test
+suite and the benchmark corpus** while forming findings, because both encode the same
+assumptions as the implementation — agreement with them proves nothing about whether the
+metric is right. Every wave-2 plan follows the same discipline: reproduce by execution
+first, and treat a passing test as evidence of stability, not of correctness.
