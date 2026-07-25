@@ -4,9 +4,21 @@ This version-controlled corpus checks curated qualitative expectations for the d
 
 ## How this benchmark differs from the other corpora
 
+See [../README.md](../README.md) for the contract table covering all three
+benchmark corpora and what each one is allowed to prove.
+
 - **Synthetic description benchmark (this directory):** isolates description
   wording and scorer weights in `cases.json`. It does not parse a whole
-  `SKILL.md`, discover resources, or inspect instruction structure.
+  `SKILL.md`, discover resources, or inspect instruction structure. It asserts the
+  behavior the implementation already has, so it catches regressions but cannot
+  tell you the metric measures the wrong thing.
+- **Production calibration corpus:** `benchmarks/description-calibration/`
+  holds verbatim descriptions from shipped skills and gates the median score, which
+  is the check this corpus cannot perform. Run it with
+  `npm run benchmark:calibration`.
+- **Labeled collision pairs:** `benchmarks/collision-pairs/` gates whether
+  collision similarity separates genuine overlaps from lookalikes. Run it with
+  `npm run benchmark:collisions`.
 - **Whole-file fixture regression corpus:**
   `fixtures/skills/expectations.json` analyzes every fixture with the generic
   profile and local filesystem access. It protects parsing, diagnostics,

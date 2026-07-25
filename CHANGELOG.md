@@ -23,6 +23,27 @@
   phrases that name a skill's own scope (`only for`, `limited to`), split out of
   `restrictiveBoundaryPhrases`. They still earn the boundary criterion in
   description scoring, but no longer act as exclusions in collision analysis.
+- **Two falsifiable benchmark corpora**, alongside the existing synthetic
+  regression corpus, plus `npm run benchmark` to run all three
+  (`benchmark:calibration` and `benchmark:collisions` run them individually; all
+  three also run under `npm test`):
+  - `benchmarks/description-calibration/production-skills.json` — 37 verbatim
+    `description` values from real, shipped skills, each with provenance and a
+    re-verification path. The test gates the **median** score, currently 60, with
+    the gate exported as a single constant so raising it is deliberate. Today's
+    distribution: mean 62.9, 21 of 37 below "good".
+  - `benchmarks/collision-pairs/pairs.json` — 26 skill pairs labeled `COLLIDE` or
+    `DISTINCT`, with the labeling rule stated in the file. Half use verbatim
+    shipped descriptions; the rest each isolate one discrimination (paraphrase with
+    little shared text, mutual exclusion with heavy shared text, same artifact with
+    opposite capability, house boilerplate, non-Latin script). The test reports
+    recall and precision at the default threshold and a threshold-independent AUC,
+    reusing `calculateTriggerMetrics` so the confusion matrix has one
+    implementation. Measured today: recall 0.00, precision 0.00, AUC 0.53.
+  - Both tests print a full diagnostic table on failure, and
+    `benchmarks/README.md` records what each corpus is allowed to prove — a failing
+    calibration or collision gate means the metric is wrong, not that the corpus
+    needs adjusting.
 
 ### Removed
 
