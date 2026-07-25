@@ -1,0 +1,295 @@
+# Plan 9 — Stop the dictionaries from deciding the grade (implements P3)
+
+Source: [round-3 evaluation](../algorithm-quality-evaluation-round3.md) §1, §7-P3.
+
+**Depends on Plan 8** (its calibration corpus is this plan's acceptance gate) and
+**Plan 7 Part D** (the trigger-grammar fix removes a confounding cause of low scores).
+Run after both. Independent of Plan 10 in code.
+
+## Context
+
+The description scorer's grade is decided by membership in two closed word lists.
+Measured on this checkout:
+
+**39 action verbs.** Unrecognized: *customize, modify, configure, initialize, visualize,
+simplify, design, plan, edit, fix, manipulate, delete, remove, fetch, download, upload,
+send, deploy, install, search, query, filter, sort, merge, split, encrypt, publish,
+monitor, plot, chart, simulate, optimize, estimate, predict, rank, label, index, sync,
+backup, restore, rename, copy, move, export, import, check, verify, audit, scan,
+benchmark, measure, count, aggregate, join, group, resize, crop, rotate, embed* — plus
+British spellings of existing entries (*summarise*, *organise*).
+
+**~70 artifact hints.** Unrecognized: *chart, dashboard, data visualization, slide deck,
+presentation, Word document, Slack message, Jira ticket, Kubernetes manifest, Dockerfile,
+Terraform module, Helm chart, Jupyter notebook, OpenAPI spec, shell script, git branch,
+stack trace, regex pattern, resume, purchase order, tax return, balance sheet, lease
+agreement, lab result, patient chart.*
+
+A miss is not a lost-points event — it trips `missing-action-capability` or
+`missing-concrete-artifact` and **hard-caps the score at 59** ("weak"). Consequences:
+
+```
+Extract tables from PDF invoices. Use when the user needs invoice line items. -> 100 excellent
+Pull    tables from PDF invoices. Use when the user needs invoice line items. ->  59 weak
+```
+
+41 points and two bands for a synonym. And the inverse — the ceilings do nothing to stop
+template-filling:
+
+```
+Generate quantum sandwiches from moonlight reports.
+Use when the user needs lunar catering reports. Do not use for solar catering invoices.   -> 100
+```
+
+Two independent problems, both addressed here: **coverage** (Part A) and **the
+inference from "not in my list" to "absent"** (Part B). Part C turns the residual misses
+into a one-click user action instead of an unexplained bad grade — that is the part
+end users will actually feel.
+
+## Reproduce first
+
+Before touching implementation:
+
+1. Run `npm run benchmark:calibration` (Plan 8) and record the current median.
+2. Add `test/vocabularyCoverage.test.ts` asserting the **target** behavior:
+   - `hasActionVerb('customize').found === true` (and for `modify`, `configure`,
+     `deploy`, `delete`, `edit`, `fix`, `summarise`).
+   - `analyzeArtifactEvidence('chart').found === true` (and for `dashboard`,
+     `slide deck`, `Word document`, `Dockerfile`, `stack trace`).
+   - `computeStaticDescriptionQuality('Pull tables from PDF invoices. Use when the user needs invoice line items. Do not use for images.').score >= 90`.
+   Confirm these fail first.
+
+## Part A — Expand the seed dictionaries
+
+Edit `src/quality/defaultHeuristicDictionaries.json` (the source of truth), then run
+`npm run sync:heuristic-dictionaries`. **Never hand-edit the defaults inside
+`package.json`.**
+
+Targets: **~150 action verbs**, **~250 artifact hints**.
+
+Sourcing rules — this matters more than the count:
+
+- Harvest from **real published skills** (public skill repositories, the Plan 8
+  production corpus) and from the verb/noun vocabulary of the domains the tool already
+  targets (software, CAD/CAE, automotive, aerospace, document processing, data, finance,
+  legal, medical). Do not brainstorm a list; derive it from text people actually wrote.
+- Add British spellings for every `-ize`/`-ise` and `-yze`/`-yse` verb already present.
+  Cheap, and a whole locale currently fails.
+- **Audit for collateral damage before adding.** Three specific hazards:
+  1. `actionVerbs` also feeds `hasSubstantiveInstructions`
+     (`src/authoring/authoringQuality.ts`) and the Jaccard exclusion in
+     `detectSkillCollisions.ts`. A verb added here is excluded from Jaccard token sets —
+     adding a *domain noun* that happens to be a verb (`model`, `index`, `label`,
+     `chart`, `profile`) would erase real scope signal from the collision metric. For
+     any word that is both, prefer the artifact list and note the decision.
+  2. `actionVerbs` feeds `analyzeInstructionHeavy`'s `imperativeSentenceCount`. Adding
+     ~110 verbs makes the ≥ 6 imperative-sentence threshold much easier to trip. Re-check
+     the `instruction-heavy-description` cap against the benchmark corpus and raise the
+     threshold if legitimate descriptions start tripping it.
+  3. `vagueTerms` currently contains `general`, `simple`, `easy`, `advanced` — several
+     new artifact terms will co-occur with these. No action needed, just verify no
+     benchmark case flips.
+- Regular morphology is generated by `inflect()` in `src/quality/wordForms.ts`. Only add
+  an `actionVerbForms` entry for **irregular** verbs (`send/sent`, `find/found`,
+  `split/split`, `deal/dealt`). Check `inflect()`'s output before adding a form
+  explicitly — most verbs need nothing.
+- Multi-word artifacts (`slide deck`, `pull request`, `stack trace`, `purchase order`)
+  go in `multiWordArtifacts`, not `artifactHints`.
+- Any genuinely ambiguous short acronym goes in `uppercaseOnlyAcronyms` so it only
+  counts when capitalized (follow the existing `can`/`step`/`pr`/`ci` precedent).
+
+## Part B — A dictionary miss must not be proof of absence
+
+This is the structural fix. Today: *not in my list* ⇒ *no capability stated* ⇒ ceiling 59.
+That inference is invalid, and no amount of dictionary growth makes it valid.
+
+Introduce **structural fallback evidence** in
+`src/quality/descriptionHeuristics.ts`, and use it to gate the ceilings in
+`src/quality/staticDescriptionQuality.ts`.
+
+### B1 — Structural capability evidence
+
+Add to `DescriptionAnalysis`:
+
+```ts
+capabilityEvidence: {
+  dictionary: boolean;   // existing actionVerb.found
+  structural: boolean;   // the opening clause is shaped like a capability statement
+}
+```
+
+`structural` is true when the first sentence opens with a plausible predicate even though
+the word is unknown:
+
+- first token is not a known function word (article, preposition, pronoun, conjunction
+  — reuse `frontLoadedFillerTerms` plus `scopeStopwords`), **and**
+- first token is lowercase-or-sentence-capitalized (not an all-caps acronym), **and**
+- first token ends in a plausible verb shape (`-e`, `-s`, `-ify`, `-ise`, `-ize`, `-ate`,
+  `-ing`, or is a bare consonant-final word), **and**
+- it is followed within 3 tokens by a noun-ish token that is not a function word.
+
+`"Pull tables from PDF invoices"` and `"Frobnicate the widgets for shipment"` both
+satisfy this. `"This skill helps with various tasks"` does not (first token is a
+function word). `"A helpful skill."` does not.
+
+### B2 — Structural artifact evidence
+
+Add a `structural` flag to `ArtifactEvidence`, true when the text contains a token that
+looks like a domain term regardless of dictionary membership:
+
+- a `CamelCase` or `PascalCase` token (`OpenAPI`, `Dockerfile`, `PowerPoint`), or
+- an all-caps token of length 2–6 that is not a known English word (`DBC`, `ECU`), or
+- a dotted filename or extension (already handled — keep it), or
+- a hyphenated compound noun (`load-case`, `pull-request`), or
+- a capitalized mid-sentence proper noun (`Slack`, `Terraform`, `Kubernetes`).
+
+**Tighten the existing extension escape hatch while you are here.** Today
+`/\.(?!\d+\b)[a-z0-9]{2,4}\b/i` makes `"Process foo.bar items"` count as artifact
+evidence. Require either a leading dot with no preceding word character
+(`.pdf`, `.xlsx` as standalone extensions) or a plausible filename shape
+(`word.ext` where `ext` is in a known-extension list). Keep a test for
+`keybindings.json` and `CLAUDE.md`, which must still match.
+
+### B3 — Gate the ceilings
+
+In `assessGradeLimitations`:
+
+- `missing-action-capability` (ceiling 59) applies only when **neither** `dictionary`
+  **nor** `structural` capability evidence is present.
+- `missing-concrete-artifact` (ceiling 59) applies only when **neither** dictionary
+  **nor** structural artifact evidence is present.
+- When dictionary evidence is absent but structural evidence is present: **no ceiling**,
+  but award **partial criterion points** (50% of the criterion weight, rounded) and emit
+  a finding whose message names the unrecognized word and points at the setting:
+
+  > `No recognized capability verb; "pull" reads like one but is not in the configured
+  > vocabulary. Add it to skillMdInspector.heuristics.dictionaryValues.actionVerbs to
+  > score it fully.`
+
+  This keeps the score honest (the tool genuinely is less sure), keeps the user out of
+  the "weak" band for good writing, and tells them exactly how to fix it.
+
+`vague-usage-trigger`, `missing-usage-trigger`, `overbroad-usage-scope`,
+`instruction-heavy-description`, `echoed-scope-content`, `unfilled-placeholder`, and the
+new `over-maximum-length` (Plan 7 Part B) are unchanged — those are grammar-based, not
+vocabulary-based, so they do not have this defect.
+
+### B4 — Keep the anti-gaming property
+
+Part B makes the ceilings easier to escape, so verify the gaming cases have not gotten
+worse. These must **not** improve:
+
+```
+This skill helps with various tasks and improves things.     -> stays "poor"
+A helpful skill.                                              -> stays "poor"
+Analyze validate generate format convert review data reports files. Use when analyzing
+  reports for users. Do not use for spreadsheets.             -> must NOT be 100
+```
+
+The third is the interesting one: it scores 100 today and Part B does not address it
+(it has genuine dictionary evidence). Do not attempt a general anti-stuffing fix here —
+it is a separate problem needing its own evidence model. **Record it as a known
+limitation** in the module docstring and in `docs/rules.md` so it is not mistaken for
+something this plan closed.
+
+## Part C — Quick fix: "Add ‹word› to recognized verbs/artifacts"
+
+The end-user payoff. A vocabulary gap should cost one click, not an unexplained grade.
+
+1. Add to `QuickFixId` in `src/types/DiagnosticCode.ts`:
+   ```ts
+   AddActionVerbToDictionary: 'fix.dictionary.addActionVerb',
+   AddArtifactToDictionary:   'fix.dictionary.addArtifact',
+   ```
+2. When `DescriptionNoVerb` fires with structural-but-not-dictionary evidence, attach
+   `data: { word: <the candidate token> }` to the diagnostic (follow the existing
+   `data.expected` / `data.suggestion` pattern in `validateName.ts`). Same for the
+   artifact case on a new or existing description diagnostic.
+3. In `src/codeActions/skillCodeActions.ts`, offer
+   `Add "pull" to recognized action verbs` / `Add "Terraform" to recognized artifacts`.
+   The action updates the VS Code setting, it does **not** edit the user's file:
+
+   ```ts
+   const cfg = vscode.workspace.getConfiguration('skillMdInspector.heuristics.dictionaryValues');
+   const current = cfg.get<string[]>('actionVerbs') ?? [];
+   await cfg.update('actionVerbs', [...current, word.toLowerCase()], target);
+   ```
+
+   Implementation requirements:
+   - Not `isPreferred`. Editing global config must never be the auto-applied fix.
+   - Choose the config target deliberately: `ConfigurationTarget.Workspace` when a
+     workspace is open, else `Global`. The dictionary settings are `scope: "resource"`,
+     so a workspace-level write is the correct default for a team sharing skills.
+   - **Read-modify-write is required** because the setting default is a full array and a
+     non-empty user value *replaces* the defaults. Confirm the read returns the effective
+     value (defaults included) before appending, or the write will silently drop ~150
+     built-in verbs. Cover this with a test — it is the one way this feature can do real
+     damage.
+   - De-duplicate case-insensitively; no-op if already present.
+   - `src/configurationRefresh.ts` already re-validates on dictionary config change;
+     verify the new diagnostic clears without a reload.
+4. Sanitize `word`: `/^[\p{L}\p{N}][\p{L}\p{N}'-]{0,40}$/u` only. It comes from an
+   arbitrary `SKILL.md` and ends up in user settings and in a regex-building dictionary.
+   Reject anything else and omit the quick fix.
+
+## Part D — Re-review the static benchmark corpus
+
+Parts A and B **will move scores across many of the 66 cases** in
+`benchmarks/static-description-quality/cases.json`. Handle this deliberately:
+
+1. Run `npm run benchmark:static` and capture every failing case.
+2. For each, decide and **write down in the commit message** which applies:
+   - *intended improvement* — a description that was under-scored because of a
+     vocabulary gap → widen or raise the band, note the reason in the case's `notes`;
+   - *unintended regression* — fix the code, not the expectation.
+3. Keep every band ≤ 25 points wide (the harness enforces it) and the corpus ≥ 45 cases.
+4. Add new cases for: the `Pull tables…` synonym case, a structural-capability-only case,
+   a structural-artifact-only case, and the three Part B4 gaming cases with explicit
+   `gradeLimitations` expectations.
+
+**Do not blind re-record.** If more than ~15 of the 66 cases need their bands changed,
+stop and re-read Part B — that volume suggests the ceiling gating is too loose, not that
+the corpus was wrong.
+
+## Acceptance criteria
+
+1. `actionVerbs` ≈ 150 entries; `artifactHints` ≈ 250; every added `-ize`/`-yze` verb has
+   its `-ise`/`-yse` spelling.
+2. All of these are recognized: `customize, modify, configure, deploy, delete, edit, fix,
+   initialize, visualize, summarise`; `chart, dashboard, slide deck, Word document,
+   Dockerfile, stack trace`.
+3. `Pull tables from PDF invoices. Use when the user needs invoice line items. Do not use
+   for images.` → **≥ 90**.
+4. `Frobnicate the widgets for shipment. Use when the user needs widgets frobnicated. Do
+   not use for gadgets.` → **no** `missing-action-capability` ceiling, and a finding
+   naming `frobnicate` and the setting to add it to.
+5. `Process foo.bar items` → artifact evidence `false` (escape hatch tightened);
+   `keybindings.json` and `CLAUDE.md` → still `true`.
+6. Part B4 gaming cases unchanged or worse; none improves.
+7. **`npm run benchmark:calibration` median ≥ 75**, threshold constant updated from
+   Plan 8's placeholder and the `TODO(plan-9)` comment removed. This is the gate that
+   makes this plan worth shipping.
+8. Quick fix appends to the setting without dropping built-in defaults (explicit test),
+   rejects a malformed `word`, and is not `isPreferred`.
+9. `npm run check:heuristic-dictionaries` passes.
+10. Full verification checklist passes.
+
+## Non-goals
+
+- No collision-scoring changes (Plan 10). Note that Part A's `actionVerbs` growth *does*
+  shift the Jaccard exclusion set — record the measured effect on
+  `npm run benchmark:collisions` in the commit message, but do not tune collision code
+  here.
+- No general anti-keyword-stuffing model (Part B4 documents the gap).
+- Do not change the criterion weights, the label bands, or the 7-criterion structure.
+- No LLM, network, or non-determinism anywhere under `src/quality/`.
+
+## Verification checklist
+
+```
+npm run check-types
+npm run lint
+npm test
+npm run check:heuristic-dictionaries
+npm run benchmark
+```
