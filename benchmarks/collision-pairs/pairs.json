@@ -1,0 +1,406 @@
+{
+  "labelingRule": "COLLIDE = an agent choosing between these two from descriptions alone would be genuinely unsure (same job, different words). DISTINCT = the choice is obvious, INCLUDING when the two are lexically similar but explicitly disjoint in scope.",
+  "notes": "A label is a judgement, not a measurement. If you disagree with one, change it deliberately and let the metrics move - that is the corpus working as intended. What you must not do is retune a label to make a scorer pass. Pairs marked provenance \"verbatim shipped descriptions\" use real frontmatter and must not be edited; synthetic pairs exist to isolate one discrimination each and may be extended.",
+  "classes": {
+    "paraphrase-low-overlap": "COLLIDE with little shared surface text - the class surface metrics miss.",
+    "overlapping-scope": "COLLIDE where both descriptions plainly claim the same request.",
+    "mutual-exclusion-high-overlap": "DISTINCT despite heavy shared vocabulary, disjoint by explicit boundary.",
+    "same-artifact-opposite-capability": "DISTINCT: same artifact, read vs write.",
+    "same-domain-different-job": "DISTINCT: adjacent domain, different job.",
+    "house-template": "DISTINCT: unrelated skills sharing boilerplate prose - the template trap.",
+    "unrelated": "DISTINCT: no meaningful relation, the easy negatives.",
+    "non-latin": "Script the text metrics cannot read; expected to be flagged low text coverage."
+  },
+  "pairs": [
+    {
+      "id": "pdf-vs-pdf-reading",
+      "label": "COLLIDE",
+      "class": "overlapping-scope",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "pdf",
+        "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill."
+      },
+      "b": {
+        "name": "pdf-reading",
+        "description": "Use this skill when you need to read, inspect, or extract content from PDF files — especially when file content is NOT in your context and you need to read it from disk. Covers content inventory, text extraction, page rasterization for visual inspection, embedded image/attachment/table/form-field extraction, and choosing the right reading strategy for different document types (text-heavy, scanned, slide-decks, forms, data-heavy). Do NOT use this skill for PDF creation, form filling, merging, splitting, watermarking, or encryption — use the pdf skill instead."
+      },
+      "notes": "Both claim reading and extracting from PDFs; for \"read this PDF\" the choice is genuinely unsure."
+    },
+    {
+      "id": "file-reading-vs-pdf-reading",
+      "label": "COLLIDE",
+      "class": "overlapping-scope",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "file-reading",
+        "description": "Use this skill when a file has been uploaded but its content is NOT in your context — only its path at /mnt/user-data/uploads/ is listed in an uploaded_files block. This skill is a router: it tells you which tool to use for each file type (pdf, docx, xlsx, csv, json, images, archives, ebooks) so you read the right amount the right way instead of blindly running cat on a binary. Triggers: any mention of /mnt/user-data/uploads/, an uploaded_files section, a file_path tag, or a user asking about an uploaded file you have not yet read. Do NOT use this skill if the file content is already visible in your context inside a documents block — you already have it."
+      },
+      "b": {
+        "name": "pdf-reading",
+        "description": "Use this skill when you need to read, inspect, or extract content from PDF files — especially when file content is NOT in your context and you need to read it from disk. Covers content inventory, text extraction, page rasterization for visual inspection, embedded image/attachment/table/form-field extraction, and choosing the right reading strategy for different document types (text-heavy, scanned, slide-decks, forms, data-heavy). Do NOT use this skill for PDF creation, form filling, merging, splitting, watermarking, or encryption — use the pdf skill instead."
+      },
+      "notes": "The router covers PDFs and the PDF reader covers uploaded files; both fit \"read the uploaded PDF\"."
+    },
+    {
+      "id": "canvas-design-vs-paint",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "canvas-design",
+        "description": "Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a poster, piece of art, design, or other static piece. Create original visual designs, never copying existing artists' work to avoid copyright violations."
+      },
+      "b": {
+        "name": "paint",
+        "description": "Paint an original image in a watercolor style by writing code, not by calling an image model. Use when the user asks you to draw, paint, sketch, or make a picture of something and there is no image-generation tool available, or when they ask for a painting, watercolor, or illustration you can iterate on. Do not use for charts, diagrams, UI mockups, or requests to edit an existing photograph."
+      },
+      "notes": "Both create original static visual art from code; \"make me a picture of X\" fits either."
+    },
+    {
+      "id": "brand-guidelines-vs-theme-factory",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "brand-guidelines",
+        "description": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Use it when brand colors or style guidelines, visual formatting, or company design standards apply."
+      },
+      "b": {
+        "name": "theme-factory",
+        "description": "Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set themes with colors/fonts that you can apply to any artifact that has been creating, or can generate a new theme on-the-fly."
+      },
+      "notes": "Both apply a colour/typography theme to an arbitrary artifact, in almost no shared vocabulary."
+    },
+    {
+      "id": "docx-vs-doc-coauthoring",
+      "label": "COLLIDE",
+      "class": "overlapping-scope",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "docx",
+        "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files) or Word templates (.dotx files). Triggers include: any mention of 'Word doc', 'word document', '.docx', '.dotx', or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx or .dotx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a 'report', 'memo', 'letter', 'template', or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation."
+      },
+      "b": {
+        "name": "doc-coauthoring",
+        "description": "Guide users through a structured workflow for co-authoring documentation. Use when user wants to write documentation, proposals, technical specs, decision docs, or similar structured content. This workflow helps users efficiently transfer context, refine content through iteration, and verify the doc works for readers. Trigger when user mentions writing docs, creating proposals, drafting specs, or similar documentation tasks."
+      },
+      "notes": "\"Help me write a design doc\" fits the Word-document producer and the documentation workflow alike."
+    },
+    {
+      "id": "docx-vs-xlsx",
+      "label": "DISTINCT",
+      "class": "mutual-exclusion-high-overlap",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "docx",
+        "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files) or Word templates (.dotx files). Triggers include: any mention of 'Word doc', 'word document', '.docx', '.dotx', or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx or .dotx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a 'report', 'memo', 'letter', 'template', or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation."
+      },
+      "b": {
+        "name": "xlsx",
+        "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved."
+      },
+      "notes": "Heavy shared vocabulary (create/read/edit, file extensions, trigger lists) but each explicitly excludes the other artifact."
+    },
+    {
+      "id": "xlsx-vs-pptx",
+      "label": "DISTINCT",
+      "class": "house-template",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "xlsx",
+        "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved."
+      },
+      "b": {
+        "name": "pptx",
+        "description": "Use this skill any time a .pptx or .potx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx or .potx file (even if the extracted content will be used elsewhere, like in an email or summary); editing, modifying, or updating existing presentations; combining or splitting slide files; working with templates (.potx), layouts, speaker notes, or comments. Trigger whenever the user mentions \"deck,\" \"slides,\" \"presentation,\" or references a .pptx or .potx filename, regardless of what they plan to do with the content afterward. If a .pptx or .potx file needs to be opened, created, or touched, use this skill."
+      },
+      "notes": "Same house template almost sentence for sentence; the artifacts are disjoint."
+    },
+    {
+      "id": "docx-vs-pdf",
+      "label": "DISTINCT",
+      "class": "mutual-exclusion-high-overlap",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "docx",
+        "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files) or Word templates (.dotx files). Triggers include: any mention of 'Word doc', 'word document', '.docx', '.dotx', or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx or .dotx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a 'report', 'memo', 'letter', 'template', or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation."
+      },
+      "b": {
+        "name": "pdf",
+        "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill."
+      },
+      "notes": "Both are document producers with overlapping wording; docx names PDFs as out of scope."
+    },
+    {
+      "id": "financial-calculator-vs-xlsx",
+      "label": "DISTINCT",
+      "class": "same-domain-different-job",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "financial-calculator",
+        "description": "Run financial calculations and scenario comparisons — tax estimates, loan comparisons, retirement projections, rent vs. buy, investment scenarios, and more. Pure math, no accounts or logins needed."
+      },
+      "b": {
+        "name": "xlsx",
+        "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved."
+      },
+      "notes": "Both are about numbers in tables, but one produces spreadsheet files and the other refuses accounts and files."
+    },
+    {
+      "id": "grocery-shopping-vs-meal-delivery",
+      "label": "DISTINCT",
+      "class": "house-template",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "grocery-shopping",
+        "description": "Help order groceries for delivery. Concierge-style flow — store selection, occasion-based list building, budget tracking, and cart assembly."
+      },
+      "b": {
+        "name": "meal-delivery",
+        "description": "Help order food timed to arrive at a specific time. Works backward from target arrival, suggests restaurants, builds cart, and monitors delivery."
+      },
+      "notes": "Consumer-concierge template shared; ordering groceries from a store is not ordering prepared food."
+    },
+    {
+      "id": "return-refund-vs-cancel-unsubscribe",
+      "label": "DISTINCT",
+      "class": "house-template",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "return-refund",
+        "description": "Help return an item or request a refund from any retailer. Identifies the item, finds the return policy, navigates the process, and handles shipping labels or phone calls."
+      },
+      "b": {
+        "name": "cancel-unsubscribe",
+        "description": "Cancel a subscription or unsubscribe from a service. Works from a description, a pasted charge line, a URL, or a photo/screenshot. Can also audit a full statement for recurring charges and cancel several at once. Finds the right contact method and handles the cancellation — including phone calls."
+      },
+      "notes": "Same template and register; returning an item and cancelling a subscription are different jobs."
+    },
+    {
+      "id": "slack-gif-creator-vs-algorithmic-art",
+      "label": "DISTINCT",
+      "class": "same-domain-different-job",
+      "provenance": "verbatim shipped descriptions (see ../description-calibration/production-skills.json)",
+      "a": {
+        "name": "slack-gif-creator",
+        "description": "Knowledge and utilities for creating animated GIFs optimized for Slack. Provides constraints, validation tools, and animation concepts. Use when users request animated GIFs for Slack like \"make me a GIF of X doing Y for Slack.\""
+      },
+      "b": {
+        "name": "algorithmic-art",
+        "description": "Creating algorithmic art using p5.js with seeded randomness and interactive parameter exploration. Use this when users request creating art using code, generative art, algorithmic art, flow fields, or particle systems. Create original algorithmic art rather than copying existing artists' work to avoid copyright violations."
+      },
+      "notes": "Both generate visual output from code; a Slack GIF request and a generative-art request do not compete."
+    },
+    {
+      "id": "commit-msg-vs-change-summary",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "commit-msg",
+        "description": "Write clear git commit messages from staged changes. Use when the user is about to commit and needs a message."
+      },
+      "b": {
+        "name": "change-summary",
+        "description": "Summarize what changed in a diff so the summary can go into version control history. Use when the user needs their edits described."
+      },
+      "notes": "Same job, different words: both turn a diff into prose for the commit history."
+    },
+    {
+      "id": "pdf-extract-vs-pdf-reader",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "pdf-extract",
+        "description": "Extract text and tables from PDF documents. Use when the user needs data out of a PDF."
+      },
+      "b": {
+        "name": "pdf-reader",
+        "description": "Read PDF files and pull out their text content. Use when the user needs PDF text."
+      },
+      "notes": "Same job, different words. Descriptions as quoted in the plan-8 schema example."
+    },
+    {
+      "id": "api-docs-vs-schema-docs",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "api-docs",
+        "description": "Generate reference documentation for HTTP endpoints from source annotations. Use when the user asks to document an API."
+      },
+      "b": {
+        "name": "schema-docs",
+        "description": "Produce human-readable descriptions of request and response shapes from an OpenAPI definition. Use when interface contracts need writing up."
+      },
+      "notes": "Both document the same interface surface from a machine-readable source."
+    },
+    {
+      "id": "test-writer-vs-spec-generator",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "test-writer",
+        "description": "Write unit tests for existing functions. Use when the user wants coverage for code they already have."
+      },
+      "b": {
+        "name": "spec-generator",
+        "description": "Produce executable specifications describing how a module should behave. Use when a module needs its behaviour pinned down."
+      },
+      "notes": "Unit tests and executable specs are the same artifact under two vocabularies."
+    },
+    {
+      "id": "doc-writer-vs-docx-builder",
+      "label": "COLLIDE",
+      "class": "overlapping-scope",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "doc-writer",
+        "description": "Draft polished prose documents for delivery to stakeholders. Use when the user needs a written report."
+      },
+      "b": {
+        "name": "docx-builder",
+        "description": "Assemble Word files with headings, tables, and page numbering. Use when the user asks for a .docx deliverable."
+      },
+      "notes": "\"I need a report document\" lands on both; one is framed by content, the other by file format."
+    },
+    {
+      "id": "csv-cleaner-vs-tabular-fixer",
+      "label": "COLLIDE",
+      "class": "paraphrase-low-overlap",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "csv-cleaner",
+        "description": "Clean messy CSV exports: drop blank rows, normalize headers, and coerce column types. Use when a CSV will not load."
+      },
+      "b": {
+        "name": "tabular-fixer",
+        "description": "Repair malformed row-and-column data so downstream tools can parse it. Use when tabular input is rejected."
+      },
+      "notes": "Identical job; almost no shared surface text, which is the class the detector misses entirely."
+    },
+    {
+      "id": "py2-migrate-vs-py3-lint",
+      "label": "DISTINCT",
+      "class": "mutual-exclusion-high-overlap",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "py2-migrate",
+        "description": "Migrate Python 2 modules to modern syntax using automated fixers. Use when a legacy Python 2 codebase must run on Python 3. Do not use for Python 3 code."
+      },
+      "b": {
+        "name": "py3-lint",
+        "description": "Lint Python 3 modules for style and typing problems using modern tooling. Use when a Python 3 codebase needs review. Do not use for Python 2 code."
+      },
+      "notes": "Near-identical vocabulary, explicitly disjoint by mutual boundary. The pattern the extension itself tells authors to write, and the highest-ranked pair in the round-3 measurement."
+    },
+    {
+      "id": "pdf-read-vs-pdf-write",
+      "label": "DISTINCT",
+      "class": "same-artifact-opposite-capability",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "pdf-read",
+        "description": "Extract text and tables out of existing PDF files. Use when the user needs the contents of a PDF. Do not use for creating PDFs."
+      },
+      "b": {
+        "name": "pdf-write",
+        "description": "Create new PDF files from Markdown or HTML sources. Use when the user needs a PDF produced. Do not use for reading existing PDFs."
+      },
+      "notes": "Same artifact, opposite capability: high lexical overlap, obvious choice."
+    },
+    {
+      "id": "k8s-deploy-vs-recipe-scale",
+      "label": "DISTINCT",
+      "class": "house-template",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "k8s-deploy",
+        "description": "Use this skill when the user asks to roll out a Kubernetes deployment. Follow the documented steps, verify the result, and report what changed. Do not use for unrelated tasks."
+      },
+      "b": {
+        "name": "recipe-scale",
+        "description": "Use this skill when the user asks to scale a cooking recipe. Follow the documented steps, verify the result, and report what changed. Do not use for unrelated tasks."
+      },
+      "notes": "Identical boilerplate prose, completely unrelated domains: the template trap."
+    },
+    {
+      "id": "tax-return-vs-lease-review",
+      "label": "DISTINCT",
+      "class": "unrelated",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "tax-return",
+        "description": "Prepare an individual income tax return from supplied statements. Use when the user needs their annual filing assembled."
+      },
+      "b": {
+        "name": "lease-review",
+        "description": "Review a residential lease agreement and flag unusual clauses. Use when the user is about to sign a rental contract."
+      },
+      "notes": "Unrelated professional documents."
+    },
+    {
+      "id": "xlsx-edit-vs-pptx-build",
+      "label": "DISTINCT",
+      "class": "same-domain-different-job",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "xlsx-edit",
+        "description": "Edit spreadsheet workbooks: add columns, fix formulas, and reformat sheets. Use when the user needs changes made to a workbook."
+      },
+      "b": {
+        "name": "pptx-build",
+        "description": "Build slide decks from an outline, applying the house template. Use when the user needs a presentation produced."
+      },
+      "notes": "Adjacent office artifacts, no scope overlap."
+    },
+    {
+      "id": "cfd-mesh-vs-slack-writer",
+      "label": "DISTINCT",
+      "class": "unrelated",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "cfd-mesh",
+        "description": "Generate computational fluid dynamics meshes from CAD geometry. Use when a simulation case needs discretizing."
+      },
+      "b": {
+        "name": "slack-writer",
+        "description": "Draft short Slack messages in the team voice. Use when the user needs an announcement posted."
+      },
+      "notes": "Unrelated domains, minimal shared vocabulary."
+    },
+    {
+      "id": "sourdough-vs-invoice-parser",
+      "label": "DISTINCT",
+      "class": "unrelated",
+      "provenance": "synthetic; pair taken from round-3 evaluation section 2.1, descriptions written for this corpus",
+      "a": {
+        "name": "sourdough",
+        "description": "Guide a sourdough bake from starter to finished loaf, adjusting for kitchen temperature. Use when the user is baking bread."
+      },
+      "b": {
+        "name": "invoice-parser",
+        "description": "Parse supplier invoices into structured line items for accounting import. Use when the user needs invoice data extracted."
+      },
+      "notes": "Unrelated domains."
+    },
+    {
+      "id": "otchet-formatter-vs-otchet-generator",
+      "label": "COLLIDE",
+      "class": "non-latin",
+      "provenance": "synthetic; written for this corpus to cover a discrimination the seed set lacked",
+      "a": {
+        "name": "otchet-formatter",
+        "description": "Форматирует технические отчёты по правилам компании. Используйте, когда нужно оформить отчёт."
+      },
+      "b": {
+        "name": "otchet-generator",
+        "description": "Готовит технические отчёты по корпоративному шаблону. Используйте при подготовке отчёта."
+      },
+      "notes": "Cyrillic paraphrase of one job. The text metrics tokenize to nothing here, so the pair must be reported as low text coverage rather than silently scored on name similarity alone."
+    }
+  ]
+}

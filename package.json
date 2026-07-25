@@ -870,7 +870,7 @@
               "usa"
             ],
             "enumDescriptions": [
-              "24-hour clock, 00:00–23:59 (e.g. 15/01/2026, 14:30:45).",
+              "24-hour clock, 00:00\u201323:59 (e.g. 15/01/2026, 14:30:45).",
               "12-hour clock with AM/PM (e.g. 1/15/2026, 2:30:45 PM)."
             ],
             "default": "european",
@@ -917,7 +917,7 @@
               "auto"
             ],
             "default": "auto",
-            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" marks the quality score as language-limited when it detects a non-Latin script (Cyrillic, CJK, …) or a common Latin-script language (German, French, Spanish, Italian, Portuguese) via stopword profiles. Other languages may still be scored as English."
+            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" marks the quality score as language-limited when it detects a non-Latin script (Cyrillic, CJK, \u2026) or a common Latin-script language (German, French, Spanish, Italian, Portuguese) via stopword profiles. Other languages may still be scored as English."
           },
           "skillMdInspector.description.maxLength": {
             "type": "number",
@@ -959,7 +959,7 @@
             "default": 0.4,
             "minimum": 0,
             "maximum": 1,
-            "description": "Composite similarity (0–1) at or above which two skills are reported as a potential collision."
+            "description": "Composite similarity (0\u20131) at or above which two skills are reported as a potential collision."
           },
           "skillMdInspector.collision.weights": {
             "type": "object",
@@ -999,7 +999,7 @@
             "default": 0.8,
             "minimum": 0,
             "maximum": 1,
-            "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
+            "description": "Similarity (0\u20131) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
           }
         }
       },
@@ -1744,7 +1744,7 @@
               ]
             },
             "default": {},
-            "markdownDescription": "Override the severity of diagnostics by code, or disable one with `off` (e.g. `{ \"skill.description.vague\": \"information\" }`). Specification errors are protected unless `#skillMdInspector.severity.allowSpecificationOverrides#` is enabled.\n\n[Configure with a picker…](command:skillMdInspector.configureSeverityOverrides)"
+            "markdownDescription": "Override the severity of diagnostics by code, or disable one with `off` (e.g. `{ \"skill.description.vague\": \"information\" }`). Specification errors are protected unless `#skillMdInspector.severity.allowSpecificationOverrides#` is enabled.\n\n[Configure with a picker\u2026](command:skillMdInspector.configureSeverityOverrides)"
           },
           "skillMdInspector.severity.allowSpecificationOverrides": {
             "type": "boolean",
@@ -1947,7 +1947,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:eval": "vitest run test/evaluation",
-    "benchmark:static": "vitest run test/benchmarks/staticDescriptionQuality.test.ts"
+    "benchmark:static": "vitest run test/benchmarks/staticDescriptionQuality.test.ts",
+    "benchmark:calibration": "vitest run test/benchmarks/descriptionCalibration.test.ts",
+    "benchmark:collisions": "vitest run test/benchmarks/collisionPairs.test.ts",
+    "benchmark": "vitest run test/benchmarks"
   },
   "dependencies": {
     "js-tiktoken": "^1.0.21",
