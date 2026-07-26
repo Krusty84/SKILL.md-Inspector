@@ -84,7 +84,7 @@
       },
       {
         "command": "skillMdInspector.exportSkillsIndex",
-        "title": "Export SKILL.md's Index",
+        "title": "Export SKILL.md's Report Index",
         "category": "SKILL.md Inspector"
       },
       {

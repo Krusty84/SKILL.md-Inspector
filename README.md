@@ -102,12 +102,12 @@ The **SKILL.md Skills** panel shows validation status, quality results, and
 resources for the first open workspace folder. These commands provide broader
 workflows:
 
-| Command                       | What it does                                                       |
-| ----------------------------- | ------------------------------------------------------------------ |
-| **Validate Workspace Skills** | Validates discovered skills and publishes findings to Problems.    |
-| **Show Workspace Report**     | Shows name conflicts, scope collisions, quality, and resources.    |
-| **Export Skills Index**       | Writes schema-version-6 `skills.index.json` to the workspace root. |
-| **Refresh Skills**            | Rebuilds the cached Skills panel analysis.                         |
+| Command                             | What it does                                                       |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| **Validate Workspace Skills**       | Validates discovered skills and publishes findings to Problems.    |
+| **Show Workspace Report**           | Shows name conflicts, scope collisions, quality, and resources.    |
+| **"Export SKILL.md's Report Index** | Writes schema-version-6 `skills.index.json` to the workspace root. |
+| **Refresh Skills**                  | Rebuilds the cached Skills panel analysis.                         |
 
 Workspace reports and index exports are cancellable. They analyze saved files;
 live editor diagnostics and the single-skill report can include unsaved changes.

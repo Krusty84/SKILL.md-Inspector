@@ -123,7 +123,7 @@
 
 ### Changed
 
-- **Collision detection now compares what skills *do*, not how alike they read.**
+- **Collision detection now compares what skills _do_, not how alike they read.**
   A new `scopeOverlap` metric — the weighted geometric mean of artifact and
   capability agreement, built on features the extension already extracted — leads
   the composite at weight 0.70, and the four lexical metrics drop to corroboration.
@@ -167,11 +167,11 @@
     spellings, so British English no longer scores as if it stated no capability),
     68 → 256 artifact hints, 10 → 74 multi-word artifacts. Harvested from real
     published skills rather than brainstormed. Words that name what a skill operates
-    *on* (`chart`, `model`, `index`, `label`, `profile`, `query`, `benchmark`) went
+    _on_ (`chart`, `model`, `index`, `label`, `profile`, `query`, `benchmark`) went
     to the artifact lists, not the verb list, so collision analysis keeps that
     signal.
   - A dictionary miss is no longer treated as proof of absence. `Pull tables from
-    PDF invoices…` used to score 59/weak against 100/excellent for
+PDF invoices…` used to score 59/weak against 100/excellent for
     `Extract tables from…` — 41 points and two label bands for a synonym. An opening
     shaped like a capability statement, or a token shaped like a domain term, now
     keeps the 59-point ceiling off and earns half the criterion, with a finding
@@ -186,7 +186,7 @@
 - **The two headline scores are now named after what they measure.** No scoring
   arithmetic changed — every score is byte-identical — only labels and headings:
   - Authoring quality labels are no longer `excellent | good | acceptable | weak |
-    poor` but `clean | minor-issues | issues | defects`. The checks look for
+poor` but `clean | minor-issues | issues | defects`. The checks look for
     structural defects, so the labels no longer read as praise for the content,
     and `clean` now requires a full 100 (no findings at all) instead of 90+.
   - "Instruction / Resource authoring quality" is now "Authoring hygiene
@@ -349,7 +349,7 @@
   `codex` profiles, each with its own extra rules.
 - **Resource graph** classifying resources as referenced/unreferenced/missing/
   remote/absolute and flagging scripts, binaries, and large files.
-- **Export Skills Index** command that writes `skills.index.json`.
+- **Export Skills Report Index** command that writes `skills.index.json`.
 - Commands: Show Workspace Report, Export Skills Index, Refresh Skills.
 - Unit tests for similarity, collision detection, workspace scanning, resource
   graph, portability, and workspace-report rendering.
