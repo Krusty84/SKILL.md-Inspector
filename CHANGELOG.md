@@ -4,6 +4,41 @@
 
 ### Added
 
+- **`skill.description.xmlTags`** (error, specification): the description contains
+  `<` or `>`, which Anthropic's platform rejects because the description is
+  injected into the system prompt. Previously such a skill validated clean locally
+  and failed only on upload.
+- **`skill.name.reservedWord`** (error, specification): the name contains
+  "anthropic" or "claude", which Anthropic's platform refuses (matched as
+  substrings, mirroring the upload validator).
+- **`skill.description.languageLimited`** (information, quality): emitted instead
+  of the English wording diagnostics when the description is detected as
+  non-English. A well-formed Russian description previously drew six diagnostics
+  telling the author to add English phrases like "Use when…"; it now gets this
+  single notice while structural rules (required fields, types, length) still run.
+
+### Changed
+
+- Resource token budgets are advisory warnings, never errors. The 25k/50k/100k
+  error tiers had no basis in the Agent Skills specification — bundled resources
+  load on demand and have no spec limit — yet marked spec-valid skills as
+  failing. Messages now name the thresholds as advisory instead of claiming an
+  official limit, and `docs/rules.md` no longer contradicts the "quality findings
+  are never fatal" rule for these codes.
+- Fenced command blocks (`bash`, `python`, and other script languages) count
+  toward the substantive-instructions check. A concise command-centric skill whose
+  steps live in fenced commands was previously labeled "issues" for lacking prose;
+  unlabeled and `text` fences still contribute nothing, so arbitrary fenced prose
+  cannot satisfy the check.
+- `skill.body.noExamples` no longer claims "No examples section found" when an
+  examples section exists: if the section's content is just not recognized as a
+  concrete example, the message now says exactly that.
+- The report's token section for files outside the standard folders is titled
+  "Other text files" instead of "Non-standard files" — root-level reference files
+  are a documented Anthropic authoring pattern, not a layout mistake.
+- `docs/rules.md` documents `skill.name.folderMismatch` under specification with
+  error severity, matching what the code has always emitted.
+
 - Opt-in remote-link availability checks for VS Code full-validation flows, reports,
   and index export. Checks use `HEAD` with minimal `GET` fallback, safe manual
   redirects, per-operation deduplication and concurrency limits, cancellation and
