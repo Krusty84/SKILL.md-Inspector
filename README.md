@@ -34,21 +34,21 @@ only when you explicitly enable remote-link availability checks.
   discovery rules, resource directories, heuristic dictionaries, and collision
   settings.
 
-  <img width="1904" height="1122" alt="image" src="https://github.com/user-attachments/assets/eae95034-d476-4b35-a45c-279a38ed04a6" />
+![Validation report for Docker_Deploy_Helper showing completeness score, authoring hygiene, token usage, and a table of findings](images/skill-md-inspector_8.png)
 
-  <img width="1904" height="1122" alt="image" src="https://github.com/user-attachments/assets/4140c8a0-491d-4bdc-a1c7-cf6b58355237" />
+![SKILL.md open in the editor with an inline diagnostic explaining that the description has no trigger clause](images/skill-md-inspector_7.png)
 
-  <img width="1329" height="885" alt="image" src="https://github.com/user-attachments/assets/54cd309a-59dc-43b8-8745-6343f6eeb755" />
+![Inspector panel listing every skill in the workspace with validation status, completeness score, and error counts](images/skill-md-inspector_6.png)
 
-  <img width="1175" height="605" alt="image" src="https://github.com/user-attachments/assets/ddd430f2-7aee-46d0-bcfc-c640b188872b" />
+![Problems panel showing per-file diagnostics with codes such as skill.name.format and skill.link.missing](images/skill-md-inspector_5.png)
 
-  <img width="1904" height="1122" alt="image" src="https://github.com/user-attachments/assets/679161c8-42a3-4702-81d8-32f67fb7ead4" />
+![OpenCode session report showing cost, token usage, duration, and a timeline of session events](images/skill-md-inspector_4.png)
 
-  <img width="587" height="536" alt="image" src="https://github.com/user-attachments/assets/5e395dfb-c072-40c4-8c07-8cdb33b9614e" />
+![Explorer context menu on a SKILL.md file showing the Inspector submenu with validate, report, and template actions](images/skill-md-inspector_3.png)
 
-  <img width="680" height="452" alt="image" src="https://github.com/user-attachments/assets/b505e3eb-f184-427a-86c8-7b082176fa5f" />
+![Explorer context menu on a folder showing validate, show report, and export report index actions](images/skill-md-inspector_2.png)
 
-  <img width="1249" height="865" alt="image" src="https://github.com/user-attachments/assets/539d62f9-d6a8-4610-9e99-1e9c5d943999" />
+![Settings page showing the extension's collision detection options including threshold and similarity weights](images/skill-md-inspector_1.png)
 
 ## Install
 
