@@ -4,6 +4,7 @@ import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { analyzeDescription } from '../quality/descriptionHeuristics';
+import { isProbablyNonEnglish } from '../quality/language';
 import { diag, keyRange } from './util';
 
 const RECOMMENDED_DESCRIPTION_MAX_LENGTH = 500;
@@ -62,6 +63,20 @@ export function validateDescription(
   const diagnostics: SkillDiagnostic[] = [];
   const { minLength, maxLength } = profile.description;
 
+  // Anthropic's platform rejects descriptions containing angle brackets (they
+  // could inject XML into the system prompt), so a clean report must not hide
+  // a description the upload validator will refuse.
+  if (/[<>]/.test(value)) {
+    diagnostics.push(
+      diag(
+        DiagnosticCode.DescriptionXmlTags,
+        'error',
+        '`description` must not contain `<` or `>`. Anthropic\'s platform rejects descriptions with XML tags or angle brackets.',
+        range,
+      ),
+    );
+  }
+
   if (analysis.length > maxLength) {
     diagnostics.push(
       diag(
@@ -91,6 +106,22 @@ export function validateDescription(
         range,
       ),
     );
+  }
+
+  // The verb/trigger/vagueness heuristics are English-dictionary checks. On a
+  // detected non-English description their "add Use when..." advice is noise,
+  // so they are replaced by a single information-level notice. Mirrors the
+  // languageLimited condition used by the description-completeness score.
+  if (profile.description.language !== 'en' && isProbablyNonEnglish(analysis.trimmed)) {
+    diagnostics.push(
+      diag(
+        DiagnosticCode.DescriptionLanguageLimited,
+        'information',
+        '`description` does not appear to be English, so the English wording checks (action verb, trigger, boundary, vagueness) were skipped. Structural rules still apply.',
+        range,
+      ),
+    );
+    return diagnostics;
   }
 
   if (analysis.vagueTerms.length > 0) {

@@ -101,6 +101,21 @@ describe('isSafeFolderRenameTarget (RenameParentFolder guard)', () => {
     },
   );
 
+  it.each(['claude-tools', 'anthropic-helper', 'my-claude-skill'])(
+    'rejects the reserved name %j, which the platform refuses',
+    (name) => {
+      expect(codes(name, `/ws/skills/${name}/SKILL.md`)).toContain(
+        DiagnosticCode.NameReservedWord,
+      );
+    },
+  );
+
+  it('accepts names without reserved words', () => {
+    expect(codes('report-tools', '/ws/skills/report-tools/SKILL.md')).not.toContain(
+      DiagnosticCode.NameReservedWord,
+    );
+  });
+
   it('a malicious frontmatter name still surfaces the diagnostic but not a safe rename', () => {
     // validateName emits folderMismatch with the raw name in data.expected; the
     // guard is the defense that stops the rename fix from acting on it.

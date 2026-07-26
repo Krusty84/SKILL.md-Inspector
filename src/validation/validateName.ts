@@ -10,6 +10,13 @@ import { diag, keyRange } from './util';
 export const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
+ * Words Anthropic's platform rejects anywhere in a skill name (matched as
+ * substrings, mirroring the upload validator, so "claude-tools" and
+ * "anthropic-helper" are both refused).
+ */
+const RESERVED_NAME_WORDS = ['anthropic', 'claude'] as const;
+
+/**
  * Whether `name` is a safe target for renaming a skill folder inside `parentDir`.
  * The name comes from frontmatter, which is attacker-controllable in an untrusted
  * SKILL.md, so it must be a valid kebab-case segment (no separators, no `..`) that
@@ -69,6 +76,18 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
         '`name` must use lowercase letters, numbers, and hyphens only, with no spaces and no leading or trailing hyphen.',
         range,
         { quickFixId: QuickFixId.ConvertNameToKebabCase, data: { suggestion: toKebabCase(value) } },
+      ),
+    );
+  }
+
+  const reserved = RESERVED_NAME_WORDS.find((word) => value.toLowerCase().includes(word));
+  if (reserved) {
+    diagnostics.push(
+      diag(
+        DiagnosticCode.NameReservedWord,
+        'error',
+        `\`name\` contains the reserved word "${reserved}". Anthropic's platform rejects skill names containing "anthropic" or "claude".`,
+        range,
       ),
     );
   }
