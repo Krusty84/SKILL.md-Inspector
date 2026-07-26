@@ -4,7 +4,8 @@
   "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
   "version": "1.0.0",
   "license": "MIT",
-  "publisher": "Sedoykin Alexey",
+  "publisher": "AlexeySedoykin",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/krusty84/skill-md-inspector.git"
