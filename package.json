@@ -2,7 +2,7 @@
   "name": "skill-md-inspector",
   "displayName": "SKILL.md Inspector",
   "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "license": "MIT",
   "publisher": "Sedoykin Alexey",
   "repository": {
@@ -20,7 +20,20 @@
     "SKILL.md",
     "agent",
     "linter",
-    "markdown"
+    "markdown",
+    "agents",
+    "AI",
+    "ai-agent",
+    "codex",
+    "claude",
+    "opencode",
+    "quality",
+    "validation",
+    "inspection",
+    "linting",
+    "skill-linter",
+    "skill-inspector",
+    "skill-validator"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -2830,14 +2843,14 @@
         {
           "id": "skillMdInspector",
           "title": "SKILL.md Inspector",
-          "icon": "media/skill-md-inspector.svg"
+          "icon": "media/icon.svg"
         }
       ],
       "panel": [
         {
           "id": "skillMdInspectorPanel",
           "title": "SKILL.md Inspector",
-          "icon": "media/skill-md-inspector.svg"
+          "icon": "media/icon.svg"
         }
       ]
     },

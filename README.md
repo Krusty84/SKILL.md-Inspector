@@ -48,7 +48,7 @@ npx @vscode/vsce package
 ```
 
 In VS Code, run **Extensions: Install from VSIX…**, select the generated
-`skill-md-inspector-0.3.0.vsix`, and reload the window.
+`skill-md-inspector-1.0.0.vsix`, and reload the window.
 
 ### Try it from source
 

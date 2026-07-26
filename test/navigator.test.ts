@@ -199,11 +199,11 @@ describe('navigator manifest', () => {
     expect(packageJson.contributes.viewsContainers.activitybar[0]).toMatchObject({
       id: 'skillMdInspector',
       title: 'SKILL.md Inspector',
-      icon: 'media/skill-md-inspector.svg',
+      icon: 'media/icon.svg',
     });
     expect(packageJson.contributes.viewsContainers.panel[0]).toMatchObject({
       id: 'skillMdInspectorPanel',
-      icon: 'media/skill-md-inspector.svg',
+      icon: 'media/icon.svg',
     });
     expect(packageJson.contributes.views.skillMdInspector.map((view) => view.id)).toEqual([
       'skillMdInspectorFavorites',
