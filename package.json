@@ -2,7 +2,7 @@
   "name": "skill-md-inspector",
   "displayName": "SKILL.md Inspector",
   "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "publisher": "AlexeySedoykin",
   "icon": "media/icon.png",
