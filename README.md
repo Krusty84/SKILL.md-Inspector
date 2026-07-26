@@ -34,6 +34,22 @@ only when you explicitly enable remote-link availability checks.
   discovery rules, resource directories, heuristic dictionaries, and collision
   settings.
 
+  <img width="1904" height="1122" alt="image" src="https://github.com/user-attachments/assets/eae95034-d476-4b35-a45c-279a38ed04a6" />
+
+  <img width="1904" height="1122" alt="image" src="https://github.com/user-attachments/assets/4140c8a0-491d-4bdc-a1c7-cf6b58355237" />
+
+  <img width="1329" height="885" alt="image" src="https://github.com/user-attachments/assets/54cd309a-59dc-43b8-8745-6343f6eeb755" />
+
+  <img width="1175" height="605" alt="image" src="https://github.com/user-attachments/assets/ddd430f2-7aee-46d0-bcfc-c640b188872b" />
+
+  <img width="1904" height="1122" alt="image" src="https://github.com/user-attachments/assets/679161c8-42a3-4702-81d8-32f67fb7ead4" />
+
+  <img width="587" height="536" alt="image" src="https://github.com/user-attachments/assets/5e395dfb-c072-40c4-8c07-8cdb33b9614e" />
+
+  <img width="680" height="452" alt="image" src="https://github.com/user-attachments/assets/b505e3eb-f184-427a-86c8-7b082176fa5f" />
+
+  <img width="1249" height="865" alt="image" src="https://github.com/user-attachments/assets/539d62f9-d6a8-4610-9e99-1e9c5d943999" />
+
 ## Install
 
 SKILL.md Inspector requires Visual Studio Code 1.90 or newer.
