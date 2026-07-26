@@ -162,4 +162,39 @@ describe('validateDescription', () => {
       DiagnosticCode.DescriptionVague,
     );
   });
+
+  it('rejects angle brackets, which the platform refuses as XML injection', () => {
+    const result = diagnostics('Format <PDF> reports. Use when audits drift.');
+    const xml = result.find((d) => d.code === DiagnosticCode.DescriptionXmlTags);
+    expect(xml?.severity).toBe('error');
+    expect(codes('Format PDF reports. Use when audits drift.')).not.toContain(
+      DiagnosticCode.DescriptionXmlTags,
+    );
+  });
+
+  it('replaces the English wording checks with one notice for non-English text', () => {
+    const russian =
+      'Создает отчеты в формате PDF из данных CSV. Используйте, когда пользователь просит печатный отчет.';
+    const result = codes(russian);
+    expect(result).toContain(DiagnosticCode.DescriptionLanguageLimited);
+    for (const code of [
+      DiagnosticCode.DescriptionNoVerb,
+      DiagnosticCode.DescriptionNoTrigger,
+      DiagnosticCode.DescriptionNoBoundary,
+      DiagnosticCode.DescriptionNotFrontLoaded,
+      DiagnosticCode.DescriptionVague,
+    ]) {
+      expect(result).not.toContain(code);
+    }
+    // Structural rules still run on non-English text.
+    expect(codes('Слишком коротко.')).toContain(DiagnosticCode.DescriptionTooShort);
+    // Forcing English disables the detection and restores the wording checks.
+    const enProfile = {
+      ...genericProfile,
+      description: { ...genericProfile.description, language: 'en' as const },
+    };
+    expect(codes(russian, DEFAULT_HEURISTIC_DICTIONARIES, enProfile)).toContain(
+      DiagnosticCode.DescriptionNoVerb,
+    );
+  });
 });

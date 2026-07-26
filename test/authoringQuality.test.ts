@@ -228,6 +228,34 @@ describe('assessAuthoringQuality instructions', () => {
     ).toBe(false);
   });
 
+  it('counts fenced command lines as concrete instruction steps', () => {
+    // A concise command-centric skill: two numbered steps, each backed by a
+    // bash command. The commands are the substance and must count.
+    const result = assessAuthoringQuality(
+      doc(
+        [
+          '# Commit Helper',
+          '',
+          '1. Inspect what is staged:',
+          '',
+          '```bash',
+          'git diff --cached --stat',
+          '```',
+          '',
+          '2. Commit with a conventional message:',
+          '',
+          '```bash',
+          'git commit -m "feat(parser): support CRLF"',
+          '```',
+        ].join('\n'),
+      ),
+    );
+
+    expect(result.instructions.findings).not.toContainEqual(
+      expect.objectContaining({ criterion: 'Substantive instructions' }),
+    );
+  });
+
   it('does not treat arbitrary fenced lines as substantive instructions', () => {
     const result = assessAuthoringQuality(
       doc('# Instructions\n\n```text\nalpha\nbeta\ngamma\n```'),

@@ -154,4 +154,21 @@ describe('validateBody profile sections (Task 56)', () => {
       expect(diagnostics.map((item) => item.code)).toContain(DiagnosticCode.BodyNoExamples);
     },
   );
+
+  it('does not claim "no examples section" when an examples section exists', () => {
+    // A non-empty section without recognized concrete evidence keeps the
+    // diagnostic but must describe what was actually checked.
+    const withSection = validateBody(
+      docWith('## Examples\n\nExamples will be added later.'),
+      profileWith('recommended', [EXAMPLES_SECTION]),
+    ).find((item) => item.code === DiagnosticCode.BodyNoExamples);
+    expect(withSection?.message).toContain('"Examples" section');
+    expect(withSection?.message).not.toContain('No examples section found');
+
+    const withoutSection = validateBody(
+      docWith('## Steps\n\nRun the converter.'),
+      profileWith('recommended', [EXAMPLES_SECTION]),
+    ).find((item) => item.code === DiagnosticCode.BodyNoExamples);
+    expect(withoutSection?.message).toContain('No examples section found');
+  });
 });

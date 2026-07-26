@@ -74,7 +74,14 @@ export function validateBody(
           hasExclusiveTriggerPhrase(doc.body, dictionaries).found ||
           frontmatterBoundary.contentFound));
     if (!satisfied) {
-      diagnostics.push(diag(spec.code, severity, spec.message, range));
+      // When an examples section exists but its content is not recognized as a
+      // concrete example, "no examples section found" would be factually wrong
+      // — say what was actually checked instead.
+      const message =
+        spec.id === 'examples' && evidence.nonConcreteExampleHeadings.length > 0
+          ? `The "${evidence.nonConcreteExampleHeadings[0]}" section shows no recognizable concrete example (fenced code, an Input:/Output: pair, or a before/after pair). Add a representative input and expected outcome.`
+          : spec.message;
+      diagnostics.push(diag(spec.code, severity, message, range));
     }
   }
 

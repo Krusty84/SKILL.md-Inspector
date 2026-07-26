@@ -22,8 +22,9 @@ disabled by default and is the only validation feature that sends network reques
   hygiene for instructions and bundled resources, validation status, and heuristic
   coverage without combining them into a misleading aggregate score.
 - **Measure packaged context offline** — view exact `o200k_base` token and line
-  metrics for the `SKILL.md` body, reference files, and non-standard text files,
-  with validation diagnostics when fixed content budgets are exceeded.
+  metrics for the `SKILL.md` body, reference files, and other text files, with
+  validation diagnostics when the body budget or advisory resource thresholds
+  are exceeded.
 - **Analyze a workspace** — discover skills, detect duplicate or similar names,
   compare overlapping descriptions, inspect resource graphs, and export a
   machine-readable `skills.index.json`.

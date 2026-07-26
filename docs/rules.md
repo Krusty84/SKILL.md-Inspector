@@ -94,6 +94,28 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 - Bad: `name: My Skill`
 - Good: `name: my-skill`
 
+### `skill.name.folderMismatch`
+
+**error** · auto-fix: yes (rename the parent folder)
+
+Inside a `skills/` layout, the parent folder must match `name` — the Agent Skills
+specification requires the directory name to equal the skill name.
+
+- Bad: folder `pdf/` containing `name: pdf-report-formatter`.
+- Good: folder `pdf-report-formatter/`.
+
+### `skill.name.reservedWord`
+
+**error** · auto-fix: no
+
+`name` contains a reserved word. Anthropic's platform rejects skill names containing
+"anthropic" or "claude" (matched anywhere in the name, mirroring the upload
+validator), so a skill that passes locally would still be refused on upload.
+
+- Bad: `name: claude-tools`
+- Bad: `name: anthropic-helper`
+- Good: `name: report-tools`
+
 ### `skill.description.missing`
 
 **error** · auto-fix: yes (insert `description`)
@@ -120,6 +142,17 @@ A top-level key appears more than once; YAML keeps only the last value, which is
 
 - Bad: a 2000-character description.
 - Good: a focused description under the limit.
+
+### `skill.description.xmlTags`
+
+**error** · auto-fix: no
+
+`description` contains `<` or `>`. Anthropic's platform rejects descriptions with
+XML tags or angle brackets because the description is injected into the system
+prompt, so a locally clean description containing them would still fail on upload.
+
+- Bad: `description: Handles <PDF> forms.`
+- Good: `description: Handles PDF forms.`
 
 ### `skill.description.tooVerbose`
 
@@ -238,15 +271,6 @@ connection is attempted.
 
 ## Quality (recommendations)
 
-### `skill.name.folderMismatch`
-
-**warning** · auto-fix: yes (rename the parent folder)
-
-A skill folder's name should match its `name` so it is easy to locate.
-
-- Bad: folder `pdf/` containing `name: pdf-report-formatter`.
-- Good: folder `pdf-report-formatter/`.
-
 ### `skill.description.tooShort`
 
 **warning** · auto-fix: no
@@ -298,6 +322,19 @@ word is registered. Only emitted when nothing in the dictionary matched.
   `OpenAPI` unregistered.
 - Fix: **Add "OpenAPI" to recognized artifacts**, which writes the workspace (or
   user) setting — it never edits your file.
+
+### `skill.description.languageLimited`
+
+**information** · auto-fix: no
+
+`description` does not appear to be English, so the English wording checks (action
+verb, trigger, boundary, vagueness, front-loading) were skipped instead of emitting
+advice that does not apply. Structural rules — required fields, types, and length
+limits — still run. Set `skillMdInspector.description.language` to `en` to force
+the English checks.
+
+- Emitted for: a well-formed Russian or German description.
+- Not emitted for: English text, or any text when the language setting is `en`.
 
 ### `skill.description.noTrigger`
 
@@ -370,38 +407,43 @@ same body line count as the existing instruction-authoring length finding.
 
 ### `skill.token.referenceFile.limit`
 
-**warning** above 10,000 / **error** above 25,000 · auto-fix: no
+**warning** above 10,000 (advisory) · auto-fix: no
 
 One readable text file recursively under the exact top-level `references/` directory
-exceeds its per-file budget. Referenced and unreferenced files are both measured.
+exceeds this tool's advisory per-file threshold. Referenced and unreferenced files
+are both measured. The Agent Skills specification sets **no** limit on bundled
+resources — they load on demand — so this finding is advisory and never an error;
+it flags files whose full read would cost significant agent context.
 
-- Warning: `references/api.md` has 25,000 tokens.
-- Error: `references/api.md` has 25,001 tokens; the error replaces the warning.
+- Warning: `references/api.md` has 10,001 tokens.
+- No finding: `references/api.md` has exactly 10,000 tokens.
 - Good: split a large guide into focused reference files and link the relevant ones.
 
 ### `skill.token.references.limit`
 
-**warning** above 25,000 / **error** above 50,000 · auto-fix: no
+**warning** above 25,000 (advisory) · auto-fix: no
 
-All counted reference files together exceed the aggregate reference budget. This
-guards against a package whose individual references are acceptable but whose total
-context is excessive.
+All counted reference files together exceed this tool's advisory aggregate
+threshold. This flags a package whose individual references are acceptable but whose
+total on-demand context is large. Advisory only — the specification places no limit
+on bundled resources, so this never escalates to an error.
 
 - Warning: reference files total 25,001 tokens.
-- Error: reference files total 50,001 tokens; the error replaces the warning.
 - No finding: reference files total exactly 25,000 tokens.
 
 ### `skill.token.otherFiles.limit`
 
-**warning** above 25,000 / **error** above 100,000 · auto-fix: no
+**warning** above 25,000 (advisory) · auto-fix: no
 
-Readable non-standard text files outside `SKILL.md`, `references/`, `scripts/`, and
-`assets/` exceed their aggregate budget. For this rule, `templates/` and unknown
-top-level directories are non-standard content. There are no script or asset token
-limits.
+Readable text files outside `SKILL.md`, `references/`, `scripts/`, and `assets/`
+exceed their advisory aggregate threshold. Root-level reference files (such as
+`FORMS.md` or `REFERENCE.md`) and unknown top-level directories are counted here;
+that layout is a documented Anthropic authoring pattern, so the finding is about
+total size, not about the layout being wrong. There are no script or asset token
+thresholds.
 
-- Warning: non-standard files total 25,001 tokens.
-- Error: non-standard files total 100,001 tokens; the error replaces the warning.
+- Warning: these files total 25,001 tokens.
+- No finding: these files total exactly 25,000 tokens.
 - Good: keep auxiliary text focused or place true reference content under
   `references/`.
 
@@ -418,10 +460,13 @@ There is no Markdown body after the frontmatter to document the workflow.
 
 **information** (or **warning** under strict body checks) · auto-fix: no
 
-No "Examples" section. Governed by `skillMdInspector.body.strictness`.
+No recognizable concrete example (fenced code, an `Input:`/`Output:` pair, or a
+before/after pair). Governed by `skillMdInspector.body.strictness`. The message
+distinguishes a missing examples section from a section whose content is not
+recognized as a concrete example.
 
-- Bad: a body with no examples.
-- Good: an `## Examples` section.
+- Bad: a body with no examples, or `## Examples` containing only "to be added".
+- Good: an `## Examples` section with a representative input and expected outcome.
 
 ### `skill.body.noWhenToUse`
 

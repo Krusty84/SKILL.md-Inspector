@@ -17,6 +17,7 @@ export const DiagnosticCode = {
   NameTooLong: 'skill.name.tooLong',
   NameFormat: 'skill.name.format',
   NameFolderMismatch: 'skill.name.folderMismatch',
+  NameReservedWord: 'skill.name.reservedWord',
 
   // description
   DescriptionMissing: 'skill.description.missing',
@@ -36,6 +37,8 @@ export const DiagnosticCode = {
    */
   DescriptionNoArtifact: 'skill.description.noArtifact',
   DescriptionNotFrontLoaded: 'skill.description.notFrontLoaded',
+  DescriptionXmlTags: 'skill.description.xmlTags',
+  DescriptionLanguageLimited: 'skill.description.languageLimited',
 
   // Markdown links
   LinkMissing: 'skill.link.missing',
@@ -86,9 +89,11 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.NameTooLong]: 'specification',
   [DiagnosticCode.NameFormat]: 'specification',
   [DiagnosticCode.NameFolderMismatch]: 'specification',
+  [DiagnosticCode.NameReservedWord]: 'specification',
   [DiagnosticCode.DescriptionMissing]: 'specification',
   [DiagnosticCode.DescriptionType]: 'specification',
   [DiagnosticCode.DescriptionTooLong]: 'specification',
+  [DiagnosticCode.DescriptionXmlTags]: 'specification',
   [DiagnosticCode.LinkMissing]: 'specification',
   // Compatibility — valid, but less portable across machines and platforms.
   [DiagnosticCode.LinkCaseMismatch]: 'compatibility',
@@ -110,6 +115,7 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.DescriptionNoBoundary]: 'quality',
   [DiagnosticCode.DescriptionNoArtifact]: 'quality',
   [DiagnosticCode.DescriptionNotFrontLoaded]: 'quality',
+  [DiagnosticCode.DescriptionLanguageLimited]: 'quality',
   [DiagnosticCode.ResourceUnreferenced]: 'quality',
   [DiagnosticCode.BodyTokenLimit]: 'quality',
   [DiagnosticCode.BodyLineLimit]: 'quality',
