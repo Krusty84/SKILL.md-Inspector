@@ -22,7 +22,7 @@ function diagnostics(description: string, profile: SkillProfile = genericProfile
 }
 
 function fixtureCodes(name: string, profile: SkillProfile = genericProfile): string[] {
-  const fixturePath = path.resolve(`fixtures/skills/${name}/SKILL.md`);
+  const fixturePath = path.resolve(`demo_skills/skills/${name}/SKILL.md`);
   return analyzeSkill(fixturePath, readFileSync(fixturePath, 'utf8'), profile, {
     mode: 'text-only',
   }).diagnostics.map((diagnostic) => diagnostic.code);

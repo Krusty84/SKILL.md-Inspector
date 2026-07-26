@@ -69,7 +69,7 @@ describe('buildReportModel', () => {
   });
 
   it('keeps the substantive engineering report formatter fixture at minor issues', () => {
-    const fixturePath = path.resolve('fixtures/skills/engineering-report-formatter/SKILL.md');
+    const fixturePath = path.resolve('demo_skills/skills/engineering-report-formatter/SKILL.md');
     const content = fs.readFileSync(fixturePath, 'utf8');
     const { document, diagnostics, tokenUsage } = analyzeSkill(
       fixturePath,

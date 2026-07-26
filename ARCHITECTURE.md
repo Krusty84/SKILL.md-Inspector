@@ -55,7 +55,7 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |-- test/               # Unit, integration, property, and regression tests
 |-- benchmarks/         # Description regression, calibration, and collision corpora
 |-- evaluation/         # Example behavioral-evaluation suites
-|-- fixtures/           # Sample skills used by tests and development
+|-- demo_skills/        # Sample skills used by tests and development
 |-- docs/               # Diagnostic-code catalog and remediation records
 |-- scripts/            # Repository maintenance utilities
 |-- esbuild.js          # Extension-host and webview build definitions

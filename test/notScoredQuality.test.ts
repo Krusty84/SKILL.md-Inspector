@@ -12,7 +12,7 @@ import { renderReportHtml } from '../src/ui/renderReport';
 import { renderWorkspaceReportHtml } from '../src/ui/renderWorkspaceReport';
 import { analyzeWorkspace, buildSkillsIndex } from '../src/workspace/analyzeWorkspace';
 
-const FIXTURE_ROOT = path.resolve('fixtures');
+const FIXTURE_ROOT = path.resolve('demo_skills');
 
 function fixturePath(name: string): string {
   return path.join(FIXTURE_ROOT, 'skills', name, 'SKILL.md');

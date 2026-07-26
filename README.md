@@ -240,7 +240,7 @@ Collision thresholds and weights, OpenCode discovery limits, resource exclusions
 name similarity, and all heuristic dictionaries are also configurable.
 
 See
-[examples/custom-template.settings.json](examples/custom-template.settings.json)
+[custom-template.settings.json](custom-template.settings.json)
 for a custom template example.
 
 ## Privacy and network access

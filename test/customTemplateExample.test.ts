@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import customTemplateSettings from '../examples/custom-template.settings.json';
+import customTemplateSettings from '../custom-template.settings.json';
 import { renderTemplate } from '../src/templates/renderTemplate';
 import { resolveTemplates } from '../src/templates/resolveTemplates';
 

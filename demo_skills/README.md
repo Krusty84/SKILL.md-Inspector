@@ -4,9 +4,13 @@ Hand-written SKILL.md files for testing skill inspection. Two batches: a
 **quality ladder** ranking whole skills from unusable to excellent, and a
 **defect zoo** of mostly single-defect and edge-case fixtures so individual
 checks have targeted test data. Other skill directories alongside these are
-legacy fixtures not part of either batch. Every direct child containing a
-`SKILL.md` has an entry in [`expectations.json`](expectations.json), which is
-enforced by `test/fixtures/skillQualityFixtures.test.ts`.
+legacy fixtures not part of either batch. The fixtures live under
+[`skills/`](skills/) in the conventional `skills/<skill-name>/SKILL.md` layout,
+so location-sensitive checks such as `skill.name.folderMismatch` fire the same
+way they do in a real workspace — open this folder in VS Code to see every
+fixture discovered and validated. Every direct child of `skills/` containing a
+`SKILL.md` has an entry in [`expectations.json`](skills/expectations.json),
+which is enforced by `test/fixtures/skillQualityFixtures.test.ts`.
 
 ## Batch 1 — quality ladder (worst → best)
 
