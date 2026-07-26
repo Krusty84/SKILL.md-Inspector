@@ -182,10 +182,11 @@ The extension deliberately reports distinct signals:
 - **Description completeness** counts how many of 7 structural conventions the
   description satisfies: a capability verb, a usage trigger, a concrete artifact, a
   boundary, front-loaded intent, low vagueness, and useful length. It measures
-  convention coverage against closed dictionaries, so a description that reads well
-  but words those conventions unusually can still score low; the number is not a
-  judgement of how useful the wording is. Internally, and in the exported index, the
-  field is still named `staticDescriptionQuality`.
+  convention coverage, not how useful the wording is: the check is deterministic
+  and does not guarantee that an agent will select the skill at runtime. Wording
+  outside the configured dictionaries earns partial credit when it is shaped like
+  a capability or artifact, with a quick fix to register the word. Internally, and
+  in the exported index, the field is still named `staticDescriptionQuality`.
 - **Authoring hygiene** counts structural defects, reported separately for the
   Markdown body (an empty body, placeholders, weak example evidence, empty or
   duplicate sections, excessive length, repetition, unclosed code fences) and for

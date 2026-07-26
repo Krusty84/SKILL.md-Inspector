@@ -232,7 +232,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         gradeLimitations,
         instructionSummary,
         `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
-        `_Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION} It is deterministic and does not guarantee an agent will select this skill at runtime._  \n`,
+        `_Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION}_  \n`,
         `_Authoring hygiene: ${AUTHORING_HYGIENE_DEFINITION}_`,
       ].join(''),
     );

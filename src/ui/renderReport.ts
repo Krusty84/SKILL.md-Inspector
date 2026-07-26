@@ -124,7 +124,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   <main class="report-content">
   <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> ${descriptionBadge}</h1>
   ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
-  <p class="note">Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION} It is deterministic and does not guarantee that an agent will select this skill at runtime.</p>
+  <p class="note">Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION}</p>
   <div class="grid">
     ${card('Description completeness', descriptionCard, '', DESCRIPTION_COMPLETENESS_DEFINITION)}
     ${card(instructionCardLabel, instructionCard, '', AUTHORING_HYGIENE_DEFINITION)}
