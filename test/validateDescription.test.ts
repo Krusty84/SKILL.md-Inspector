@@ -140,9 +140,10 @@ describe('validateDescription', () => {
     const removed = resolveHeuristicDictionaries({
       actionVerbs: DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs.filter((verb) => verb !== 'format'),
     });
-    // "auditing" keeps the first two sentences free of other registry verbs, so
-    // removing "format" is what decides the diagnostic.
-    expect(codes('Format inspection reports. Use when auditing documents.', removed)).toContain(
+    // The trailing clause must stay free of other registry verbs so removing
+    // "format" is what decides the diagnostic. Plan 9 added `audit`, which the
+    // previous "when auditing documents" wording then matched.
+    expect(codes('Format inspection reports. Use when packages arrive.', removed)).toContain(
       DiagnosticCode.DescriptionNoVerb,
     );
   });

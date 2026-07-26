@@ -137,8 +137,13 @@ describe('computeStaticDescriptionQuality', () => {
   });
 
   it('caps descriptions without an action capability or concrete artifact at 59', () => {
+    // "customer audits" used to be the no-capability example, but plan 9 added
+    // `audit` to the verb registry and the capability matcher has no part of
+    // speech — a noun use of a registry verb reads as a capability. That is a
+    // known precision cost of the wider vocabulary, so the example avoids any
+    // registry verb rather than pretending the matcher is smarter than it is.
     const noAction = computeStaticDescriptionQuality(
-      'PDF reports for customer audits. Use when customer audit packages are due. Do not use for invoices.',
+      'PDF reports for customer packages. Use when customer packages are due. Do not use for invoices.',
     );
     const noArtifact = computeStaticDescriptionQuality(
       'Format useful material carefully. Use when preparing a detailed customer delivery. Do not use for internal work.',
@@ -292,7 +297,10 @@ describe('computeStaticDescriptionQuality', () => {
   });
 
   it('lets a custom artifact hint change artifact points and the adjusted score', () => {
-    const description = 'Analyze widgets carefully. Use when widget calibration drifts.';
+    // "calibration" became a built-in artifact hint in plan 9, so the baseline
+    // needs a word that is genuinely outside the registry for the custom hint to
+    // be what changes the score.
+    const description = 'Analyze widgets carefully. Use when widget flanges wobble.';
     const before = computeStaticDescriptionQuality(description);
     const dictionaries = resolveHeuristicDictionaries({
       artifactHints: [...DEFAULT_HEURISTIC_DICTIONARIES.artifactHints, 'widget'],

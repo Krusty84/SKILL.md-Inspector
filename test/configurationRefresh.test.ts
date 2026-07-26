@@ -44,6 +44,21 @@ describe('refreshAfterConfigurationChange', () => {
     expect(targets.refreshOpenCodeSessions).not.toHaveBeenCalled();
   });
 
+  it('re-validates open editors after a heuristic dictionary write (plan 9 Part C)', () => {
+    // The "Add <word> to recognized action verbs" quick fix writes
+    // skillMdInspector.heuristics.dictionaryValues.*, and the diagnostic it came
+    // from has to clear without a reload. Dictionary settings carry no snapshot
+    // field of their own, so they land in the broad analysis refresh — pinned here
+    // so a future narrowing of that routing cannot silently strand the fix.
+    const targets = makeTargets();
+    refreshAfterConfigurationChange(
+      { affectsSkillMdInspector: true, previous: snapshot(), next: snapshot() },
+      targets,
+    );
+    expect(targets.revalidateVisible).toHaveBeenCalledOnce();
+    expect(targets.refreshSkills).toHaveBeenCalledOnce();
+  });
+
   it('refreshes INSTALLED AGENTS only when navigator.additionalRoots changed', () => {
     const targets = makeTargets();
     refreshAfterConfigurationChange(

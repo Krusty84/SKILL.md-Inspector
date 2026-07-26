@@ -37,6 +37,12 @@ descriptions vary in quality, and the claim is only about the distribution. The 
 single exported constant (`MEDIAN_SCORE_GATE`) carrying a comment that says which plan
 owns its current value, so raising it is a deliberate, visible act.
 
+It has been raised once. Plan 8 set it to the 60 it measured; plan 9 widened the
+dictionaries and stopped a dictionary miss from capping the score, moving the median to 79
+and the mean to 76.7, and the gate to **75** — the "good" label boundary, so the assertion
+states something meaningful (half of these grade as good or better) instead of restating
+one sample, and the corpus can keep growing without fighting its own gate.
+
 Two rules for contributors:
 
 - **Verbatim only.** If you cannot copy a description exactly, leave it out. The corpus's

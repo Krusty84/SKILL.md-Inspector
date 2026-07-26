@@ -276,6 +276,29 @@ as "Formatting invoices…" or "A skill that extracts…").
 - Bad: `description: A helper for reports.`
 - Good: `description: Format inspection reports.`
 
+A word outside the configured `actionVerbs` no longer proves the capability is
+absent. When the opening clause is *shaped* like a capability statement —
+"Frobnicate the widgets for shipment" — the description keeps the
+`missing-action-capability` ceiling off, earns half the criterion, and gets a
+finding naming the word and the setting to add it to. The quick fix
+**Add "…" to recognized action verbs** performs that edit. The same applies to
+`artifactHints` for concrete-artifact evidence.
+
+### `skill.description.noArtifact`
+
+**information** · auto-fix: yes (adds the word to the recognized artifacts setting)
+
+`description` names something artifact-shaped — `PascalCase`, a short all-caps
+code, a filename, a hyphenated compound, or a mid-sentence proper noun — that the
+configured `artifactHints` do not contain. The description is fine; the
+dictionary is incomplete, so the concrete-artifact criterion pays half until the
+word is registered. Only emitted when nothing in the dictionary matched.
+
+- Cause: `description: Generate deliverables from OpenAPI definitions.` with
+  `OpenAPI` unregistered.
+- Fix: **Add "OpenAPI" to recognized artifacts**, which writes the workspace (or
+  user) setting — it never edits your file.
+
 ### `skill.description.noTrigger`
 
 **warning** · auto-fix: yes (insert a "Use when…" clause)
@@ -426,6 +449,33 @@ No inputs/outputs section when the recommended sections include documenting I/O.
 
 - Bad: a body that never describes inputs or outputs.
 - Good: an `## Inputs and outputs` section.
+
+---
+
+## Known limitations of the description score
+
+**Keyword stuffing is not detected.** A description that lists capability verbs
+and artifact nouns without saying anything can still score 100:
+
+```
+Analyze validate generate format convert review data reports files.
+Use when analyzing reports for users. Do not use for spreadsheets.
+```
+
+Every criterion is satisfied on the surface, and `echoed-scope-content` does not
+fire because the trigger and the boundary name different scopes. This is a
+different defect from a vocabulary miss: the description has genuine dictionary
+evidence, so the structural fallback above does not apply to it. Closing it needs
+an evidence model that can distinguish a *stated* capability from a *listed* one,
+which is not something the current criteria can express. Recorded here so a high
+score on a stuffed description is understood as a known gap rather than a
+judgement that the description is good.
+
+**Structural capability evidence is Latin-script only.** The shape rules that
+recognize an unregistered capability verb ("Formatiert PDF-Rechnungen…") key off
+Latin suffixes, so a non-Latin description gets no such credit and keeps the
+`missing-action-capability` ceiling. Non-English descriptions are already marked
+language-limited; this is a further limit on what the score means for them.
 
 ---
 

@@ -30,6 +30,11 @@ export const DiagnosticCode = {
   DescriptionNoVerb: 'skill.description.noVerb',
   DescriptionNoTrigger: 'skill.description.noTrigger',
   DescriptionNoBoundary: 'skill.description.noBoundary',
+  /**
+   * The description names something artifact-shaped that the configured
+   * `artifactHints` do not know (plan 9 Part C). Carries `data.word`.
+   */
+  DescriptionNoArtifact: 'skill.description.noArtifact',
   DescriptionNotFrontLoaded: 'skill.description.notFrontLoaded',
 
   // Markdown links
@@ -103,6 +108,7 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.DescriptionNoVerb]: 'quality',
   [DiagnosticCode.DescriptionNoTrigger]: 'quality',
   [DiagnosticCode.DescriptionNoBoundary]: 'quality',
+  [DiagnosticCode.DescriptionNoArtifact]: 'quality',
   [DiagnosticCode.DescriptionNotFrontLoaded]: 'quality',
   [DiagnosticCode.ResourceUnreferenced]: 'quality',
   [DiagnosticCode.BodyTokenLimit]: 'quality',
@@ -134,6 +140,13 @@ export const QuickFixId = {
   InsertDoNotUseClause: 'fix.description.doNotUse',
   CreateMissingLinkedFile: 'fix.link.createFile',
   AddResourceLink: 'fix.resource.addLink',
+  /**
+   * Register an unrecognized word in the heuristic dictionaries (plan 9 Part C).
+   * These edit the VS Code setting, not the user's file — a vocabulary gap should
+   * cost one click, not an unexplained grade.
+   */
+  AddActionVerbToDictionary: 'fix.dictionary.addActionVerb',
+  AddArtifactToDictionary: 'fix.dictionary.addArtifact',
 } as const;
 
 export type QuickFixId = (typeof QuickFixId)[keyof typeof QuickFixId];
