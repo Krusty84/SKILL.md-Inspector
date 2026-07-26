@@ -508,10 +508,6 @@
           "group": "2_editing@2"
         },
         {
-          "command": "skillMdInspector.exportSkillsIndex",
-          "group": "3_reports@1"
-        },
-        {
           "command": "skillMdInspector.refreshSkills",
           "group": "4_maintenance@1"
         },
@@ -858,6 +854,10 @@
         {
           "command": "skillMdInspector.showWorkspaceReport",
           "group": "1_validation@2"
+        },
+        {
+          "command": "skillMdInspector.exportSkillsIndex",
+          "group": "3_reports@1"
         }
       ],
       "skillMdInspector/installedAgentsFolderSkillContext": [

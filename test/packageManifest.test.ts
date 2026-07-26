@@ -41,7 +41,6 @@ describe('package manifest context menus and templates', () => {
         'skillMdInspector.showSkillReport',
         'skillMdInspector.insertTemplate',
         'skillMdInspector.improveDescriptionLocally',
-        'skillMdInspector.exportSkillsIndex',
         'skillMdInspector.refreshSkills',
         'skillMdInspector.toggleFavorite',
       ]),
@@ -50,6 +49,7 @@ describe('package manifest context menus and templates', () => {
     for (const removed of [
       'skillMdInspector.validateWorkspaceSkills',
       'skillMdInspector.showWorkspaceReport',
+      'skillMdInspector.exportSkillsIndex',
       'skillMdInspector.openTemplateSettings',
       'skillMdInspector.resetTemplates',
     ]) {
@@ -456,7 +456,12 @@ describe('package manifest context menus and templates', () => {
     expect(folderMenu.map((item) => item.command)).toEqual([
       'skillMdInspector.validateWorkspaceSkills',
       'skillMdInspector.showWorkspaceReport',
+      'skillMdInspector.exportSkillsIndex',
     ]);
+    expect(folderMenu).toContainEqual({
+      command: 'skillMdInspector.exportSkillsIndex',
+      group: '3_reports@1',
+    });
     expect(packageJson.contributes.menus['view/item/context']).toContainEqual(
       expect.objectContaining({
         submenu: 'skillMdInspector/workspaceFolderSkillContext',
