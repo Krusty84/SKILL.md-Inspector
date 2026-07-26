@@ -29,33 +29,35 @@ describe('token-budget threshold policy', () => {
     ).toBe('warning');
   });
 
-  it('uses strict per-reference boundaries and replaces warnings with errors', () => {
+  // Resource thresholds are advisory: the Agent Skills spec sets no limit on
+  // bundled resources (they load on demand), so a spec-valid skill must never
+  // fail validation for a large reference file — warnings only.
+  it('uses a strict advisory per-reference boundary and never escalates to error', () => {
     expect(referenceDiagnostic(10_000)).toBeUndefined();
     expect(referenceDiagnostic(10_001)).toMatchObject({ severity: 'warning' });
-    expect(referenceDiagnostic(25_000)).toMatchObject({ severity: 'warning' });
-    const aboveError = validateTokenBudgets(
+    const veryLarge = validateTokenBudgets(
       document,
-      metrics({ referenceFiles: [{ relativePath: 'references/guide.md', tokens: 25_001 }] }),
+      metrics({ referenceFiles: [{ relativePath: 'references/guide.md', tokens: 500_000 }] }),
     ).filter((diagnostic) => diagnostic.code === DiagnosticCode.ReferenceFileTokenLimit);
-    expect(aboveError).toHaveLength(1);
-    expect(aboveError[0]).toMatchObject({ severity: 'error' });
-    expect(aboveError[0]?.message).toContain('references/guide.md');
-    expect(aboveError[0]?.message).toContain('25,001');
-    expect(aboveError[0]?.message).toContain('25,000');
+    expect(veryLarge).toHaveLength(1);
+    expect(veryLarge[0]).toMatchObject({ severity: 'warning' });
+    expect(veryLarge[0]?.message).toContain('references/guide.md');
+    expect(veryLarge[0]?.message).toContain('500,000');
+    expect(veryLarge[0]?.message).toContain('advisory');
+    expect(veryLarge[0]?.message).toContain('no limit');
   });
 
-  it('uses strict aggregate-reference boundaries', () => {
+  it('uses a strict advisory aggregate-reference boundary without an error tier', () => {
     expect(aggregateDiagnostic('references', 25_000)).toBeUndefined();
     expect(aggregateDiagnostic('references', 25_001)).toMatchObject({ severity: 'warning' });
-    expect(aggregateDiagnostic('references', 50_000)).toMatchObject({ severity: 'warning' });
-    expect(aggregateDiagnostic('references', 50_001)).toMatchObject({ severity: 'error' });
+    expect(aggregateDiagnostic('references', 1_000_000)).toMatchObject({ severity: 'warning' });
   });
 
-  it('uses strict aggregate non-standard-file boundaries', () => {
+  it('uses a strict advisory boundary for files outside the standard folders', () => {
     expect(aggregateDiagnostic('otherFiles', 25_000)).toBeUndefined();
     expect(aggregateDiagnostic('otherFiles', 25_001)).toMatchObject({ severity: 'warning' });
-    expect(aggregateDiagnostic('otherFiles', 100_000)).toMatchObject({ severity: 'warning' });
-    expect(aggregateDiagnostic('otherFiles', 100_001)).toMatchObject({ severity: 'error' });
+    expect(aggregateDiagnostic('otherFiles', 1_000_000)).toMatchObject({ severity: 'warning' });
+    expect(aggregateDiagnostic('otherFiles', 25_001)?.message).not.toContain('Non-standard');
   });
 });
 

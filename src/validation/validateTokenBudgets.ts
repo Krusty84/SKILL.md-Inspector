@@ -3,17 +3,19 @@ import { DiagnosticCode } from '../types/DiagnosticCode';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { AnalyzedSkillTokenUsage, TokenUsageGroup } from '../types/SkillTokenUsage';
 import { hasResourceTokenUsage } from '../types/SkillTokenUsage';
-import type { SkillDiagnostic, SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
+import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import { bodyTopRange, diag } from './util';
 
+// The body numbers are the published Agent Skills guidance (under 5k tokens /
+// 500 lines). The resource thresholds below are this tool's advisory numbers:
+// the spec sets NO limit on bundled resources — they load on demand — so
+// resource findings are never errors and their messages say the threshold is
+// advisory rather than claiming an official limit.
 const BODY_TOKEN_WARNING = 5_000;
 const BODY_LINE_WARNING = 500;
 const REFERENCE_FILE_WARNING = 10_000;
-const REFERENCE_FILE_ERROR = 25_000;
 const REFERENCES_TOTAL_WARNING = 25_000;
-const REFERENCES_TOTAL_ERROR = 50_000;
 const OTHER_FILES_TOTAL_WARNING = 25_000;
-const OTHER_FILES_TOTAL_ERROR = 100_000;
 
 export function validateTokenBudgets(
   doc: SkillDocument,
@@ -48,13 +50,12 @@ export function validateTokenBudgets(
   }
 
   for (const entry of usage.references.files) {
-    const threshold = highestThreshold(entry.tokens, REFERENCE_FILE_WARNING, REFERENCE_FILE_ERROR);
-    if (threshold) {
+    if (entry.tokens > REFERENCE_FILE_WARNING) {
       diagnostics.push(
         diag(
           DiagnosticCode.ReferenceFileTokenLimit,
-          threshold.severity,
-          `Reference file ${JSON.stringify(entry.relativePath)} has ${format(entry.tokens)} o200k_base tokens, exceeding the ${format(threshold.limit)}-token limit.`,
+          'warning',
+          `Reference file ${JSON.stringify(entry.relativePath)} has ${format(entry.tokens)} o200k_base tokens (advisory threshold: ${format(REFERENCE_FILE_WARNING)}). The Agent Skills spec sets no limit on bundled resources, but a file this large costs significant context whenever the agent reads it.`,
           range,
         ),
       );
@@ -67,16 +68,14 @@ export function validateTokenBudgets(
     DiagnosticCode.ReferencesTokenLimit,
     '`references/` files',
     REFERENCES_TOTAL_WARNING,
-    REFERENCES_TOTAL_ERROR,
     range,
   );
   addAggregateDiagnostic(
     diagnostics,
     usage.otherFiles,
     DiagnosticCode.OtherFilesTokenLimit,
-    'Non-standard files outside `SKILL.md`, `references/`, `scripts/`, and `assets/`',
+    'Text files outside `SKILL.md`, `references/`, `scripts/`, and `assets/`',
     OTHER_FILES_TOTAL_WARNING,
-    OTHER_FILES_TOTAL_ERROR,
     range,
   );
   return diagnostics;
@@ -88,29 +87,17 @@ function addAggregateDiagnostic(
   code: string,
   label: string,
   warning: number,
-  error: number,
   range: ReturnType<typeof bodyTopRange>,
 ): void {
-  const threshold = highestThreshold(group.totalTokens, warning, error);
-  if (!threshold) return;
+  if (group.totalTokens <= warning) return;
   diagnostics.push(
     diag(
       code,
-      threshold.severity,
-      `${label} total ${format(group.totalTokens)} o200k_base tokens, exceeding the combined ${format(threshold.limit)}-token limit.`,
+      'warning',
+      `${label} total ${format(group.totalTokens)} o200k_base tokens (advisory threshold: ${format(warning)}). Bundled resources load on demand and have no spec limit; consider splitting very large files so the agent can read only what it needs.`,
       range,
     ),
   );
-}
-
-function highestThreshold(
-  value: number,
-  warning: number,
-  error: number,
-): { severity: SkillDiagnosticSeverity; limit: number } | undefined {
-  if (value > error) return { severity: 'error', limit: error };
-  if (value > warning) return { severity: 'warning', limit: warning };
-  return undefined;
 }
 
 function format(value: number): string {

@@ -34,7 +34,7 @@ const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
     label: 'Token usage',
     children: [
       { id: 'reference-files', label: 'Reference files' },
-      { id: 'non-standard-files', label: 'Non-standard files' },
+      { id: 'non-standard-files', label: 'Other text files' },
     ],
   },
 ];
@@ -169,7 +169,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     <tr><td><code>SKILL.md</code> body</td><td>${formatNumber(report.tokenUsage.body.tokens)}</td><td>${formatNumber(report.tokenUsage.body.lines)}</td></tr>
   </tbody></table>
   ${renderTokenGroup('Reference files', report.tokenUsage.references)}
-  ${renderTokenGroup('Non-standard files', report.tokenUsage.otherFiles)}
+  ${renderTokenGroup('Other text files', report.tokenUsage.otherFiles)}
   </main>
   </div>
 </body>

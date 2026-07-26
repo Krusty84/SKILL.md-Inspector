@@ -196,11 +196,11 @@ describe('workspace discovery + analysis', () => {
 
   it('propagates resource token diagnostics into workspace counts and status', () => {
     writeTokenBudgetSkill('warning-token-skill', 10_001);
-    writeTokenBudgetSkill('error-token-skill', 25_001);
+    writeTokenBudgetSkill('large-token-skill', 25_001);
 
     const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const warningSkill = analysis.skills.find((skill) => skill.name === 'warning-token-skill')!;
-    const errorSkill = analysis.skills.find((skill) => skill.name === 'error-token-skill')!;
+    const largeSkill = analysis.skills.find((skill) => skill.name === 'large-token-skill')!;
 
     expect(warningSkill.diagnostics).toContainEqual(
       expect.objectContaining({
@@ -211,14 +211,16 @@ describe('workspace discovery + analysis', () => {
     expect(warningSkill.warnings).toBeGreaterThanOrEqual(1);
     expect(warningSkill.validationStatus).toBe('warning');
 
-    expect(errorSkill.diagnostics).toContainEqual(
+    // Resource budgets are advisory (the spec sets no resource limit), so even
+    // a far-over-threshold reference file must stay a warning, never a 'fail'.
+    expect(largeSkill.diagnostics).toContainEqual(
       expect.objectContaining({
         code: DiagnosticCode.ReferenceFileTokenLimit,
-        severity: 'error',
+        severity: 'warning',
       }),
     );
-    expect(errorSkill.errors).toBeGreaterThanOrEqual(1);
-    expect(errorSkill.validationStatus).toBe('fail');
+    expect(largeSkill.errors).toBe(0);
+    expect(largeSkill.validationStatus).toBe('warning');
   });
 
   it('stops analysis when cancellation is requested and marks the result partial (Task 64)', () => {

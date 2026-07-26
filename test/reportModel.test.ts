@@ -118,7 +118,7 @@ describe('renderReportHtml', () => {
     expect(html).toContain('Description completeness');
     expect(html).toContain(`${model.staticDescriptionQuality.score}`);
     expect(html).toContain('Reference files (0)');
-    expect(html).toContain('Non-standard files (0)');
+    expect(html).toContain('Other text files (0)');
     expect(html).toContain('Aggregate total: 0 tokens');
     // Left-hand section navigation with anchor links to each section.
     expect(html).toContain('class="report-toc"');
@@ -178,7 +178,7 @@ describe('renderReportHtml', () => {
     ]);
     expect(html).toContain('Token usage (o200k_base)');
     expect(html).toContain('Reference files (2)');
-    expect(html).toContain('Non-standard files (1)');
+    expect(html).toContain('Other text files (1)');
     expect(html).toContain('references/a&lt;&amp;&gt;.md');
     expect(html).toContain('templates/&lt;card&gt;.txt');
     expect(html).toContain(
