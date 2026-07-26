@@ -200,7 +200,8 @@ describe('SkillTreeProvider collision tooltip', () => {
         b: 'otchet-generator',
         similarity: 0.17,
         metrics: {
-          cosine: 0,
+          scopeOverlap: 0.5,
+        cosine: 0,
           jaccard: 0,
           charNgram: 0,
           nameSimilarity: 0.85,

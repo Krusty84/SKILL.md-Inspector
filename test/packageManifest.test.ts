@@ -122,7 +122,9 @@ describe('package manifest context menus and templates', () => {
           `${H}actionVerbForms`,
           `${H}actionVerbs`,
           `${H}artifactHints`,
+          `${H}artifactSynonymGroups`,
           `${H}artifactSupportTerms`,
+          `${H}capabilitySynonymGroups`,
           `${H}collisionStopwords`,
           `${H}exclusiveTriggerPhrases`,
           `${H}frontLoadedFillerTerms`,
@@ -190,10 +192,10 @@ describe('package manifest context menus and templates', () => {
     const validation = configuration[1].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    // Every setting lives in exactly one section (46 total, no duplicates).
+    // Every setting lives in exactly one section (48 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(46);
-    expect(new Set(allKeys).size).toBe(46);
+    expect(allKeys.length).toBe(48);
+    expect(new Set(allKeys).size).toBe(48);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

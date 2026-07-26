@@ -70,6 +70,13 @@ export type CollisionTextCoverage = 'full' | 'low';
 
 /** The individual normalized metrics behind a composite collision score (each 0..1). */
 export interface CollisionMetrics {
+  /**
+   * Scope agreement: the geometric mean of artifact and capability-group overlap
+   * (plan 10). The only metric that models the actual question — do these two
+   * skills do the same kind of thing to the same kind of object — rather than
+   * lexical surface overlap.
+   */
+  scopeOverlap: number;
   /** TF-IDF cosine over the whole corpus (corpus-dependent). */
   cosine: number;
   /** Pairwise token Jaccard — independent of the rest of the corpus. */
@@ -82,8 +89,17 @@ export interface CollisionMetrics {
   boundarySeparation: number;
 }
 
-/** Weights for blending the collision metrics into the composite score. */
+/**
+ * Weights for blending the collision metrics into the composite score.
+ *
+ * `scopeOverlap` is optional for backward compatibility: a user's stored
+ * `skillMdInspector.collision.weights` object predates it, and a missing key must
+ * read as the default rather than as 0 — otherwise everyone who ever customized
+ * their weights silently keeps the pre-plan-10 surface-overlap metric. See
+ * `normalizeWeights`.
+ */
 export interface CollisionWeights {
+  scopeOverlap?: number;
   jaccard: number;
   cosine: number;
   charNgram: number;

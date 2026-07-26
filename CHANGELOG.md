@@ -90,6 +90,12 @@
   artifact-shaped that the configured `artifactHints` do not contain. The
   description is fine and the dictionary is incomplete, so the artifact criterion
   pays half until the word is registered.
+- **`skillMdInspector.heuristics.dictionaryValues.capabilitySynonymGroups`** and
+  **`.artifactSynonymGroups`**: verbs and artifact terms that count as the same
+  thing when comparing two skills' scope, so `extract`/`retrieve` and
+  `xlsx`/`workbook` are not treated as unrelated. Groups must not share a term.
+- **`scopeOverlap`** in `skillMdInspector.collision.weights` and in the per-pair
+  metric breakdown shown in reports.
 
 ### Removed
 
@@ -117,6 +123,43 @@
 
 ### Changed
 
+- **Collision detection now compares what skills *do*, not how alike they read.**
+  A new `scopeOverlap` metric — the weighted geometric mean of artifact and
+  capability agreement, built on features the extension already extracted — leads
+  the composite at weight 0.70, and the four lexical metrics drop to corroboration.
+  On the labeled benchmark corpus the four surface metrics measured **at or below
+  chance** (AUC 0.47–0.53): genuine collisions are usually paraphrases that share
+  little text, while two skills that merely share an artifact share a lot of it. The
+  visible effects:
+  - Two skills disambiguated by mutual boundaries (`Python 2 only` /
+    `Python 3 only`) are no longer the highest-scoring pair in the workspace. The
+    extension stopped penalizing the pattern its own diagnostics recommend.
+  - `Extract from PDFs` vs `Create PDFs` now scores 0 on scope: same artifact,
+    opposite capability.
+  - Paraphrases with no shared wording (`Generate API docs` /
+    `Produce schema descriptions`) are detected for the first time.
+  - Capability and artifact synonyms fold, so `extract`/`retrieve` and
+    `xlsx`/`workbook`/`spreadsheet` count as the same scope. Both tables are
+    editable settings.
+  - A skill's own `Do not use for ...` clause no longer counts toward what it does.
+    A PDF reader that disclaims creating PDFs was previously credited with
+    `create`.
+  - Corpus-wide: recall 0.00 → 0.33, precision 0.00 → 1.00, AUC 0.533 → 0.726. The
+    remaining gap to the target is documented in `benchmarks/README.md` rather than
+    tuned away.
+- **`skillMdInspector.collision.threshold` now defaults to 0.3** (was 0.4), and the
+  risk bands to High ≥ 0.40 / Medium ≥ 0.35 (were 0.80 / 0.60). Both were derived
+  from the corpus distribution. This changes what you see: the old bands were
+  unreachable except by near-verbatim duplication, so in practice there was one
+  band, and the old threshold reports almost nothing against a scope-led composite.
+  A saved `collision.weights` object from before `scopeOverlap` existed keeps
+  working — the missing key takes its default weight rather than disabling the new
+  metric.
+- **Non-Latin descriptions are compared instead of discarded.** Collision
+  tokenization matched only `[a-z0-9]`, so two identical Russian descriptions and
+  two unrelated ones both scored 0.17 — entirely from their names. Identical
+  Cyrillic descriptions now score ~0.99 and unrelated ones stay below the threshold.
+  Stopword lists are still English, so such pairs keep reporting low confidence.
 - **A word outside the built-in dictionaries no longer decides your grade.** Two
   independent changes, and the description score on real shipped skills moved from a
   median of 60 to 79 (mean 62.9 → 76.7) as a result:

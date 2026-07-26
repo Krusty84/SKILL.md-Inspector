@@ -63,6 +63,26 @@ threshold-independent AUC (`P[COLLIDE ranked above DISTINCT]`), and reuses
 `calculateTriggerMetrics` from `src/evaluation/metrics.ts` so the confusion-matrix
 arithmetic has one implementation.
 
+### What this corpus has measured so far
+
+| | plan 8 (baseline) | plan 10 |
+| --- | --- | --- |
+| recall | 0.00 | 0.33 |
+| precision | 0.00 | 1.00 |
+| specificity | 0.79 | 1.00 |
+| AUC | 0.533 | 0.726 |
+| top-ranked pairs | 3 DISTINCT | 4 COLLIDE |
+
+Plan 10's targets were recall 0.70, precision 0.60, AUC 0.85. **Precision is met;
+recall and AUC are not**, and the shortfall is asserted rather than described — see
+`plan 10 targets not yet met` in the test. Four labeled collisions score exactly 0
+on scope overlap because neither description names an artifact or capability the
+dictionaries recognize as shared; they tie with the eleven DISTINCT pairs that also
+score 0, which caps AUC at 0.798 no matter how the metrics are blended. Closing
+that needs new evidence, not new weights, so the gates hold the measured values and
+the targets stay recorded as unmet. That is the corpus doing its job: it is meant to
+be able to fail.
+
 If you disagree with a label, change it deliberately and let the metrics move — that is
 the corpus working as intended. What you must not do is retune a label so a scorer passes.
 
