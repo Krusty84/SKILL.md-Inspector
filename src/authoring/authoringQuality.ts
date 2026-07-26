@@ -313,6 +313,8 @@ interface ScannedLine {
   text: string;
   /** Inside a ``` / ~~~ fenced code block (delimiters count as inside). */
   inFence: boolean;
+  /** Inside a fence whose info string names a command/script language. */
+  inCommandFence: boolean;
   /** Opening or closing fence delimiter rather than fence content. */
   isFenceDelimiter: boolean;
   /** ATX heading OUTSIDE fenced code; `#` lines inside code are content. */
@@ -325,6 +327,8 @@ interface FenceState {
   marker: '`' | '~';
   length: number;
   lineIndex: number;
+  /** The fence carries commands the agent is meant to run, not sample text. */
+  isCommand: boolean;
 }
 
 interface LineScanResult {
@@ -343,11 +347,23 @@ function scanLines(body: string): LineScanResult {
       const opening = parseOpeningFence(text, lineIndex);
       if (opening) {
         fence = opening;
-        result.push({ text, inFence: true, isFenceDelimiter: true, isHeading: false });
+        result.push({
+          text,
+          inFence: true,
+          inCommandFence: false,
+          isFenceDelimiter: true,
+          isHeading: false,
+        });
         continue;
       }
     } else if (isClosingFence(text, fence)) {
-      result.push({ text, inFence: true, isFenceDelimiter: true, isHeading: false });
+      result.push({
+        text,
+        inFence: true,
+        inCommandFence: false,
+        isFenceDelimiter: true,
+        isHeading: false,
+      });
       fence = null;
       continue;
     }
@@ -355,6 +371,7 @@ function scanLines(body: string): LineScanResult {
     result.push({
       text,
       inFence: fence !== null,
+      inCommandFence: fence?.isCommand ?? false,
       isFenceDelimiter: false,
       isHeading: Boolean(heading),
       ...(heading ? { headingTitle: heading[2], headingDepth: heading[1].length } : {}),
@@ -363,15 +380,48 @@ function scanLines(body: string): LineScanResult {
   return { lines: result, openFence: fence };
 }
 
+/**
+ * Info strings that mark a fence as runnable commands or code rather than
+ * sample text/output. A `text`/unlabeled fence stays non-substantive so
+ * arbitrary fenced prose cannot satisfy the instruction check.
+ */
+const COMMAND_FENCE_LANGUAGES = new Set([
+  'bash',
+  'sh',
+  'shell',
+  'zsh',
+  'fish',
+  'console',
+  'terminal',
+  'powershell',
+  'pwsh',
+  'bat',
+  'cmd',
+  'python',
+  'py',
+  'javascript',
+  'js',
+  'typescript',
+  'ts',
+  'node',
+  'ruby',
+  'rb',
+  'perl',
+  'php',
+  'sql',
+]);
+
 function parseOpeningFence(text: string, lineIndex: number): FenceState | null {
   // Container-relative indentation is unavailable here, so preserve support for
   // fences nested in Markdown list items while enforcing marker compatibility.
   const match = /^\s*(`{3,}|~{3,})(.*)$/.exec(text);
   if (!match || (match[1][0] === '`' && match[2].includes('`'))) return null;
+  const language = match[2].trim().split(/\s+/)[0]?.toLowerCase() ?? '';
   return {
     marker: match[1][0] as FenceState['marker'],
     length: match[1].length,
     lineIndex,
+    isCommand: COMMAND_FENCE_LANGUAGES.has(language),
   };
 }
 
@@ -398,7 +448,10 @@ function hasSubstantiveInstructions(
 
   const verbForms = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms).forms;
   const concreteSteps = content.reduce((count, line) => {
-    if (line.inFence) return count;
+    // A fenced command is itself a concrete instruction — a command-centric
+    // body keeps its substance inside bash/python/... blocks. Unlabeled and
+    // `text` fences stay non-substantive.
+    if (line.inFence) return count + (line.inCommandFence ? 1 : 0);
     if (/^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line.text)) return count + 1;
     const actionCount = (line.text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((word) =>
       verbForms.has(word),
