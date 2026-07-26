@@ -85,6 +85,23 @@ describe('structural artifact evidence', () => {
       expect(analyzeArtifactEvidence(text).found, text).toBe(true);
     }
   });
+
+  it('scans a single unbroken letter run in linear time', () => {
+    // The unbounded filename-stem pattern backtracked quadratically on text
+    // with no dot: a 40k-character pasted blob took tens of seconds per
+    // analysis and froze the extension host. With the 64-character stem cap
+    // this completes in milliseconds; a quadratic regression trips the test
+    // timeout instead of hanging the editor.
+    const blob = 'a'.repeat(100_000);
+    expect(analyzeArtifactEvidence(blob).found).toBe(false);
+    expect(analyzeDescription(`${blob}.`).artifactEvidence.structural).toBe(false);
+  });
+
+  it('classifies a filename whose stem is longer than the 64-character cap', () => {
+    const evidence = analyzeArtifactEvidence(`Process ${'a'.repeat(80)}.json files`);
+    expect(evidence.found).toBe(true);
+    expect(evidence.structural).toBe(true);
+  });
 });
 
 describe('a dictionary miss is not proof of absence', () => {
