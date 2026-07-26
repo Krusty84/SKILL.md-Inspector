@@ -46,9 +46,18 @@ const descriptions = {
     'Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.',
   collisionStopwords:
     'Common terms removed before workspace description collision similarity is calculated.',
+  capabilitySynonymGroups:
+    'Capability verbs that count as the same capability when comparing two skills\' scope. Keys are group ids and values are the verbs in that group; groups must not share a verb. A verb outside "actionVerbs" is simply never matched.',
+  artifactSynonymGroups:
+    'Artifact terms that count as the same kind of object when comparing two skills\' scope (for example spreadsheet, xlsx and workbook). Keys are group ids and values are the terms in that group; groups must not share a term.',
 };
 
-const mappingKeys = new Set(['actionVerbForms', 'irregularSingularForms']);
+const mappingKeys = new Set([
+  'actionVerbForms',
+  'irregularSingularForms',
+  'capabilitySynonymGroups',
+  'artifactSynonymGroups',
+]);
 const dictionaryPrefix = 'skillMdInspector.heuristics.';
 const visiblePrefix = 'skillMdInspector.heuristics.dictionaryValues.';
 

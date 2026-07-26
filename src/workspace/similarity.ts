@@ -6,13 +6,32 @@
 
 import { DEFAULT_HEURISTIC_DICTIONARIES } from '../quality/dictionaries';
 
-/** Lower-cases and keeps meaningful tokens (length > 2, non-stopword). */
+/**
+ * Lower-cases and keeps meaningful tokens (length > 2, non-stopword).
+ *
+ * Matches any Unicode letter or number, not just `[a-z0-9]` (plan 10 Part D).
+ * Under the old ASCII-only class a Cyrillic or CJK description tokenized to
+ * nothing, so all three text metrics returned 0 and the composite was
+ * `nameSimilarity` alone: two *identical* Russian descriptions and two unrelated
+ * ones both scored 0.17. ASCII input is unaffected — `\p{L}\p{N}` is a superset of
+ * `a-z0-9` for lower-cased text, verified byte-for-byte against the benchmark
+ * corpus.
+ *
+ * The `length > 2` filter is kept as-is, which is a known compromise: in CJK two
+ * characters can be a whole word, so some real tokens are dropped. Widening the
+ * class is still a strict improvement over discarding the text entirely, and the
+ * stopword lists remain English, so a non-Latin pair's content filtering is
+ * weaker — which is why `detectCollisions` keeps flagging such pairs as low text
+ * coverage instead of presenting a confident number. Per-language stopwords are a
+ * follow-up: `src/quality/language.ts` already detects script and several
+ * Latin-script profiles, and wiring that in here is deliberately out of scope.
+ */
 export function tokenizeContent(
   text: string,
   stopwords: readonly string[] = DEFAULT_HEURISTIC_DICTIONARIES.collisionStopwords,
 ): string[] {
   const ignored = new Set(stopwords);
-  return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+  return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter(
     (token) => token.length > 2 && !ignored.has(token),
   );
 }
@@ -158,13 +177,18 @@ export function nameSimilarity(a: string, b: string): number {
 }
 
 /**
- * Character n-grams of normalized text: lower-cased, reduced to alphanumerics and
- * single spaces. Strings shorter than `n` yield a single gram of the whole string.
+ * Character n-grams of normalized text: lower-cased, reduced to letters, numbers
+ * and single spaces. Strings shorter than `n` yield a single gram of the whole
+ * string.
+ *
+ * Keeps any Unicode letter or number rather than `[a-z0-9]` (plan 10 Part D), for
+ * the same reason as `tokenizeContent`: the ASCII-only class erased non-Latin text
+ * entirely instead of comparing it.
  */
 export function charNgrams(text: string, n = 3): string[] {
   const normalized = text
     .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/[^\p{L}\p{N} ]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   if (normalized.length === 0) return [];

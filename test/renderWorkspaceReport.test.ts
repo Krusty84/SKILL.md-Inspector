@@ -71,7 +71,8 @@ function analysis(): WorkspaceAnalysis {
         b: 'engineering-report-formatter',
         similarity: 0.84,
         metrics: {
-          cosine: 0.84,
+          scopeOverlap: 0.5,
+        cosine: 0.84,
           jaccard: 0.8,
           charNgram: 0.9,
           nameSimilarity: 0.6,
