@@ -53,7 +53,7 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |   |-- config.ts       # Effective VS Code configuration resolution
 |   `-- extension.ts    # Extension-host composition root
 |-- test/               # Unit, integration, property, and regression tests
-|-- benchmarks/         # Description-completeness benchmark corpus
+|-- benchmarks/         # Description regression, calibration, and collision corpora
 |-- evaluation/         # Example behavioral-evaluation suites
 |-- fixtures/           # Sample skills used by tests and development
 |-- docs/               # Diagnostic-code catalog and remediation records
@@ -145,10 +145,11 @@ reports the lost coverage as a linter failure rather than a problem with the ski
 
 `src/diagnostics/diagnosticsProvider.ts` bridges the analysis result to a VS Code
 diagnostic collection and caches resource discovery. `src/codeActions/` converts
-diagnostic quick-fix metadata into `WorkspaceEdit` operations. Frontmatter edits use
-parser-provided value ranges, and folder-rename fixes accept only a safe kebab-case
-path segment that remains under the current parent. The validation layer only
-describes potential edits; it never applies them.
+diagnostic quick-fix metadata into `WorkspaceEdit` operations or a narrowly scoped
+configuration command. Frontmatter edits use parser-provided value ranges, and
+folder-rename fixes accept only a safe kebab-case path segment that remains under
+the current parent. The validation layer only describes potential edits; it never
+applies them.
 
 Optional online checking is a separate asynchronous phase in `src/online/`.
 `RemoteLinkCheckSession` consumes parsed remote links, deduplicates normalized URLs,
@@ -190,10 +191,22 @@ configuration refresh path.
 
 `src/quality/defaultHeuristicDictionaries.json` is the canonical data source for
 action verbs, artifacts, trigger and boundary phrases, vague language, morphology,
-acronyms, and collision stopwords. `src/quality/dictionaries.ts` normalizes and
-freezes configured values. Invalid dictionary entries fall back independently to
-their defaults, and configuration warnings are reported without preventing the
-extension from starting.
+acronyms, collision stopwords, artifact filters, and capability and artifact synonym
+groups. `src/quality/dictionaries.ts` normalizes and freezes configured values.
+Invalid dictionary entries fall back independently to their defaults, and
+configuration warnings are reported without preventing the extension from starting.
+
+When a description has a structurally plausible but unregistered opening verb or
+artifact, its information-level diagnostic can offer a quick fix implemented by
+`src/commands/addHeuristicDictionaryWord.ts`. The command validates the diagnostic
+payload again and appends to the effective `actionVerbs` or `artifactHints` value,
+using workspace settings when a workspace is open and user settings otherwise.
+Reading the effective value before writing is important because configured dictionary
+lists replace, rather than extend, the packaged defaults.
+
+Collision weight configuration remains backward compatible with settings saved
+before `scopeOverlap` was added: an omitted `scopeOverlap` property receives the
+current default weight rather than being interpreted as zero.
 
 ### Quality and compatibility signals
 
@@ -215,7 +228,11 @@ combines configurable phrase dictionaries with a built-in, sentence-bounded gram
 The grammar keeps positive and negated usage forms symmetric, prevents a negated
 usage clause from earning trigger credit, and rejects unfilled placeholders or
 duration/behavior statements as concrete scope. Artifact and scope comparisons share
-the verb-form and singularization rules in `src/quality/wordForms.ts`.
+the verb-form, singularization, and synonym-group rules in
+`src/quality/wordForms.ts`. Dictionary matches and structural evidence are kept
+separate: plausible but unregistered capability or artifact wording can receive
+partial quality credit and an actionable vocabulary diagnostic instead of being
+treated as proof that the description contains no such evidence.
 
 In `auto` mode, `src/quality/language.ts` marks semantic coverage as limited for
 non-Latin-script descriptions and for high-confidence German, French, Spanish,
@@ -248,22 +265,30 @@ and a resource graph. After individual records exist, it computes:
 
 - exact normalized name conflicts;
 - confusingly similar names;
-- description collisions using token, character, and name similarity signals;
+- description collisions using structured scope, lexical, and name signals;
 - boundary-based reductions when descriptions declare mutually exclusive scopes.
 
-Collision detection normalizes configurable verb and plural forms, then precomputes
-per-skill TF-IDF norms, character n-grams over normalized content, and boundary
-features before entering the quadratic pair comparison. Token Jaccard excludes
-registered capability verbs to damp shared template wording; TF-IDF, explanatory
-shared terms, and content n-grams retain them. Because TF-IDF document frequencies
-come from the complete scanned corpus, adding or removing another skill can shift a
-pair's score slightly. The loop checks cancellation between comparison rows, and
+Collision detection normalizes configurable verb and plural forms, groups synonymous
+capabilities and artifacts, and extracts trigger objects after removing negative
+boundary clauses. It precomputes those scope features, TF-IDF norms, and character
+n-grams before entering the quadratic pair comparison. The default composite is led
+by `scopeOverlap`, which compares whether two skills do the same kind of work on the
+same kind of object. Token Jaccard, TF-IDF cosine, and content n-grams provide
+corroborating lexical evidence, while name similarity is a small tiebreaker and
+explicitly separating boundaries reduce the result.
+
+Token Jaccard excludes registered capability verbs to damp shared template wording;
+TF-IDF, explanatory shared terms, and content n-grams retain them. Because TF-IDF
+document frequencies come from the complete scanned corpus, adding or removing
+another skill can shift a pair's score slightly. Missing structured scope evidence
+lowers collision confidence rather than being presented as a reliable zero. The
+collision and similar-name loops check cancellation between comparison rows, and
 workspace analysis marks the result as cancelled rather than presenting a partial
-collision scan as complete.
+cross-skill scan as complete.
 
 The same `WorkspaceAnalysis` model feeds the Skills tree and workspace report.
-`buildSkillsIndex` projects it into schema-version-5 JSON for export as
-`skills.index.json`.
+`buildSkillsIndex` projects its per-skill records into schema-version-6 JSON for
+export as `skills.index.json`.
 
 The per-skill report is different: it analyzes the active editor buffer and can
 therefore include unsaved changes. Reports render escaped, script-disabled HTML in
@@ -349,7 +374,8 @@ repository supplies no production provider or UI for this subsystem.
 7. For a full run with online checking enabled, a separate asynchronous session
    checks eligible HTTP(S) links and merges results only if the request is current.
 8. If requested, the code-action provider maps quick-fix metadata to editor or
-   filesystem edits.
+   filesystem edits, or to the guarded command that extends a heuristic dictionary
+   setting.
 
 ### Workspace analysis
 
@@ -427,6 +453,9 @@ a restart recognizable: the channel resets and the marker reappears.
 - **Share evidence, not outcomes.** Validation and quality scoring consume the same
   description and body evidence models, while retaining separate severities, scores,
   and presentation.
+- **Calibrate heuristic changes against explicit corpora.** Synthetic regression
+  expectations, verbatim production descriptions, and labeled collision pairs answer
+  different questions and remain separate test gates.
 - **Prefer deterministic output.** Stable rule order, sorted diagnostics, normalized
   configuration, and sorted discovery results support reproducible reports and
   tests.
@@ -467,6 +496,11 @@ Prettier, and VS Code type definitions.
 - Production builds are minified; watch builds include source maps.
 - Vitest runs `test/**/*.test.ts` in Node, including property tests based on
   `fast-check`.
+- The normal test suite includes three benchmark gates under `benchmarks/`: synthetic
+  description-score regression cases, verbatim production-description calibration,
+  and labeled collision pairs. `npm run benchmark` runs all three directly; the
+  `benchmark:static`, `benchmark:calibration`, and `benchmark:collisions` scripts run
+  them individually.
 - `scripts/sync-heuristic-dictionaries.js --check` detects drift between the
   canonical dictionary catalog and contributed VS Code settings.
 - Diagnostic codes should have corresponding user documentation in
@@ -491,12 +525,14 @@ script.
 - Aggregate analysis reads saved files. Unsaved changes appear in live diagnostics
   and the per-skill report, but not in collision or index results.
 - Full skill and workspace analysis uses synchronous Node filesystem operations.
-  Cancellation is checked between skill files and between rows of the cross-skill
-  collision loop, but not during one skill's resource scan or validation pipeline.
-- Token-budget thresholds are fixed policy. Resource token totals exist only after
-  full analysis; text-only analysis never infers missing groups as zero. The
-  `o200k_base` tokenizer is a deterministic offline proxy rather than a guarantee of
-  the counts produced by every target agent.
+  Cancellation is checked between skill files and between rows of the collision and
+  similar-name loops, but not during one skill's resource scan or validation
+  pipeline.
+- Body token and line limits are fixed policy. Resource thresholds are tool-specific
+  advisories rather than Agent Skills specification limits. Resource token totals
+  exist only after full analysis; text-only analysis never infers missing groups as
+  zero. The `o200k_base` tokenizer is a deterministic offline proxy rather than a
+  guarantee of the counts produced by every target agent.
 - Path-oriented analysis does not uniformly support remote or virtual filesystem
   providers. The Workspace navigator and OpenCode reader are more broadly URI-based.
 - Resource file watchers cover only `references`, `scripts`, `assets`, and
@@ -506,6 +542,10 @@ script.
   primarily ASCII-oriented. Automatic coverage limiting recognizes non-Latin
   scripts and five profiled Latin-script languages; unprofiled languages, including
   Dutch, can still be analyzed as English.
+- Scope-led collision detection depends on recognizable capability and artifact
+  evidence. Dictionary gaps or underspecified descriptions lower confidence and can
+  still cause genuine collisions to be missed; the labeled collision corpus favors
+  precision and records this recall limitation.
 - Collision checks do not execute skills in an agent. Optional
   remote-link checks establish availability only; they do not inspect or trust
   response content, and network failures remain indeterminate.
