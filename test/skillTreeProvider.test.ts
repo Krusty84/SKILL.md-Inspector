@@ -98,6 +98,15 @@ function analysis(): WorkspaceAnalysis {
           references: { files: [], totalTokens: 0 },
           otherFiles: { files: [], totalTokens: 0 },
         },
+        compatibility: {
+          verifiedOn: '2026-07-26',
+          projections: [
+            { agent: 'spec', label: 'Spec (skills-ref)', verdict: 'compatible', findings: [] },
+            { agent: 'claude-code', label: 'Claude Code', verdict: 'compatible', findings: [] },
+            { agent: 'codex', label: 'Codex', verdict: 'compatible', findings: [] },
+            { agent: 'opencode', label: 'OpenCode', verdict: 'compatible', findings: [] },
+          ],
+        },
       },
     ],
     collisions: [],

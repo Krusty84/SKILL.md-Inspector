@@ -127,6 +127,43 @@ describe('renderReportHtml', () => {
     expect(html).toContain('href="#reference-files"');
   });
 
+  it('renders the agent compatibility projection with the verbatim footer', () => {
+    const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
+    expect(model.compatibility.projections.map((p) => p.agent)).toEqual([
+      'spec',
+      'claude-code',
+      'codex',
+      'opencode',
+    ]);
+
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(html).toContain('<h2 id="agent-compatibility">Agent compatibility</h2>');
+    expect(html).toContain('href="#agent-compatibility"');
+    expect(html).toContain('Spec (skills-ref)');
+    expect(html).toContain('Claude Code');
+    expect(html).toContain('OpenCode');
+    // The temp-dir location is outside every documented discovery path, so the
+    // tool agents carry notes.
+    expect(html).toContain('compatible with notes');
+    expect(html).toContain(
+      `Based on documented behavior verified on ${model.compatibility.verifiedOn}. This is a static projection, not a runtime test — it does not prove an agent will select or correctly execute the skill.`,
+    );
+  });
+
+  it('escapes HTML in compatibility finding messages', () => {
+    const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
+    model.compatibility.projections[0].findings.push({
+      agent: 'spec',
+      level: 'issue',
+      kind: 'field-rejected',
+      message: '<img src=x onerror=alert(4)>',
+      subject: 'x',
+    });
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(html).not.toContain('<img src=x onerror=alert(4)>');
+    expect(html).toContain('&lt;img src=x onerror=alert(4)&gt;');
+  });
+
   it('renders the generated-at timestamp when provided', () => {
     const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\n');
     const html = renderReportHtml(model, {

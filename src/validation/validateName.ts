@@ -92,8 +92,8 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
     );
   }
 
-  const folder = path.basename(doc.directory);
-  if (looksLikeSkillFolder(doc.directory) && folder && folder !== value) {
+  const folder = nameFolderMismatch(doc.directory, value);
+  if (folder !== null) {
     diagnostics.push(
       diag(
         DiagnosticCode.NameFolderMismatch,
@@ -106,6 +106,17 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
   }
 
   return diagnostics;
+}
+
+/**
+ * The parent folder name when `name` does not match it, applying the same
+ * gating the validator uses (only inside a `skills/` parent); null when they
+ * match or the location is not a skill folder. Shared with the compatibility
+ * projection so the two surfaces can never disagree about a mismatch.
+ */
+export function nameFolderMismatch(directory: string, name: string): string | null {
+  const folder = path.basename(directory);
+  return looksLikeSkillFolder(directory) && folder !== '' && folder !== name ? folder : null;
 }
 
 /** Converts an arbitrary string into a valid kebab-case skill name. */
