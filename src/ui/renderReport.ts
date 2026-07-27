@@ -5,6 +5,7 @@ import type {
 } from '../types/StaticDescriptionQuality';
 import { renderToc, slugify, TOC_STYLES, type TocEntry } from './reportToc';
 import {
+  AGENT_COMPATIBILITY_DEFINITION,
   AUTHORING_HYGIENE_DEFINITION,
   AUTHORING_HYGIENE_INSTRUCTIONS_HEADING,
   AUTHORING_HYGIENE_RESOURCES_HEADING,
@@ -13,6 +14,7 @@ import {
   compatibilityFooterText,
   compatibilityVerdictText,
 } from './metricDefinitions';
+import { overallCompatibilityVerdict } from '../compat/projectCompatibility';
 import { totalSkillTokens } from '../analysis/tokenUsage';
 
 export interface RenderOptions {
@@ -115,6 +117,11 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   .conf-high { color: var(--vscode-testing-iconPassed, #3fb950); }
   .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
   .conf-low { color: var(--vscode-errorForeground, #f14c4c); }
+  .semaphore { display: inline-block; width: 0.75em; height: 0.75em; border-radius: 50%; margin-right: 0.4rem; }
+  .semaphore.green { background: var(--vscode-testing-iconPassed, #3fb950); }
+  .semaphore.yellow { background: var(--vscode-editorWarning-foreground, #cca700); }
+  .semaphore.red { background: var(--vscode-errorForeground, #f14c4c); }
+  .verdict-breakdown { font-size: 0.72rem; font-weight: 400; opacity: 0.7; margin-top: 0.2rem; line-height: 1.4; }
   table { width: 100%; border-collapse: collapse; }
   th, td { border-bottom: 1px solid var(--vscode-panel-border); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
   th { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }${TOC_STYLES}
@@ -132,7 +139,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     ${card('Description completeness', descriptionCard, '', DESCRIPTION_COMPLETENESS_DEFINITION)}
     ${card(instructionCardLabel, instructionCard, '', AUTHORING_HYGIENE_DEFINITION)}
     ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
-    ${card('Profile', escapeHtml(report.profileLabel))}
+    ${card('Agent compatibility', compatibilityCardValue(report.compatibility), '', AGENT_COMPATIBILITY_DEFINITION)}
     ${card('Description', `${report.descriptionLength} chars`)}
     ${card('Token usage', tokenCardValue)}
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
@@ -213,6 +220,38 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
         ? { cls: 'no', glyph: '✗' }
         : { cls: 'partial', glyph: '◐' };
   return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(finding.criterion)}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
+}
+
+/**
+ * Semaphore summary card of the worst per-agent verdict: green = every agent
+ * compatible, yellow = notes, red = issues. Not-evaluated states render as
+ * words with no colored dot, mirroring the not-scored quality cards.
+ */
+function compatibilityCardValue(compatibility: SkillReport['compatibility']): string {
+  const overall = overallCompatibilityVerdict(compatibility);
+  if (overall === 'not-evaluated') {
+    const reason = compatibility.projections.find(
+      (projection) => projection.notEvaluatedReason,
+    )?.notEvaluatedReason;
+    return `Not evaluated${reason ? ` — ${escapeHtml(reason)}` : ''}`;
+  }
+  const color = overall === 'issues' ? 'red' : overall === 'notes' ? 'yellow' : 'green';
+  const breakdown = (
+    [
+      ['Issues', 'issues'],
+      ['Notes', 'notes'],
+      ['Compatible', 'compatible'],
+    ] as const
+  )
+    .map(([label, verdict]) => ({
+      label,
+      count: compatibility.projections.filter((projection) => projection.verdict === verdict)
+        .length,
+    }))
+    .filter(({ count }) => count > 0)
+    .map(({ label, count }) => `${label} ${count}`)
+    .join(' · ');
+  return `<span class="semaphore ${color}"></span>${capitalize(compatibilityVerdictText(overall))}<div class="verdict-breakdown">${breakdown}</div>`;
 }
 
 /** One row per agent: verdict plus the findings behind it (plan §7). */

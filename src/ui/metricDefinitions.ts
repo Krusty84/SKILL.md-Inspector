@@ -23,6 +23,9 @@ export const AUTHORING_HYGIENE_DEFINITION =
 export const LOW_TEXT_COVERAGE_DEFINITION =
   'Fewer than 3 comparable content tokens (often non-Latin script); this similarity is derived mostly from the skill names.';
 
+export const AGENT_COMPATIBILITY_DEFINITION =
+  'Worst per-agent verdict from projecting the skill against documented agent behavior (spec baseline, Claude Code, Codex, OpenCode). A static projection, not a runtime test.';
+
 /** Visible headings for the two hygiene sections of the skill report. */
 export const AUTHORING_HYGIENE_INSTRUCTIONS_HEADING = 'Authoring hygiene (instructions)';
 export const AUTHORING_HYGIENE_RESOURCES_HEADING = 'Authoring hygiene (resources)';

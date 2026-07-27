@@ -12,7 +12,6 @@ import type { SkillTokenUsage } from '../types/SkillTokenUsage';
 export interface SkillReport {
   name: string;
   descriptionLength: number;
-  profileLabel: string;
   status: 'pass' | 'warning' | 'fail';
   errorCount: number;
   warningCount: number;
@@ -59,7 +58,6 @@ export function buildReportModel(
   return {
     name,
     descriptionLength: description.trim().length,
-    profileLabel: profile.label,
     status: errorCount > 0 ? 'fail' : warningCount > 0 ? 'warning' : 'pass',
     errorCount,
     warningCount,
