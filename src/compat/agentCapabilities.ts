@@ -1,6 +1,7 @@
 import type {
   AgentCapabilities,
   AgentCapabilityTable,
+  AgentId,
   CapabilityFact,
 } from '../types/AgentCompatibility';
 
@@ -158,3 +159,20 @@ export const AGENT_CAPABILITIES: AgentCapabilityTable = {
   verifiedOn: VERIFIED_ON,
   agents: [spec, claudeCode, codex, opencode],
 };
+
+/**
+ * The capability table restricted to the agents the user enabled in settings
+ * (`skillMdInspector.validation.compatibilityAgents.*`); the full table when
+ * no list is given. Filters the table rather than trusting the list's order,
+ * so the stable spec → claude-code → codex → opencode projection order is
+ * preserved regardless of how the enabled ids are listed.
+ */
+export function enabledCapabilityTable(enabled?: readonly AgentId[]): AgentCapabilityTable {
+  if (enabled === undefined) {
+    return AGENT_CAPABILITIES;
+  }
+  return {
+    verifiedOn: AGENT_CAPABILITIES.verifiedOn,
+    agents: AGENT_CAPABILITIES.agents.filter((agent) => enabled.includes(agent.agent)),
+  };
+}

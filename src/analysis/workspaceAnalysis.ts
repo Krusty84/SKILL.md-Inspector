@@ -43,6 +43,7 @@ export function computeWorkspaceAnalysis(
         ...options,
         dictionaries: config.heuristicDictionaries,
         resourceDirectories: config.resourceDirectories,
+        compatibilityAgents: config.compatibilityAgents,
       },
     ),
   };
@@ -145,6 +146,7 @@ export async function computeScopedAnalysisOnline(
       ...options,
       dictionaries: config.heuristicDictionaries,
       resourceDirectories: config.resourceDirectories,
+      compatibilityAgents: config.compatibilityAgents,
     },
   );
   if (!analysis.cancelled) {

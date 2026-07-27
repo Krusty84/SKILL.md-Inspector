@@ -2,10 +2,11 @@ import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { StaticDescriptionQualityResult } from '../types/StaticDescriptionQuality';
-import type { CompatibilityReport } from '../types/AgentCompatibility';
+import type { AgentId, CompatibilityReport } from '../types/AgentCompatibility';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { assessAuthoringQuality, type SkillAuthoringQuality } from '../authoring/authoringQuality';
 import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
+import { enabledCapabilityTable } from '../compat/agentCapabilities';
 import { projectCompatibility } from '../compat/projectCompatibility';
 import type { SkillTokenUsage } from '../types/SkillTokenUsage';
 
@@ -38,6 +39,7 @@ export function buildReportModel(
   profile: SkillProfile,
   tokenUsage: SkillTokenUsage,
   dictionaries?: HeuristicDictionaries,
+  compatibilityAgents?: readonly AgentId[],
 ): SkillReport {
   const errorCount = diagnostics.filter((d) => d.severity === 'error').length;
   const warningCount = diagnostics.filter((d) => d.severity === 'warning').length;
@@ -67,7 +69,7 @@ export function buildReportModel(
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
     staticDescriptionQuality,
     authoringQuality: assessAuthoringQuality(doc, dictionaries, tokenUsage.body.lines),
-    compatibility: projectCompatibility(doc),
+    compatibility: projectCompatibility(doc, enabledCapabilityTable(compatibilityAgents)),
     tokenUsage: {
       ...tokenUsage,
       references: {

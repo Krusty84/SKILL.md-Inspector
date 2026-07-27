@@ -51,6 +51,7 @@ export async function showSkillReport(
     analysisContext.profile,
     tokenUsage,
     analysisContext.dictionaries,
+    analysisContext.compatibilityAgents,
   );
   SkillReportPanel.show(report);
 }

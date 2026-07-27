@@ -217,6 +217,18 @@ describe('renderWorkspaceReportHtml', () => {
     );
   });
 
+  it('states when all compatibility agents are disabled instead of an empty matrix', () => {
+    const model = analysis();
+    model.skills[0].compatibility.projections = [];
+    const html = renderWorkspaceReportHtml(model, {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
+    expect(html).toContain('All compatibility agents are disabled in the extension settings.');
+    expect(html).not.toContain('<th>Spec (skills-ref)</th>');
+  });
+
   it('renders the generated-at timestamp when provided', () => {
     const html = renderWorkspaceReportHtml(analysis(), {
       nonce: 'n',

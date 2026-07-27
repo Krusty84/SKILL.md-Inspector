@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
 import type { SkillProfile, DescriptionLanguage, BodyStrictness } from './types/SkillProfile';
+import type { AgentId } from './types/AgentCompatibility';
 import type { SkillDiagnosticSeverity } from './types/SkillDiagnostic';
 import type { TimestampFormat } from './types/TimestampFormat';
 import type { CollisionWeights } from './types/Workspace';
@@ -27,6 +28,7 @@ export interface AnalysisContext {
   profile: SkillProfile;
   dictionaries: HeuristicDictionaries;
   resourceDirectories: readonly string[];
+  compatibilityAgents: readonly AgentId[];
 }
 
 export interface InspectorConfig {
@@ -43,7 +45,20 @@ export interface InspectorConfig {
   onlineCheckEnabled: boolean;
   onlineCheckMaxConcurrency: number;
   timeFormat: TimestampFormat;
+  /** Agents the compatibility projection evaluates (all enabled by default). */
+  compatibilityAgents: readonly AgentId[];
 }
+
+/**
+ * One checkbox per agent so a future agent added here (and to the capability
+ * table) defaults on for every user, including users who toggled the others.
+ */
+const COMPATIBILITY_AGENT_SETTINGS: readonly { setting: string; agent: AgentId }[] = [
+  { setting: 'validation.compatibilityAgents.spec', agent: 'spec' },
+  { setting: 'validation.compatibilityAgents.claudeCode', agent: 'claude-code' },
+  { setting: 'validation.compatibilityAgents.codex', agent: 'codex' },
+  { setting: 'validation.compatibilityAgents.openCode', agent: 'opencode' },
+];
 
 export interface ConfigurationWarning {
   setting: string;
@@ -52,12 +67,16 @@ export interface ConfigurationWarning {
 
 /** Reads `skillMdInspector.*` settings and resolves the effective profile. */
 export function analysisContextFromConfig(
-  config: Pick<InspectorConfig, 'profile' | 'heuristicDictionaries' | 'resourceDirectories'>,
+  config: Pick<
+    InspectorConfig,
+    'profile' | 'heuristicDictionaries' | 'resourceDirectories' | 'compatibilityAgents'
+  >,
 ): AnalysisContext {
   return {
     profile: config.profile,
     dictionaries: config.heuristicDictionaries,
     resourceDirectories: config.resourceDirectories,
+    compatibilityAgents: config.compatibilityAgents,
   };
 }
 
@@ -69,6 +88,9 @@ export function readConfig(scope?: vscode.Uri): InspectorConfig {
   return {
     enabled: cfg.get<boolean>('validation.enabled', true),
     runOnSave: cfg.get<boolean>('validation.runOnSave', true),
+    compatibilityAgents: COMPATIBILITY_AGENT_SETTINGS.filter(({ setting }) =>
+      cfg.get<boolean>(setting, true),
+    ).map(({ agent }) => agent),
     onlineCheckEnabled: cfg.get<boolean>('links.onlineCheck.enabled', false),
     onlineCheckMaxConcurrency: clampOnlineCheckConcurrency(
       cfg.get<number>('links.onlineCheck.maxConcurrency', 4),

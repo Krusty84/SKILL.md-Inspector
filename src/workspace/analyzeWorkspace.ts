@@ -3,13 +3,14 @@ import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
 import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
 import { assessAuthoringQuality } from '../authoring/authoringQuality';
+import { enabledCapabilityTable } from '../compat/agentCapabilities';
 import { projectCompatibility } from '../compat/projectCompatibility';
 import { buildResourceGraph } from './buildResourceGraph';
 import { detectCollisions } from './detectSkillCollisions';
 import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
-import type { CompatibilityReport } from '../types/AgentCompatibility';
+import type { AgentId, CompatibilityReport } from '../types/AgentCompatibility';
 import type { SkillProfile } from '../types/SkillProfile';
 import type {
   WorkspaceAnalysis,
@@ -31,6 +32,8 @@ export interface WorkspaceAnalysisOptions {
   onProgress?: (done: number, total: number) => void;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
+  /** Agents the compatibility projection evaluates; omitted = all agents. */
+  compatibilityAgents?: readonly AgentId[];
 }
 
 /**
@@ -184,7 +187,10 @@ function toWorkspaceSkill(
     profile: profile.id,
     resourceGraph,
     tokenUsage,
-    compatibility: projectCompatibility(document),
+    compatibility: projectCompatibility(
+      document,
+      enabledCapabilityTable(options.compatibilityAgents),
+    ),
   };
 }
 

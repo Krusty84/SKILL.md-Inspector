@@ -189,6 +189,26 @@ describe('workspace discovery + analysis', () => {
     expect(entry.information).toBeGreaterThanOrEqual(0);
   });
 
+  it('limits compatibility projections to the enabled agents', () => {
+    const analysis = analyzeWorkspace(
+      root,
+      discoverSkillPaths(root),
+      genericProfile,
+      undefined,
+      undefined,
+      undefined,
+      { compatibilityAgents: ['spec'] },
+    );
+    expect(analysis.skills.length).toBeGreaterThan(0);
+    for (const skill of analysis.skills) {
+      expect(skill.compatibility.projections.map((p) => p.agent)).toEqual(['spec']);
+    }
+    const index = buildSkillsIndex(analysis);
+    for (const entry of index.skills) {
+      expect(entry.compatibility.projections.map((p) => p.agent)).toEqual(['spec']);
+    }
+  });
+
   it('includes a machine-readable diagnostics summary in the index (Task 87)', () => {
     const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const index = buildSkillsIndex(analysis);

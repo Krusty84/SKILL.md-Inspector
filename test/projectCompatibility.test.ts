@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseSkillFile } from '../src/parser/parseSkillFile';
+import { AGENT_CAPABILITIES, enabledCapabilityTable } from '../src/compat/agentCapabilities';
 import {
   overallCompatibilityVerdict,
   projectCompatibility,
@@ -395,6 +396,34 @@ describe('projectCompatibility — not-evaluated and determinism (plan §8.7/§8
   it('reports the capability table verification date', () => {
     const report = project('/ws/skills/alpha/SKILL.md', WELL_FORMED);
     expect(report.verifiedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('enabledCapabilityTable (per-agent settings filter)', () => {
+  it('returns the full table when no enabled list is given', () => {
+    expect(enabledCapabilityTable()).toBe(AGENT_CAPABILITIES);
+  });
+
+  it('filters to the enabled agents while preserving the stable table order', () => {
+    const table = enabledCapabilityTable(['codex', 'spec']);
+    expect(table.agents.map((agent) => agent.agent)).toEqual(['spec', 'codex']);
+    expect(table.verifiedOn).toBe(AGENT_CAPABILITIES.verifiedOn);
+  });
+
+  it('projects only the enabled agents', () => {
+    const report = projectCompatibility(
+      parseSkillFile('/ws/skills/alpha/SKILL.md', WELL_FORMED),
+      enabledCapabilityTable(['claude-code']),
+    );
+    expect(report.projections.map((projection) => projection.agent)).toEqual(['claude-code']);
+  });
+
+  it('yields an empty projection list when every agent is disabled', () => {
+    const report = projectCompatibility(
+      parseSkillFile('/ws/skills/alpha/SKILL.md', WELL_FORMED),
+      enabledCapabilityTable([]),
+    );
+    expect(report.projections).toEqual([]);
   });
 });
 

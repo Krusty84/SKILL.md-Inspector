@@ -187,6 +187,35 @@ describe('renderReportHtml', () => {
     );
   });
 
+  it('limits the projection to the enabled compatibility agents', () => {
+    const { document, diagnostics, tokenUsage } = analyzeSkill(
+      path.join(dir, 'SKILL.md'),
+      '---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.',
+      genericProfile,
+    );
+    const model = buildReportModel(document, diagnostics, genericProfile, tokenUsage, undefined, [
+      'claude-code',
+    ]);
+    expect(model.compatibility.projections.map((p) => p.agent)).toEqual(['claude-code']);
+  });
+
+  it('states when all compatibility agents are disabled instead of rendering an empty section', () => {
+    const { document, diagnostics, tokenUsage } = analyzeSkill(
+      path.join(dir, 'SKILL.md'),
+      '---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.',
+      genericProfile,
+    );
+    const model = buildReportModel(document, diagnostics, genericProfile, tokenUsage, undefined, []);
+    expect(model.compatibility.projections).toEqual([]);
+
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    // The stylesheet keeps its .compat-bar rule; the bar element itself is gone.
+    expect(html).not.toContain('class="card compat-bar"');
+    expect(html).toContain('<h2 id="agent-compatibility">Agent compatibility</h2>');
+    expect(html).toContain('All compatibility agents are disabled in the extension settings.');
+    expect(html).not.toContain('Based on documented behavior verified on');
+  });
+
   it('renders a Lines card with the body line count', () => {
     const model = report(
       '---\nname: demo\ndescription: Format reports. Use when needed.\n---\nLine one.\nLine two.\nLine three.',

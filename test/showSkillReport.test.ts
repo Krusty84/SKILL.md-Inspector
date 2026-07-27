@@ -12,6 +12,7 @@ const hoisted = vi.hoisted(() => ({
   filePath: '',
   report: undefined as SkillReport | undefined,
   onlineEnabled: false,
+  codexCompatEnabled: true,
 }));
 
 vi.mock('vscode', () => ({
@@ -26,6 +27,9 @@ vi.mock('vscode', () => ({
         }
         if (key === 'links.onlineCheck.enabled') {
           return hoisted.onlineEnabled;
+        }
+        if (key === 'validation.compatibilityAgents.codex') {
+          return hoisted.codexCompatEnabled;
         }
         return fallback;
       }),
@@ -72,6 +76,7 @@ beforeEach(() => {
   hoisted.analysis = undefined;
   hoisted.report = undefined;
   hoisted.onlineEnabled = false;
+  hoisted.codexCompatEnabled = true;
 });
 
 afterEach(() => {
@@ -119,6 +124,26 @@ describe('showSkillReport', () => {
       diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length,
     );
     expect(report?.unreferencedFiles).toContain('playbooks/guide.md');
+  });
+
+  it('omits agents disabled in settings from the compatibility projection', async () => {
+    hoisted.codexCompatEnabled = false;
+    hoisted.content = [
+      '---',
+      'name: demo',
+      'description: Frobnicate widgets. Use when widget settings drift. Do not use for invoices.',
+      '---',
+      '',
+      'Body.',
+    ].join('\n');
+
+    await showSkillReport();
+
+    expect(hoisted.report?.compatibility.projections.map((p) => p.agent)).toEqual([
+      'spec',
+      'claude-code',
+      'opencode',
+    ]);
   });
 
   it('includes online diagnostics in the full skill report when enabled', async () => {
