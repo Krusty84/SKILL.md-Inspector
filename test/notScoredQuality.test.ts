@@ -221,5 +221,10 @@ describe('explicit not-scored quality state', () => {
     expect(skillHtml).toContain(
       'Instruction structure</div><div class="value ">Not scored — frontmatter could not be parsed',
     );
+    // The semaphore card states not-evaluated in words, with no colored dot.
+    expect(skillHtml).toContain(
+      'Agent compatibility</div><div class="value ">Not evaluated — frontmatter could not be parsed',
+    );
+    expect(skillHtml).not.toContain('class="semaphore');
   });
 });

@@ -150,6 +150,34 @@ describe('renderReportHtml', () => {
     );
   });
 
+  it('summarizes the compatibility verdict as a semaphore card and drops the Profile card', () => {
+    const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+
+    expect(html).not.toContain('<div class="label">Profile</div>');
+    expect(html).toContain('<div class="label">Agent compatibility</div>');
+    // Three agents carry discovery notes, one (spec) is compatible → yellow.
+    expect(html).toContain('<span class="semaphore yellow"></span>Compatible with notes');
+    expect(html).toContain('Notes 3 · Compatible 1');
+  });
+
+  it('colors the semaphore card by the worst verdict', () => {
+    const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
+
+    for (const projection of model.compatibility.projections) {
+      projection.verdict = 'compatible';
+      projection.findings = [];
+    }
+    let html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(html).toContain('<span class="semaphore green"></span>Compatible');
+    expect(html).toContain('Compatible 4');
+
+    model.compatibility.projections[0].verdict = 'issues';
+    html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(html).toContain('<span class="semaphore red"></span>Issues');
+    expect(html).toContain('Issues 1 · Compatible 3');
+  });
+
   it('escapes HTML in compatibility finding messages', () => {
     const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
     model.compatibility.projections[0].findings.push({

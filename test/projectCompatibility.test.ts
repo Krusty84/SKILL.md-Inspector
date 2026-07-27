@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { parseSkillFile } from '../src/parser/parseSkillFile';
-import { projectCompatibility } from '../src/compat/projectCompatibility';
+import {
+  overallCompatibilityVerdict,
+  projectCompatibility,
+} from '../src/compat/projectCompatibility';
 import type { AgentId, AgentProjection } from '../src/types/AgentCompatibility';
 
 function project(filePath: string, content: string) {
@@ -392,5 +395,36 @@ describe('projectCompatibility — not-evaluated and determinism (plan §8.7/§8
   it('reports the capability table verification date', () => {
     const report = project('/ws/skills/alpha/SKILL.md', WELL_FORMED);
     expect(report.verifiedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('overallCompatibilityVerdict', () => {
+  it('rolls up to the worst verdict across agents: issues beats notes', () => {
+    // name alpha in directory beta/ → spec and OpenCode issues, tool notes.
+    const report = project('/ws/skills/beta/SKILL.md', WELL_FORMED);
+    expect(overallCompatibilityVerdict(report)).toBe('issues');
+  });
+
+  it('reports notes when no agent has issues but at least one has findings', () => {
+    const report = project('/repo/.opencode/skills/alpha/SKILL.md', WELL_FORMED);
+    expect(overallCompatibilityVerdict(report)).toBe('notes');
+  });
+
+  it('reports not-evaluated when frontmatter could not be parsed', () => {
+    const report = project('/ws/skills/alpha/SKILL.md', '# Body only.');
+    expect(overallCompatibilityVerdict(report)).toBe('not-evaluated');
+  });
+
+  it('reports compatible only when every agent is compatible', () => {
+    const report = {
+      verifiedOn: '2026-07-26',
+      projections: (['spec', 'claude-code', 'codex', 'opencode'] as const).map((agent) => ({
+        agent,
+        label: agent,
+        verdict: 'compatible' as const,
+        findings: [],
+      })),
+    };
+    expect(overallCompatibilityVerdict(report)).toBe('compatible');
   });
 });

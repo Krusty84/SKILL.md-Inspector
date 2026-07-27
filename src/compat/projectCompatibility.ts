@@ -55,6 +55,25 @@ function verdictOf(findings: CompatibilityFinding[]): CompatibilityVerdict {
   return findings.length > 0 ? 'notes' : 'compatible';
 }
 
+/**
+ * The worst verdict across a report's agents, for one-glance summaries:
+ * issues > notes > not-evaluated > compatible. `compatible` requires every
+ * agent to be evaluated and clean, so a summary can never overclaim.
+ */
+export function overallCompatibilityVerdict(report: CompatibilityReport): CompatibilityVerdict {
+  const verdicts = report.projections.map((projection) => projection.verdict);
+  if (verdicts.includes('issues')) {
+    return 'issues';
+  }
+  if (verdicts.includes('notes')) {
+    return 'notes';
+  }
+  if (verdicts.length === 0 || verdicts.includes('not-evaluated')) {
+    return 'not-evaluated';
+  }
+  return 'compatible';
+}
+
 /** Classifies each present top-level key (plan §6.1). Never inspects inside values. */
 function fieldFindings(
   frontmatter: SkillFrontmatter,
