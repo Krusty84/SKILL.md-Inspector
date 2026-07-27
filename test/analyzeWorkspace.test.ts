@@ -151,8 +151,20 @@ describe('workspace discovery + analysis', () => {
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
     const entry = index.skills.find((s) => s.name === 'pdf-report-formatter')!;
-    expect(index.schemaVersion).toBe(6);
+    expect(index.schemaVersion).toBe(7);
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
+    expect(entry.compatibility.verifiedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(entry.compatibility.projections.map((p) => p.agent)).toEqual([
+      'spec',
+      'claude-code',
+      'codex',
+      'opencode',
+    ]);
+    // The exported projections drop the display label (plan §7).
+    for (const projection of entry.compatibility.projections) {
+      expect(projection).not.toHaveProperty('label');
+      expect(['compatible', 'notes', 'issues', 'not-evaluated']).toContain(projection.verdict);
+    }
     expect(entry.validationStatus).toBe('warning');
     expect(entry.staticDescriptionQuality).toMatchObject({
       state: 'scored',

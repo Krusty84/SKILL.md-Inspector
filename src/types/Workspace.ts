@@ -3,6 +3,12 @@ import type { SkillDiagnosticSeverity, SkillDiagnosticKind } from './SkillDiagno
 import type { StaticDescriptionQualityResult } from './StaticDescriptionQuality';
 import type { SkillAuthoringQuality } from '../authoring/authoringQuality';
 import type { SkillTokenUsage } from './SkillTokenUsage';
+import type {
+  AgentId,
+  CompatibilityFinding,
+  CompatibilityReport,
+  CompatibilityVerdict,
+} from './AgentCompatibility';
 
 /** A compact diagnostic carried into the tree/report models and the exported index (Task 87). */
 export interface IndexDiagnostic {
@@ -53,6 +59,8 @@ export interface WorkspaceSkill {
   resourceGraph: ResourceGraph;
   /** Full o200k_base token metrics (SKILL.md body plus reference and other bundled files). */
   tokenUsage: SkillTokenUsage;
+  /** Per-agent compatibility projection from the verified capability table. */
+  compatibility: CompatibilityReport;
 }
 
 export type CollisionRisk = 'High' | 'Medium' | 'Low';
@@ -151,6 +159,19 @@ export interface WorkspaceAnalysis {
   cancelled: boolean;
 }
 
+/** An exported agent projection: the report projection minus the display label. */
+export interface SkillsIndexAgentProjection {
+  agent: AgentId;
+  verdict: CompatibilityVerdict;
+  findings: CompatibilityFinding[];
+  notEvaluatedReason?: string;
+}
+
+export interface SkillsIndexCompatibility {
+  projections: SkillsIndexAgentProjection[];
+  verifiedOn: string;
+}
+
 export interface SkillsIndexEntry {
   name: string;
   path: string;
@@ -163,11 +184,13 @@ export interface SkillsIndexEntry {
   information: number;
   /** The machine-readable rule output: every diagnostic's code, severity, and kind (Task 87). */
   diagnostics: IndexDiagnostic[];
+  /** Per-agent compatibility projections without the display labels. */
+  compatibility: SkillsIndexCompatibility;
 }
 
 export interface SkillsIndex {
-  /** Version 6 adds `textCoverage` to collision objects. */
-  schemaVersion: 6;
+  /** Version 7 adds per-agent `compatibility` projections to each skill. */
+  schemaVersion: 7;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }

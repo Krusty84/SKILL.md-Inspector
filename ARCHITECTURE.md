@@ -35,6 +35,7 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |   |-- authoring/      # Instruction and resource authoring assessments
 |   |-- codeActions/    # Diagnostic quick fixes
 |   |-- commands/       # Extension, workspace, and OpenCode commands
+|   |-- compat/         # Verified per-agent capability table and projection
 |   |-- diagnostics/    # VS Code diagnostics bridge and range mapping
 |   |-- evaluation/     # Offline behavioral-evaluation library
 |   |-- llm/            # Provider interface without an implementation
@@ -55,7 +56,7 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 |-- test/               # Unit, integration, property, and regression tests
 |-- benchmarks/         # Description regression, calibration, and collision corpora
 |-- evaluation/         # Example behavioral-evaluation suites
-|-- fixtures/           # Sample skills used by tests and development
+|-- demo_skills/        # Sample skills used by tests and development
 |-- docs/               # Diagnostic-code catalog and remediation records
 |-- scripts/            # Repository maintenance utilities
 |-- esbuild.js          # Extension-host and webview build definitions
@@ -220,7 +221,23 @@ The project intentionally keeps several assessments separate:
   large files. Its labels (`clean`, `minor-issues`, `issues`, `defects`) describe the
   defect load, not the merit of the content.
 - Validation reports rule violations for the configured policy.
+- Agent compatibility (`src/compat/`) projects one validated document against a
+  table of verified per-agent behavior (spec baseline `skills-ref`, Claude Code,
+  Codex, OpenCode) and reports a verdict plus findings per agent.
 - Collision analysis compares skill names and descriptions within a workspace.
+
+The compatibility projection replaces the vendor-profile system deleted in
+PR #57, and deliberately avoids what made that design fail. The old profiles
+were guesses ("best-effort placeholder" per their own comments) and forked
+validation itself: users picked one profile and validation changed. In the
+current design validation stays single and generic; the projection is a
+read-only layer over the already-validated document. Every capability fact in
+`src/compat/agentCapabilities.ts` carries a source URL and a verified-on date,
+enforced by a structural test, and the projection emits no diagnostics —
+nothing in the Problems panel, no severity-override interaction, no change to
+validation status. Do not resurrect per-vendor validation profiles or a
+profile-mode setting. Adding an agent column is a pure data change to the
+capability table.
 
 `src/quality/descriptionHeuristics.ts` produces the shared `DescriptionAnalysis`
 consumed by description validation and description completeness. Scope evidence
@@ -287,8 +304,9 @@ workspace analysis marks the result as cancelled rather than presenting a partia
 cross-skill scan as complete.
 
 The same `WorkspaceAnalysis` model feeds the Skills tree and workspace report.
-`buildSkillsIndex` projects its per-skill records into schema-version-6 JSON for
-export as `skills.index.json`.
+`buildSkillsIndex` projects its per-skill records into schema-version-7 JSON for
+export as `skills.index.json`; version 7 adds each skill's per-agent
+compatibility projections (without display labels).
 
 The per-skill report is different: it analyzes the active editor buffer and can
 therefore include unsaved changes. Reports render escaped, script-disabled HTML in

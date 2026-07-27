@@ -3,13 +3,20 @@ import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
 import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
 import { assessAuthoringQuality } from '../authoring/authoringQuality';
+import { projectCompatibility } from '../compat/projectCompatibility';
 import { buildResourceGraph } from './buildResourceGraph';
 import { detectCollisions } from './detectSkillCollisions';
 import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
+import type { CompatibilityReport } from '../types/AgentCompatibility';
 import type { SkillProfile } from '../types/SkillProfile';
-import type { WorkspaceAnalysis, WorkspaceSkill, SkillsIndex } from '../types/Workspace';
+import type {
+  WorkspaceAnalysis,
+  WorkspaceSkill,
+  SkillsIndex,
+  SkillsIndexCompatibility,
+} from '../types/Workspace';
 
 /** Minimal cancellation signal, structurally compatible with `vscode.CancellationToken`. */
 export interface CancellationSignal {
@@ -80,7 +87,7 @@ export function analyzeWorkspace(
 /** Builds the exportable index model (brief §13.6). */
 export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     generatedAt: new Date().toISOString(),
     skills: analysis.skills.map((skill) => ({
       name: skill.name,
@@ -93,6 +100,22 @@ export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
       warnings: skill.warnings,
       information: skill.information,
       diagnostics: skill.diagnostics,
+      compatibility: toIndexCompatibility(skill.compatibility),
+    })),
+  };
+}
+
+/** The exported projection keeps the data and drops the display labels. */
+function toIndexCompatibility(report: CompatibilityReport): SkillsIndexCompatibility {
+  return {
+    verifiedOn: report.verifiedOn,
+    projections: report.projections.map((projection) => ({
+      agent: projection.agent,
+      verdict: projection.verdict,
+      findings: projection.findings,
+      ...(projection.notEvaluatedReason !== undefined
+        ? { notEvaluatedReason: projection.notEvaluatedReason }
+        : {}),
     })),
   };
 }
@@ -161,6 +184,7 @@ function toWorkspaceSkill(
     profile: profile.id,
     resourceGraph,
     tokenUsage,
+    compatibility: projectCompatibility(document),
   };
 }
 

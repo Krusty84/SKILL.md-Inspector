@@ -4,6 +4,17 @@
 
 ### Added
 
+- **Per-agent compatibility projection**: the skill and workspace reports gain
+  an "Agent compatibility" section that projects one validated skill against
+  documented behavior of the `skills-ref` spec baseline, Claude Code, Codex,
+  and OpenCode — accepted frontmatter fields, name/directory rules, discovery
+  paths, `allowed-tools` semantics, `$ARGUMENTS` substitution, and dynamic
+  context — and reports a per-agent verdict with findings. Every capability
+  fact carries a source URL and a verified-on date (`src/compat/`). The
+  projection is a static, read-only layer: it emits no diagnostics, does not
+  interact with severity overrides, and never changes validation status.
+  `skills.index.json` now has `schemaVersion` 7: each skill gains a
+  `compatibility` object with the projections (without display labels).
 - **`skill.description.xmlTags`** (error, specification): the description contains
   `<` or `>`, which Anthropic's platform rejects because the description is
   injected into the system prompt. Previously such a skill validated clean locally

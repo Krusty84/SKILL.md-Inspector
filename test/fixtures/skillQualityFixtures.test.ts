@@ -39,7 +39,7 @@ interface FixtureExpectation {
   limitations?: string[];
 }
 
-const fixturesRoot = path.resolve('fixtures/skills');
+const fixturesRoot = path.resolve('demo_skills/skills');
 const manifestPath = path.join(fixturesRoot, 'expectations.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<
   string,

@@ -12,6 +12,8 @@ import {
   DESCRIPTION_COMPLETENESS_DEFINITION,
   LOW_TEXT_COVERAGE_DEFINITION,
   authoringLabelText,
+  compatibilityFooterText,
+  compatibilityVerdictText,
 } from './metricDefinitions';
 import { totalSkillTokens } from '../analysis/tokenUsage';
 
@@ -29,6 +31,7 @@ export type WorkspaceReportScope =
 
 const WORKSPACE_REPORT_SECTIONS: readonly TocEntry[] = [
   { id: 'skills', label: 'Skills' },
+  { id: 'agent-compatibility', label: 'Agent compatibility' },
   { id: 'duplicate-names', label: 'Duplicate names' },
   { id: 'similar-names', label: 'Similar names' },
   { id: 'collision-matrix', label: 'Collision matrix' },
@@ -94,6 +97,9 @@ export function renderWorkspaceReportHtml(
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
+
+  <h2 id="agent-compatibility">Agent compatibility</h2>
+  ${renderCompatibilityMatrix(analysis.skills)}
 
   <h2 id="duplicate-names">Duplicate names</h2>
   ${renderNameConflicts(analysis.nameConflicts)}
@@ -172,6 +178,45 @@ function renderDescriptionQuality(quality: WorkspaceSkill['staticDescriptionQual
 
 function statusClass(status: WorkspaceSkill['validationStatus']): string {
   return status === 'pass' ? 'ok' : status === 'warning' ? 'warn' : 'fail';
+}
+
+/**
+ * Skills × agents verdict matrix (plan §7). `not-evaluated` renders as the
+ * words "not evaluated", never as an empty or zero-like cell.
+ */
+function renderCompatibilityMatrix(skills: WorkspaceSkill[]): string {
+  if (skills.length === 0) {
+    return '<p class="empty">No skills analyzed.</p>';
+  }
+  const labels = skills[0].compatibility.projections.map((projection) => projection.label);
+  const head = `<tr><th>Skill</th>${labels
+    .map((label) => `<th>${escapeHtml(label)}</th>`)
+    .join('')}</tr>`;
+  const rows = skills
+    .map(
+      (skill) =>
+        `<tr><td><code>${escapeHtml(skill.name)}</code></td>${skill.compatibility.projections
+          .map((projection) => {
+            const cls = verdictClass(projection.verdict);
+            return `<td${cls === '' ? '' : ` class="${cls}"`}>${compatibilityVerdictText(projection.verdict)}</td>`;
+          })
+          .join('')}</tr>`,
+    )
+    .join('');
+  const footer = `<p class="note">${escapeHtml(
+    compatibilityFooterText(skills[0].compatibility.verifiedOn),
+  )}</p>`;
+  return `<div class="scroll"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>${footer}`;
+}
+
+function verdictClass(verdict: WorkspaceSkill['compatibility']['projections'][number]['verdict']): string {
+  return verdict === 'compatible'
+    ? 'ok'
+    : verdict === 'notes'
+      ? 'warn'
+      : verdict === 'issues'
+        ? 'fail'
+        : '';
 }
 
 function renderCollisions(collisions: SkillCollision[]): string {

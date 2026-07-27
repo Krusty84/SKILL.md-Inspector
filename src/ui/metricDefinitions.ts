@@ -1,4 +1,5 @@
 import type { AuthoringLabel } from '../authoring/authoringQuality';
+import type { CompatibilityVerdict } from '../types/AgentCompatibility';
 
 /**
  * One-sentence definitions of the reported metrics, shared by every surface that
@@ -33,4 +34,29 @@ export const AUTHORING_HYGIENE_RESOURCES_HEADING = 'Authoring hygiene (resources
  */
 export function authoringLabelText(label: AuthoringLabel): string {
   return label === 'minor-issues' ? 'Minor issues' : label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/**
+ * Reader-facing wording for a compatibility verdict. `not-evaluated` must
+ * always render as words, never as an empty or zero-like cell.
+ */
+export function compatibilityVerdictText(verdict: CompatibilityVerdict): string {
+  switch (verdict) {
+    case 'compatible':
+      return 'compatible';
+    case 'notes':
+      return 'compatible with notes';
+    case 'issues':
+      return 'issues';
+    case 'not-evaluated':
+      return 'not evaluated';
+  }
+}
+
+/**
+ * The verbatim scope statement under every compatibility table (plan §7); the
+ * README reuses the same sentence so the surfaces cannot drift apart.
+ */
+export function compatibilityFooterText(verifiedOn: string): string {
+  return `Based on documented behavior verified on ${verifiedOn}. This is a static projection, not a runtime test — it does not prove an agent will select or correctly execute the skill.`;
 }

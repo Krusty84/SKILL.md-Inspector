@@ -12,7 +12,7 @@ import { renderReportHtml } from '../src/ui/renderReport';
 import { renderWorkspaceReportHtml } from '../src/ui/renderWorkspaceReport';
 import { analyzeWorkspace, buildSkillsIndex } from '../src/workspace/analyzeWorkspace';
 
-const FIXTURE_ROOT = path.resolve('fixtures');
+const FIXTURE_ROOT = path.resolve('demo_skills');
 
 function fixturePath(name: string): string {
   return path.join(FIXTURE_ROOT, 'skills', name, 'SKILL.md');
@@ -148,7 +148,7 @@ describe('explicit not-scored quality state', () => {
     expect(result.resources).toMatchObject({ score: 90, label: 'minor-issues' });
   });
 
-  it('serializes the explicit state in skills index schema version 6', () => {
+  it('serializes the explicit state in skills index schema version 7', () => {
     const analysis = analyzeWorkspace(
       FIXTURE_ROOT,
       [fixturePath('json-formatter'), fixturePath('helper'), fixturePath('stuff')],
@@ -157,7 +157,7 @@ describe('explicit not-scored quality state', () => {
     const serialized = JSON.parse(JSON.stringify(buildSkillsIndex(analysis)));
 
     expect(serialized).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: 7,
       skills: expect.arrayContaining([
         expect.objectContaining({
           name: 'json-formatter',
@@ -174,6 +174,16 @@ describe('explicit not-scored quality state', () => {
           }),
           authoringQuality: expect.objectContaining({
             instructions: expect.objectContaining({ state: 'not-scored', score: null }),
+          }),
+          // The compatibility projection mirrors the not-scored discipline.
+          compatibility: expect.objectContaining({
+            projections: expect.arrayContaining([
+              expect.objectContaining({
+                agent: 'spec',
+                verdict: 'not-evaluated',
+                notEvaluatedReason: 'frontmatter could not be parsed',
+              }),
+            ]),
           }),
         }),
         expect.objectContaining({
@@ -202,6 +212,8 @@ describe('explicit not-scored quality state', () => {
       expect(html).not.toMatch(/(?:null|undefined)\/100/);
       expect(html).not.toContain('Description quality: 0/100');
       expect(html).not.toContain('Instruction structure: 0/100');
+      // The compatibility matrix must say "not evaluated", never an empty cell.
+      expect(html).toContain('not evaluated');
     }
     expect(skillHtml).toContain(
       'Description completeness: Not scored — frontmatter could not be parsed',

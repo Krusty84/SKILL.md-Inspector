@@ -2,9 +2,11 @@ import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { StaticDescriptionQualityResult } from '../types/StaticDescriptionQuality';
+import type { CompatibilityReport } from '../types/AgentCompatibility';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { assessAuthoringQuality, type SkillAuthoringQuality } from '../authoring/authoringQuality';
 import { assessDocumentDescriptionQuality } from '../quality/staticDescriptionQuality';
+import { projectCompatibility } from '../compat/projectCompatibility';
 import type { SkillTokenUsage } from '../types/SkillTokenUsage';
 
 export interface SkillReport {
@@ -22,6 +24,8 @@ export interface SkillReport {
   /** Separate structural authoring dimension; it is never averaged into description quality. */
   authoringQuality: SkillAuthoringQuality;
   tokenUsage: SkillTokenUsage;
+  /** Per-agent compatibility projection from the verified capability table. */
+  compatibility: CompatibilityReport;
 }
 
 /**
@@ -65,6 +69,7 @@ export function buildReportModel(
     unreferencedFiles: doc.resources.filter((r) => !r.referenced).map((r) => r.relativePath),
     staticDescriptionQuality,
     authoringQuality: assessAuthoringQuality(doc, dictionaries, tokenUsage.body.lines),
+    compatibility: projectCompatibility(doc),
     tokenUsage: {
       ...tokenUsage,
       references: {

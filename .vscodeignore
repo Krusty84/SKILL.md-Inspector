@@ -2,7 +2,7 @@
 .vscode-test/**
 src/**
 test/**
-fixtures/**
+demo_skills/**
 node_modules/**
 .gitignore
 .prettierrc.json

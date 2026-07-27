@@ -980,9 +980,14 @@ const KNOWN_EXTENSIONS = new Set([
  * (`.pdf`, with no word character before the dot) or a `word.ext` pair whose
  * extension is a known one. `keybindings.json` and `CLAUDE.md` still match;
  * `foo.bar` and version numbers like `3.14` do not.
+ *
+ * The stem is capped at 64 characters so the scan stays linear: an unbounded
+ * stem backtracks quadratically on long unbroken letter runs, which freezes
+ * analysis on pasted-blob descriptions. A longer stem still matches on its
+ * trailing 64 characters, so classification is unchanged for real filenames.
  */
 function matchesFilename(text: string): boolean {
-  for (const match of text.matchAll(/(\p{L}[\p{L}\p{N}_-]*)?\.([a-z0-9]{1,8})\b/giu)) {
+  for (const match of text.matchAll(/(\p{L}[\p{L}\p{N}_-]{0,63})?\.([a-z0-9]{1,8})\b/giu)) {
     const extension = match[2].toLowerCase();
     if (/^\d+$/.test(extension)) {
       continue;
@@ -1056,7 +1061,7 @@ const COMMON_UPPERCASE_WORDS = new Set([
  */
 function structuralArtifact(text: string, dictionaries: HeuristicDictionaries): string | undefined {
   if (matchesFilename(text)) {
-    const filename = text.match(/\p{L}[\p{L}\p{N}_-]*\.[a-z0-9]{1,8}\b/iu)?.[0];
+    const filename = text.match(/\p{L}[\p{L}\p{N}_-]{0,63}\.[a-z0-9]{1,8}\b/iu)?.[0];
     if (filename) return filename;
   }
   const vague = new Set(dictionaries.vagueTerms);

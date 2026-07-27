@@ -21,6 +21,9 @@ only when you explicitly enable remote-link availability checks.
 - **Review a complete skill package** — inspect description completeness,
   instruction and resource hygiene, token usage, links, and bundled files in one
   report.
+- **See how each agent treats the skill** — project one validated skill against
+  documented Claude Code, Codex, and OpenCode behavior (plus the `skills-ref`
+  spec baseline) and get a per-agent verdict with the findings behind it.
 - **Compare a collection of skills** — find duplicate or confusing names, detect
   overlapping scopes, review resource graphs, and export a machine-readable
   `skills.index.json`.
@@ -122,7 +125,7 @@ workflows:
 | ----------------------------------- | ------------------------------------------------------------------ |
 | **Validate Workspace Skills**       | Validates discovered skills and publishes findings to Problems.    |
 | **Show Workspace Report**           | Shows name conflicts, scope collisions, quality, and resources.    |
-| **"Export SKILL.md's Report Index** | Writes schema-version-6 `skills.index.json` to the workspace root. |
+| **"Export SKILL.md's Report Index** | Writes schema-version-7 `skills.index.json` to the workspace root. |
 | **Refresh Skills**                  | Rebuilds the cached Skills panel analysis.                         |
 
 Workspace reports and index exports are cancellable. They analyze saved files;
@@ -202,6 +205,15 @@ Reports keep these higher-level signals separate:
   such as placeholders, weak examples, duplicate sections, undocumented scripts,
   or unreferenced files. A `clean` result does not prove that instructions are
   correct, useful, or safe.
+- **Agent compatibility** projects the skill against a table of verified
+  per-agent behavior — accepted frontmatter fields, name/directory rules,
+  documented discovery paths, and body features such as `$ARGUMENTS`
+  substitution and dynamic-context execution — and reports a verdict per agent
+  (spec baseline, Claude Code, Codex, OpenCode) with the findings behind it.
+  It is based on documented behavior verified on a stated date. This is a
+  static projection, not a runtime test — it does not prove an agent will
+  select or correctly execute the skill. It emits no diagnostics and never
+  changes validation status.
 - **Collision risk** compares what skills do and what they operate on, supported
   by wording and name similarity. It is a review aid, not proof that two skills
   will compete at runtime.
@@ -240,7 +252,7 @@ Collision thresholds and weights, OpenCode discovery limits, resource exclusions
 name similarity, and all heuristic dictionaries are also configurable.
 
 See
-[examples/custom-template.settings.json](examples/custom-template.settings.json)
+[custom-template.settings.json](custom-template.settings.json)
 for a custom template example.
 
 ## Privacy and network access

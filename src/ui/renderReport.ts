@@ -10,6 +10,8 @@ import {
   AUTHORING_HYGIENE_RESOURCES_HEADING,
   DESCRIPTION_COMPLETENESS_DEFINITION,
   authoringLabelText,
+  compatibilityFooterText,
+  compatibilityVerdictText,
 } from './metricDefinitions';
 import { totalSkillTokens } from '../analysis/tokenUsage';
 
@@ -24,6 +26,7 @@ export interface RenderOptions {
 // visible labels were renamed to match what the checks actually measure.
 const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
   { id: 'validation-findings', label: 'Validation findings' },
+  { id: 'agent-compatibility', label: 'Agent compatibility' },
   { id: 'trigger-quality-breakdown', label: 'Trigger quality breakdown' },
   { id: 'instruction-authoring-quality', label: AUTHORING_HYGIENE_INSTRUCTIONS_HEADING },
   { id: 'resource-authoring-quality', label: AUTHORING_HYGIENE_RESOURCES_HEADING },
@@ -148,6 +151,9 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   <h2 id="validation-findings">Validation findings</h2>
   ${renderDiagnostics(report.diagnostics)}
 
+  <h2 id="agent-compatibility">Agent compatibility</h2>
+  ${renderCompatibility(report.compatibility)}
+
   <h2 id="trigger-quality-breakdown">Trigger quality breakdown</h2>
   ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">Description completeness was not scored — ${escapeHtml(q.notScoredReason)}.</p>`}
 
@@ -207,6 +213,24 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
         ? { cls: 'no', glyph: '✗' }
         : { cls: 'partial', glyph: '◐' };
   return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(finding.criterion)}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
+}
+
+/** One row per agent: verdict plus the findings behind it (plan §7). */
+function renderCompatibility(compatibility: SkillReport['compatibility']): string {
+  const rows = compatibility.projections
+    .map((projection) => {
+      const findings =
+        projection.verdict === 'not-evaluated'
+          ? `<span class="empty">${escapeHtml(projection.notEvaluatedReason ?? 'not evaluated')}</span>`
+          : projection.findings.length === 0
+            ? '<span class="empty">None</span>'
+            : `<ul>${projection.findings
+                .map((finding) => `<li>${escapeHtml(finding.message)}</li>`)
+                .join('')}</ul>`;
+      return `<tr><td>${escapeHtml(projection.label)}</td><td>${compatibilityVerdictText(projection.verdict)}</td><td>${findings}</td></tr>`;
+    })
+    .join('');
+  return `<table><thead><tr><th>Agent</th><th>Verdict</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table><p class="note">${escapeHtml(compatibilityFooterText(compatibility.verifiedOn))}</p>`;
 }
 
 function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {

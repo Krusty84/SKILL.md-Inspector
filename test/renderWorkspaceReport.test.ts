@@ -63,6 +63,46 @@ function analysis(): WorkspaceAnalysis {
           references: { files: [], totalTokens: 80 },
           otherFiles: { files: [], totalTokens: 15 },
         },
+        compatibility: {
+          verifiedOn: '2026-07-26',
+          projections: [
+            { agent: 'spec', label: 'Spec (skills-ref)', verdict: 'compatible', findings: [] },
+            {
+              agent: 'claude-code',
+              label: 'Claude Code',
+              verdict: 'notes',
+              findings: [
+                {
+                  agent: 'claude-code',
+                  level: 'note',
+                  kind: 'tool-grant',
+                  message: '`allowed-tools` grants tools without prompting; review the grant.',
+                  subject: 'allowed-tools',
+                },
+              ],
+            },
+            {
+              agent: 'codex',
+              label: 'Codex',
+              verdict: 'issues',
+              findings: [
+                {
+                  agent: 'codex',
+                  level: 'issue',
+                  kind: 'field-rejected',
+                  message: 'Example issue.',
+                },
+              ],
+            },
+            {
+              agent: 'opencode',
+              label: 'OpenCode',
+              verdict: 'not-evaluated',
+              findings: [],
+              notEvaluatedReason: 'frontmatter could not be parsed',
+            },
+          ],
+        },
       },
     ],
     collisions: [
@@ -152,6 +192,29 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('href="#skills"');
     expect(html).toContain('href="#collision-matrix"');
     expect(html).toContain('<h2 id="collision-matrix">Collision matrix</h2>');
+  });
+
+  it('renders the agent compatibility matrix with verdict words, never empty cells', () => {
+    const html = renderWorkspaceReportHtml(analysis(), {
+      nonce: 'n',
+      cspSource: 'x',
+      scope: { kind: 'workspace', folderPath: '/ws' },
+    });
+
+    expect(html).toContain('<h2 id="agent-compatibility">Agent compatibility</h2>');
+    expect(html).toContain('href="#agent-compatibility"');
+    expect(html).toContain('<th>Spec (skills-ref)</th>');
+    expect(html).toContain('<th>Claude Code</th>');
+    expect(html).toContain('<th>Codex</th>');
+    expect(html).toContain('<th>OpenCode</th>');
+    expect(html).toContain('>compatible</td>');
+    expect(html).toContain('>compatible with notes</td>');
+    expect(html).toContain('>issues</td>');
+    // House rule: not-evaluated renders as words, never as an empty/zero-like cell.
+    expect(html).toContain('>not evaluated</td>');
+    expect(html).toContain(
+      'Based on documented behavior verified on 2026-07-26. This is a static projection, not a runtime test — it does not prove an agent will select or correctly execute the skill.',
+    );
   });
 
   it('renders the generated-at timestamp when provided', () => {

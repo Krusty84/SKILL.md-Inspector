@@ -8,13 +8,13 @@ import { DiagnosticCode } from '../src/types/DiagnosticCode';
 import { validateBody } from '../src/validation/validateBody';
 
 function inspectFixture(name: string) {
-  const fixturePath = path.resolve(`fixtures/skills/${name}/SKILL.md`);
+  const fixturePath = path.resolve(`demo_skills/skills/${name}/SKILL.md`);
   const document = parseSkillFile(fixturePath, readFileSync(fixturePath, 'utf8'));
   return assessAuthoringQuality(document).instructions;
 }
 
 function fixtureDocument(name: string) {
-  const fixturePath = path.resolve(`fixtures/skills/${name}/SKILL.md`);
+  const fixturePath = path.resolve(`demo_skills/skills/${name}/SKILL.md`);
   return parseSkillFile(fixturePath, readFileSync(fixturePath, 'utf8'));
 }
 

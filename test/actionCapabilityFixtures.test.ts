@@ -9,7 +9,7 @@ import { DiagnosticCode } from '../src/types/DiagnosticCode';
 import type { SkillProfile } from '../src/types/SkillProfile';
 
 function inspectFixture(name: string, profile: SkillProfile = genericProfile) {
-  const fixturePath = path.resolve(`fixtures/skills/${name}/SKILL.md`);
+  const fixturePath = path.resolve(`demo_skills/skills/${name}/SKILL.md`);
   const content = readFileSync(fixturePath, 'utf8');
   const { document, diagnostics } = analyzeSkill(fixturePath, content, profile, {
     mode: 'text-only',
