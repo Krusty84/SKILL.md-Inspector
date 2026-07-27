@@ -30,13 +30,15 @@
 
 ### Changed
 
-- The skill report's summary row replaces the Profile card with an Agent
-  compatibility semaphore card. The Profile card was vestigial — validation has
+- The skill report's summary row drops the Profile card and gains a Lines card
+  (Markdown body line count). The Profile card was vestigial — validation has
   used a single generic policy since the vendor profiles were removed (PR #57),
-  so it always read "Generic". The new card shows the worst per-agent verdict
-  as a green (compatible) / yellow (notes) / red (issues) light with a
-  per-verdict agent count; when the projection is not evaluated the card says
-  so in words, like the other not-scored cards.
+  so it always read "Generic". A full-width Agent compatibility bar under the
+  summary cards shows one semaphore lamp per agent — green (compatible),
+  yellow (notes), red (issues), verdict words on hover — with the spec
+  baseline shown as "Regular SKILL.md"; a not-evaluated projection renders in
+  words, like the other not-scored cards. The detailed Agent compatibility
+  section is unchanged.
 - Resource token budgets are advisory warnings, never errors. The 25k/50k/100k
   error tiers had no basis in the Agent Skills specification — bundled resources
   load on demand and have no spec limit — yet marked spec-valid skills as

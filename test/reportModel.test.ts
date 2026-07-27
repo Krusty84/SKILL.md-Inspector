@@ -150,32 +150,52 @@ describe('renderReportHtml', () => {
     );
   });
 
-  it('summarizes the compatibility verdict as a semaphore card and drops the Profile card', () => {
+  it('renders a per-agent semaphore bar below the summary cards instead of a card', () => {
     const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
     const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
 
     expect(html).not.toContain('<div class="label">Profile</div>');
-    expect(html).toContain('<div class="label">Agent compatibility</div>');
-    // Three agents carry discovery notes, one (spec) is compatible → yellow.
-    expect(html).toContain('<span class="semaphore yellow"></span>Compatible with notes');
-    expect(html).toContain('Notes 3 · Compatible 1');
+    expect(html).not.toContain('verdict-breakdown');
+    expect(html).toContain('class="card compat-bar"');
+    // Lamps only, verdict on hover. Spec is compatible (green); the tmp-dir
+    // location gives the three tools discovery notes (yellow). The spec lamp
+    // uses the friendlier bar-only name.
+    expect(html).toContain(
+      'Regular SKILL.md<span class="semaphore green" title="compatible"></span>',
+    );
+    expect(html).toContain(
+      'Claude Code<span class="semaphore yellow" title="compatible with notes"></span>',
+    );
+    expect(html).toContain(
+      'Codex<span class="semaphore yellow" title="compatible with notes"></span>',
+    );
+    expect(html).toContain(
+      'OpenCode<span class="semaphore yellow" title="compatible with notes"></span>',
+    );
+    // The detailed section still uses the formal spec label.
+    expect(html).toContain('Spec (skills-ref)');
   });
 
-  it('colors the semaphore card by the worst verdict', () => {
+  it('colors each agent lamp by its own verdict', () => {
     const model = report('---\nname: demo\ndescription: Format reports. Use when needed.\n---\nBody.');
+    const codex = model.compatibility.projections.find((p) => p.agent === 'codex')!;
+    codex.verdict = 'issues';
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(html).toContain('Codex<span class="semaphore red" title="issues"></span>');
+    expect(html).toContain(
+      'Claude Code<span class="semaphore yellow" title="compatible with notes"></span>',
+    );
+  });
 
-    for (const projection of model.compatibility.projections) {
-      projection.verdict = 'compatible';
-      projection.findings = [];
-    }
-    let html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
-    expect(html).toContain('<span class="semaphore green"></span>Compatible');
-    expect(html).toContain('Compatible 4');
-
-    model.compatibility.projections[0].verdict = 'issues';
-    html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
-    expect(html).toContain('<span class="semaphore red"></span>Issues');
-    expect(html).toContain('Issues 1 · Compatible 3');
+  it('renders a Lines card with the body line count', () => {
+    const model = report(
+      '---\nname: demo\ndescription: Format reports. Use when needed.\n---\nLine one.\nLine two.\nLine three.',
+    );
+    const html = renderReportHtml(model, { nonce: 'n', cspSource: 'x' });
+    expect(model.tokenUsage.body.lines).toBeGreaterThan(0);
+    expect(html).toContain(
+      `<div class="label">Lines</div><div class="value ">${model.tokenUsage.body.lines.toLocaleString('en-US')}</div>`,
+    );
   });
 
   it('escapes HTML in compatibility finding messages', () => {

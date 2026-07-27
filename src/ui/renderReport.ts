@@ -14,7 +14,6 @@ import {
   compatibilityFooterText,
   compatibilityVerdictText,
 } from './metricDefinitions';
-import { overallCompatibilityVerdict } from '../compat/projectCompatibility';
 import { totalSkillTokens } from '../analysis/tokenUsage';
 
 export interface RenderOptions {
@@ -117,11 +116,12 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   .conf-high { color: var(--vscode-testing-iconPassed, #3fb950); }
   .conf-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
   .conf-low { color: var(--vscode-errorForeground, #f14c4c); }
-  .semaphore { display: inline-block; width: 0.75em; height: 0.75em; border-radius: 50%; margin-right: 0.4rem; }
+  .semaphore { display: inline-block; width: 0.75em; height: 0.75em; border-radius: 50%; }
   .semaphore.green { background: var(--vscode-testing-iconPassed, #3fb950); }
   .semaphore.yellow { background: var(--vscode-editorWarning-foreground, #cca700); }
   .semaphore.red { background: var(--vscode-errorForeground, #f14c4c); }
-  .verdict-breakdown { font-size: 0.72rem; font-weight: 400; opacity: 0.7; margin-top: 0.2rem; line-height: 1.4; }
+  .compat-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; margin-top: 0.75rem; }
+  .compat-agent { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
   table { width: 100%; border-collapse: collapse; }
   th, td { border-bottom: 1px solid var(--vscode-panel-border); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
   th { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }${TOC_STYLES}
@@ -139,13 +139,14 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     ${card('Description completeness', descriptionCard, '', DESCRIPTION_COMPLETENESS_DEFINITION)}
     ${card(instructionCardLabel, instructionCard, '', AUTHORING_HYGIENE_DEFINITION)}
     ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
-    ${card('Agent compatibility', compatibilityCardValue(report.compatibility), '', AGENT_COMPATIBILITY_DEFINITION)}
     ${card('Description', `${report.descriptionLength} chars`)}
+    ${card('Lines', formatNumber(report.tokenUsage.body.lines), '', 'Line count of the SKILL.md Markdown body.')}
     ${card('Token usage', tokenCardValue)}
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
     ${card('Warnings', String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
     ${card('Information', String(report.informationCount))}
   </div>
+  ${renderCompatibilityBar(report.compatibility)}
   ${renderGradeLimitations(q)}
   ${
     q.limitations.length > 0
@@ -223,35 +224,31 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
 }
 
 /**
- * Semaphore summary card of the worst per-agent verdict: green = every agent
- * compatible, yellow = notes, red = issues. Not-evaluated states render as
- * words with no colored dot, mirroring the not-scored quality cards.
+ * Full-width per-agent semaphore bar under the summary cards: one lamp per
+ * agent, colored by that agent's own verdict (green = compatible, yellow =
+ * notes, red = issues) with the verdict words on hover. A not-evaluated
+ * projection renders the words instead of a lamp, mirroring the not-scored
+ * quality cards. The spec baseline is shown under the friendlier name
+ * "Regular SKILL.md" here; the detailed section keeps its formal label.
  */
-function compatibilityCardValue(compatibility: SkillReport['compatibility']): string {
-  const overall = overallCompatibilityVerdict(compatibility);
-  if (overall === 'not-evaluated') {
-    const reason = compatibility.projections.find(
-      (projection) => projection.notEvaluatedReason,
-    )?.notEvaluatedReason;
-    return `Not evaluated${reason ? ` — ${escapeHtml(reason)}` : ''}`;
-  }
-  const color = overall === 'issues' ? 'red' : overall === 'notes' ? 'yellow' : 'green';
-  const breakdown = (
-    [
-      ['Issues', 'issues'],
-      ['Notes', 'notes'],
-      ['Compatible', 'compatible'],
-    ] as const
-  )
-    .map(([label, verdict]) => ({
-      label,
-      count: compatibility.projections.filter((projection) => projection.verdict === verdict)
-        .length,
-    }))
-    .filter(({ count }) => count > 0)
-    .map(({ label, count }) => `${label} ${count}`)
-    .join(' · ');
-  return `<span class="semaphore ${color}"></span>${capitalize(compatibilityVerdictText(overall))}<div class="verdict-breakdown">${breakdown}</div>`;
+function renderCompatibilityBar(compatibility: SkillReport['compatibility']): string {
+  const agents = compatibility.projections
+    .map((projection) => {
+      const name = projection.agent === 'spec' ? 'Regular SKILL.md' : projection.label;
+      const lamp =
+        projection.verdict === 'not-evaluated'
+          ? '<span class="empty">not evaluated</span>'
+          : `<span class="semaphore ${
+              projection.verdict === 'issues'
+                ? 'red'
+                : projection.verdict === 'notes'
+                  ? 'yellow'
+                  : 'green'
+            }" title="${compatibilityVerdictText(projection.verdict)}"></span>`;
+      return `<span class="compat-agent">${escapeHtml(name)}${lamp}</span>`;
+    })
+    .join('');
+  return `<div class="card compat-bar" title="${AGENT_COMPATIBILITY_DEFINITION}"><div class="label">Agent compatibility</div>${agents}</div>`;
 }
 
 /** One row per agent: verdict plus the findings behind it (plan §7). */
