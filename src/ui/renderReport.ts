@@ -9,6 +9,7 @@ import {
   AUTHORING_HYGIENE_DEFINITION,
   AUTHORING_HYGIENE_INSTRUCTIONS_HEADING,
   AUTHORING_HYGIENE_RESOURCES_HEADING,
+  COMPATIBILITY_ALL_AGENTS_DISABLED,
   DESCRIPTION_COMPLETENESS_DEFINITION,
   authoringLabelText,
   compatibilityFooterText,
@@ -232,6 +233,11 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
  * "Regular SKILL.md" here; the detailed section keeps its formal label.
  */
 function renderCompatibilityBar(compatibility: SkillReport['compatibility']): string {
+  if (compatibility.projections.length === 0) {
+    // Every agent unchecked in settings: the detailed section says so in
+    // words; a bar with no lamps would just be an empty box.
+    return '';
+  }
   const agents = compatibility.projections
     .map((projection) => {
       const name = projection.agent === 'spec' ? 'Regular SKILL.md' : projection.label;
@@ -253,6 +259,9 @@ function renderCompatibilityBar(compatibility: SkillReport['compatibility']): st
 
 /** One row per agent: verdict plus the findings behind it (plan §7). */
 function renderCompatibility(compatibility: SkillReport['compatibility']): string {
+  if (compatibility.projections.length === 0) {
+    return `<p class="empty">${COMPATIBILITY_ALL_AGENTS_DISABLED}</p>`;
+  }
   const rows = compatibility.projections
     .map((projection) => {
       const findings =

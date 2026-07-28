@@ -213,7 +213,8 @@ Reports keep these higher-level signals separate:
   It is based on documented behavior verified on a stated date. This is a
   static projection, not a runtime test — it does not prove an agent will
   select or correctly execute the skill. It emits no diagnostics and never
-  changes validation status.
+  changes validation status. Each agent can be excluded via the
+  `skillMdInspector.validation.compatibilityAgents.*` settings.
 - **Collision risk** compares what skills do and what they operate on, supported
   by wording and name similarity. It is a review aid, not proof that two skills
   will compete at runtime.
@@ -236,6 +237,7 @@ Open VS Code Settings and search for `SKILL.md Inspector`.
 | --------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
 | `skillMdInspector.validation.enabled`               | `true`                                         | Enable or disable editor validation.                           |
 | `skillMdInspector.validation.runOnSave`             | `true`                                         | Run complete validation when a skill is saved.                 |
+| `skillMdInspector.validation.compatibilityAgents.*` | all `true`                                     | Choose which agents appear in compatibility projections.       |
 | `skillMdInspector.links.onlineCheck.enabled`        | `false`                                        | Check referenced HTTP(S) URLs during complete validation.      |
 | `skillMdInspector.links.onlineCheck.maxConcurrency` | `4`                                            | Limit concurrent remote checks for one operation.              |
 | `skillMdInspector.description.language`             | `auto`                                         | Select English checks or automatic limited-language detection. |

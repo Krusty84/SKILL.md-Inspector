@@ -15,6 +15,11 @@
   interact with severity overrides, and never changes validation status.
   `skills.index.json` now has `schemaVersion` 7: each skill gains a
   `compatibility` object with the projections (without display labels).
+  Each agent has an enable/disable checkbox in the Validation settings
+  (`skillMdInspector.validation.compatibilityAgents.*`, all on by default);
+  a disabled agent is omitted from the bar, the detailed section, the
+  workspace matrix, and the exported index, and the reports say so in words
+  when every agent is disabled.
 - **`skill.description.xmlTags`** (error, specification): the description contains
   `<` or `>`, which Anthropic's platform rejects because the description is
   injected into the system prompt. Previously such a skill validated clean locally

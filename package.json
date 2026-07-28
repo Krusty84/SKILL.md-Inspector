@@ -907,6 +907,30 @@
             "default": true,
             "description": "Re-run validation whenever a SKILL.md file is saved.",
             "order": 2
+          },
+          "skillMdInspector.validation.compatibilityAgents.spec": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include the specification baseline (skills-ref) in the agent compatibility projection.",
+            "order": 3
+          },
+          "skillMdInspector.validation.compatibilityAgents.claudeCode": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include Claude Code in the agent compatibility projection.",
+            "order": 4
+          },
+          "skillMdInspector.validation.compatibilityAgents.codex": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include Codex in the agent compatibility projection.",
+            "order": 5
+          },
+          "skillMdInspector.validation.compatibilityAgents.openCode": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include OpenCode in the agent compatibility projection.",
+            "order": 6
           }
         }
       },

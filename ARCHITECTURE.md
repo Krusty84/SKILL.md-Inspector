@@ -235,9 +235,11 @@ read-only layer over the already-validated document. Every capability fact in
 `src/compat/agentCapabilities.ts` carries a source URL and a verified-on date,
 enforced by a structural test, and the projection emits no diagnostics —
 nothing in the Problems panel, no severity-override interaction, no change to
-validation status. Do not resurrect per-vendor validation profiles or a
-profile-mode setting. Adding an agent column is a pure data change to the
-capability table.
+validation status. The `skillMdInspector.validation.compatibilityAgents.*`
+settings only filter which agents are projected and shown; they never change
+validation. Do not resurrect per-vendor validation profiles or a profile-mode
+setting. Adding an agent column is a pure data change to the capability table
+plus one settings checkbox.
 
 `src/quality/descriptionHeuristics.ts` produces the shared `DescriptionAnalysis`
 consumed by description validation and description completeness. Scope evidence

@@ -90,7 +90,14 @@ describe('package manifest context menus and templates', () => {
       {
         title: 'Validation',
         order: 2,
-        keys: ['skillMdInspector.validation.enabled', 'skillMdInspector.validation.runOnSave'],
+        keys: [
+          'skillMdInspector.validation.enabled',
+          'skillMdInspector.validation.runOnSave',
+          'skillMdInspector.validation.compatibilityAgents.spec',
+          'skillMdInspector.validation.compatibilityAgents.claudeCode',
+          'skillMdInspector.validation.compatibilityAgents.codex',
+          'skillMdInspector.validation.compatibilityAgents.openCode',
+        ],
       },
       {
         title: 'Content quality',
@@ -192,10 +199,10 @@ describe('package manifest context menus and templates', () => {
     const validation = configuration[1].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    // Every setting lives in exactly one section (48 total, no duplicates).
+    // Every setting lives in exactly one section (52 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(48);
-    expect(new Set(allKeys).size).toBe(48);
+    expect(allKeys.length).toBe(52);
+    expect(new Set(allKeys).size).toBe(52);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

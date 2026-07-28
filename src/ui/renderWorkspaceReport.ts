@@ -9,6 +9,7 @@ import type {
 import { renderToc, TOC_STYLES, type TocEntry } from './reportToc';
 import {
   AUTHORING_HYGIENE_DEFINITION,
+  COMPATIBILITY_ALL_AGENTS_DISABLED,
   DESCRIPTION_COMPLETENESS_DEFINITION,
   LOW_TEXT_COVERAGE_DEFINITION,
   authoringLabelText,
@@ -187,6 +188,9 @@ function statusClass(status: WorkspaceSkill['validationStatus']): string {
 function renderCompatibilityMatrix(skills: WorkspaceSkill[]): string {
   if (skills.length === 0) {
     return '<p class="empty">No skills analyzed.</p>';
+  }
+  if (skills[0].compatibility.projections.length === 0) {
+    return `<p class="empty">${COMPATIBILITY_ALL_AGENTS_DISABLED}</p>`;
   }
   const labels = skills[0].compatibility.projections.map((projection) => projection.label);
   const head = `<tr><th>Skill</th>${labels
