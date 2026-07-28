@@ -72,6 +72,8 @@ vi.mock('vscode', () => ({
 
 import { SkillCodeActionProvider } from '../src/codeActions/skillCodeActions';
 import { QuickFixId } from '../src/types/DiagnosticCode';
+import { analyzeSkill } from '../src/analysis/analyzeSkill';
+import { genericProfile } from '../src/profiles';
 
 /** A `SKILL.md` whose capability verb is deliberately outside the registry. */
 const UNREGISTERED_VERB = `---
@@ -110,8 +112,18 @@ const WHOLE_FILE = {
   end: { line: 99, character: 0 },
 };
 
+/**
+ * Pure stand-in for the DiagnosticsProvider's cached-analysis source; the
+ * dictionary quick fixes come from description heuristics, which text-only
+ * mode produces without touching the filesystem.
+ */
+const analysisSource = {
+  analysisForCodeActions: (document: { uri: { fsPath: string }; getText(): string }) =>
+    analyzeSkill(document.uri.fsPath, document.getText(), genericProfile, { mode: 'text-only' }),
+};
+
 function actionsFor(text: string) {
-  const provider = new SkillCodeActionProvider();
+  const provider = new SkillCodeActionProvider(analysisSource as never);
   return provider.provideCodeActions(
     fakeDocument(text) as never,
     WHOLE_FILE as never,

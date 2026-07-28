@@ -10,7 +10,11 @@ import type {
   SkillBodyTokenUsage,
   SkillTokenUsage,
 } from '../types/SkillTokenUsage';
-import { measureBodyTokenUsage, measureSkillTokenUsage } from './tokenUsage';
+import {
+  measureBodyTokenUsage,
+  measureSkillTokenUsage,
+  type ResourceTokenSource,
+} from './tokenUsage';
 
 export interface SkillAnalysis {
   document: SkillDocument;
@@ -35,6 +39,11 @@ export interface AnalyzeSkillOptions {
   exclude?: readonly string[];
   /** Resource discovery function (full mode only); defaults to filesystem discovery. */
   discover?: (dir: string, exclude?: readonly string[]) => SkillResource[];
+  /**
+   * Per-resource token counts (full mode only); defaults to reading and
+   * encoding each file. Long-lived callers pass a cache-backed source.
+   */
+  fileTokens?: ResourceTokenSource;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
 }
@@ -85,7 +94,7 @@ export function analyzeSkill(
 
   const discover = options.discover ?? discoverResources;
   const document = withResources(parsed, discover(parsed.directory, options.exclude));
-  const tokenUsage = measureSkillTokenUsage(document);
+  const tokenUsage = measureSkillTokenUsage(document, undefined, options.fileTokens);
   const diagnostics = runAllValidations(document, profile, {
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,

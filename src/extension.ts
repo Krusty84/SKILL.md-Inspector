@@ -1,9 +1,12 @@
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DiagnosticsProvider } from './diagnostics/diagnosticsProvider';
+import { createResourceWatcherScheduler } from './diagnostics/resourceWatcherScheduler';
+import { matchesAnyGlob } from './parser/globMatch';
 import { SkillCodeActionProvider } from './codeActions/skillCodeActions';
 import { registerCommands } from './commands';
 import { isSkillFile } from './diagnostics/mapping';
-import { readConfig } from './config';
+import { invalidateConfigCache, readConfig } from './config';
 import { SkillTreeProvider } from './ui/skillTreeProvider';
 import { FavoritesTreeProvider } from './ui/favoritesTreeProvider';
 import { WorkspaceTreeProvider } from './ui/workspaceTreeProvider';
@@ -30,8 +33,16 @@ import {
   type NavigatorConfigSnapshot,
 } from './configurationRefresh';
 import { registerNavigatorWatchers } from './navigator/navigatorWatchers';
+import { warmUpO200kTokenizer } from './analysis/o200kTokenizer';
+import { createKeyedDebouncer } from './ui/debounce';
 
-const CHANGE_DEBOUNCE_MS = 300;
+const CHANGE_DEBOUNCE_MS = 250;
+const CHANGE_MAX_WAIT_MS = 1000;
+const RESOURCE_EVENT_DEBOUNCE_MS = 250;
+const RESOURCE_EVENT_MAX_WAIT_MS = 2000;
+const SAVE_TREE_REFRESH_DEBOUNCE_MS = 1000;
+const SAVE_TREE_REFRESH_MAX_WAIT_MS = 5000;
+const TOKENIZER_WARM_UP_DELAY_MS = 2000;
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('SKILL.md Inspector');
@@ -182,17 +193,33 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Watch bundled resource files so adding/removing/renaming one refreshes the
   // tree and re-validates the owning skill (Task 60). Renames fire delete+create.
+  // The glob matches those directory names anywhere in the workspace, so events
+  // are filtered against the resource-exclusion globs (a node_modules install
+  // must not thrash the tree) and coalesced per burst: one invalidation sweep,
+  // one Skills refresh, one revalidation — instead of one of each per file.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(
     '**/{references,scripts,assets,templates}/**',
   );
-  const onResourceChange = (uri: vscode.Uri): void => {
-    provider.invalidateResource(uri.fsPath);
-    treeProvider.refresh();
-    revalidateVisible(provider);
-  };
+  const resourceScheduler = createResourceWatcherScheduler({
+    debounceMs: RESOURCE_EVENT_DEBOUNCE_MS,
+    maxWaitMs: RESOURCE_EVENT_MAX_WAIT_MS,
+    // Fail-open: patterns anchored to a skill directory (e.g. `dist/**`) do not
+    // match an absolute path, and their events just proceed to the batch.
+    ignore: (fsPath) =>
+      matchesAnyGlob(toPosixPath(fsPath), readConfig(vscode.Uri.file(fsPath)).resourceExclude),
+    flush: (paths) => {
+      for (const fsPath of paths) {
+        provider.invalidateResource(fsPath);
+      }
+      void treeProvider.refresh();
+      revalidateVisible(provider);
+    },
+  });
+  const onResourceChange = (uri: vscode.Uri): void => resourceScheduler.notify(uri.fsPath);
   resourceWatcher.onDidCreate(onResourceChange);
   resourceWatcher.onDidDelete(onResourceChange);
   resourceWatcher.onDidChange(onResourceChange);
+  context.subscriptions.push(new vscode.Disposable(() => resourceScheduler.dispose()));
 
   context.subscriptions.push(
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
@@ -291,30 +318,31 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
       { language: 'markdown', scheme: 'file' },
-      new SkillCodeActionProvider(),
+      new SkillCodeActionProvider(provider),
       { providedCodeActionKinds: SkillCodeActionProvider.providedCodeActionKinds },
     ),
   );
 
-  // Debounced re-validation while typing, keyed by document URI.
-  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+  // Debounced re-validation while typing, keyed by document URI: trailing
+  // edge after each pause, but never later than CHANGE_MAX_WAIT_MS after the
+  // first coalesced change, so diagnostics keep refreshing during continuous
+  // typing instead of freezing until the user stops.
+  const changeDebouncer = createKeyedDebouncer(CHANGE_DEBOUNCE_MS, CHANGE_MAX_WAIT_MS);
+  const saveRefreshDebouncer = createKeyedDebouncer(
+    SAVE_TREE_REFRESH_DEBOUNCE_MS,
+    SAVE_TREE_REFRESH_MAX_WAIT_MS,
+  );
   const scheduleValidate = (document: vscode.TextDocument): void => {
     if (!isSkillFile(document)) {
       return;
     }
-    const key = document.uri.toString();
-    const existing = pending.get(key);
-    if (existing) {
-      clearTimeout(existing);
-    }
-    pending.set(
-      key,
-      setTimeout(() => {
-        pending.delete(key);
-        // While typing, run the filesystem-free pipeline (Tasks 57/58).
-        void provider.validate(document, 'text-only');
-      }, CHANGE_DEBOUNCE_MS),
-    );
+    changeDebouncer.schedule(document.uri.toString(), () => {
+      // While typing, run the full pipeline served from the resource and
+      // token caches, so filesystem diagnostics (missing links, unreferenced
+      // resources) stay stable instead of vanishing until the next save.
+      // Online link checking stays off this path: no network per keystroke.
+      void provider.validate(document, { online: false });
+    });
   };
 
   // Baseline of the settings the sidebar views depend on, updated on every
@@ -323,6 +351,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((document) => void provider.validate(document)),
+    // onDidOpenTextDocument does not re-fire for an already-open document, so a
+    // SKILL.md revealed later (a restored background tab, a new split) would
+    // never get validated. The version-matched cache check keeps ordinary tab
+    // switching between already-validated files free of work.
+    vscode.window.onDidChangeVisibleTextEditors((editors) => {
+      for (const editor of editors) {
+        if (isSkillFile(editor.document) && !provider.hasCurrentAnalysis(editor.document)) {
+          void provider.validate(editor.document);
+        }
+      }
+    }),
     vscode.workspace.onDidChangeTextDocument((event) => scheduleValidate(event.document)),
     vscode.workspace.onDidSaveTextDocument((document) => {
       if (isSkillFile(document)) {
@@ -331,8 +370,9 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         // Saving only changes the file's analysis, so refresh just the Skills
         // panel. The WORKSPACE and FAVORITES file lists don't depend on file
-        // contents and stay independent.
-        void treeProvider.refresh();
+        // contents and stay independent. Coalesced: the workspace re-analysis
+        // is synchronous and heavy, so rapid saves must not stack runs.
+        saveRefreshDebouncer.schedule('skills-tree', () => void treeProvider.refresh());
       }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
@@ -345,6 +385,8 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (!event.affectsConfiguration('skillMdInspector')) return;
+      // Before anything below re-reads settings: the memoized configs are stale.
+      invalidateConfigCache();
       reportConfigurationWarnings();
       // Compare the settings each sidebar view actually reads against the last
       // snapshot so a view refreshes only when its own value changed. Adding or
@@ -374,22 +416,41 @@ export function activate(context: vscode.ExtensionContext): void {
       );
       navigatorConfigSnapshot = nextSnapshot;
     }),
-    new vscode.Disposable(() => {
-      for (const timer of pending.values()) {
-        clearTimeout(timer);
-      }
-      pending.clear();
-    }),
+    new vscode.Disposable(() => changeDebouncer.dispose()),
+    new vscode.Disposable(() => saveRefreshDebouncer.dispose()),
   );
 
   reportConfigurationWarnings();
   revalidateVisible(provider);
+
+  // Any full validation constructs the o200k tokenizer on demand (a noticeable
+  // synchronous stall). If no SKILL.md was visible above, prebuild it shortly
+  // after activation so the first edit in a skill workspace stays smooth; a
+  // plain-markdown single file (no workspace) skips the cost entirely.
+  let warmUpTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+    warmUpTimer = undefined;
+    if (vscode.workspace.workspaceFolders?.length) {
+      warmUpO200kTokenizer();
+    }
+  }, TOKENIZER_WARM_UP_DELAY_MS);
+  context.subscriptions.push(
+    new vscode.Disposable(() => {
+      if (warmUpTimer) {
+        clearTimeout(warmUpTimer);
+        warmUpTimer = undefined;
+      }
+    }),
+  );
 }
 
 function revalidateVisible(provider: DiagnosticsProvider): void {
   for (const editor of vscode.window.visibleTextEditors) {
     void provider.validate(editor.document);
   }
+}
+
+function toPosixPath(fsPath: string): string {
+  return fsPath.split(path.sep).join('/');
 }
 
 /**

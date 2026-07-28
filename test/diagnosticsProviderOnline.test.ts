@@ -121,9 +121,40 @@ describe('DiagnosticsProvider online validation boundary', () => {
       transport: { request: vi.fn() },
     };
     const provider = new DiagnosticsProvider(dependencies);
-    await provider.validate(textDocument().document as never, 'text-only');
+    await provider.validate(textDocument().document as never, { mode: 'text-only' });
     expect(dependencies.dns.resolve).not.toHaveBeenCalled();
     expect(dependencies.transport.request).not.toHaveBeenCalled();
+    provider.dispose();
+  });
+
+  it('does no network work for the typing path even when online checking is enabled', async () => {
+    hoisted.onlineEnabled = true;
+    const dependencies: RemoteLinkDependencies = {
+      dns: { resolve: vi.fn() },
+      transport: { request: vi.fn() },
+    };
+    const provider = new DiagnosticsProvider(dependencies);
+    // The debounced while-typing runs use full mode with online disabled.
+    await provider.validate(textDocument().document as never, { online: false });
+    expect(dependencies.dns.resolve).not.toHaveBeenCalled();
+    expect(dependencies.transport.request).not.toHaveBeenCalled();
+    provider.dispose();
+  });
+
+  it('keeps filesystem diagnostics live on the typing path where text-only drops them', async () => {
+    const provider = new DiagnosticsProvider();
+    const { document } = textDocument('/workspace/demo/SKILL.md', 'references/missing.md');
+
+    // The old typing path: filesystem rules skipped, so the missing-link error
+    // is absent — the "diagnostics vanish 300ms after a keystroke" flicker.
+    await provider.validate(document as never, { mode: 'text-only' });
+    const textOnly = hoisted.published.get(document.uri.toString()) ?? [];
+    expect(textOnly.map((item) => item.code)).not.toContain(DiagnosticCode.LinkMissing);
+
+    // The typing path now: full mode served from caches keeps it visible.
+    await provider.validate(document as never, { online: false });
+    const typing = hoisted.published.get(document.uri.toString()) ?? [];
+    expect(typing.map((item) => item.code)).toContain(DiagnosticCode.LinkMissing);
     provider.dispose();
   });
 

@@ -170,7 +170,10 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private startAnalysis(): Promise<void> {
     const wasRunning = this.analysisLoad.isRunning;
     this.analysisAttempted = true;
-    const operation = this.analysisLoad.run(async () => {
+    // runLatest: a refresh requested while an analysis is in flight (e.g. two
+    // quick saves) queues one trailing re-run instead of being dropped, so the
+    // panel always ends on the newest state.
+    const operation = this.analysisLoad.runLatest(async () => {
       try {
         const result = await vscode.window.withProgress(
           { location: { viewId: 'skillMdInspectorSkills' } },
@@ -184,10 +187,10 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     });
     if (!wasRunning) {
       this.emitter.fire(undefined);
-      void operation.catch((error: unknown) => {
-        this.output?.appendLine(`Workspace skills analysis failed: ${String(error)}`);
-      });
     }
+    void operation.catch((error: unknown) => {
+      this.output?.appendLine(`Workspace skills analysis failed: ${String(error)}`);
+    });
     return operation;
   }
 

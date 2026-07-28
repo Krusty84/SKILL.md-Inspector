@@ -266,17 +266,34 @@ describe('SkillTreeProvider loading', () => {
     expect(provider.getChildren()).toEqual([expect.objectContaining({ type: 'skill' })]);
   });
 
-  it('reuses an active refresh and keeps previous analysis visible', async () => {
+  it('queues one trailing re-run for refreshes during an active analysis', async () => {
     const provider = await loadedProvider();
+    const refreshed = analysis();
+    refreshed.skills[0]!.name = 'refreshed-skill';
     vi.mocked(computeWorkspaceAnalysis).mockClear();
+    vi.mocked(computeWorkspaceAnalysis)
+      .mockReturnValueOnce({ rootDir: '/ws', analysis: analysis() })
+      .mockReturnValueOnce({ rootDir: '/ws', analysis: refreshed });
 
     const first = provider.refresh();
     const second = provider.refresh();
+    const third = provider.refresh();
 
-    expect(first).toBe(second);
+    // Busy-time refreshes coalesce into one queued trailing completion (they
+    // used to be dropped outright, leaving the panel on stale results) ...
+    expect(second).not.toBe(first);
+    expect(third).toBe(second);
+    // ... while the previous analysis stays visible during the refresh.
     expect(provider.getChildren()).toEqual([expect.objectContaining({ type: 'skill' })]);
-    await first;
-    expect(computeWorkspaceAnalysis).toHaveBeenCalledTimes(1);
+
+    await third;
+    expect(computeWorkspaceAnalysis).toHaveBeenCalledTimes(2);
+    expect(provider.getChildren()).toEqual([
+      expect.objectContaining({
+        type: 'skill',
+        skill: expect.objectContaining({ name: 'refreshed-skill' }),
+      }),
+    ]);
   });
 
   it('clears failed loading state and permits retry', async () => {

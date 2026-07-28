@@ -121,12 +121,22 @@ export function measureBodyTokenUsage(
 }
 
 /**
+ * How a caller supplies resource-file token counts. Returning undefined skips
+ * the file (binary or unreadable), matching the default read-and-count path.
+ */
+export type ResourceTokenSource = (resource: SkillResource) => number | undefined;
+
+/**
  * Measures each eligible resource at most once. The counter parameter is an
- * internal test seam for small synthetic threshold fixtures, not user configuration.
+ * internal test seam for small synthetic threshold fixtures, not user
+ * configuration. `fileTokens` lets long-lived callers serve per-file counts
+ * from a cache (see FileTokenCache) instead of re-reading and re-encoding
+ * every file on each analysis.
  */
 export function measureSkillTokenUsage(
   doc: SkillDocument,
   countTokens: TokenCounter = countO200kTokens,
+  fileTokens?: ResourceTokenSource,
 ): SkillTokenUsage {
   const bodyUsage = measureBodyTokenUsage(doc.body, countTokens);
   const references: TokenCountEntry[] = [];
@@ -141,13 +151,15 @@ export function measureSkillTokenUsage(
     ) {
       continue;
     }
-    const text = readUtf8Text(resource);
-    if (text === undefined) {
+    const tokens = fileTokens
+      ? fileTokens(resource)
+      : countResourceTokens(resource.absolutePath, countTokens);
+    if (tokens === undefined) {
       continue;
     }
     const entry = {
       relativePath: normalizePosix(resource.relativePath),
-      tokens: countTokens(text),
+      tokens,
     };
     (group === 'references' ? references : otherFiles).push(entry);
   }
@@ -157,6 +169,19 @@ export function measureSkillTokenUsage(
     references: { files: references, totalTokens: sumTokens(references) },
     otherFiles: { files: otherFiles, totalTokens: sumTokens(otherFiles) },
   };
+}
+
+/**
+ * Reads a resource as UTF-8 and counts its tokens; undefined for binary or
+ * unreadable files. The one place the default measurement and cache-backed
+ * callers share, so both skip exactly the same files.
+ */
+export function countResourceTokens(
+  absolutePath: string,
+  countTokens: TokenCounter = countO200kTokens,
+): number | undefined {
+  const text = readUtf8Text(absolutePath);
+  return text === undefined ? undefined : countTokens(text);
 }
 
 /** Combined token footprint: SKILL.md body plus every counted reference and other file. */
@@ -171,10 +196,10 @@ function tokenGroupFor(relativePath: string): 'references' | 'otherFiles' | unde
   return normalized === 'SKILL.md' ? undefined : 'otherFiles';
 }
 
-function readUtf8Text(resource: SkillResource): string | undefined {
+function readUtf8Text(absolutePath: string): string | undefined {
   let content: Buffer;
   try {
-    content = fs.readFileSync(resource.absolutePath);
+    content = fs.readFileSync(absolutePath);
   } catch {
     return undefined;
   }

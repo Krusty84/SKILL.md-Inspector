@@ -1,6 +1,5 @@
 import type { Code, Heading, RootContent } from 'mdast';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
+import { parseMarkdownRoot } from '../parser/markdownAst';
 import type { SkillHeading } from '../parser/parseMarkdownHeadings';
 import { phraseRegex } from '../quality/textMatch';
 import { EXAMPLES_SECTION, matchesSection } from './bodySections';
@@ -20,7 +19,7 @@ interface MarkdownSection {
 
 /** Parses shared structural evidence once for body diagnostics and scoring. */
 export function analyzeBodyEvidence(body: string): BodyEvidence {
-  const root = unified().use(remarkParse).parse(body);
+  const root = parseMarkdownRoot(body);
   const children = root.children as RootContent[];
   const sections = collectSections(children);
   const exampleSections = sections.filter((section) =>
@@ -125,8 +124,16 @@ function hasPairedInputOutputFences(nodes: RootContent[], body: string): boolean
   return hasInput && hasOutput;
 }
 
+/** Compiled once per word; the vocabulary here is a handful of pair markers. */
+const WORD_REGEX_CACHE = new Map<string, RegExp>();
+
 function wordRegex(word: string): RegExp {
-  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${word}(?=$|[^\\p{L}\\p{N}])`, 'iu');
+  let regex = WORD_REGEX_CACHE.get(word);
+  if (!regex) {
+    regex = new RegExp(`(?:^|[^\\p{L}\\p{N}])${word}(?=$|[^\\p{L}\\p{N}])`, 'iu');
+    WORD_REGEX_CACHE.set(word, regex);
+  }
+  return regex;
 }
 
 function collectText(node: unknown): string {

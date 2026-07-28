@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { analyzeSkill, type SkillAnalysis, type AnalysisMode } from '../analysis/analyzeSkill';
+import { FileTokenCache } from '../analysis/fileTokenCache';
 import { ResourceCache } from '../parser/resourceCache';
-import { readConfig } from '../config';
+import { readConfig, type InspectorConfig } from '../config';
+import { isPathInsideDir } from '../parser/linkPaths';
 import { isSkillFile, toVscodeDiagnostic } from './mapping';
 import { augmentWithRemoteDiagnostics } from '../online/augmentRemoteDiagnostics';
 import { RemoteLinkCheckSession, type RemoteLinkDependencies } from '../online/remoteLinkChecker';
@@ -16,7 +18,18 @@ import { nodeRemoteLinkDependencies } from '../online/nodeRemoteLinkDependencies
 export class DiagnosticsProvider implements vscode.Disposable {
   private readonly collection: vscode.DiagnosticCollection;
   private readonly resourceCache = new ResourceCache();
+  private readonly fileTokenCache = new FileTokenCache();
   private readonly requests = new Map<string, ValidationRequest>();
+  /**
+   * Latest analysis per document, keyed by URI and stamped with the document
+   * version it was computed from. The code-action provider is invoked by
+   * VS Code on every cursor move and content change; serving it from here
+   * instead of re-analyzing keeps that path free of filesystem work.
+   */
+  private readonly lastAnalyses = new Map<
+    string,
+    { version: number; mode: AnalysisMode; analysis: SkillAnalysis }
+  >();
   private nextRequestId = 0;
 
   constructor(private readonly remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies) {
@@ -24,16 +37,18 @@ export class DiagnosticsProvider implements vscode.Disposable {
   }
 
   /**
-   * Analyzes a document and publishes diagnostics. `text-only` mode (used while
-   * typing) does no filesystem access; `full` mode (open/save/commands) runs the
-   * whole pipeline. Returns the analysis, or undefined when the document is not a
-   * SKILL.md or validation is disabled.
+   * Analyzes a document and publishes diagnostics. `full` mode (the default,
+   * also used by the debounced while-typing runs, which pass `online: false`)
+   * runs the whole pipeline served from the resource and token caches;
+   * `text-only` mode does no filesystem access at all. Returns the analysis,
+   * or undefined when the document is not a SKILL.md or validation is
+   * disabled.
    */
   async validate(
     document: vscode.TextDocument,
-    mode: AnalysisMode = 'full',
-    sharedSession?: RemoteLinkCheckSession,
+    options: ValidateOptions = {},
   ): Promise<SkillAnalysis | undefined> {
+    const mode = options.mode ?? 'full';
     if (!isSkillFile(document)) {
       return undefined;
     }
@@ -41,24 +56,20 @@ export class DiagnosticsProvider implements vscode.Disposable {
     const config = readConfig(document.uri);
     if (!config.enabled) {
       this.collection.delete(document.uri);
+      this.lastAnalyses.delete(document.uri.toString());
       return undefined;
     }
 
-    const analysis = analyzeSkill(document.uri.fsPath, document.getText(), config.profile, {
-      mode,
-      exclude: config.resourceExclude,
-      dictionaries: config.heuristicDictionaries,
-      resourceDirectories: config.resourceDirectories,
-      discover: (dir, exclude) => this.resourceCache.discover(dir, exclude),
-    });
+    const analysis = this.runAnalysis(document, config, mode);
     this.collection.set(
       document.uri,
       analysis.diagnostics.map((d) => toVscodeDiagnostic(d, document)),
     );
-    if (mode === 'text-only' || !config.onlineCheckEnabled) {
+    if (mode === 'text-only' || options.online === false || !config.onlineCheckEnabled) {
       return analysis;
     }
 
+    const sharedSession = options.sharedSession;
     const session =
       sharedSession ??
       new RemoteLinkCheckSession(this.remoteDependencies, {
@@ -75,6 +86,11 @@ export class DiagnosticsProvider implements vscode.Disposable {
       if (!this.isCurrent(document, request)) {
         return undefined;
       }
+      this.lastAnalyses.set(document.uri.toString(), {
+        version: request.version,
+        mode,
+        analysis: augmented,
+      });
       this.collection.set(
         document.uri,
         augmented.diagnostics.map((diagnostic) => toVscodeDiagnostic(diagnostic, document)),
@@ -87,14 +103,69 @@ export class DiagnosticsProvider implements vscode.Disposable {
     }
   }
 
+  /**
+   * Serves the code-action provider, which VS Code invokes on every cursor
+   * move: the latest full analysis when it is still current for the document
+   * version, otherwise one fresh cache-backed full analysis (first lightbulb
+   * before the first validate, or a filesystem invalidation with no text edit).
+   */
+  analysisForCodeActions(document: vscode.TextDocument): SkillAnalysis {
+    const cached = this.lastAnalyses.get(document.uri.toString());
+    if (cached && cached.version === document.version && cached.mode === 'full') {
+      return cached.analysis;
+    }
+    return this.runAnalysis(document, readConfig(document.uri), 'full');
+  }
+
+  /**
+   * True when the latest recorded analysis matches the document's current
+   * version — i.e. published diagnostics are up to date and a revalidation
+   * would be redundant. Used to keep visible-editor sweeps cheap.
+   */
+  hasCurrentAnalysis(document: vscode.TextDocument): boolean {
+    return this.lastAnalyses.get(document.uri.toString())?.version === document.version;
+  }
+
   /** Invalidates cached resources for the skill directory containing `filePath`. */
   invalidateResource(filePath: string): void {
     this.resourceCache.invalidateFile(filePath);
+    this.fileTokenCache.invalidateUnder(filePath);
+    // Filesystem-dependent diagnostics can change with no document edit, so
+    // version-matched analyses of the owning skill are stale too.
+    for (const [key, entry] of [...this.lastAnalyses]) {
+      if (isPathInsideDir(entry.analysis.document.directory, filePath)) {
+        this.lastAnalyses.delete(key);
+      }
+    }
   }
 
   /** Clears the whole resource cache (e.g. on configuration change). */
   clearResourceCache(): void {
     this.resourceCache.clear();
+    this.fileTokenCache.clear();
+    this.lastAnalyses.clear();
+  }
+
+  /** Runs the deterministic pipeline and records the result for reuse. */
+  private runAnalysis(
+    document: vscode.TextDocument,
+    config: InspectorConfig,
+    mode: AnalysisMode,
+  ): SkillAnalysis {
+    const analysis = analyzeSkill(document.uri.fsPath, document.getText(), config.profile, {
+      mode,
+      exclude: config.resourceExclude,
+      dictionaries: config.heuristicDictionaries,
+      resourceDirectories: config.resourceDirectories,
+      discover: (dir, exclude) => this.resourceCache.discover(dir, exclude),
+      fileTokens: (resource) => this.fileTokenCache.tokensFor(resource.absolutePath),
+    });
+    this.lastAnalyses.set(document.uri.toString(), {
+      version: document.version,
+      mode,
+      analysis,
+    });
+    return analysis;
   }
 
   /**
@@ -123,7 +194,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
         }
         const document = await vscode.workspace.openTextDocument(uri);
         validations.push(
-          this.validate(document, 'full', session).then(() => {
+          this.validate(document, { sharedSession: session }).then(() => {
             processed += 1;
             progress?.report({
               message: `${processed}/${total}`,
@@ -164,7 +235,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
         }
         const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
         validations.push(
-          this.validate(document, 'full', session).then(() => {
+          this.validate(document, { sharedSession: session }).then(() => {
             processed += 1;
             progress?.report({
               message: `${processed}/${total}`,
@@ -183,6 +254,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
   clear(uri: vscode.Uri): void {
     this.cancelRequest(uri.toString());
     this.collection.delete(uri);
+    this.lastAnalyses.delete(uri.toString());
   }
 
   dispose(): void {
@@ -190,6 +262,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
       request.cancellation.cancel();
     }
     this.requests.clear();
+    this.lastAnalyses.clear();
     this.collection.dispose();
   }
 
@@ -217,6 +290,18 @@ export class DiagnosticsProvider implements vscode.Disposable {
     this.requests.get(key)?.cancellation.cancel();
     this.requests.delete(key);
   }
+}
+
+export interface ValidateOptions {
+  /** Defaults to 'full'. */
+  mode?: AnalysisMode;
+  /**
+   * Set to false to skip the online link phase even when it is enabled — the
+   * debounced while-typing runs must never fire network requests per edit.
+   */
+  online?: boolean;
+  /** Shared remote-link session for batch operations (workspace validation). */
+  sharedSession?: RemoteLinkCheckSession;
 }
 
 interface ValidationRequest {

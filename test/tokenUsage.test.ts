@@ -80,6 +80,25 @@ describe('o200k_base token metrics', () => {
     );
   });
 
+  it('serves resource counts from a fileTokens source instead of reading files', () => {
+    write('references/a.md', 'alpha beta');
+    write('references/b.md', 'binary-in-reality');
+    const seen: string[] = [];
+    const usage = analyzeSkill(path.join(dir, 'SKILL.md'), validSkill(), genericProfile, {
+      fileTokens: (resource) => {
+        seen.push(resource.relativePath);
+        // A source may skip a file (its cache recorded it as binary)...
+        if (resource.relativePath.endsWith('b.md')) return undefined;
+        // ...or answer without the default read-and-encode.
+        return 1234;
+      },
+    }).tokenUsage;
+
+    expect(seen.sort()).toEqual(['references/a.md', 'references/b.md']);
+    expect(usage.references.files).toEqual([{ relativePath: 'references/a.md', tokens: 1234 }]);
+    expect(usage.references.totalTokens).toBe(1234);
+  });
+
   it('text-only analysis never discovers resources and emits no resource-budget diagnostics', () => {
     const body = Array.from({ length: 501 }, () => 'Follow this instruction.').join('\n');
     const content = `${validSkill()}\n${body}`;
