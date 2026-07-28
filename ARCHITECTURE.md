@@ -86,8 +86,16 @@ registers:
 
 The composition root owns refresh coordination. Changes to `SKILL.md`, known
 resource directories, workspace folders, or extension settings invalidate the
-appropriate caches and refresh affected views. Validation while typing is debounced
-by 300 milliseconds.
+appropriate caches and refresh affected views. Validation while typing is
+debounced by 250 milliseconds on the trailing edge with a one-second max-wait,
+so diagnostics keep refreshing during continuous typing. Resource watcher
+events are filtered against the resource-exclusion globs and coalesced per
+burst into one invalidation sweep, one Skills refresh, and one revalidation;
+the save-triggered Skills refresh is debounced the same way. A visible-editors
+listener validates any revealed SKILL.md whose recorded analysis is not
+current for the document version, covering documents that were already open
+when they became visible. The `o200k_base` tokenizer is warmed up shortly
+after activation so its one-off construction cost stays off the first edit.
 
 ### Skill parsing and document model
 
@@ -115,6 +123,13 @@ model. It counts the parsed Markdown body and, in full mode, reads eligible text
 resources once to classify reference and non-standard content. Hidden paths,
 known binary formats, and byte content detected as binary are not decoded. Paths
 and file entries are normalized and sorted before they reach validation or reports.
+Long-lived callers supply per-file counts through the `fileTokens` seam:
+`src/analysis/fileTokenCache.ts` validates each cached count against the file's
+mtime and size with a single stat, so repeated full analyses re-encode only
+changed files. Markdown parsing itself is shared the same way —
+`src/parser/markdownAst.ts` owns one frozen remark processor and a small
+content-keyed LRU, so the link, heading, and body-evidence passes of one
+analysis parse the body once; the returned tree is read-only by contract.
 
 ### Validation and diagnostics
 
@@ -130,10 +145,17 @@ and file entries are normalized and sorted before they reach validation or repor
 
 There are two analysis modes:
 
-- `text-only` avoids filesystem access, measures only the already-parsed body, and
-  is used for debounced editor changes;
+- `text-only` avoids filesystem access and measures only the already-parsed
+  body; it remains the no-filesystem embedding and test mode;
 - `full` discovers resources, verifies local links, and measures eligible resource
   text for open, save, commands, reports, and workspace analysis.
+
+The debounced while-typing runs also use `full` mode, served from the resource,
+file-token, and configuration caches and with the online phase explicitly
+disabled, so live diagnostics no longer oscillate between the two modes'
+outputs: filesystem findings (missing links, unreferenced resources, resource
+token budgets) stay visible and current while the user types instead of
+vanishing until the next save.
 
 `src/validation/ruleRegistry.ts` provides stable validation areas for frontmatter,
 name, description, links, resources, body content, and token budgets.
@@ -145,7 +167,15 @@ throws, the remaining rules continue and an information-level internal diagnosti
 reports the lost coverage as a linter failure rather than a problem with the skill.
 
 `src/diagnostics/diagnosticsProvider.ts` bridges the analysis result to a VS Code
-diagnostic collection and caches resource discovery. `src/codeActions/` converts
+diagnostic collection and owns three caches: discovered resources per skill
+directory, per-file token counts validated by mtime/size, and the latest
+analysis per document keyed by version and mode. The code-action provider —
+which VS Code invokes on every cursor move — consumes that last cache through
+`analysisForCodeActions` instead of re-running the pipeline, honors its
+cancellation token, and only triggers a fresh cache-backed full analysis when
+the recorded one is stale. All three caches are dropped for the affected scope
+on document close, resource file events, and configuration changes.
+`src/codeActions/` converts
 diagnostic quick-fix metadata into `WorkspaceEdit` operations or a narrowly scoped
 configuration command. Frontmatter edits use parser-provided value ranges, and
 folder-rename fixes accept only a safe kebab-case path segment that remains under
@@ -411,10 +441,16 @@ repository supplies no production provider or UI for this subsystem.
 
 ### Configuration refresh
 
-1. `readConfig` resolves the effective policy values.
+1. `readConfig` resolves the effective policy values, memoized per
+   workspace-folder scope. Untouched installs resolve the heuristic
+   dictionaries to the packaged defaults **by object identity** (overrides are
+   detected through `inspect()`), which is what keeps the identity-keyed
+   word-form caches in `src/quality/wordForms.ts` hot across validation runs.
 2. Dictionary resolution replaces malformed entries with canonical defaults and
    returns warnings.
-3. A relevant configuration event clears resource and analysis caches.
+3. A relevant configuration event first drops the memoized configurations
+   (`invalidateConfigCache`), then clears resource, file-token, and analysis
+   caches.
 4. Visible skills are revalidated and affected tree providers are refreshed.
 
 ### Sidebar view refresh isolation
@@ -551,8 +587,9 @@ script.
 - Body token and line limits are fixed policy. Resource thresholds are tool-specific
   advisories rather than Agent Skills specification limits. Resource token totals
   exist only after full analysis; text-only analysis never infers missing groups as
-  zero. The `o200k_base` tokenizer is a deterministic offline proxy rather than a
-  guarantee of the counts produced by every target agent.
+  zero (the editor's live diagnostics run cache-served full analysis, so they do
+  carry resource totals). The `o200k_base` tokenizer is a deterministic offline
+  proxy rather than a guarantee of the counts produced by every target agent.
 - Path-oriented analysis does not uniformly support remote or virtual filesystem
   providers. The Workspace navigator and OpenCode reader are more broadly URI-based.
 - Resource file watchers cover only `references`, `scripts`, `assets`, and
