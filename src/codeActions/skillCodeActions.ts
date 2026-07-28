@@ -1,7 +1,5 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { analyzeSkill } from '../analysis/analyzeSkill';
-import { readConfig } from '../config';
 import { isSkillFile } from '../diagnostics/mapping';
 import { QuickFixId } from '../types/DiagnosticCode';
 import { frontmatterStartLine } from '../parser/parseSkillFile';
@@ -18,29 +16,36 @@ import {
   bodyTemplate,
 } from './templates';
 
+/**
+ * Where the provider gets its analysis. VS Code requests code actions on every
+ * cursor move and content change, so the source must be cheap: the
+ * DiagnosticsProvider satisfies this interface from its per-version analysis
+ * cache instead of re-running the pipeline per request.
+ */
+export interface CodeActionAnalysisSource {
+  analysisForCodeActions(document: vscode.TextDocument): {
+    document: SkillDocument;
+    diagnostics: SkillDiagnostic[];
+  };
+}
+
 export class SkillCodeActionProvider implements vscode.CodeActionProvider {
   static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
+
+  constructor(private readonly analysisSource: CodeActionAnalysisSource) {}
 
   provideCodeActions(
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
     context: vscode.CodeActionContext,
+    token?: vscode.CancellationToken,
   ): vscode.CodeAction[] {
-    if (!isSkillFile(document)) {
+    if (token?.isCancellationRequested || !isSkillFile(document)) {
       return [];
     }
 
-    const config = readConfig(document.uri);
-    const { document: skillDoc, diagnostics } = analyzeSkill(
-      document.uri.fsPath,
-      document.getText(),
-      config.profile,
-      {
-        exclude: config.resourceExclude,
-        dictionaries: config.heuristicDictionaries,
-        resourceDirectories: config.resourceDirectories,
-      },
-    );
+    const { document: skillDoc, diagnostics } =
+      this.analysisSource.analysisForCodeActions(document);
 
     const actions: vscode.CodeAction[] = [];
     for (const diagnostic of diagnostics) {

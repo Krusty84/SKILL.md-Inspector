@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { analyzeSkill, type SkillAnalysis, type AnalysisMode } from '../analysis/analyzeSkill';
 import { ResourceCache } from '../parser/resourceCache';
-import { readConfig } from '../config';
+import { readConfig, type InspectorConfig } from '../config';
+import { isPathInsideDir } from '../parser/linkPaths';
 import { isSkillFile, toVscodeDiagnostic } from './mapping';
 import { augmentWithRemoteDiagnostics } from '../online/augmentRemoteDiagnostics';
 import { RemoteLinkCheckSession, type RemoteLinkDependencies } from '../online/remoteLinkChecker';
@@ -17,6 +18,16 @@ export class DiagnosticsProvider implements vscode.Disposable {
   private readonly collection: vscode.DiagnosticCollection;
   private readonly resourceCache = new ResourceCache();
   private readonly requests = new Map<string, ValidationRequest>();
+  /**
+   * Latest analysis per document, keyed by URI and stamped with the document
+   * version it was computed from. The code-action provider is invoked by
+   * VS Code on every cursor move and content change; serving it from here
+   * instead of re-analyzing keeps that path free of filesystem work.
+   */
+  private readonly lastAnalyses = new Map<
+    string,
+    { version: number; mode: AnalysisMode; analysis: SkillAnalysis }
+  >();
   private nextRequestId = 0;
 
   constructor(private readonly remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies) {
@@ -41,16 +52,11 @@ export class DiagnosticsProvider implements vscode.Disposable {
     const config = readConfig(document.uri);
     if (!config.enabled) {
       this.collection.delete(document.uri);
+      this.lastAnalyses.delete(document.uri.toString());
       return undefined;
     }
 
-    const analysis = analyzeSkill(document.uri.fsPath, document.getText(), config.profile, {
-      mode,
-      exclude: config.resourceExclude,
-      dictionaries: config.heuristicDictionaries,
-      resourceDirectories: config.resourceDirectories,
-      discover: (dir, exclude) => this.resourceCache.discover(dir, exclude),
-    });
+    const analysis = this.runAnalysis(document, config, mode);
     this.collection.set(
       document.uri,
       analysis.diagnostics.map((d) => toVscodeDiagnostic(d, document)),
@@ -75,6 +81,11 @@ export class DiagnosticsProvider implements vscode.Disposable {
       if (!this.isCurrent(document, request)) {
         return undefined;
       }
+      this.lastAnalyses.set(document.uri.toString(), {
+        version: request.version,
+        mode,
+        analysis: augmented,
+      });
       this.collection.set(
         document.uri,
         augmented.diagnostics.map((diagnostic) => toVscodeDiagnostic(diagnostic, document)),
@@ -87,14 +98,57 @@ export class DiagnosticsProvider implements vscode.Disposable {
     }
   }
 
+  /**
+   * Serves the code-action provider, which VS Code invokes on every cursor
+   * move: the latest full analysis when it is still current for the document
+   * version, otherwise one fresh cache-backed full analysis (first lightbulb
+   * before the first validate, or a filesystem invalidation with no text edit).
+   */
+  analysisForCodeActions(document: vscode.TextDocument): SkillAnalysis {
+    const cached = this.lastAnalyses.get(document.uri.toString());
+    if (cached && cached.version === document.version && cached.mode === 'full') {
+      return cached.analysis;
+    }
+    return this.runAnalysis(document, readConfig(document.uri), 'full');
+  }
+
   /** Invalidates cached resources for the skill directory containing `filePath`. */
   invalidateResource(filePath: string): void {
     this.resourceCache.invalidateFile(filePath);
+    // Filesystem-dependent diagnostics can change with no document edit, so
+    // version-matched analyses of the owning skill are stale too.
+    for (const [key, entry] of [...this.lastAnalyses]) {
+      if (isPathInsideDir(entry.analysis.document.directory, filePath)) {
+        this.lastAnalyses.delete(key);
+      }
+    }
   }
 
   /** Clears the whole resource cache (e.g. on configuration change). */
   clearResourceCache(): void {
     this.resourceCache.clear();
+    this.lastAnalyses.clear();
+  }
+
+  /** Runs the deterministic pipeline and records the result for reuse. */
+  private runAnalysis(
+    document: vscode.TextDocument,
+    config: InspectorConfig,
+    mode: AnalysisMode,
+  ): SkillAnalysis {
+    const analysis = analyzeSkill(document.uri.fsPath, document.getText(), config.profile, {
+      mode,
+      exclude: config.resourceExclude,
+      dictionaries: config.heuristicDictionaries,
+      resourceDirectories: config.resourceDirectories,
+      discover: (dir, exclude) => this.resourceCache.discover(dir, exclude),
+    });
+    this.lastAnalyses.set(document.uri.toString(), {
+      version: document.version,
+      mode,
+      analysis,
+    });
+    return analysis;
   }
 
   /**
@@ -183,6 +237,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
   clear(uri: vscode.Uri): void {
     this.cancelRequest(uri.toString());
     this.collection.delete(uri);
+    this.lastAnalyses.delete(uri.toString());
   }
 
   dispose(): void {
@@ -190,6 +245,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
       request.cancellation.cancel();
     }
     this.requests.clear();
+    this.lastAnalyses.clear();
     this.collection.dispose();
   }
 

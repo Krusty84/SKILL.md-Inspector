@@ -291,7 +291,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
       { language: 'markdown', scheme: 'file' },
-      new SkillCodeActionProvider(),
+      new SkillCodeActionProvider(provider),
       { providedCodeActionKinds: SkillCodeActionProvider.providedCodeActionKinds },
     ),
   );
