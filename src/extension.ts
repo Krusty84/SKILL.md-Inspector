@@ -30,8 +30,10 @@ import {
   type NavigatorConfigSnapshot,
 } from './configurationRefresh';
 import { registerNavigatorWatchers } from './navigator/navigatorWatchers';
+import { warmUpO200kTokenizer } from './analysis/o200kTokenizer';
 
 const CHANGE_DEBOUNCE_MS = 300;
+const TOKENIZER_WARM_UP_DELAY_MS = 2000;
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('SKILL.md Inspector');
@@ -386,6 +388,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
   reportConfigurationWarnings();
   revalidateVisible(provider);
+
+  // Any full validation constructs the o200k tokenizer on demand (a noticeable
+  // synchronous stall). If no SKILL.md was visible above, prebuild it shortly
+  // after activation so the first edit in a skill workspace stays smooth; a
+  // plain-markdown single file (no workspace) skips the cost entirely.
+  let warmUpTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+    warmUpTimer = undefined;
+    if (vscode.workspace.workspaceFolders?.length) {
+      warmUpO200kTokenizer();
+    }
+  }, TOKENIZER_WARM_UP_DELAY_MS);
+  context.subscriptions.push(
+    new vscode.Disposable(() => {
+      if (warmUpTimer) {
+        clearTimeout(warmUpTimer);
+        warmUpTimer = undefined;
+      }
+    }),
+  );
 }
 
 function revalidateVisible(provider: DiagnosticsProvider): void {
