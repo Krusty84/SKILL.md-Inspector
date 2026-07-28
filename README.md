@@ -4,8 +4,8 @@ Write, validate, and compare Agent Skills without leaving Visual Studio Code.
 SKILL.md Inspector gives every file named exactly `SKILL.md` live feedback,
 guided fixes, readable reports, and workspace-wide collision checks.
 
-The extension is offline by default. It does not call an LLM, run an agent,
-execute commands from inspected files, or send telemetry. Network access occurs
+**The extension is offline by default. It does not call an LLM, run an agent,
+execute commands from inspected files, or send telemetry.** Network access occurs
 only when you explicitly enable remote-link availability checks.
 
 ## Features
