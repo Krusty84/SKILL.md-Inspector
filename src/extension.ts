@@ -3,7 +3,7 @@ import { DiagnosticsProvider } from './diagnostics/diagnosticsProvider';
 import { SkillCodeActionProvider } from './codeActions/skillCodeActions';
 import { registerCommands } from './commands';
 import { isSkillFile } from './diagnostics/mapping';
-import { readConfig } from './config';
+import { invalidateConfigCache, readConfig } from './config';
 import { SkillTreeProvider } from './ui/skillTreeProvider';
 import { FavoritesTreeProvider } from './ui/favoritesTreeProvider';
 import { WorkspaceTreeProvider } from './ui/workspaceTreeProvider';
@@ -345,6 +345,8 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (!event.affectsConfiguration('skillMdInspector')) return;
+      // Before anything below re-reads settings: the memoized configs are stale.
+      invalidateConfigCache();
       reportConfigurationWarnings();
       // Compare the settings each sidebar view actually reads against the last
       // snapshot so a view refreshes only when its own value changed. Adding or

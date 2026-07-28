@@ -5,7 +5,10 @@ import {
   normalizeVerbForm,
   normalizeContentToken,
 } from '../src/quality/wordForms';
-import { resolveHeuristicDictionaries } from '../src/quality/dictionaries';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  resolveHeuristicDictionaries,
+} from '../src/quality/dictionaries';
 
 describe('singularize (Task 31)', () => {
   it('reduces regular plurals to a shared singular form', () => {
@@ -84,6 +87,20 @@ describe('buildVerbForms', () => {
   it('memoizes per registry array reference', () => {
     const verbs = ['analyze', 'format'];
     expect(buildVerbForms(verbs)).toBe(buildVerbForms(verbs));
+  });
+
+  it('memoizes the packaged dictionaries, the identity every default lint run hits', () => {
+    // readConfig resolves untouched installs to DEFAULT_HEURISTIC_DICTIONARIES
+    // by identity precisely so this lookup is a cache hit on every keystroke.
+    const first = buildVerbForms(
+      DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs,
+      DEFAULT_HEURISTIC_DICTIONARIES.actionVerbForms,
+    );
+    const second = buildVerbForms(
+      DEFAULT_HEURISTIC_DICTIONARIES.actionVerbs,
+      DEFAULT_HEURISTIC_DICTIONARIES.actionVerbForms,
+    );
+    expect(second).toBe(first);
   });
 
   it('uses explicit custom forms before generated regular morphology', () => {

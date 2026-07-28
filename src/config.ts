@@ -19,6 +19,7 @@ import {
   HEURISTIC_LIST_DICTIONARY_KEYS,
   HEURISTIC_MAPPING_DICTIONARY_KEYS,
   resolveHeuristicDictionariesWithWarnings,
+  type DictionaryResolution,
   type HeuristicDictionaries,
   type HeuristicDictionaryValues,
 } from './quality/dictionaries';
@@ -80,11 +81,62 @@ export function analysisContextFromConfig(
   };
 }
 
+/**
+ * Effective configurations memoized per workspace-folder scope. Every
+ * validation (including the debounced while-typing runs) calls readConfig, so
+ * rebuilding the config — and above all re-normalizing the heuristic
+ * dictionaries into fresh objects — on each call would defeat every
+ * identity-keyed cache downstream (see quality/wordForms.ts). Entries are
+ * dropped by {@link invalidateConfigCache} when a `skillMdInspector.*` setting
+ * changes.
+ */
+const configCache = new Map<string, InspectorConfig>();
+
+/** Drops all memoized configurations; call on `onDidChangeConfiguration`. */
+export function invalidateConfigCache(): void {
+  configCache.clear();
+}
+
 export function readConfig(scope?: vscode.Uri): InspectorConfig {
   const cfg = vscode.workspace.getConfiguration('skillMdInspector', scope);
-  const dictionaryResolution = resolveHeuristicDictionariesWithWarnings(
-    readVisibleDictionaryValues(cfg),
-  );
+  // Memoization needs inspect() to tell overridden dictionary keys apart from
+  // manifest defaults; a harness whose configuration mock lacks inspect() gets
+  // the uncached behavior (fresh values on every call), so existing fixtures
+  // that swap mocked values between calls keep working.
+  const cacheKey = typeof cfg.inspect === 'function' ? scopeCacheKey(scope) : undefined;
+  if (cacheKey !== undefined) {
+    const cached = configCache.get(cacheKey);
+    if (cached) return cached;
+  }
+  const config = buildConfig(cfg);
+  if (cacheKey !== undefined) {
+    configCache.set(cacheKey, config);
+  }
+  return config;
+}
+
+/**
+ * Configuration values vary only by workspace folder: files sharing a folder
+ * share every `skillMdInspector.*` value, and files outside any folder see
+ * exactly the global/workspace values that an undefined scope sees.
+ */
+function scopeCacheKey(scope?: vscode.Uri): string {
+  if (!scope) return '';
+  const folder =
+    typeof vscode.workspace.getWorkspaceFolder === 'function'
+      ? vscode.workspace.getWorkspaceFolder(scope)
+      : undefined;
+  return folder?.uri.toString() ?? '';
+}
+
+function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
+  const overriddenDictionaryValues = readOverriddenDictionaryValues(cfg);
+  // No overrides -> the packaged defaults BY OBJECT IDENTITY. Resolving would
+  // produce content-equal copies (freezeDictionaries copies every array), and
+  // the word-form caches key on identity, not content.
+  const dictionaryResolution: DictionaryResolution = overriddenDictionaryValues
+    ? resolveHeuristicDictionariesWithWarnings(overriddenDictionaryValues)
+    : { dictionaries: DEFAULT_HEURISTIC_DICTIONARIES, warnings: [] };
   return {
     enabled: cfg.get<boolean>('validation.enabled', true),
     runOnSave: cfg.get<boolean>('validation.runOnSave', true),
@@ -144,21 +196,59 @@ function clampOnlineCheckConcurrency(value: number): number {
   return Math.min(10, Math.max(1, Math.trunc(value) || 4));
 }
 
-function readVisibleDictionaryValues(
+const ALL_DICTIONARY_KEYS = [
+  ...HEURISTIC_LIST_DICTIONARY_KEYS,
+  ...HEURISTIC_MAPPING_DICTIONARY_KEYS,
+] as const;
+
+/**
+ * Collects only the dictionary values the user actually overrode, returning
+ * undefined when there are none. All 22 keys are declared in package.json, so
+ * cfg.get() always answers with a freshly deserialized manifest default — only
+ * inspect() can tell an override apart from an untouched key.
+ */
+function readOverriddenDictionaryValues(
   cfg: vscode.WorkspaceConfiguration,
-): HeuristicDictionaryValues {
-  const values: HeuristicDictionaryValues = {};
-  for (const key of HEURISTIC_LIST_DICTIONARY_KEYS) {
-    values[key] = cfg.get<unknown>(
-      `heuristics.dictionaryValues.${key}`,
-      DEFAULT_HEURISTIC_DICTIONARIES[key],
-    );
-  }
-  for (const key of HEURISTIC_MAPPING_DICTIONARY_KEYS) {
-    values[key] = cfg.get<unknown>(
-      `heuristics.dictionaryValues.${key}`,
-      DEFAULT_HEURISTIC_DICTIONARIES[key],
-    );
+): HeuristicDictionaryValues | undefined {
+  const canInspect = typeof cfg.inspect === 'function';
+  let values: HeuristicDictionaryValues | undefined;
+  for (const key of ALL_DICTIONARY_KEYS) {
+    const settingKey = `heuristics.dictionaryValues.${key}`;
+    if (canInspect && !hasNonDefaultValue(cfg.inspect<unknown>(settingKey))) {
+      continue;
+    }
+    const value = cfg.get<unknown>(settingKey, DEFAULT_HEURISTIC_DICTIONARIES[key]);
+    // Without inspect(), a harness echoing the passed fallback back means the
+    // key is unset; a genuine override is always a distinct object.
+    if (!canInspect && value === DEFAULT_HEURISTIC_DICTIONARIES[key]) {
+      continue;
+    }
+    (values ??= {})[key] = value;
   }
   return values;
+}
+
+function hasNonDefaultValue(
+  info:
+    | {
+        globalValue?: unknown;
+        workspaceValue?: unknown;
+        workspaceFolderValue?: unknown;
+        defaultLanguageValue?: unknown;
+        globalLanguageValue?: unknown;
+        workspaceLanguageValue?: unknown;
+        workspaceFolderLanguageValue?: unknown;
+      }
+    | undefined,
+): boolean {
+  return (
+    info !== undefined &&
+    (info.globalValue !== undefined ||
+      info.workspaceValue !== undefined ||
+      info.workspaceFolderValue !== undefined ||
+      info.defaultLanguageValue !== undefined ||
+      info.globalLanguageValue !== undefined ||
+      info.workspaceLanguageValue !== undefined ||
+      info.workspaceFolderLanguageValue !== undefined)
+  );
 }
