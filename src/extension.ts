@@ -31,8 +31,10 @@ import {
 } from './configurationRefresh';
 import { registerNavigatorWatchers } from './navigator/navigatorWatchers';
 import { warmUpO200kTokenizer } from './analysis/o200kTokenizer';
+import { createKeyedDebouncer } from './ui/debounce';
 
-const CHANGE_DEBOUNCE_MS = 300;
+const CHANGE_DEBOUNCE_MS = 250;
+const CHANGE_MAX_WAIT_MS = 1000;
 const TOKENIZER_WARM_UP_DELAY_MS = 2000;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -298,28 +300,22 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
-  // Debounced re-validation while typing, keyed by document URI.
-  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+  // Debounced re-validation while typing, keyed by document URI: trailing
+  // edge after each pause, but never later than CHANGE_MAX_WAIT_MS after the
+  // first coalesced change, so diagnostics keep refreshing during continuous
+  // typing instead of freezing until the user stops.
+  const changeDebouncer = createKeyedDebouncer(CHANGE_DEBOUNCE_MS, CHANGE_MAX_WAIT_MS);
   const scheduleValidate = (document: vscode.TextDocument): void => {
     if (!isSkillFile(document)) {
       return;
     }
-    const key = document.uri.toString();
-    const existing = pending.get(key);
-    if (existing) {
-      clearTimeout(existing);
-    }
-    pending.set(
-      key,
-      setTimeout(() => {
-        pending.delete(key);
-        // While typing, run the full pipeline served from the resource and
-        // token caches, so filesystem diagnostics (missing links, unreferenced
-        // resources) stay stable instead of vanishing until the next save.
-        // Online link checking stays off this path: no network per keystroke.
-        void provider.validate(document, { online: false });
-      }, CHANGE_DEBOUNCE_MS),
-    );
+    changeDebouncer.schedule(document.uri.toString(), () => {
+      // While typing, run the full pipeline served from the resource and
+      // token caches, so filesystem diagnostics (missing links, unreferenced
+      // resources) stay stable instead of vanishing until the next save.
+      // Online link checking stays off this path: no network per keystroke.
+      void provider.validate(document, { online: false });
+    });
   };
 
   // Baseline of the settings the sidebar views depend on, updated on every
@@ -381,12 +377,7 @@ export function activate(context: vscode.ExtensionContext): void {
       );
       navigatorConfigSnapshot = nextSnapshot;
     }),
-    new vscode.Disposable(() => {
-      for (const timer of pending.values()) {
-        clearTimeout(timer);
-      }
-      pending.clear();
-    }),
+    new vscode.Disposable(() => changeDebouncer.dispose()),
   );
 
   reportConfigurationWarnings();
