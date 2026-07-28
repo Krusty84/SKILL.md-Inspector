@@ -1,5 +1,8 @@
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DiagnosticsProvider } from './diagnostics/diagnosticsProvider';
+import { createResourceWatcherScheduler } from './diagnostics/resourceWatcherScheduler';
+import { matchesAnyGlob } from './parser/globMatch';
 import { SkillCodeActionProvider } from './codeActions/skillCodeActions';
 import { registerCommands } from './commands';
 import { isSkillFile } from './diagnostics/mapping';
@@ -35,6 +38,10 @@ import { createKeyedDebouncer } from './ui/debounce';
 
 const CHANGE_DEBOUNCE_MS = 250;
 const CHANGE_MAX_WAIT_MS = 1000;
+const RESOURCE_EVENT_DEBOUNCE_MS = 250;
+const RESOURCE_EVENT_MAX_WAIT_MS = 2000;
+const SAVE_TREE_REFRESH_DEBOUNCE_MS = 1000;
+const SAVE_TREE_REFRESH_MAX_WAIT_MS = 5000;
 const TOKENIZER_WARM_UP_DELAY_MS = 2000;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -186,17 +193,33 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Watch bundled resource files so adding/removing/renaming one refreshes the
   // tree and re-validates the owning skill (Task 60). Renames fire delete+create.
+  // The glob matches those directory names anywhere in the workspace, so events
+  // are filtered against the resource-exclusion globs (a node_modules install
+  // must not thrash the tree) and coalesced per burst: one invalidation sweep,
+  // one Skills refresh, one revalidation — instead of one of each per file.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(
     '**/{references,scripts,assets,templates}/**',
   );
-  const onResourceChange = (uri: vscode.Uri): void => {
-    provider.invalidateResource(uri.fsPath);
-    treeProvider.refresh();
-    revalidateVisible(provider);
-  };
+  const resourceScheduler = createResourceWatcherScheduler({
+    debounceMs: RESOURCE_EVENT_DEBOUNCE_MS,
+    maxWaitMs: RESOURCE_EVENT_MAX_WAIT_MS,
+    // Fail-open: patterns anchored to a skill directory (e.g. `dist/**`) do not
+    // match an absolute path, and their events just proceed to the batch.
+    ignore: (fsPath) =>
+      matchesAnyGlob(toPosixPath(fsPath), readConfig(vscode.Uri.file(fsPath)).resourceExclude),
+    flush: (paths) => {
+      for (const fsPath of paths) {
+        provider.invalidateResource(fsPath);
+      }
+      void treeProvider.refresh();
+      revalidateVisible(provider);
+    },
+  });
+  const onResourceChange = (uri: vscode.Uri): void => resourceScheduler.notify(uri.fsPath);
   resourceWatcher.onDidCreate(onResourceChange);
   resourceWatcher.onDidDelete(onResourceChange);
   resourceWatcher.onDidChange(onResourceChange);
+  context.subscriptions.push(new vscode.Disposable(() => resourceScheduler.dispose()));
 
   context.subscriptions.push(
     vscode.commands.registerCommand('skillMdInspector.refreshSkills', () => treeProvider.refresh()),
@@ -305,6 +328,10 @@ export function activate(context: vscode.ExtensionContext): void {
   // first coalesced change, so diagnostics keep refreshing during continuous
   // typing instead of freezing until the user stops.
   const changeDebouncer = createKeyedDebouncer(CHANGE_DEBOUNCE_MS, CHANGE_MAX_WAIT_MS);
+  const saveRefreshDebouncer = createKeyedDebouncer(
+    SAVE_TREE_REFRESH_DEBOUNCE_MS,
+    SAVE_TREE_REFRESH_MAX_WAIT_MS,
+  );
   const scheduleValidate = (document: vscode.TextDocument): void => {
     if (!isSkillFile(document)) {
       return;
@@ -332,8 +359,9 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         // Saving only changes the file's analysis, so refresh just the Skills
         // panel. The WORKSPACE and FAVORITES file lists don't depend on file
-        // contents and stay independent.
-        void treeProvider.refresh();
+        // contents and stay independent. Coalesced: the workspace re-analysis
+        // is synchronous and heavy, so rapid saves must not stack runs.
+        saveRefreshDebouncer.schedule('skills-tree', () => void treeProvider.refresh());
       }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
@@ -378,6 +406,7 @@ export function activate(context: vscode.ExtensionContext): void {
       navigatorConfigSnapshot = nextSnapshot;
     }),
     new vscode.Disposable(() => changeDebouncer.dispose()),
+    new vscode.Disposable(() => saveRefreshDebouncer.dispose()),
   );
 
   reportConfigurationWarnings();
@@ -407,6 +436,10 @@ function revalidateVisible(provider: DiagnosticsProvider): void {
   for (const editor of vscode.window.visibleTextEditors) {
     void provider.validate(editor.document);
   }
+}
+
+function toPosixPath(fsPath: string): string {
+  return fsPath.split(path.sep).join('/');
 }
 
 /**
