@@ -37,16 +37,18 @@ export class DiagnosticsProvider implements vscode.Disposable {
   }
 
   /**
-   * Analyzes a document and publishes diagnostics. `text-only` mode (used while
-   * typing) does no filesystem access; `full` mode (open/save/commands) runs the
-   * whole pipeline. Returns the analysis, or undefined when the document is not a
-   * SKILL.md or validation is disabled.
+   * Analyzes a document and publishes diagnostics. `full` mode (the default,
+   * also used by the debounced while-typing runs, which pass `online: false`)
+   * runs the whole pipeline served from the resource and token caches;
+   * `text-only` mode does no filesystem access at all. Returns the analysis,
+   * or undefined when the document is not a SKILL.md or validation is
+   * disabled.
    */
   async validate(
     document: vscode.TextDocument,
-    mode: AnalysisMode = 'full',
-    sharedSession?: RemoteLinkCheckSession,
+    options: ValidateOptions = {},
   ): Promise<SkillAnalysis | undefined> {
+    const mode = options.mode ?? 'full';
     if (!isSkillFile(document)) {
       return undefined;
     }
@@ -63,10 +65,11 @@ export class DiagnosticsProvider implements vscode.Disposable {
       document.uri,
       analysis.diagnostics.map((d) => toVscodeDiagnostic(d, document)),
     );
-    if (mode === 'text-only' || !config.onlineCheckEnabled) {
+    if (mode === 'text-only' || options.online === false || !config.onlineCheckEnabled) {
       return analysis;
     }
 
+    const sharedSession = options.sharedSession;
     const session =
       sharedSession ??
       new RemoteLinkCheckSession(this.remoteDependencies, {
@@ -182,7 +185,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
         }
         const document = await vscode.workspace.openTextDocument(uri);
         validations.push(
-          this.validate(document, 'full', session).then(() => {
+          this.validate(document, { sharedSession: session }).then(() => {
             processed += 1;
             progress?.report({
               message: `${processed}/${total}`,
@@ -223,7 +226,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
         }
         const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
         validations.push(
-          this.validate(document, 'full', session).then(() => {
+          this.validate(document, { sharedSession: session }).then(() => {
             processed += 1;
             progress?.report({
               message: `${processed}/${total}`,
@@ -278,6 +281,18 @@ export class DiagnosticsProvider implements vscode.Disposable {
     this.requests.get(key)?.cancellation.cancel();
     this.requests.delete(key);
   }
+}
+
+export interface ValidateOptions {
+  /** Defaults to 'full'. */
+  mode?: AnalysisMode;
+  /**
+   * Set to false to skip the online link phase even when it is enabled — the
+   * debounced while-typing runs must never fire network requests per edit.
+   */
+  online?: boolean;
+  /** Shared remote-link session for batch operations (workspace validation). */
+  sharedSession?: RemoteLinkCheckSession;
 }
 
 interface ValidationRequest {

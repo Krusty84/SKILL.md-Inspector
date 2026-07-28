@@ -313,8 +313,11 @@ export function activate(context: vscode.ExtensionContext): void {
       key,
       setTimeout(() => {
         pending.delete(key);
-        // While typing, run the filesystem-free pipeline (Tasks 57/58).
-        void provider.validate(document, 'text-only');
+        // While typing, run the full pipeline served from the resource and
+        // token caches, so filesystem diagnostics (missing links, unreferenced
+        // resources) stay stable instead of vanishing until the next save.
+        // Online link checking stays off this path: no network per keystroke.
+        void provider.validate(document, { online: false });
       }, CHANGE_DEBOUNCE_MS),
     );
   };

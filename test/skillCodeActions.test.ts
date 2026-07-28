@@ -153,7 +153,7 @@ describe('DiagnosticsProvider.analysisForCodeActions', () => {
   it('never serves a text-only analysis to code actions', async () => {
     const provider = new DiagnosticsProvider();
     const { document } = fakeDocument(SKILL_TEXT);
-    await provider.validate(document as never, 'text-only');
+    await provider.validate(document as never, { mode: 'text-only' });
     expect(analyzeSkillMock).toHaveBeenCalledTimes(1);
 
     provider.analysisForCodeActions(document as never);
