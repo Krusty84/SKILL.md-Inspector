@@ -351,6 +351,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((document) => void provider.validate(document)),
+    // onDidOpenTextDocument does not re-fire for an already-open document, so a
+    // SKILL.md revealed later (a restored background tab, a new split) would
+    // never get validated. The version-matched cache check keeps ordinary tab
+    // switching between already-validated files free of work.
+    vscode.window.onDidChangeVisibleTextEditors((editors) => {
+      for (const editor of editors) {
+        if (isSkillFile(editor.document) && !provider.hasCurrentAnalysis(editor.document)) {
+          void provider.validate(editor.document);
+        }
+      }
+    }),
     vscode.workspace.onDidChangeTextDocument((event) => scheduleValidate(event.document)),
     vscode.workspace.onDidSaveTextDocument((document) => {
       if (isSkillFile(document)) {

@@ -117,6 +117,15 @@ export class DiagnosticsProvider implements vscode.Disposable {
     return this.runAnalysis(document, readConfig(document.uri), 'full');
   }
 
+  /**
+   * True when the latest recorded analysis matches the document's current
+   * version — i.e. published diagnostics are up to date and a revalidation
+   * would be redundant. Used to keep visible-editor sweeps cheap.
+   */
+  hasCurrentAnalysis(document: vscode.TextDocument): boolean {
+    return this.lastAnalyses.get(document.uri.toString())?.version === document.version;
+  }
+
   /** Invalidates cached resources for the skill directory containing `filePath`. */
   invalidateResource(filePath: string): void {
     this.resourceCache.invalidateFile(filePath);

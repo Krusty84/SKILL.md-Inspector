@@ -186,6 +186,19 @@ describe('DiagnosticsProvider.analysisForCodeActions', () => {
     provider.dispose();
   });
 
+  it('reports whether the recorded analysis is current for the visible-editor sweep', async () => {
+    const provider = new DiagnosticsProvider();
+    const { state, document } = fakeDocument(SKILL_TEXT);
+    expect(provider.hasCurrentAnalysis(document as never)).toBe(false);
+
+    await provider.validate(document as never);
+    expect(provider.hasCurrentAnalysis(document as never)).toBe(true);
+
+    state.version = 2;
+    expect(provider.hasCurrentAnalysis(document as never)).toBe(false);
+    provider.dispose();
+  });
+
   it('drops cached analyses on clearResourceCache and clear', async () => {
     const provider = new DiagnosticsProvider();
     const { document } = fakeDocument(SKILL_TEXT);
