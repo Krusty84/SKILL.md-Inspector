@@ -1,6 +1,5 @@
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
 import { visit } from 'unist-util-visit';
+import { parseMarkdownRoot } from './markdownAst';
 import type { SkillLink, SkillLinkKind } from '../types/SkillDocument';
 import type { SkillDiagnosticRange } from '../types/SkillDiagnostic';
 
@@ -38,7 +37,7 @@ const RESOURCE_PATH_RE =
  *   so returned ranges are in document coordinates.
  */
 export function parseMarkdownLinks(body: string, bodyStartLine = 0): SkillLink[] {
-  const tree = unified().use(remarkParse).parse(body);
+  const tree = parseMarkdownRoot(body);
   const links: SkillLink[] = [];
 
   visit(tree, (raw: unknown, _index: number | undefined, parent: unknown) => {

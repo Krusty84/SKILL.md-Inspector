@@ -1,6 +1,5 @@
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
 import { visit } from 'unist-util-visit';
+import { parseMarkdownRoot } from './markdownAst';
 
 export interface SkillHeading {
   /** Heading text with original case preserved, trimmed. */
@@ -21,7 +20,7 @@ interface HeadingNode {
  * blocks are ignored (code is a distinct node type, never `heading`).
  */
 export function extractHeadings(body: string): SkillHeading[] {
-  const tree = unified().use(remarkParse).parse(body);
+  const tree = parseMarkdownRoot(body);
   const headings: SkillHeading[] = [];
   visit(tree, 'heading', (node: unknown) => {
     const heading = node as HeadingNode;
