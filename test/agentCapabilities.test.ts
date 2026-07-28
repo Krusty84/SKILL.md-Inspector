@@ -33,7 +33,7 @@ describe('agent capability table integrity (plan §8.1)', () => {
       'opencode',
     ]);
     expect(AGENT_CAPABILITIES.agents.map((agent) => agent.label)).toEqual([
-      'Spec (skills-ref)',
+      'Regular SKILL.md',
       'Claude Code',
       'Codex',
       'OpenCode',

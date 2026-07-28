@@ -7,11 +7,13 @@ import type {
   ReportWebviewToExtensionMessage,
 } from './model';
 import {
+  applyTimelineSearch,
+  clearTimelineSearch,
   collapseVisibleTimelineEvents,
   createInitialTimelineState,
   expandVisibleTimelineEvents,
   setTimelineFilter,
-  setTimelineSearchQuery,
+  setTimelineSearchDraft,
   toggleTimelineEvent,
   visibleTimelineEvents,
   type OpenCodeTimelineState,
@@ -28,7 +30,6 @@ let model: OpenCodeTimelineViewModel | undefined;
 let state: OpenCodeTimelineState | undefined;
 const details = new Map<string, OpenCodeTimelineEventDetails>();
 const requested = new Set<string>();
-let searchTimer: number | undefined;
 const tooltipId = 'report-tooltip';
 const tooltips: Record<string, string> = {
   all: 'Show all session events',
@@ -94,6 +95,8 @@ document.addEventListener('click', (event) => {
     renderSessionDetails();
     renderSessionChevron();
     action.focus();
+  } else if (type === 'search') {
+    applySearch();
   } else if (type === 'copy' && action.dataset.value)
     vscode.postMessage({ type: 'copyText', value: action.dataset.value });
   else if (type === 'raw') vscode.postMessage({ type: 'openRawSession' });
@@ -120,12 +123,9 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.key === 'Escape') {
     hideTooltip();
-    const search = qs<HTMLInputElement>('#search');
-    if (search?.value) {
-      search.value = '';
-      state = setTimelineSearchQuery(state, '');
+    if (state.draftQuery || state.query) {
+      state = clearTimelineSearch(state);
       renderTimeline();
-      renderToolbar();
     } else if (state.focusedEventId && state.expandedEventIds.has(state.focusedEventId)) {
       toggle(state.focusedEventId, { restoreFocus: true });
     }
@@ -226,25 +226,31 @@ function renderToolbar(): void {
   search.id = 'search';
   search.type = 'search';
   search.placeholder = 'Search session…';
-  search.value = state.query;
+  search.value = state.draftQuery;
   search.setAttribute('aria-label', 'Search session events');
   attachTooltip(search, tooltips.search);
   search.addEventListener('input', () => {
-    window.clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(() => {
-      state = setTimelineSearchQuery(state!, search.value);
-      renderTimeline();
-      renderToolbar();
-    }, 150);
+    state = setTimelineSearchDraft(state!, search.value);
+  });
+  search.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    applySearch();
   });
   actions.append(
     search,
+    button('Search', 'search', tooltips.search),
     textEl('span', 'Matches ' + visibleTimelineEvents(model.events, state).length),
     button('Expand all', 'expand-all', tooltips['expand-all']),
     button('Collapse all', 'collapse-all', tooltips['collapse-all']),
     button('Raw JSON', 'raw', tooltips.raw),
   );
   bar.append(chips, actions);
+}
+function applySearch(): void {
+  if (!state) return;
+  state = applyTimelineSearch(state);
+  renderTimeline();
 }
 function sessionDetails(): HTMLElement {
   const s = el('section', 'session-details');

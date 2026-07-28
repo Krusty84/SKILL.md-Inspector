@@ -44,6 +44,26 @@ describe('OpenCode session report shell structure', () => {
     expect(source).not.toContain('Session details (');
   });
 
+  it('applies search only on Enter or the Search button without a debounce timer', () => {
+    expect(source).toContain("search.addEventListener('input', () => {");
+    expect(source).toContain('state = setTimelineSearchDraft(state!, search.value)');
+    expect(source).toContain("search.addEventListener('keydown', (event) => {");
+    expect(source).toContain("if (event.key !== 'Enter') return");
+    expect(source).toContain("button('Search', 'search', tooltips.search)");
+    expect(source).toContain("type === 'search'");
+    expect(source).toContain('state = applyTimelineSearch(state)');
+    expect(source).not.toContain('searchTimer');
+    expect(source).not.toContain('setTimeout');
+  });
+
+  it('uses pointer cursors for enabled controls and a text cursor in the search field', () => {
+    expect(cssCompact).toMatch(
+      /button:not\(:disabled\),input\[type='search'\]::-webkit-search-cancel-button\{cursor:pointer;?\}/,
+    );
+    expect(cssCompact).toMatch(/button:disabled\{cursor:default;?\}/);
+    expect(cssCompact).toMatch(/input\[type='search'\]\{cursor:text;?\}/);
+  });
+
   it('orders Skills immediately after Tools', () => {
     expect(sourceCompact).toMatch(
       /\['all','tools','skills','reasoning','errors','diffs','text','subtasks',?\]/,

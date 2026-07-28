@@ -1,18 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title">
-  <title id="title">SKILL.md Inspector</title>
-  <mask id="lens-cut">
-    <rect x="0" y="0" width="24" height="24" fill="#fff"/>
-    <circle cx="16.2" cy="15.2" r="6.2" fill="#000"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="SKILL.md validator">
+  <mask id="cross">
+    <rect x="-8" y="-8" width="144" height="144" fill="#fff"/>
+    <rect x="52" y="108" width="24" height="18" rx="9" fill="#000"/>
   </mask>
-  <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <g mask="url(#lens-cut)">
-      <path d="M4.4 2.6 H10.4 L14.4 6.6 V19.4 A1.2 1.2 0 0 1 13.2 20.6 H4.4 A1.2 1.2 0 0 1 3.2 19.4 V3.8 A1.2 1.2 0 0 1 4.4 2.6 Z"/>
-      <path d="M10.4 2.6 V5.4 A1.2 1.2 0 0 0 11.6 6.6 H14.4"/>
-      <path d="M6 9.6 H11.2"/>
-      <path d="M6 12.6 H9.4"/>
-    </g>
-    <circle cx="16.2" cy="15.2" r="4.6"/>
-    <path d="M19.6 18.6 L21.4 20.4"/>
-    <path d="M14 15.2 l1.6 1.8 l3.2 -3.8"/>
+
+  <g mask="url(#cross)" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" stroke-linecap="butt">
+    <path d="M30 12 H86 L110 36 V104 A12 12 0 0 1 98 116 H30 A12 12 0 0 1 18 104 V24 A12 12 0 0 1 30 12 Z"/>
+    <path d="M86 12 V36 H110"/>
+  </g>
+
+  <g fill="currentColor">
+    <rect x="30" y="26" width="30" height="6" rx="3"/>
+    <rect x="30" y="42" width="16" height="6" rx="3"/>
+  </g>
+
+  <path d="M79 48 A15 15 0 1 0 64 63 A15 15 0 1 1 49 78" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="butt"/>
+
+  <g fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="butt">
+    <path d="M33 73 V86 C33 99 47 106 64 107"/>
+    <path d="M95 73 V86 C95 99 81 106 64 107"/>
+    <path d="M64 107 V126"/>
+  </g>
+
+  <g fill="currentColor">
+    <path transform="translate(33,74) rotate(22)" d="M-3 0 C-6.5 -3 -6.5 -6 -6.5 -9.5 C-6.5 -15 -3.4 -18.5 0 -18.5 C3.4 -18.5 6.5 -15 6.5 -9.5 C6.5 -6 6.5 -3 3 0 Z"/>
+    <path transform="translate(95,74) rotate(-22)" d="M-3 0 C-6.5 -3 -6.5 -6 -6.5 -9.5 C-6.5 -15 -3.4 -18.5 0 -18.5 C3.4 -18.5 6.5 -15 6.5 -9.5 C6.5 -6 6.5 -3 3 0 Z"/>
   </g>
 </svg>

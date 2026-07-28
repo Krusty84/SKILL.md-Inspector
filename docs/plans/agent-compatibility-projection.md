@@ -16,12 +16,12 @@ verified per-agent behavior and reports, **per agent**, a verdict and a list
 of findings. The end user sees, in the single-skill report and the workspace
 report, a section like:
 
-| Agent | Verdict | Findings |
-| --- | --- | --- |
-| Spec (`skills-ref`) | issues | `context` is an unexpected field — the reference validator errors on it |
-| Claude Code | compatible with notes | `allowed-tools` grants tools without prompting; review the grant |
-| Codex | compatible with notes | `compatibility` is not in Codex's allowed field set; no Codex discovery path contains this skill |
-| OpenCode | compatible | unknown fields are ignored by design |
+| Agent               | Verdict               | Findings                                                                                         |
+| ------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
+| Spec (`skills-ref`) | issues                | `context` is an unexpected field — the reference validator errors on it                          |
+| Claude Code         | compatible with notes | `allowed-tools` grants tools without prompting; review the grant                                 |
+| Codex               | compatible with notes | `compatibility` is not in Codex's allowed field set; no Codex discovery path contains this skill |
+| OpenCode            | compatible            | unknown fields are ignored by design                                                             |
 
 Agents in scope for v1: **spec baseline (`skills-ref`), Claude Code, Codex,
 OpenCode**. The table design must make adding Copilot/VS Code later a pure
@@ -94,8 +94,8 @@ export type AgentId = 'spec' | 'claude-code' | 'codex' | 'opencode';
 
 export type CompatibilityVerdict =
   | 'compatible'
-  | 'notes'        // works, but behavior differs in ways the author should know
-  | 'issues'       // documented behavior says something is rejected/broken here
+  | 'notes' // works, but behavior differs in ways the author should know
+  | 'issues' // documented behavior says something is rejected/broken here
   | 'not-evaluated'; // input insufficient (e.g. frontmatter unparseable)
 
 export interface CompatibilityFinding {
@@ -112,7 +112,7 @@ export interface CompatibilityFinding {
 
 export interface AgentProjection {
   agent: AgentId;
-  label: string;              // 'Spec (skills-ref)', 'Claude Code', …
+  label: string; // 'Regular SKILL.md', 'Claude Code', …
   verdict: CompatibilityVerdict;
   findings: CompatibilityFinding[];
   notEvaluatedReason?: string;
@@ -186,7 +186,7 @@ Source: `https://code.claude.com/docs/en/skills` (fetched directly).
   emit a `note` for Claude Code ("substituted at invocation") and a `note`
   for other agents ("stays literal text").
 - Dynamic context: `` !`command` `` (only at line start or after whitespace)
-  and ```` ```! ```` fenced blocks execute **at load time, before the model
+  and ` ```! ` fenced blocks execute **at load time, before the model
   reads the content**; `disableSkillShellExecution` disables. → `note` on
   Claude Code, phrased as load-time execution to review; `note` on other
   agents ("inert text").
@@ -238,12 +238,12 @@ Source: `https://opencode.ai/docs/skills` (repo `anomalyco/opencode`,
 Match on path segments of the skill's directory (pure string matching on the
 already-known skill path; no filesystem access):
 
-| Path contains | spec | claude-code | codex | opencode |
-| --- | --- | --- | --- | --- |
-| `.claude/skills/` | n/a | yes | no | yes |
-| `.agents/skills/` | n/a | no | yes | yes |
-| `.opencode/skills/` | n/a | no | no | yes |
-| `.github/skills/`, bare `skills/` | n/a | no | no | no |
+| Path contains                     | spec | claude-code | codex | opencode |
+| --------------------------------- | ---- | ----------- | ----- | -------- |
+| `.claude/skills/`                 | n/a  | yes         | no    | yes      |
+| `.agents/skills/`                 | n/a  | no          | yes   | yes      |
+| `.opencode/skills/`               | n/a  | no          | no    | yes      |
+| `.github/skills/`, bare `skills/` | n/a  | no          | no    | no       |
 
 "No" here means: no verified documentation says the agent scans that
 location — word the finding as "no documented <agent> discovery path
@@ -274,7 +274,7 @@ Per agent:
    the validator uses.
 3. **Discovery path.** §5.5.
 4. **Body features.** Detect `` !`…` `` (line start/whitespace rule) and
-   ```` ```! ```` blocks; `$ARGUMENTS`/`$ARGUMENTS[N]`/`$N` tokens; declared
+   ` ```! ` blocks; `$ARGUMENTS`/`$ARGUMENTS[N]`/`$N` tokens; declared
    `arguments:` names appearing as `$name`. Emit the per-agent notes from
    §5.2. Detection must ignore ordinary fenced code for the dynamic-context
    inline form only when `!` follows a non-whitespace character (that is the
@@ -292,9 +292,9 @@ then name, discovery, body), stable messages.
 
 - **Single-skill report**: new "Agent compatibility" section — the table from
   §1, one row per agent, findings as an escaped list. Footer line, verbatim
-  requirement: *"Based on documented behavior verified on {verifiedOn}. This
+  requirement: _"Based on documented behavior verified on {verifiedOn}. This
   is a static projection, not a runtime test — it does not prove an agent
-  will select or correctly execute the skill."* Renders through the existing
+  will select or correctly execute the skill."_ Renders through the existing
   escaped, script-disabled HTML path; anchors join the existing TOC.
 - **Workspace report**: a matrix (rows = skills, columns = the four agents,
   cells = verdict). Cells for `not-evaluated` must render as text

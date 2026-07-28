@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyTimelineSearch,
+  clearTimelineSearch,
   collapseVisibleTimelineEvents,
   createInitialTimelineState,
   expandVisibleTimelineEvents,
   setTimelineFilter,
-  setTimelineSearchQuery,
+  setTimelineSearchDraft,
   toggleTimelineEvent,
   visibleTimelineEvents,
 } from '../../src/webview/openCodeSessionReport/state';
@@ -53,7 +55,8 @@ describe('timeline state helpers', () => {
     state = toggleTimelineEvent(state, 'tool');
     expect(state.expandedEventIds.has('tool')).toBe(true);
     state = setTimelineFilter(state, 'tools');
-    state = setTimelineSearchQuery(state, 'read');
+    state = setTimelineSearchDraft(state, 'read');
+    state = applyTimelineSearch(state);
     expect(visibleTimelineEvents(events, state).map((e) => e.id)).toEqual(['tool']);
     state = expandVisibleTimelineEvents(state, events);
     expect(state.expandedEventIds.has('tool')).toBe(true);
@@ -82,15 +85,18 @@ describe('timeline state helpers', () => {
       'error',
       'failed-skill',
     ]);
-    state = setTimelineSearchQuery(state, 'tester');
+    state = setTimelineSearchDraft(state, 'tester');
+    state = applyTimelineSearch(state);
     expect(visibleTimelineEvents(events, state).map((e) => e.id)).toEqual([
       'skill',
       'failed-skill',
     ]);
     state = setTimelineFilter(state, 'skills');
-    state = setTimelineSearchQuery(state, 'read');
+    state = setTimelineSearchDraft(state, 'read');
+    state = applyTimelineSearch(state);
     expect(visibleTimelineEvents(events, state).map((e) => e.id)).toEqual([]);
-    state = setTimelineSearchQuery(state, 'tester');
+    state = setTimelineSearchDraft(state, 'tester');
+    state = applyTimelineSearch(state);
     expect(visibleTimelineEvents(events, state).map((e) => e.id)).toEqual([
       'skill',
       'failed-skill',
@@ -101,10 +107,32 @@ describe('timeline state helpers', () => {
     state = collapseVisibleTimelineEvents(state, events);
     expect(state.expandedEventIds.has('skill')).toBe(false);
     state = setTimelineFilter(state, 'errors');
-    state = setTimelineSearchQuery(state, '');
+    state = clearTimelineSearch(state);
     expect(visibleTimelineEvents(events, state).map((e) => e.id)).toEqual([
       'error',
       'failed-skill',
     ]);
+  });
+
+  it('keeps draft search text separate until applied and clears both values together', () => {
+    let state = createInitialTimelineState(model);
+    state = setTimelineSearchDraft(state, 'read');
+
+    expect(state.draftQuery).toBe('read');
+    expect(state.query).toBe('');
+    expect(visibleTimelineEvents(events, state)).toEqual(events);
+
+    state = applyTimelineSearch(state);
+    expect(state.query).toBe('read');
+    expect(visibleTimelineEvents(events, state).map((event) => event.id)).toEqual(['tool']);
+
+    state = setTimelineSearchDraft(state, 'tester');
+    expect(state.query).toBe('read');
+    expect(visibleTimelineEvents(events, state).map((event) => event.id)).toEqual(['tool']);
+
+    state = clearTimelineSearch(state);
+    expect(state.draftQuery).toBe('');
+    expect(state.query).toBe('');
+    expect(visibleTimelineEvents(events, state)).toEqual(events);
   });
 });

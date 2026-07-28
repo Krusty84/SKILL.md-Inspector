@@ -51,7 +51,7 @@ const SPEC_FIELDS = [
 
 const spec: AgentCapabilities = {
   agent: 'spec',
-  label: 'Spec (skills-ref)',
+  label: 'Regular SKILL.md',
   fields: verified(SPEC_FIELDS, SPEC_SOURCE),
   // The reference validator reports anything else as "Unexpected fields" (an error).
   unknownFields: verified('rejected', SPEC_VALIDATOR_SOURCE),
@@ -140,7 +140,8 @@ const opencode: AgentCapabilities = {
     'allowed-tools': verified(
       {
         kind: 'field-ignored',
-        message: '`allowed-tools` is ignored; OpenCode permissions are configured in opencode.json.',
+        message:
+          '`allowed-tools` is ignored; OpenCode permissions are configured in opencode.json.',
       },
       OPENCODE_SOURCE,
     ),

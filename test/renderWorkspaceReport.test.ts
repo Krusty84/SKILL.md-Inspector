@@ -66,7 +66,7 @@ function analysis(): WorkspaceAnalysis {
         compatibility: {
           verifiedOn: '2026-07-26',
           projections: [
-            { agent: 'spec', label: 'Spec (skills-ref)', verdict: 'compatible', findings: [] },
+            { agent: 'spec', label: 'Regular SKILL.md', verdict: 'compatible', findings: [] },
             {
               agent: 'claude-code',
               label: 'Claude Code',
@@ -112,7 +112,7 @@ function analysis(): WorkspaceAnalysis {
         similarity: 0.84,
         metrics: {
           scopeOverlap: 0.5,
-        cosine: 0.84,
+          cosine: 0.84,
           jaccard: 0.8,
           charNgram: 0.9,
           nameSimilarity: 0.6,
@@ -203,7 +203,7 @@ describe('renderWorkspaceReportHtml', () => {
 
     expect(html).toContain('<h2 id="agent-compatibility">Agent compatibility</h2>');
     expect(html).toContain('href="#agent-compatibility"');
-    expect(html).toContain('<th>Spec (skills-ref)</th>');
+    expect(html).toContain('<th>Regular SKILL.md</th>');
     expect(html).toContain('<th>Claude Code</th>');
     expect(html).toContain('<th>Codex</th>');
     expect(html).toContain('<th>OpenCode</th>');
@@ -226,7 +226,7 @@ describe('renderWorkspaceReportHtml', () => {
       scope: { kind: 'workspace', folderPath: '/ws' },
     });
     expect(html).toContain('All compatibility agents are disabled in the extension settings.');
-    expect(html).not.toContain('<th>Spec (skills-ref)</th>');
+    expect(html).not.toContain('<th>Regular SKILL.md</th>');
   });
 
   it('renders the generated-at timestamp when provided', () => {

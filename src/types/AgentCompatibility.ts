@@ -29,7 +29,7 @@ export interface CompatibilityFinding {
 
 export interface AgentProjection {
   agent: AgentId;
-  label: string; // 'Spec (skills-ref)', 'Claude Code', …
+  label: string; // 'Regular SKILL.md', 'Claude Code', …
   verdict: CompatibilityVerdict;
   findings: CompatibilityFinding[];
   notEvaluatedReason?: string;

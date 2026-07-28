@@ -114,6 +114,13 @@ button {
   border-radius: 3px;
   padding: 0.25rem 0.5rem;
 }
+button:not(:disabled),
+input[type='search']::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
 button[aria-current='true'] {
   background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
@@ -123,6 +130,9 @@ input {
   color: var(--vscode-input-foreground);
   border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
   padding: 0.25rem 0.5rem;
+}
+input[type='search'] {
+  cursor: text;
 }
 .chips,
 .actions {

@@ -1,14 +1,14 @@
 {
   "name": "skill-md-inspector",
   "displayName": "SKILL.md Inspector",
-  "description": "Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
-  "version": "1.0.1",
+  "description": "Offline-first! Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
+  "version": "1.0.2",
   "license": "MIT",
   "publisher": "AlexeySedoykin",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/krusty84/skill-md-inspector.git"
+    "url": "https://github.com/Krusty84/SKILL.md-Inspector.git"
   },
   "engines": {
     "vscode": "^1.90.0"

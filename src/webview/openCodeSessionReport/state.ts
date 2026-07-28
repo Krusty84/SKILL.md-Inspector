@@ -6,6 +6,7 @@ import type {
 export interface OpenCodeTimelineState {
   activeFilter: OpenCodeTimelineFilter;
   query: string;
+  draftQuery: string;
   expandedEventIds: Set<string>;
   sessionDetailsExpanded: boolean;
   focusedEventId?: string;
@@ -16,6 +17,7 @@ export function createInitialTimelineState(
   return {
     activeFilter: model.initialState.activeFilter,
     query: '',
+    draftQuery: '',
     expandedEventIds: new Set(model.initialState.expandedEventIds),
     sessionDetailsExpanded: false,
   };
@@ -26,11 +28,17 @@ export function setTimelineFilter(
 ): OpenCodeTimelineState {
   return { ...state, activeFilter };
 }
-export function setTimelineSearchQuery(
+export function setTimelineSearchDraft(
   state: OpenCodeTimelineState,
-  query: string,
+  draftQuery: string,
 ): OpenCodeTimelineState {
-  return { ...state, query };
+  return { ...state, draftQuery };
+}
+export function applyTimelineSearch(state: OpenCodeTimelineState): OpenCodeTimelineState {
+  return { ...state, query: state.draftQuery };
+}
+export function clearTimelineSearch(state: OpenCodeTimelineState): OpenCodeTimelineState {
+  return { ...state, query: '', draftQuery: '' };
 }
 export function toggleTimelineEvent(
   state: OpenCodeTimelineState,

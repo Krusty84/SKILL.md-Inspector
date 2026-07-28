@@ -101,7 +101,7 @@ function analysis(): WorkspaceAnalysis {
         compatibility: {
           verifiedOn: '2026-07-26',
           projections: [
-            { agent: 'spec', label: 'Spec (skills-ref)', verdict: 'compatible', findings: [] },
+            { agent: 'spec', label: 'Regular SKILL.md', verdict: 'compatible', findings: [] },
             { agent: 'claude-code', label: 'Claude Code', verdict: 'compatible', findings: [] },
             { agent: 'codex', label: 'Codex', verdict: 'compatible', findings: [] },
             { agent: 'opencode', label: 'OpenCode', verdict: 'compatible', findings: [] },
@@ -210,7 +210,7 @@ describe('SkillTreeProvider collision tooltip', () => {
         similarity: 0.17,
         metrics: {
           scopeOverlap: 0.5,
-        cosine: 0,
+          cosine: 0,
           jaccard: 0,
           charNgram: 0,
           nameSimilarity: 0.85,
