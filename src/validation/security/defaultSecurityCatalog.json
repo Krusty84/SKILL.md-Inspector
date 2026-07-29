@@ -1,0 +1,428 @@
+{
+  "_comment": "Curated security pattern catalog. Regex sources are compiled once in patterns.ts. Command/injection/path/service patterns compile case-insensitive; secret signatures compile case-sensitive. Keep patterns anchored and low-false-positive; document any change in docs/rules.md.",
+  "dangerousCommands": [
+    {
+      "id": "rm-rf-root",
+      "source": "\\brm\\b(?=[^\\n]*?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]*?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]*?\\s(?:--no-preserve-root\\s+)?(?:--\\s+)?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
+      "message": "recursive force-delete of the filesystem root, a system directory, or the home directory; near-certainly destructive. Remove it or scope the path."
+    },
+    {
+      "id": "fork-bomb",
+      "source": ":\\s*\\(\\s*\\)\\s*\\{\\s*:\\s*\\|\\s*:\\s*&\\s*\\}\\s*;\\s*:",
+      "message": "shell fork bomb; exhausts system resources. Remove it."
+    },
+    {
+      "id": "dd-to-device",
+      "source": "\\bdd\\b[^\\n]*\\sof=/dev/(?:sd|nvme|hd|disk|mmcblk|vd)",
+      "message": "writes raw data directly to a block device; destroys the disk. Remove it."
+    },
+    {
+      "id": "mkfs-device",
+      "source": "\\bmkfs(?:\\.\\w+)?\\b[^\\n]*\\s/dev/(?:sd|nvme|hd|disk|mmcblk|vd)",
+      "message": "reformats a block device; erases all data on it. Remove it."
+    },
+    {
+      "id": "redirect-block-device",
+      "source": ">\\s*/dev/(?:sd|nvme|hd|mmcblk|vd)\\w*",
+      "message": "redirects output onto a raw block device; corrupts the disk. Remove it."
+    },
+    {
+      "id": "shutdown",
+      "source": "\\b(?:shutdown|poweroff|halt|reboot|init\\s+0)\\b",
+      "message": "powers off or reboots the host. An agent should not run this unattended; remove it."
+    },
+    {
+      "id": "chmod-777-root",
+      "source": "\\bchmod\\s+(?:(?:-R|--recursive)\\s+0?777|0?777\\s+(?:-R|--recursive))\\s+/(?![\\w])",
+      "message": "recursively makes the filesystem root world-writable; catastrophic. Remove it."
+    },
+    {
+      "id": "credential-exfil-pipe",
+      "source": "\\b(?:cat|less|more|head|tail|cp|tar|gzip|base64)\\b[^\\n|]*(?:\\.ssh/|/\\.ssh|\\.aws/credentials|/etc/shadow|\\.npmrc|\\.netrc|id_rsa|id_ed25519)[^\\n|]*\\|[^\\n]*\\b(?:curl|wget|nc|ncat|netcat|scp|ssh)\\b",
+      "message": "reads a credential file and pipes it to a network tool; credential exfiltration. Remove it."
+    },
+    {
+      "id": "obfuscated-exec",
+      "source": "\\b(?:base64\\s+(?:-d|--decode)|xxd\\s+-r|openssl\\s+(?:enc\\s+)?-d\\b[^\\n]*-base64|openssl\\s+base64\\s+-d)\\b[^\\n]*\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|python|python3|perl|ruby|node)\\b",
+      "message": "decodes obfuscated content and pipes it straight to an interpreter; hides what runs. Remove it."
+    },
+    {
+      "id": "eval-download",
+      "source": "\\beval\\b[^\\n]*(?:curl|wget)\\b[^\\n]*https?://",
+      "message": "evaluates content downloaded from the network; runs arbitrary remote code. Remove it."
+    },
+    {
+      "id": "reverse-shell-dev-tcp",
+      "source": "\\b(?:bash|sh|zsh|ksh)\\b[^\\n]*\\s-i\\b[^\\n]*/dev/(?:tcp|udp)/[^\\s/]+/\\d{1,5}\\b",
+      "message": "opens an interactive shell over a /dev/tcp or /dev/udp socket; this is a reverse shell. Remove it."
+    },
+    {
+      "id": "reverse-shell-netcat",
+      "source": "\\b(?:nc|ncat|netcat)\\b(?=[^\\n]*(?:\\s-e\\s+|\\s--exec(?:=|\\s+))(?:(?:/usr)?/bin/)?(?:sh|bash|zsh|ksh)\\b)[^\\n]*\\s(?:[a-z0-9.-]+|\\[[0-9a-f:]+\\])\\s+\\d{2,5}\\b",
+      "message": "uses netcat to attach a shell to a remote endpoint; this is a reverse shell. Remove it."
+    },
+    {
+      "id": "credential-exfil-upload",
+      "source": "\\b(?:curl|wget)\\b(?=[^\\n]*\\b(?:https?|ftp)://)(?=[^\\n]*(?:--data(?:-binary|-raw)?|--upload-file|--post-file|--form|-[TF])\\b)[^\\n]*(?:\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|config)|\\.aws/credentials|/etc/shadow|\\.netrc|\\.npmrc|Login\\s+Data|cookies\\.sqlite|key4\\.db)",
+      "message": "uploads a credential file directly to a network endpoint; credential exfiltration. Remove it."
+    },
+    {
+      "id": "credential-exfil-copy",
+      "source": "\\bscp\\b[^\\n]*(?:\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|config)|\\.aws/credentials|/etc/shadow|\\.netrc|\\.npmrc|Login\\s+Data|cookies\\.sqlite|key4\\.db)[^\\n]*\\s(?:[^\\s@:]+@)?(?:[\\w.-]+|\\[[0-9a-f:]+\\]):\\S*",
+      "message": "copies a credential file to a remote host; credential exfiltration. Remove it."
+    }
+  ],
+  "riskyCommands": [
+    {
+      "id": "rm-rf-generic",
+      "source": "\\brm\\b(?=[^\\n]*?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]*?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]*?\\s\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
+      "message": "recursive force-delete of a variable or unquoted-glob path; the target may expand to something unintended. Quote and scope it."
+    },
+    {
+      "id": "sudo",
+      "source": "\\bsudo\\b",
+      "message": "runs a command as root. Confirm elevated privileges are required."
+    },
+    {
+      "id": "chmod-777",
+      "source": "\\bchmod\\s+(?:-[a-zA-Z]+\\s+)?0?777\\b",
+      "message": "makes a file world-writable. Prefer the narrowest permission that works."
+    },
+    {
+      "id": "curl-pipe-shell",
+      "source": "\\b(?:curl|wget)\\b[^\\n]*\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|ksh)\\b",
+      "message": "pipes a downloaded script straight into a shell; the content is unverified. Download, review, then run."
+    },
+    {
+      "id": "git-push-force",
+      "source": "\\bgit\\s+push\\b[^\\n]*\\s(?:--force(?!-with-lease)|-f)\\b",
+      "message": "force-pushes and can overwrite remote history. Prefer --force-with-lease."
+    },
+    {
+      "id": "dd-if",
+      "source": "\\bdd\\s+if=",
+      "message": "raw disk/byte copy; verify source and destination before an agent runs it."
+    },
+    {
+      "id": "chown-recursive",
+      "source": "\\bchown\\b[^\\n]*\\s-[a-zA-Z]*R",
+      "message": "recursively changes ownership; verify the target path is scoped."
+    },
+    {
+      "id": "eval",
+      "source": "\\beval\\b",
+      "message": "evaluates a dynamically built string as code. Avoid eval where possible."
+    },
+    {
+      "id": "install-from-url",
+      "source": "\\b(?:pip|pip3|npm|gem|yarn|pnpm)\\s+(?:install|add|i)\\b[^\\n]*https?://",
+      "message": "installs a package directly from a URL, bypassing registry integrity checks. Prefer a pinned registry package."
+    },
+    {
+      "id": "disable-firewall",
+      "source": "\\b(?:iptables\\s+-F|ufw\\s+disable|setenforce\\s+0|systemctl\\s+stop\\s+firewalld)\\b",
+      "message": "disables a firewall or security enforcement. Confirm this is intended."
+    },
+    {
+      "id": "download-pipe-interpreter",
+      "source": "\\b(?:curl|wget)\\b[^\\n]*https?://[^\\n]*\\|\\s*(?:sudo\\s+)?(?:python|python3|node|ruby|perl|pwsh|powershell)\\b",
+      "message": "pipes downloaded content directly into an interpreter; download and review it before execution."
+    },
+    {
+      "id": "powershell-download-exec",
+      "source": "(?:\\b(?:Invoke-WebRequest|iwr|Invoke-RestMethod|irm)\\b[^\\n|]*https?://[^\\n|]*\\|\\s*(?:Invoke-Expression|iex)\\b|\\b(?:Invoke-Expression|iex)\\b[^\\n]*(?:DownloadString|DownloadFile)\\s*\\([^\\n]*https?://)",
+      "message": "downloads remote PowerShell content and evaluates it immediately; save and review it before execution."
+    },
+    {
+      "id": "powershell-encoded-command",
+      "source": "\\b(?:powershell|pwsh)(?:\\.exe)?\\b[^\\n]*\\s-(?:EncodedCommand|enc)\\b\\s+[A-Za-z0-9+/=]{8,}",
+      "message": "runs an encoded PowerShell command that hides the executed content. Decode and review it first."
+    },
+    {
+      "id": "git-reset-hard",
+      "source": "\\bgit\\s+reset\\b[^\\n]*\\s--hard\\b",
+      "message": "discards tracked working-tree and index changes. Confirm the lost work is recoverable."
+    },
+    {
+      "id": "git-clean-destructive",
+      "source": "\\bgit\\s+clean\\b(?![^\\n]*(?:\\s--dry-run\\b|\\s-[a-zA-Z]*n[a-zA-Z]*\\b))(?=[^\\n]*(?:\\s--force\\b|\\s-[a-zA-Z]*f[a-zA-Z]*\\b))(?=[^\\n]*\\s-[a-zA-Z]*d[a-zA-Z]*\\b)(?=[^\\n]*\\s-[a-zA-Z]*x[a-zA-Z]*\\b)[^\\n]*",
+      "message": "force-deletes untracked directories and ignored files. Preview with git clean -ndx first."
+    },
+    {
+      "id": "disable-tls-verification",
+      "source": "(?:\\bcurl\\b[^\\n]*(?:\\s-k\\b|\\s--insecure\\b)|\\bwget\\b[^\\n]*\\s--no-check-certificate\\b|\\b(?:Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\\b[^\\n]*\\s-SkipCertificateCheck\\b|\\bNODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*[\"']?0\\b|\\bgit\\s+(?:-c\\s+http\\.sslVerify=false|config(?:\\s+--global)?\\s+http\\.sslVerify\\s+false)\\b)",
+      "message": "disables TLS certificate verification. Keep verification enabled or trust a specific certificate."
+    },
+    {
+      "id": "agent-skip-permissions",
+      "source": "--dangerously-skip-permissions\\b",
+      "message": "disables an agent's permission prompts. Keep normal approval boundaries enabled."
+    },
+    {
+      "id": "agent-identity-write",
+      "source": "(?:\\b(?:echo|printf|cat|sed|awk|curl|wget|base64)\\b[^\\n]*>{1,2}\\s*[\"']?(?:[^\\s\"']*/)?(?:SOUL|MEMORY|AGENTS)\\.md\\b|\\btee\\b[^\\n]*(?:SOUL|MEMORY|AGENTS)\\.md\\b|\\b(?:Set-Content|Add-Content|Out-File)\\b[^\\n]*(?:SOUL|MEMORY|AGENTS)\\.md\\b)",
+      "message": "writes persistent agent identity or instruction state. Require explicit review and justification."
+    }
+  ],
+  "serviceHosts": [
+    "webhook.site",
+    "requestbin.com",
+    "requestbin.net",
+    "hookb.in",
+    "transfer.sh",
+    "file.io",
+    "0x0.st",
+    "ngrok.io",
+    "ngrok.app",
+    "ngrok-free.app",
+    "localtunnel.me",
+    "trycloudflare.com",
+    "pastebin.com",
+    "rentry.co",
+    "dpaste.com",
+    "termbin.com",
+    "sprunge.us",
+    "ipinfo.io",
+    "icanhazip.com",
+    "api.ipify.org",
+    "ifconfig.me",
+    "oastify.com",
+    "burpcollaborator.net",
+    "interact.sh",
+    "bit.ly",
+    "tinyurl.com",
+    "goo.gl",
+    "t.co",
+    "is.gd"
+  ],
+  "secretSignatures": [
+    {
+      "id": "aws-access-key",
+      "label": "AWS access key ID",
+      "source": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b"
+    },
+    { "id": "github-token", "label": "GitHub token", "source": "\\bgh[opsur]_[A-Za-z0-9]{36}\\b" },
+    {
+      "id": "github-pat-fine",
+      "label": "GitHub fine-grained token",
+      "source": "\\bgithub_pat_[A-Za-z0-9_]{22,}\\b"
+    },
+    { "id": "slack-token", "label": "Slack token", "source": "\\bxox[baprs]-[A-Za-z0-9-]{10,}\\b" },
+    {
+      "id": "anthropic-key",
+      "label": "Anthropic API key",
+      "source": "\\bsk-ant-[A-Za-z0-9_-]{20,}\\b"
+    },
+    {
+      "id": "openai-key",
+      "label": "OpenAI API key",
+      "source": "\\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9]{20,}\\b"
+    },
+    { "id": "gitlab-token", "label": "GitLab token", "source": "\\bglpat-[A-Za-z0-9_-]{20}\\b" },
+    { "id": "google-api-key", "label": "Google API key", "source": "\\bAIza[0-9A-Za-z_-]{35}\\b" },
+    { "id": "npm-token", "label": "npm token", "source": "\\bnpm_[A-Za-z0-9]{36}\\b" },
+    {
+      "id": "stripe-key",
+      "label": "Stripe secret key",
+      "source": "\\b(?:sk|rk)_live_[A-Za-z0-9]{20,}\\b"
+    },
+    {
+      "id": "private-key-block",
+      "label": "private key block",
+      "source": "-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----"
+    },
+    {
+      "id": "jwt",
+      "label": "JSON Web Token",
+      "source": "\\beyJ[A-Za-z0-9_-]{8,}\\.eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\b"
+    },
+    {
+      "id": "huggingface-token",
+      "label": "Hugging Face token",
+      "source": "\\bhf_[A-Za-z0-9_-]{30,}\\b"
+    },
+    {
+      "id": "pypi-token",
+      "label": "PyPI API token",
+      "source": "\\bpypi-[A-Za-z0-9_-]{85,}\\b"
+    },
+    {
+      "id": "docker-pat",
+      "label": "Docker personal access token",
+      "source": "\\bdckr_pat_[A-Za-z0-9_-]{12,}\\b"
+    }
+  ],
+  "secretAssignment": {
+    "id": "generic-credential",
+    "label": "hardcoded credential",
+    "source": "\\b(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|aws[_-]?secret[_-]?access[_-]?key|aws[_-]?session[_-]?token)\\b\\s*[:=]\\s*[\"']?([^\\s\"'#`]{8,})"
+  },
+  "credentialedUrl": {
+    "id": "credentialed-url",
+    "label": "credentials embedded in a URL",
+    "source": "\\b[a-z][a-z0-9+.-]*://[^\\s/@:]+:[^\\s/@:]+@"
+  },
+  "secretPlaceholder": {
+    "source": "<[^>]*>|\\$\\{?[A-Za-z0-9_]+\\}?|%[A-Za-z0-9_]+%|x{3,}|\\*{3,}|\\.\\.\\.|\\byour[_-]|example|changeme|placeholder|redacted|dummy|sample|<redacted>"
+  },
+  "injectionPhrases": [
+    {
+      "id": "ignore-previous",
+      "source": "ignore\\s+(?:all\\s+)?(?:the\\s+)?previous\\s+instructions",
+      "message": "prompt-injection wording that tells the agent to ignore prior instructions."
+    },
+    {
+      "id": "disregard-above",
+      "source": "disregard\\s+(?:the\\s+)?(?:above|previous|prior|earlier)",
+      "message": "prompt-injection wording that tells the agent to disregard prior context."
+    },
+    {
+      "id": "do-not-tell-user",
+      "source": "do\\s+not\\s+(?:ask|tell|inform|notify|alert|warn)\\s+(?:the\\s+)?user",
+      "message": "instructs the agent to act without informing the user."
+    },
+    {
+      "id": "without-asking",
+      "source": "without\\s+(?:(?:asking|telling|informing|notifying)\\s+(?:the\\s+)?user|(?:the\\s+)?user(?:'s)?\\s+confirmation|confirmation)",
+      "message": "instructs the agent to act without confirmation."
+    },
+    {
+      "id": "bypass-permission",
+      "source": "(?:bypass|disable|skip|turn\\s+off|ignore)\\s+(?:\\w+\\s+){0,3}permissions?",
+      "message": "instructs the agent to bypass permission prompts."
+    },
+    {
+      "id": "skip-permissions-flag",
+      "source": "--dangerously-skip-permissions",
+      "message": "invokes a flag that disables the agent's permission prompts."
+    },
+    {
+      "id": "exfiltrate",
+      "source": "\\bexfiltrat(?:e|es|ing|ion)\\b",
+      "message": "references exfiltrating data."
+    },
+    {
+      "id": "send-secrets",
+      "source": "(?<!never\\s)(?<!not\\s)(?<!don't\\s)(?:print|send|leak|upload|post|transmit|reveal|dump)\\s+(?:\\w+\\s+){0,4}(?:env(?:ironment)?|secret|token|credential|api[_-]?key|password)",
+      "message": "instructs the agent to send secrets or environment variables somewhere."
+    },
+    {
+      "id": "hide-from-user",
+      "source": "hide\\s+(?:this|it|that|the\\s+\\w+)\\s+from\\s+(?:the\\s+)?user",
+      "message": "instructs the agent to hide activity from the user."
+    },
+    {
+      "id": "developer-mode",
+      "source": "\\byou\\s+are\\s+now\\s+(?:in\\s+)?(?:developer|debug|administrator|admin|system)\\s+mode\\b",
+      "message": "attempts to replace the agent's operating role with a privileged mode."
+    },
+    {
+      "id": "override-authority",
+      "source": "(?<!not\\s)(?<!never\\s)(?<!don't\\s)\\b(?:override|replace|supersede|bypass)\\s+(?:all\\s+)?(?:the\\s+)?(?:system|developer|safety|security)\\s+(?:instructions?|rules?|polic(?:y|ies)|guardrails?)\\b",
+      "message": "attempts to override higher-priority instructions or safeguards."
+    },
+    {
+      "id": "delete-audit-history",
+      "source": "\\b(?:delete|erase|clear|remove|wipe)\\s+(?:all\\s+)?(?:the\\s+)?(?:audit\\s+(?:logs?|trail)|security\\s+logs?|activity\\s+history|evidence)\\b",
+      "message": "instructs the agent to remove audit evidence or security history."
+    },
+    {
+      "id": "conceal-instruction",
+      "source": "\\b(?:do\\s+not|don't|never)\\s+(?:mention|disclose|reveal|show)\\s+(?:this|these|the)\\s+(?:instructions?|actions?|steps?|activity)\\b",
+      "message": "instructs the agent to conceal its instructions or actions."
+    },
+    {
+      "id": "reveal-system-prompt",
+      "source": "(?<!not\\s)(?<!never\\s)(?<!don't\\s)(?<!avoid\\s)\\b(?:reveal|print|repeat|show|output)\\s+(?:the\\s+|your\\s+)?(?:system|developer)\\s+(?:prompt|message|instructions?)\\b",
+      "message": "attempts to extract higher-priority system or developer instructions."
+    }
+  ],
+  "sensitivePaths": [
+    {
+      "id": "ssh-keys",
+      "source": "(?:~|\\$HOME)?/?\\.ssh/\\S*|\\bid_(?:rsa|ed25519|ecdsa|dsa)\\b",
+      "message": "references SSH private keys."
+    },
+    {
+      "id": "aws-credentials",
+      "source": "(?:~|\\$HOME)?/?\\.aws/credentials\\b",
+      "message": "references the AWS credentials file."
+    },
+    {
+      "id": "etc-shadow",
+      "source": "/etc/(?:shadow|passwd|sudoers)\\b",
+      "message": "references a system account/password file."
+    },
+    {
+      "id": "kube-config",
+      "source": "(?:~|\\$HOME)?/?\\.kube/config\\b",
+      "message": "references the Kubernetes credentials file."
+    },
+    {
+      "id": "docker-config",
+      "source": "(?:~|\\$HOME)?/?\\.docker/config\\.json\\b",
+      "message": "references the Docker credentials file."
+    },
+    {
+      "id": "keychain",
+      "source": "\\bLibrary/Keychains\\b|\\bfind-generic-password\\b|\\bsecurity\\s+find-(?:generic|internet)-password\\b",
+      "message": "references the macOS keychain."
+    },
+    {
+      "id": "browser-store",
+      "source": "\\bLogin\\s+Data\\b|\\bcookies\\.sqlite\\b|\\bkey4\\.db\\b",
+      "message": "references a browser credential/cookie store."
+    },
+    {
+      "id": "netrc",
+      "source": "(?:~|\\$HOME)?/?\\.netrc\\b",
+      "message": "references the .netrc credentials file."
+    },
+    {
+      "id": "pkg-config",
+      "source": "(?:~|\\$HOME)?/?\\.(?:npmrc|pypirc)\\b",
+      "message": "references a package-manager credentials file."
+    },
+    {
+      "id": "env-file",
+      "source": "(?<![\\w.-])\\.env(?!\\.(?:example|sample|template)\\b)(?:\\.[A-Za-z0-9_-]+)?\\b",
+      "message": "references an environment file that commonly holds secrets."
+    },
+    {
+      "id": "git-credentials",
+      "source": "(?:~|\\$HOME)?/?\\.git-credentials\\b",
+      "message": "references Git's plaintext credentials file."
+    },
+    {
+      "id": "github-cli-credentials",
+      "source": "(?:~|\\$HOME)?/?\\.config/gh/hosts\\.yml\\b",
+      "message": "references the GitHub CLI credentials file."
+    },
+    {
+      "id": "gcloud-credentials",
+      "source": "(?:~|\\$HOME)?/?\\.config/gcloud/application_default_credentials\\.json\\b",
+      "message": "references Google Cloud application-default credentials."
+    },
+    {
+      "id": "terraform-credentials",
+      "source": "(?:~|\\$HOME)?/?\\.terraform\\.d/credentials\\.tfrc\\.json\\b",
+      "message": "references Terraform CLI credentials."
+    },
+    {
+      "id": "proc-environ",
+      "source": "/proc/(?:self|\\d+)/environ\\b",
+      "message": "references a process environment block that may expose credentials."
+    },
+    {
+      "id": "kubernetes-service-token",
+      "source": "/var/run/secrets/kubernetes\\.io/serviceaccount/token\\b",
+      "message": "references the in-cluster Kubernetes service-account token."
+    }
+  ],
+  "hiddenUnicode": {
+    "source": "[\\u200B-\\u200D\\u2060\\uFEFF\\u202A-\\u202E\\u2066-\\u2069]|[\\u{E0000}-\\u{E007F}]"
+  },
+  "hiddenImperative": {
+    "source": "\\b(?:ignore|disregard|run|execute|exec|delete|remove|send|upload|curl|wget|eval|bypass|disable|exfiltrat|do\\s+not\\s+tell|password|token|secret|credential)\\b"
+  }
+}

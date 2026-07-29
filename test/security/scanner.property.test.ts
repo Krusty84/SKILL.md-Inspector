@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { parseSkillFile } from '../../src/parser/parseSkillFile';
-import { validateSecurity } from '../../src/analysis/security';
-import { DEFAULT_SECURITY_SETTINGS } from '../../src/analysis/security/settings';
+import { validateSecurity } from '../../src/validation/security';
+import { DEFAULT_SECURITY_SETTINGS } from '../../src/validation/security/settings';
 
 function docFrom(body: string) {
   return parseSkillFile(
@@ -31,9 +31,10 @@ describe('security scanner robustness (property)', () => {
     fc.assert(
       fc.property(fc.string(), (body) => {
         const doc = docFrom(body);
-        const lineCount = `---\nname: demo\ndescription: Do a thing. Use when a thing is needed.\n---\n\n${body}\n`.split(
-          '\n',
-        ).length;
+        const lineCount =
+          `---\nname: demo\ndescription: Do a thing. Use when a thing is needed.\n---\n\n${body}\n`.split(
+            '\n',
+          ).length;
         const diagnostics = validateSecurity({
           doc,
           settings: DEFAULT_SECURITY_SETTINGS,

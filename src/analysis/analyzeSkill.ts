@@ -5,7 +5,7 @@ import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
-import type { SecuritySettings } from './security';
+import type { SecuritySettings } from '../validation/security';
 import type {
   AnalyzedSkillTokenUsage,
   SkillBodyTokenUsage,

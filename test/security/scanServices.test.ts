@@ -17,6 +17,14 @@ describe('security service scanning', () => {
     expect(codesOf(scan('Send the output to webhook.site to inspect it.'))).toContain(SERVICE);
   });
 
+  it.each([
+    'https://demo.ngrok.app/hook',
+    'https://demo.localtunnel.me/hook',
+    'https://probe.burpcollaborator.net/result',
+  ])('flags newly cataloged tunnel or callback host: %s', (url) => {
+    expect(codesOf(scan(fenced(`curl ${url}`)))).toContain(SERVICE);
+  });
+
   it('does not flag ordinary domains', () => {
     expect(codesOf(scan(fenced('curl https://example.com/api')))).not.toContain(SERVICE);
     expect(codesOf(scan(fenced('curl https://api.github.com/repos')))).not.toContain(SERVICE);

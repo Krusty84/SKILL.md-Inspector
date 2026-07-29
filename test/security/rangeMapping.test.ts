@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseSkillFile } from '../../src/parser/parseSkillFile';
-import { validateSecurity } from '../../src/analysis/security';
-import { DEFAULT_SECURITY_SETTINGS } from '../../src/analysis/security/settings';
+import { validateSecurity } from '../../src/validation/security';
+import { DEFAULT_SECURITY_SETTINGS } from '../../src/validation/security/settings';
 import { DiagnosticCode } from '../../src/types/DiagnosticCode';
 
 function scanContent(content: string) {
@@ -58,5 +58,13 @@ describe('security range mapping', () => {
       expect(d.range.startCharacter).toBeGreaterThanOrEqual(0);
       expect(d.range.endCharacter).toBeGreaterThanOrEqual(d.range.startCharacter);
     }
+  });
+
+  it('uses the UTF-16 width of an astral Unicode tag character', () => {
+    const tag = String.fromCodePoint(0xe0061);
+    const content = `${FM}\nvisible${tag}text\n`;
+    const { diagnostics } = scanContent(content);
+    const finding = diagnostics.find((d) => d.code === DiagnosticCode.SecurityHiddenContent);
+    expect((finding?.range?.endCharacter ?? 0) - (finding?.range?.startCharacter ?? 0)).toBe(2);
   });
 });

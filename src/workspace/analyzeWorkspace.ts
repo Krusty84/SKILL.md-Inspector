@@ -10,7 +10,7 @@ import { detectCollisions } from './detectSkillCollisions';
 import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
-import type { SecuritySettings } from '../analysis/security';
+import type { SecuritySettings } from '../validation/security';
 import type { AgentId, CompatibilityReport } from '../types/AgentCompatibility';
 import type { SkillProfile } from '../types/SkillProfile';
 import type {

@@ -14,9 +14,10 @@ import { genericProfile } from '../../src/profiles/genericProfile';
 import { buildReportModel } from '../../src/ui/reportModel';
 import { renderReportHtml } from '../../src/ui/renderReport';
 import { renderWorkspaceReportHtml } from '../../src/ui/renderWorkspaceReport';
-import { DEFAULT_SECURITY_SETTINGS } from '../../src/analysis/security/settings';
+import { DEFAULT_SECURITY_SETTINGS } from '../../src/validation/security/settings';
 
-const MALICIOUS_BODY = '```bash\nrm -rf /\nexport TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789\n```';
+const MALICIOUS_BODY =
+  '```bash\nrm -rf /\nexport TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789\n```';
 const CLEAN_BODY = '# Helper\n\nFormat the report and summarize the findings for the user.';
 
 let dir: string;
@@ -45,7 +46,12 @@ describe('per-skill report Security section', () => {
       mode: 'full',
       security: DEFAULT_SECURITY_SETTINGS,
     });
-    const report = buildReportModel(analysis.document, analysis.diagnostics, genericProfile, analysis.tokenUsage);
+    const report = buildReportModel(
+      analysis.document,
+      analysis.diagnostics,
+      genericProfile,
+      analysis.tokenUsage,
+    );
     const html = renderReportHtml(report, RENDER_OPTS);
     expect(html).toContain('id="security-findings"');
     expect(html).toContain('>Security Issues</h2>');
@@ -64,7 +70,12 @@ describe('per-skill report Security section', () => {
       mode: 'full',
       security: DEFAULT_SECURITY_SETTINGS,
     });
-    const report = buildReportModel(analysis.document, analysis.diagnostics, genericProfile, analysis.tokenUsage);
+    const report = buildReportModel(
+      analysis.document,
+      analysis.diagnostics,
+      genericProfile,
+      analysis.tokenUsage,
+    );
     const html = renderReportHtml(report, RENDER_OPTS);
     expect(html).toContain('No security issues found.');
   });
@@ -111,7 +122,9 @@ describe('workspace report Security column and index security array', () => {
     const malicious = index.skills.find((s) => s.name === 'malicious')!;
     const clean = index.skills.find((s) => s.name === 'clean')!;
     expect(malicious.security.map((f) => f.code)).toContain('skill.security.command.dangerous');
-    expect(malicious.security.every((f) => typeof f.message === 'string' && f.message.length > 0)).toBe(true);
+    expect(
+      malicious.security.every((f) => typeof f.message === 'string' && f.message.length > 0),
+    ).toBe(true);
     expect(clean.security).toEqual([]);
   });
 });

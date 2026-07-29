@@ -29,6 +29,15 @@ describe('security secret scanning — known token formats', () => {
     );
   });
 
+  it('flags Hugging Face, PyPI, and Docker tokens', () => {
+    const huggingFace = `hf_${'a'.repeat(30)}`;
+    const pypi = `pypi-${'A'.repeat(85)}`;
+    const docker = `dckr_pat_${'b'.repeat(12)}`;
+    expect(codesOf(scan(fenced(`HF_TOKEN=${huggingFace}`)))).toContain(SECRET);
+    expect(codesOf(scan(fenced(`PYPI_TOKEN=${pypi}`)))).toContain(SECRET);
+    expect(codesOf(scan(fenced(`DOCKER_TOKEN=${docker}`)))).toContain(SECRET);
+  });
+
   it('never echoes the raw secret into the message', () => {
     const [diagnostic] = scan(fenced('token=ghp_abcdefghijklmnopqrstuvwxyz0123456789'));
     expect(diagnostic.message).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz0123456789');
@@ -39,6 +48,25 @@ describe('security secret scanning — generic assignments', () => {
   it('flags a hardcoded password assignment', () => {
     expect(codesOf(scan(fenced('password = "hunter2primary"')))).toContain(SECRET);
     expect(codesOf(scan(fenced('api_key: sompE4l0ngSecret9')))).toContain(SECRET);
+  });
+
+  it('flags AWS secret-access-key and session-token assignments', () => {
+    expect(
+      codesOf(
+        scan(fenced('aws_secret_access_key = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789ABCD"')),
+      ),
+    ).toContain(SECRET);
+    expect(
+      codesOf(scan(fenced('AWS_SESSION_TOKEN=AbCdEfGhIjKlMnOpQrStUvWxYz0123456789'))),
+    ).toContain(SECRET);
+  });
+
+  it('keeps the provider-specific finding when a generic assignment overlaps', () => {
+    const diagnostics = scan(fenced('api_key=sk-abcdefghijklmnopqrstuvwxyz012345')).filter(
+      (diagnostic) => diagnostic.code === SECRET,
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.message).toContain('OpenAI API key');
   });
 });
 
@@ -56,6 +84,12 @@ describe('security secret scanning — placeholder suppression', () => {
 
   it('does not treat an ordinary dotted identifier as a JWT', () => {
     expect(codesOf(scan(fenced('const x = obj.property.value;')))).not.toContain(SECRET);
+  });
+
+  it('does not flag provider prefixes that are too short', () => {
+    expect(codesOf(scan(fenced('HF_TOKEN=hf_short')))).not.toContain(SECRET);
+    expect(codesOf(scan(fenced('PYPI_TOKEN=pypi-short')))).not.toContain(SECRET);
+    expect(codesOf(scan(fenced('DOCKER_TOKEN=dckr_pat_short')))).not.toContain(SECRET);
   });
 });
 

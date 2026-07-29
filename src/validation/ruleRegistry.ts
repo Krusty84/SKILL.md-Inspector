@@ -11,7 +11,7 @@ import { validateLinks } from './validateLinks';
 import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
 import { validateTokenBudgets } from './validateTokenBudgets';
-import { validateSecurity, DEFAULT_SECURITY_SETTINGS, type SecuritySettings } from '../analysis/security';
+import { validateSecurity, DEFAULT_SECURITY_SETTINGS, type SecuritySettings } from './security';
 import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
 
 /** Everything a rule needs to run. */

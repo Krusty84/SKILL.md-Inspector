@@ -35,6 +35,8 @@ export interface CompiledSecurityPatterns {
   secretPlaceholder: RegExp;
   injectionPhrases: readonly CompiledLabeledPattern[];
   sensitivePaths: readonly CompiledLabeledPattern[];
+  /** Zero-width, bidi-control, and Unicode tag characters hidden from reviewers. */
+  hiddenUnicode: RegExp;
   /** Imperative/command wording used to decide whether an HTML comment is hidden instruction. */
   hiddenImperative: RegExp;
 }
@@ -76,6 +78,7 @@ const BUILTIN_INJECTION: CompiledLabeledPattern[] = (
 const BUILTIN_SENSITIVE_PATHS: CompiledLabeledPattern[] = (
   catalog.sensitivePaths as RawCommand[]
 ).map((e) => ({ id: e.id, re: new RegExp(e.source, 'gi'), message: e.message }));
+const HIDDEN_UNICODE = new RegExp(catalog.hiddenUnicode.source, 'gu');
 const HIDDEN_IMPERATIVE = new RegExp(catalog.hiddenImperative.source, 'i');
 const BUILTIN_SERVICE_HOSTS: readonly string[] = catalog.serviceHosts;
 
@@ -151,6 +154,7 @@ export function resolveSecurityPatterns(settings: SecuritySettings): CompiledSec
     secretPlaceholder: SECRET_PLACEHOLDER,
     injectionPhrases: BUILTIN_INJECTION,
     sensitivePaths: BUILTIN_SENSITIVE_PATHS,
+    hiddenUnicode: HIDDEN_UNICODE,
     hiddenImperative: HIDDEN_IMPERATIVE,
   };
   resolvedCache.set(settings, resolved);

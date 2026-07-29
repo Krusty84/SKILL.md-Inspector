@@ -1,12 +1,26 @@
 import type { SkillDiagnostic, SkillDiagnosticRange } from '../../types/SkillDiagnostic';
 import type { SkillDocument, SkillResource } from '../../types/SkillDocument';
-import { hasBinaryExtension, isHiddenPath, normalizePosix, readUtf8Text } from '../textFile';
+import {
+  hasBinaryExtension,
+  isHiddenPath,
+  normalizePosix,
+  readUtf8Text,
+} from '../../analysis/textFile';
 import type { SecuritySettings } from './settings';
 import type { CompiledSecurityPatterns } from './patterns';
-import { scanCommands, scanSecrets, type RawMatch } from './scanText';
+import {
+  scanCommands,
+  scanHtmlCommentInstructions,
+  scanInjection,
+  scanInvisible,
+  scanSecrets,
+  scanSensitivePaths,
+  scanServices,
+  type RawMatch,
+} from './scanText';
 import { toSecurityDiagnostic } from './diagnostic';
 
-/** Executable-code files: scanned for both commands and secrets. */
+/** Executable-code files receive command checks in addition to the shared low-noise scans. */
 const CODE_EXTENSIONS = new Set([
   '.sh',
   '.bash',
@@ -32,7 +46,7 @@ const CODE_EXTENSIONS = new Set([
   '.r',
 ]);
 
-/** Other text files: scanned for secrets only (command patterns would be noisy in prose). */
+/** Other text files skip command patterns, which would be noisy in prose. */
 const TEXT_EXTENSIONS = new Set([
   '.txt',
   '.md',
@@ -49,9 +63,10 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 /**
- * Scans bundled resource files for dangerous/risky commands and hardcoded
- * secrets. Skills instruct agents to run these scripts, so a risk hidden in one
- * is as real as a risk in SKILL.md. Full mode only (reads the filesystem).
+ * Scans bundled resource files for security risks. Executable files receive
+ * command, secret, service, sensitive-path, and invisible-Unicode checks. Text
+ * files receive the same low-noise checks plus prompt-injection and hidden HTML
+ * comment checks, but no generic command scan. Full mode only (reads the filesystem).
  *
  * Findings attach to the SKILL.md document — at the referencing link's range
  * when the resource is linked, otherwise at the top of the body — with the
@@ -80,7 +95,12 @@ export function scanResources(
     }
     const matches: RawMatch[] = [
       ...(plan.commands ? scanCommands(content, patterns, settings.allowedCommands) : []),
+      ...(!plan.commands ? scanInjection(content, patterns) : []),
       ...scanSecrets(content, patterns),
+      ...scanServices(content, patterns, settings.allowedDomains),
+      ...scanSensitivePaths(content, patterns),
+      ...(!plan.commands ? scanHtmlCommentInstructions(content, patterns) : []),
+      ...scanInvisible(content, patterns),
     ];
     if (matches.length === 0) {
       continue;

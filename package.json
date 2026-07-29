@@ -2696,7 +2696,7 @@
           "skillMdInspector.security.scanResourceFiles": {
             "type": "boolean",
             "default": true,
-            "description": "Also scan bundled resource files (scripts and other text files) for dangerous commands and hardcoded credentials during full validation."
+            "description": "Also scan bundled resource files during full validation. Scripts are checked for commands, secrets, risky services, sensitive paths, and invisible Unicode; text resources also receive prompt-injection and hidden-comment checks."
           },
           "skillMdInspector.security.maxScannedFileSizeKb": {
             "type": "integer",

@@ -12,7 +12,7 @@ import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
 import { validateTokenBudgets } from './validateTokenBudgets';
 import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
-import type { SecuritySettings } from '../analysis/security';
+import type { SecuritySettings } from './security';
 
 export interface RunValidationsOptions {
   /** Skip filesystem-dependent checks (linked-file existence, symlink escape, resource scan). */
@@ -105,7 +105,7 @@ export {
   validateBody,
   validateTokenBudgets,
 };
-export { validateSecurity } from '../analysis/security';
+export { validateSecurity } from './security';
 export { toKebabCase, NAME_PATTERN } from './validateName';
 export { sortDiagnostics } from './util';
 export { runRules, VALIDATION_RULES } from './ruleRegistry';

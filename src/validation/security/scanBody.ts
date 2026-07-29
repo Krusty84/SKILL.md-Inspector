@@ -2,7 +2,6 @@ import { visit } from 'unist-util-visit';
 import { parseMarkdownRoot } from '../../parser/markdownAst';
 import { valueOrigin, offsetRange, type ValueOrigin } from '../../parser/valueRanges';
 import type { SkillDiagnostic } from '../../types/SkillDiagnostic';
-import { DiagnosticCode } from '../../types/DiagnosticCode';
 import type { SkillDocument } from '../../types/SkillDocument';
 import type { SecuritySettings } from './settings';
 import type { CompiledSecurityPatterns } from './patterns';
@@ -12,7 +11,8 @@ import {
   scanServices,
   scanInjection,
   scanSensitivePaths,
-  formatSnippet,
+  scanHtmlCommentInstructions,
+  scanInvisible,
   type RawMatch,
 } from './scanText';
 // scanSecrets is used in both the code and prose branches (token formats are
@@ -27,15 +27,6 @@ interface ScanNode {
     end: { line: number; column: number };
   };
 }
-
-const HTML_COMMENT_RE = /<!--([\s\S]*?)-->/g;
-// Zero-width (200B–200D, 2060, FEFF) and bidirectional-override (202A–202E,
-// 2066–2069, "Trojan Source") characters — invisible to a human reviewer.
-// Built with escapes (not literal glyphs) so the source stays readable.
-const INVISIBLE_RE = new RegExp(
-  '[\\u200B-\\u200D\\u2060\\uFEFF\\u202A-\\u202E\\u2066-\\u2069]',
-  'g',
-);
 
 /**
  * Scans the parsed Markdown body for security findings. Commands, secrets,
@@ -84,11 +75,16 @@ export function scanBody(
       ]);
     } else if (node.type === 'html') {
       const origin = valueOrigin(node, doc.bodyStartLine);
-      out.push(...scanHtmlComments(value, patterns, origin));
+      pushMatches(out, origin, value, scanHtmlCommentInstructions(value, patterns));
     }
   });
 
-  out.push(...scanInvisible(doc.body, doc.bodyStartLine));
+  pushMatches(
+    out,
+    { line: doc.bodyStartLine, character: 0 },
+    doc.body,
+    scanInvisible(doc.body, patterns),
+  );
   return out;
 }
 
@@ -101,59 +97,4 @@ function pushMatches(
   for (const match of matches) {
     out.push(toSecurityDiagnostic(match, offsetRange(origin, value, match.index, match.length)));
   }
-}
-
-/**
- * An HTML comment that carries imperative/command/injection wording is a hidden
- * instruction: invisible in rendered Markdown, but read by an agent. Empty or
- * purely descriptive comments are left alone.
- */
-function scanHtmlComments(
-  value: string,
-  patterns: CompiledSecurityPatterns,
-  origin: ValueOrigin,
-): SkillDiagnostic[] {
-  const out: SkillDiagnostic[] = [];
-  HTML_COMMENT_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = HTML_COMMENT_RE.exec(value)) !== null) {
-    const inner = match[1] ?? '';
-    if (!patterns.hiddenImperative.test(inner)) {
-      continue;
-    }
-    out.push(
-      toSecurityDiagnostic(
-        {
-          code: DiagnosticCode.SecurityHiddenContent,
-          severity: 'warning',
-          message: `Hidden instruction in an HTML comment: \`${formatSnippet(inner)}\` — this text is invisible in rendered Markdown but read by an agent. Remove it or make it visible.`,
-        },
-        offsetRange(origin, value, match.index, match[0].length),
-      ),
-    );
-  }
-  return out;
-}
-
-/** Flags zero-width and bidirectional-override characters anywhere in the body. */
-function scanInvisible(body: string, bodyStartLine: number): SkillDiagnostic[] {
-  const out: SkillDiagnostic[] = [];
-  const origin: ValueOrigin = { line: bodyStartLine, character: 0 };
-  INVISIBLE_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = INVISIBLE_RE.exec(body)) !== null) {
-    const code = body.codePointAt(match.index) ?? 0;
-    const hex = code.toString(16).toUpperCase().padStart(4, '0');
-    out.push(
-      toSecurityDiagnostic(
-        {
-          code: DiagnosticCode.SecurityHiddenContent,
-          severity: 'warning',
-          message: `Invisible Unicode character (U+${hex}) in the skill text; it can hide or reorder instructions from human review. Remove it.`,
-        },
-        offsetRange(origin, body, match.index, 1),
-      ),
-    );
-  }
-  return out;
 }

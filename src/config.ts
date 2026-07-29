@@ -24,7 +24,7 @@ import {
   type HeuristicDictionaryValues,
 } from './quality/dictionaries';
 import { normalizeResourceDirectory } from './validation/validateResources';
-import type { SecuritySettings } from './analysis/security';
+import type { SecuritySettings } from './validation/security';
 
 export interface AnalysisContext {
   profile: SkillProfile;

@@ -4,7 +4,7 @@ import { runAllValidations } from '../../src/validation';
 import { analyzeSkill } from '../../src/analysis/analyzeSkill';
 import { parseSkillFile } from '../../src/parser/parseSkillFile';
 import { genericProfile } from '../../src/profiles';
-import { DEFAULT_SECURITY_SETTINGS } from '../../src/analysis/security/settings';
+import { DEFAULT_SECURITY_SETTINGS } from '../../src/validation/security/settings';
 import { DiagnosticCode } from '../../src/types/DiagnosticCode';
 
 const maliciousContent = `---

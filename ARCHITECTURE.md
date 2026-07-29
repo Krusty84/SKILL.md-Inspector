@@ -166,7 +166,7 @@ that behavior. Each registered rule runs behind an isolation boundary: if a rule
 throws, the remaining rules continue and an information-level internal diagnostic
 reports the lost coverage as a linter failure rather than a problem with the skill.
 
-`src/analysis/security/` is a `vscode`-free, deterministic security scanner
+`src/validation/security/` is a `vscode`-free, deterministic security scanner
 registered as the `security` validation rule. It statically flags dangerous and
 risky commands (two severity tiers), risky public services, hardcoded
 credentials, prompt-injection wording, hidden content (HTML-comment
@@ -178,7 +178,7 @@ for injection, hidden content, and sensitive paths. Patterns live in a curated
 to keep false positives low; secret values are never echoed into messages. The
 scanner reuses two extracted helpers so behavior is shared, not copied:
 `src/parser/valueRanges.ts` (match-offset-to-document-range mapping, also used
-by the link parser) and `src/analysis/textFile.ts` (UTF-8 read plus
+by the link parser) and `src/validation/textFile.ts` (UTF-8 read plus
 binary/hidden-file detection, also used by token measurement). Settings resolve
 in `src/config.ts` (`skillMdInspector.security.*`); the scanner executes
 nothing.

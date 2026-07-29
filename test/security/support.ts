@@ -1,7 +1,7 @@
 import { parseSkillFile } from '../../src/parser/parseSkillFile';
-import { validateSecurity } from '../../src/analysis/security';
-import { DEFAULT_SECURITY_SETTINGS } from '../../src/analysis/security/settings';
-import type { SecuritySettings } from '../../src/analysis/security/settings';
+import { validateSecurity } from '../../src/validation/security';
+import { DEFAULT_SECURITY_SETTINGS } from '../../src/validation/security/settings';
+import type { SecuritySettings } from '../../src/validation/security/settings';
 import type { SkillDiagnostic } from '../../src/types/SkillDiagnostic';
 import type { SkillDocument } from '../../src/types/SkillDocument';
 
