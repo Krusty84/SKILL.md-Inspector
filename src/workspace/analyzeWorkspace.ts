@@ -10,6 +10,7 @@ import { detectCollisions } from './detectSkillCollisions';
 import type { CollisionOptions } from './detectSkillCollisions';
 import { detectNameConflicts, detectSimilarNames } from './detectNameConflicts';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
+import type { SecuritySettings } from '../analysis/security';
 import type { AgentId, CompatibilityReport } from '../types/AgentCompatibility';
 import type { SkillProfile } from '../types/SkillProfile';
 import type {
@@ -34,6 +35,8 @@ export interface WorkspaceAnalysisOptions {
   resourceDirectories?: readonly string[];
   /** Agents the compatibility projection evaluates; omitted = all agents. */
   compatibilityAgents?: readonly AgentId[];
+  /** Static security-scan settings; omitted = defaults. */
+  security?: SecuritySettings;
 }
 
 /**
@@ -141,6 +144,7 @@ function toWorkspaceSkill(
     exclude,
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
+    security: options.security,
   });
   const name =
     typeof document.frontmatter?.name === 'string' && document.frontmatter.name

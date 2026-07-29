@@ -31,7 +31,7 @@ execute skills, agent binaries, or commands recorded in OpenCode exports.
 ```text
 .
 |-- src/
-|   |-- analysis/       # Single-skill pipeline and workspace adapter
+|   |-- analysis/       # Single-skill pipeline, workspace adapter, security scan
 |   |-- authoring/      # Instruction and resource authoring assessments
 |   |-- codeActions/    # Diagnostic quick fixes
 |   |-- commands/       # Extension, workspace, and OpenCode commands
@@ -165,6 +165,23 @@ run. Specification errors cannot be downgraded unless the user explicitly enable
 that behavior. Each registered rule runs behind an isolation boundary: if a rule
 throws, the remaining rules continue and an information-level internal diagnostic
 reports the lost coverage as a linter failure rather than a problem with the skill.
+
+`src/analysis/security/` is a `vscode`-free, deterministic security scanner
+registered as the `security` validation rule. It statically flags dangerous and
+risky commands (two severity tiers), risky public services, hardcoded
+credentials, prompt-injection wording, hidden content (HTML-comment
+instructions, zero-width/bidi Unicode), and sensitive-path references. Command
+and secret patterns target code contexts (fenced/inline code) and — in full
+mode only — bundled resource files (scripts and other text); prose is scanned
+for injection, hidden content, and sensitive paths. Patterns live in a curated
+`defaultSecurityCatalog.json` with placeholder suppression and user allowlists
+to keep false positives low; secret values are never echoed into messages. The
+scanner reuses two extracted helpers so behavior is shared, not copied:
+`src/parser/valueRanges.ts` (match-offset-to-document-range mapping, also used
+by the link parser) and `src/analysis/textFile.ts` (UTF-8 read plus
+binary/hidden-file detection, also used by token measurement). Settings resolve
+in `src/config.ts` (`skillMdInspector.security.*`); the scanner executes
+nothing.
 
 `src/diagnostics/diagnosticsProvider.ts` bridges the analysis result to a VS Code
 diagnostic collection and owns three caches: discovered resources per skill

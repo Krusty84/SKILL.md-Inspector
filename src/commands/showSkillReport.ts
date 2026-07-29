@@ -27,6 +27,7 @@ export async function showSkillReport(
       exclude: config.resourceExclude,
       dictionaries: analysisContext.dictionaries,
       resourceDirectories: analysisContext.resourceDirectories,
+      security: analysisContext.security,
     },
   );
   if (config.onlineCheckEnabled) {

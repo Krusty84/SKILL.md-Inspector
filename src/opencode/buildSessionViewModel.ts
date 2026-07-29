@@ -22,6 +22,7 @@ export async function attachSkillMatches(session: NormalizedOpenCodeSession): Pr
           mode: 'text-only',
           dictionaries: cfg.heuristicDictionaries,
           resourceDirectories: cfg.resourceDirectories,
+          security: cfg.security,
         });
         const candidate: SkillCandidate = {
           uri: vscode.Uri.file(skillPath).toString(),
