@@ -861,5 +861,35 @@
         }
       ]
     }
+  },
+  "malicious-exfil": {
+    "group": "defect-zoo",
+    "tier": "malicious",
+    "frontmatter": "valid",
+    "requiredDiagnostics": [
+      "skill.security.command.dangerous",
+      "skill.security.secret",
+      "skill.security.service.risky",
+      "skill.security.sensitivePath",
+      "skill.security.hiddenContent"
+    ],
+    "forbiddenDiagnostics": [],
+    "descriptionQuality": {
+      "state": "scored",
+      "minScore": 80,
+      "maxScore": 100
+    },
+    "instructionQuality": {
+      "state": "scored",
+      "minScore": 70,
+      "maxScore": 100
+    },
+    "requiredInstructionFindings": [
+      "Examples"
+    ],
+    "forbiddenInstructionFindings": [],
+    "limitations": [
+      "A polished description and structure do not make a skill safe. The body instructs an agent to delete /var/log, exfiltrate ~/.aws/credentials to a paste endpoint, and hardcodes a token, and a hidden HTML comment carries an injection instruction. This fixture exercises the security rule."
+    ]
   }
 }

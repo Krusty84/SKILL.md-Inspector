@@ -167,17 +167,31 @@ describe('package manifest context menus and templates', () => {
         ],
       },
       {
-        title: 'Severity',
+        title: 'Security',
         order: 8,
+        keys: [
+          'skillMdInspector.security.enabled',
+          'skillMdInspector.security.scanResourceFiles',
+          'skillMdInspector.security.maxScannedFileSizeKb',
+          'skillMdInspector.security.allowedDomains',
+          'skillMdInspector.security.allowedCommands',
+          'skillMdInspector.security.additionalRiskyCommands',
+          'skillMdInspector.security.additionalDangerousCommands',
+          'skillMdInspector.security.additionalServiceDomains',
+        ],
+      },
+      {
+        title: 'Severity',
+        order: 9,
         keys: [
           'skillMdInspector.severityOverrides',
           'skillMdInspector.severity.allowSpecificationOverrides',
         ],
       },
-      { title: 'Templates', order: 9, keys: ['skillMdInspector.templates'] },
+      { title: 'Templates', order: 10, keys: ['skillMdInspector.templates'] },
       {
         title: 'Views',
-        order: 10,
+        order: 11,
         keys: [
           'skillMdInspector.navigator.additionalRoots',
           'skillMdInspector.openCode.maxDiscoveredSessions',
@@ -199,10 +213,10 @@ describe('package manifest context menus and templates', () => {
     const validation = configuration[1].properties;
     expect(validation['skillMdInspector.validation.enabled'].order).toBe(1);
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
-    // Every setting lives in exactly one section (52 total, no duplicates).
+    // Every setting lives in exactly one section (60 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(52);
-    expect(new Set(allKeys).size).toBe(52);
+    expect(allKeys.length).toBe(60);
+    expect(new Set(allKeys).size).toBe(60);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

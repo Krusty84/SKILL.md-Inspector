@@ -5,6 +5,7 @@ import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
+import type { SecuritySettings } from './security';
 import type {
   AnalyzedSkillTokenUsage,
   SkillBodyTokenUsage,
@@ -46,6 +47,8 @@ export interface AnalyzeSkillOptions {
   fileTokens?: ResourceTokenSource;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
+  /** Security-scan settings; defaults to DEFAULT_SECURITY_SETTINGS when omitted. */
+  security?: SecuritySettings;
 }
 
 /**
@@ -88,6 +91,7 @@ export function analyzeSkill(
       dictionaries: options.dictionaries,
       resourceDirectories: options.resourceDirectories,
       tokenUsage,
+      security: options.security,
     });
     return { document: parsed, diagnostics, tokenUsage };
   }
@@ -99,6 +103,7 @@ export function analyzeSkill(
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
     tokenUsage,
+    security: options.security,
   });
   return { document, diagnostics, tokenUsage };
 }

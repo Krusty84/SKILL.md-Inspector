@@ -4,6 +4,22 @@
 
 ### Added
 
+- **Static security scan** (on by default, fully offline, executes nothing): a
+  new `security` validation rule flags instructions that could harm the user if
+  an agent acted on them. Seven new `security`-kind diagnostics —
+  `skill.security.command.dangerous` (error) and `skill.security.command.risky`
+  (warning) for a two-tier command assessment, `skill.security.service.risky`
+  for paste/exfil/tunnel/IP-echo endpoints, `skill.security.secret` (error) for
+  hardcoded credentials (known token formats plus `password=`/`api_key=`
+  assignments, with placeholder suppression and no echoing of the secret),
+  `skill.security.promptInjection`, `skill.security.hiddenContent` (HTML-comment
+  instructions and zero-width/bidi Unicode), and `skill.security.sensitivePath`.
+  Command and secret patterns are scanned in code contexts and — during full
+  validation — in bundled resource files (scripts and other text); prose is
+  scanned for injection, hidden content, and sensitive paths. New settings under
+  the **Security** group (`skillMdInspector.security.*`) toggle the scan and
+  resource scanning, cap scanned file size, and supply allowlists and additive
+  command/service patterns. Every code honors `skillMdInspector.severityOverrides`.
 - **Per-agent compatibility projection**: the skill and workspace reports gain
   an "Agent compatibility" section that projects one validated skill against
   documented behavior of the `skills-ref` spec baseline, Claude Code, Codex,

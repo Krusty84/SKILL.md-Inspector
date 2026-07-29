@@ -18,6 +18,10 @@ All checks use deterministic static analysis, documented compatibility rules, an
   files, reference untracked resources, and teach the heuristics new vocabulary.
 - **Understand what needs attention** — keep specification errors, portability
   warnings, security findings, and optional quality advice clearly separated.
+- **Catch unsafe instructions** — statically flag dangerous and risky shell
+  commands, risky public services, hardcoded credentials, prompt-injection
+  wording, hidden content, and sensitive-path references, in the SKILL.md and
+  its bundled scripts. All offline; nothing is executed.
 - **Review a complete skill package** — inspect description completeness,
   instruction and resource hygiene, token usage, links, and bundled files in one
   report.
@@ -163,7 +167,10 @@ Diagnostics are grouped by meaning:
   broken.
 - **Compatibility** — the skill is valid but may fail on another machine,
   filesystem, or remote server.
-- **Security** — a link or path is unsafe to follow.
+- **Security** — a risky reference, or an instruction that could harm the user
+  if an agent acts on it: dangerous or risky commands, risky public services,
+  hardcoded credentials, prompt-injection wording, hidden content, or
+  sensitive-path references — in the SKILL.md and its bundled scripts.
 - **Quality** — optional authoring advice; these findings are not fatal.
 - **Internal** — a checker failed, so some validation coverage was lost.
 

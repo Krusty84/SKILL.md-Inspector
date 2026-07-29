@@ -1,5 +1,6 @@
 import { visit } from 'unist-util-visit';
 import { parseMarkdownRoot } from './markdownAst';
+import { valueOrigin, offsetRange } from './valueRanges';
 import type { SkillLink, SkillLinkKind } from '../types/SkillDocument';
 import type { SkillDiagnosticRange } from '../types/SkillDiagnostic';
 
@@ -110,56 +111,9 @@ function collectResourcePaths(node: LinkLikeNode, bodyStartLine: number, links: 
       raw,
       text: raw,
       kind: classifyLink(raw),
-      range: pathRange(origin, value, match.index, raw.length),
+      range: offsetRange(origin, value, match.index, raw.length),
     });
   }
-}
-
-/** Document position of `node.value[0]`, accounting for code fences/backticks. */
-function valueOrigin(
-  node: LinkLikeNode,
-  bodyStartLine: number,
-): { line: number; character: number } {
-  const { start, end } = node.position!;
-  const line = bodyStartLine + start.line - 1;
-  if (node.type === 'code') {
-    // Fenced block: content begins on the line after the opening fence, column 0.
-    return { line: line + 1, character: 0 };
-  }
-  if (node.type === 'inlineCode' && start.line === end.line) {
-    const backticks = Math.max(
-      1,
-      Math.floor((end.column - start.column - (node.value ?? '').length) / 2),
-    );
-    return { line, character: start.column - 1 + backticks };
-  }
-  // Plain text (and any fallback): the value starts exactly at the node position.
-  return { line, character: start.column - 1 };
-}
-
-/** Range of a match inside `value`, walking newlines from the value origin. */
-function pathRange(
-  origin: { line: number; character: number },
-  value: string,
-  index: number,
-  length: number,
-): SkillDiagnosticRange {
-  let line = origin.line;
-  let character = origin.character;
-  for (let i = 0; i < index; i++) {
-    if (value.charCodeAt(i) === 10 /* \n */) {
-      line += 1;
-      character = 0;
-    } else {
-      character += 1;
-    }
-  }
-  return {
-    startLine: line,
-    startCharacter: character,
-    endLine: line,
-    endCharacter: character + length,
-  };
 }
 
 export function classifyLink(url: string): SkillLinkKind {

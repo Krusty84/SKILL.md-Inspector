@@ -44,6 +44,7 @@ which is enforced by `test/fixtures/skillQualityFixtures.test.ts`.
 | `release-automation/`   | Mediocre                        | Valid frontmatter but a 666-line body of fifty near-identical stages — far over the ~500-line guidance; content that should have been a reference file or a loop.               |
 | `tech-translator/`      | Good                            | English frontmatter with a fully Russian body (Cyrillic, tables, typographic quotes) — Unicode and non-English content handling.                                                |
 | `bug-repro-minimizer/`  | Excellent                       | Description written as a YAML folded block scalar (`>-`) — a valid style parsers must handle; content is top-tier (oracle prerequisite, reduction loop, verification, example). |
+| `malicious-exfil/`      | Malicious                       | Polished description and structure, but the body deletes `/var/log`, pipes `~/.aws/credentials` to a paste endpoint, hardcodes a token, and hides an injection instruction in an HTML comment. Exercises the security rule (dangerous command, secret, risky service, sensitive path, hidden content). |
 
 ## Notes
 

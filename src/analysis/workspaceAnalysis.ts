@@ -44,6 +44,7 @@ export function computeWorkspaceAnalysis(
         dictionaries: config.heuristicDictionaries,
         resourceDirectories: config.resourceDirectories,
         compatibilityAgents: config.compatibilityAgents,
+        security: config.security,
       },
     ),
   };
@@ -77,6 +78,7 @@ async function augmentAnalysisOnline(
           exclude: config.resourceExclude,
           dictionaries: config.heuristicDictionaries,
           resourceDirectories: config.resourceDirectories,
+          security: config.security,
         });
         const augmented = await augmentWithRemoteDiagnostics(
           staticAnalysis,
@@ -147,6 +149,7 @@ export async function computeScopedAnalysisOnline(
       dictionaries: config.heuristicDictionaries,
       resourceDirectories: config.resourceDirectories,
       compatibilityAgents: config.compatibilityAgents,
+      security: config.security,
     },
   );
   if (!analysis.cancelled) {

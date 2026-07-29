@@ -11,17 +11,20 @@ import { validateLinks } from './validateLinks';
 import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
 import { validateTokenBudgets } from './validateTokenBudgets';
+import { validateSecurity, DEFAULT_SECURITY_SETTINGS, type SecuritySettings } from '../analysis/security';
 import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
 
 /** Everything a rule needs to run. */
 export interface ValidationContext {
   doc: SkillDocument;
   profile: SkillProfile;
-  /** Skip filesystem-dependent checks (linked-file existence, symlink escape). */
+  /** Skip filesystem-dependent checks (linked-file existence, symlink escape, resource scan). */
   skipFilesystem?: boolean;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
   tokenUsage?: AnalyzedSkillTokenUsage;
+  /** Security-scan settings; defaults to {@link DEFAULT_SECURITY_SETTINGS} when omitted. */
+  security?: SecuritySettings;
 }
 
 /**
@@ -49,6 +52,11 @@ export const VALIDATION_RULES: ValidationRule[] = [
   },
   { id: 'body', run: ({ doc, profile, dictionaries }) => validateBody(doc, profile, dictionaries) },
   { id: 'token-budgets', run: ({ doc, tokenUsage }) => validateTokenBudgets(doc, tokenUsage) },
+  {
+    id: 'security',
+    run: ({ doc, skipFilesystem, security }) =>
+      validateSecurity({ doc, settings: security ?? DEFAULT_SECURITY_SETTINGS, skipFilesystem }),
+  },
 ];
 
 /** Runs the registered rules, concatenated in registry order. */

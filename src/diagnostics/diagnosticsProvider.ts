@@ -157,6 +157,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
       exclude: config.resourceExclude,
       dictionaries: config.heuristicDictionaries,
       resourceDirectories: config.resourceDirectories,
+      security: config.security,
       discover: (dir, exclude) => this.resourceCache.discover(dir, exclude),
       fileTokens: (resource) => this.fileTokenCache.tokensFor(resource.absolutePath),
     });

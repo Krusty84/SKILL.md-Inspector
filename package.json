@@ -2685,8 +2685,71 @@
         }
       },
       {
-        "title": "Severity",
+        "title": "Security",
         "order": 8,
+        "properties": {
+          "skillMdInspector.security.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Statically scan SKILL.md files for security risks (dangerous/risky commands, risky public services, hardcoded credentials, prompt-injection wording, hidden content, and sensitive-path references). Analysis is local and offline; nothing is executed."
+          },
+          "skillMdInspector.security.scanResourceFiles": {
+            "type": "boolean",
+            "default": true,
+            "description": "Also scan bundled resource files (scripts and other text files) for dangerous commands and hardcoded credentials during full validation."
+          },
+          "skillMdInspector.security.maxScannedFileSizeKb": {
+            "type": "integer",
+            "default": 256,
+            "minimum": 1,
+            "maximum": 4096,
+            "description": "Bundled resource files larger than this size (in KiB) are skipped by the security scan."
+          },
+          "skillMdInspector.security.allowedDomains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Host suffixes to treat as trusted, suppressing risky-service findings (e.g. \"internal.example.com\")."
+          },
+          "skillMdInspector.security.allowedCommands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Substrings that suppress a command finding when they appear on the matched line (e.g. a known-safe command you use often)."
+          },
+          "skillMdInspector.security.additionalRiskyCommands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Additional regular expressions (JavaScript syntax) that flag a line as a risky command (warning). Invalid patterns are ignored with a configuration warning."
+          },
+          "skillMdInspector.security.additionalDangerousCommands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Additional regular expressions (JavaScript syntax) that flag a line as a dangerous command (error). Invalid patterns are ignored with a configuration warning."
+          },
+          "skillMdInspector.security.additionalServiceDomains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Additional host suffixes to flag as risky public services (e.g. paste or file-upload endpoints)."
+          }
+        }
+      },
+      {
+        "title": "Severity",
+        "order": 9,
         "properties": {
           "skillMdInspector.severityOverrides": {
             "type": "object",
@@ -2711,7 +2774,7 @@
       },
       {
         "title": "Templates",
-        "order": 9,
+        "order": 10,
         "properties": {
           "skillMdInspector.templates": {
             "type": "array",
@@ -2763,7 +2826,7 @@
       },
       {
         "title": "Views",
-        "order": 10,
+        "order": 11,
         "properties": {
           "skillMdInspector.navigator.additionalRoots": {
             "type": "array",

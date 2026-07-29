@@ -24,12 +24,14 @@ import {
   type HeuristicDictionaryValues,
 } from './quality/dictionaries';
 import { normalizeResourceDirectory } from './validation/validateResources';
+import type { SecuritySettings } from './analysis/security';
 
 export interface AnalysisContext {
   profile: SkillProfile;
   dictionaries: HeuristicDictionaries;
   resourceDirectories: readonly string[];
   compatibilityAgents: readonly AgentId[];
+  security: SecuritySettings;
 }
 
 export interface InspectorConfig {
@@ -48,6 +50,8 @@ export interface InspectorConfig {
   timeFormat: TimestampFormat;
   /** Agents the compatibility projection evaluates (all enabled by default). */
   compatibilityAgents: readonly AgentId[];
+  /** Resolved static security-scan settings. */
+  security: SecuritySettings;
 }
 
 /**
@@ -70,7 +74,7 @@ export interface ConfigurationWarning {
 export function analysisContextFromConfig(
   config: Pick<
     InspectorConfig,
-    'profile' | 'heuristicDictionaries' | 'resourceDirectories' | 'compatibilityAgents'
+    'profile' | 'heuristicDictionaries' | 'resourceDirectories' | 'compatibilityAgents' | 'security'
   >,
 ): AnalysisContext {
   return {
@@ -78,6 +82,7 @@ export function analysisContextFromConfig(
     dictionaries: config.heuristicDictionaries,
     resourceDirectories: config.resourceDirectories,
     compatibilityAgents: config.compatibilityAgents,
+    security: config.security,
   };
 }
 
@@ -137,6 +142,7 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
   const dictionaryResolution: DictionaryResolution = overriddenDictionaryValues
     ? resolveHeuristicDictionariesWithWarnings(overriddenDictionaryValues)
     : { dictionaries: DEFAULT_HEURISTIC_DICTIONARIES, warnings: [] };
+  const securityResolution = buildSecuritySettings(cfg);
   return {
     enabled: cfg.get<boolean>('validation.enabled', true),
     runOnSave: cfg.get<boolean>('validation.runOnSave', true),
@@ -159,10 +165,13 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
       allowSpecificationOverrides: cfg.get<boolean>('severity.allowSpecificationOverrides'),
     }),
     heuristicDictionaries: dictionaryResolution.dictionaries,
-    configurationWarnings: dictionaryResolution.warnings.map((warning) => ({
-      setting: `skillMdInspector.${warning.path}`,
-      message: warning.message,
-    })),
+    configurationWarnings: [
+      ...dictionaryResolution.warnings.map((warning) => ({
+        setting: `skillMdInspector.${warning.path}`,
+        message: warning.message,
+      })),
+      ...securityResolution.warnings,
+    ],
     resourceDirectories: (
       cfg.get<string[]>('resources.directories', [
         'references',
@@ -189,11 +198,82 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
         ...cfg.get<Partial<CollisionWeights>>('collision.weights', {}),
       },
     },
+    security: securityResolution.settings,
   };
 }
 
 function clampOnlineCheckConcurrency(value: number): number {
   return Math.min(10, Math.max(1, Math.trunc(value) || 4));
+}
+
+/** Lowercases, trims, and drops empty entries from a string-list setting. */
+function normalizeLowerList(values: readonly string[] | undefined): string[] {
+  return (values ?? [])
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 0);
+}
+
+/**
+ * Compiles user-supplied regex sources, skipping (and warning about) any that
+ * are invalid so one bad pattern never breaks configuration. A domain suffix is
+ * stored verbatim; a command pattern is compiled here so a broken regex is
+ * caught at config time, not on every scan.
+ */
+function compileUserPatterns(
+  sources: readonly string[] | undefined,
+  settingKey: string,
+): { patterns: RegExp[]; warnings: ConfigurationWarning[] } {
+  const patterns: RegExp[] = [];
+  const warnings: ConfigurationWarning[] = [];
+  for (const source of sources ?? []) {
+    if (typeof source !== 'string' || source.trim().length === 0) {
+      continue;
+    }
+    try {
+      patterns.push(new RegExp(source, 'gi'));
+    } catch (error) {
+      warnings.push({
+        setting: `skillMdInspector.${settingKey}`,
+        message: `Ignoring invalid regular expression "${source}": ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      });
+    }
+  }
+  return { patterns, warnings };
+}
+
+/** Resolves the static security-scan settings from `skillMdInspector.security.*`. */
+function buildSecuritySettings(cfg: vscode.WorkspaceConfiguration): {
+  settings: SecuritySettings;
+  warnings: ConfigurationWarning[];
+} {
+  const risky = compileUserPatterns(
+    cfg.get<string[]>('security.additionalRiskyCommands', []),
+    'security.additionalRiskyCommands',
+  );
+  const dangerous = compileUserPatterns(
+    cfg.get<string[]>('security.additionalDangerousCommands', []),
+    'security.additionalDangerousCommands',
+  );
+  const maxKb = Math.min(
+    4096,
+    Math.max(1, Math.trunc(cfg.get<number>('security.maxScannedFileSizeKb', 256)) || 256),
+  );
+  const settings: SecuritySettings = {
+    enabled: cfg.get<boolean>('security.enabled', true),
+    scanResourceFiles: cfg.get<boolean>('security.scanResourceFiles', true),
+    maxScannedFileSizeBytes: maxKb * 1024,
+    allowedDomains: normalizeLowerList(cfg.get<string[]>('security.allowedDomains', [])),
+    allowedCommands: normalizeLowerList(cfg.get<string[]>('security.allowedCommands', [])),
+    additionalRiskyCommands: risky.patterns,
+    additionalDangerousCommands: dangerous.patterns,
+    additionalServiceDomains: normalizeLowerList(
+      cfg.get<string[]>('security.additionalServiceDomains', []),
+    ),
+  };
+  return { settings, warnings: [...risky.warnings, ...dangerous.warnings] };
 }
 
 const ALL_DICTIONARY_KEYS = [
