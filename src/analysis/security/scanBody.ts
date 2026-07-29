@@ -38,12 +38,13 @@ const INVISIBLE_RE = new RegExp(
 );
 
 /**
- * Scans the parsed Markdown body for security findings. Command/secret patterns
- * target code contexts (fenced blocks and inline code, regardless of language
- * tag — language hints are unreliable and agents copy from any fence); prose
- * text is scanned for injection wording, sensitive paths, and risky-service
- * references. HTML comments are scanned for hidden instructions, and the raw
- * body for invisible/bidi Unicode.
+ * Scans the parsed Markdown body for security findings. Commands, secrets,
+ * services, and sensitive paths are scanned in both prose and code contexts
+ * (fenced blocks and inline code, regardless of language tag) — the whole body
+ * is instructions an agent may act on, so a command in a sentence is as real as
+ * one in a fence. Prose additionally gets injection-wording checks; HTML
+ * comments are scanned for hidden instructions, and the raw body for
+ * invisible/bidi Unicode.
  */
 export function scanBody(
   doc: SkillDocument,
@@ -70,6 +71,12 @@ export function scanBody(
     } else if (node.type === 'text') {
       const origin = valueOrigin(node, doc.bodyStartLine);
       pushMatches(out, origin, value, [
+        // Prose in a SKILL.md is itself the agent's instructions, so a command
+        // written as an ordinary sentence is scanned too — not only fenced or
+        // inline code. The dangerous-tier patterns are specific enough that
+        // prose false positives are rare; risky-tier prose hits (e.g. "sudo")
+        // are warnings and can be allowlisted or overridden.
+        ...scanCommands(value, patterns, settings.allowedCommands),
         ...scanInjection(value, patterns),
         ...scanSecrets(value, patterns),
         ...scanSensitivePaths(value, patterns),
