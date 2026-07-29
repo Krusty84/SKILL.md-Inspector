@@ -1,12 +1,12 @@
 # SKILL.md Inspector
 
-Write, validate, and compare Agent Skills without leaving Visual Studio Code.
-SKILL.md Inspector gives every file named exactly `SKILL.md` live feedback,
-guided fixes, readable reports, and workspace-wide collision checks.
+Write, validate, and review Agent SKILL.md's directly in Visual Studio Code.
 
-**The extension is offline by default. It does not call an LLM, run an agent,
-execute commands from inspected files, or send telemetry.** Network access occurs
-only when you explicitly enable remote-link availability checks.
+SKILL.md Inspector provides live diagnostics for every file named exactly `SKILL.md`, guided quick fixes, detailed reports, and workspace-wide checks for naming and scope conflicts.
+All checks use deterministic static analysis, documented compatibility rules, and configurable heuristics. The extension does not run skills against an agent, so its findings are review guidance—not proof that a skill will be selected, executed correctly, or behave consistently across agent platforms.
+
+**Private and offline by default.** All analysis runs locally unless you explicitly enable remote-link availability checks. The extension does not use an LLM (in future it will be implement as option, and disabled by default), start an agent, execute commands referenced by inspected files, or collect telemetry.
+
 
 ## Features
 
@@ -53,33 +53,6 @@ only when you explicitly enable remote-link availability checks.
 
 ![Settings page showing the extension's collision detection options including threshold and similarity weights](images/skill-md-inspector_1.png)
 
-## Install
-
-SKILL.md Inspector requires Visual Studio Code 1.90 or newer.
-
-### Install a local VSIX
-
-From this repository:
-
-```bash
-npm install
-npx @vscode/vsce package
-```
-
-In VS Code, run **Extensions: Install from VSIX…**, select the generated
-`skill-md-inspector-1.0.0.vsix`, and reload the window.
-
-### Try it from source
-
-1. Run `npm install`.
-2. Open this repository in VS Code.
-3. Press **F5**, or choose **Run and Debug → Run Extension**.
-4. In the new Extension Development Host window, open a folder containing a
-   `SKILL.md` file.
-
-Opening this repository in a normal VS Code window does not activate the
-development build. The extension must run in the Extension Development Host.
-
 ## Quick start
 
 1. Open a folder containing one or more Agent Skills.
@@ -125,7 +98,7 @@ workflows:
 | ----------------------------------- | ------------------------------------------------------------------ |
 | **Validate Workspace Skills**       | Validates discovered skills and publishes findings to Problems.    |
 | **Show Workspace Report**           | Shows name conflicts, scope collisions, quality, and resources.    |
-| **"Export SKILL.md's Report Index** | Writes schema-version-7 `skills.index.json` to the workspace root. |
+| **"Export SKILL.md's Report Index** | Writes report in JSON format to the workspace root. |
 | **Refresh Skills**                  | Rebuilds the cached Skills panel analysis.                         |
 
 Workspace reports and index exports are cancellable. They analyze saved files;
