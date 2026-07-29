@@ -29,7 +29,7 @@ export interface RenderOptions {
 // visible labels were renamed to match what the checks actually measure.
 const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
   { id: 'validation-findings', label: 'Validation findings' },
-  { id: 'security-findings', label: 'Security' },
+  { id: 'security-findings', label: 'Security Issues' },
   { id: 'agent-compatibility', label: 'Agent compatibility' },
   { id: 'trigger-quality-breakdown', label: 'Trigger quality breakdown' },
   { id: 'instruction-authoring-quality', label: AUTHORING_HYGIENE_INSTRUCTIONS_HEADING },
@@ -168,9 +168,9 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   }
 
   <h2 id="validation-findings">Validation findings</h2>
-  ${renderDiagnostics(report.diagnostics)}
+  ${renderDiagnostics(report.diagnostics.filter((d) => d.kind !== 'security'))}
 
-  <h2 id="security-findings">Security</h2>
+  <h2 id="security-findings">Security Issues</h2>
   ${renderSecurity(securityFindings)}
 
   <h2 id="agent-compatibility">Agent compatibility</h2>
@@ -304,9 +304,9 @@ function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
 }
 
 /**
- * The dedicated Security section: the security-kind findings on their own, so a
- * risky command or leaked credential is not buried in the full findings table.
- * The same findings still appear (by kind) under Validation findings.
+ * The dedicated Security Issues section: the security-kind findings on their
+ * own. These are shown here only — the Validation findings table filters them
+ * out — so a risky command or leaked credential has one clear home.
  */
 function renderSecurity(findings: SkillReport['diagnostics']): string {
   if (findings.length === 0) {

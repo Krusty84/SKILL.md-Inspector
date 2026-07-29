@@ -48,10 +48,14 @@ describe('per-skill report Security section', () => {
     const report = buildReportModel(analysis.document, analysis.diagnostics, genericProfile, analysis.tokenUsage);
     const html = renderReportHtml(report, RENDER_OPTS);
     expect(html).toContain('id="security-findings"');
+    expect(html).toContain('>Security Issues</h2>');
     expect(html).toContain('skill.security.command.dangerous');
     expect(html).toContain('skill.security.secret');
     // The secret value itself is never rendered.
     expect(html).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+    // Security findings live only in the Security Issues section, not the
+    // Validation findings table: each security code appears exactly once.
+    expect(html.split('skill.security.command.dangerous').length - 1).toBe(1);
   });
 
   it('shows a positive empty state for a clean skill', () => {
