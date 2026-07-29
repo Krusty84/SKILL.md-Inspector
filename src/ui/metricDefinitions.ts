@@ -26,6 +26,9 @@ export const LOW_TEXT_COVERAGE_DEFINITION =
 export const AGENT_COMPATIBILITY_DEFINITION =
   'Per-agent verdicts from projecting the skill against documented agent behavior (spec baseline, Claude Code, Codex, OpenCode). A static projection, not a runtime test.';
 
+export const SECURITY_DEFINITION =
+  'Static security findings in the SKILL.md and its bundled files: dangerous or risky commands, risky public services, hardcoded credentials, prompt-injection wording, hidden content, and sensitive-path references. Offline analysis; nothing is executed.';
+
 /** Shown by both reports when the settings disable every compatibility agent. */
 export const COMPATIBILITY_ALL_AGENTS_DISABLED =
   'All compatibility agents are disabled in the extension settings.';

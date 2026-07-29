@@ -93,7 +93,7 @@ export function analyzeWorkspace(
 /** Builds the exportable index model (brief §13.6). */
 export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     generatedAt: new Date().toISOString(),
     skills: analysis.skills.map((skill) => ({
       name: skill.name,
@@ -106,6 +106,7 @@ export function buildSkillsIndex(analysis: WorkspaceAnalysis): SkillsIndex {
       warnings: skill.warnings,
       information: skill.information,
       diagnostics: skill.diagnostics,
+      security: skill.securityFindings ?? [],
       compatibility: toIndexCompatibility(skill.compatibility),
     })),
   };
@@ -169,6 +170,9 @@ function toWorkspaceSkill(
     severity: d.severity,
     kind: d.kind,
   }));
+  const securityFindings = diagnostics
+    .filter((d) => d.kind === 'security')
+    .map((d) => ({ code: d.code, severity: d.severity, message: d.message }));
   const resourceGraph = buildResourceGraph(document);
   const authoringQuality = assessAuthoringQuality(
     document,
@@ -188,6 +192,7 @@ function toWorkspaceSkill(
     warnings,
     information,
     diagnostics: indexDiagnostics,
+    securityFindings,
     profile: profile.id,
     resourceGraph,
     tokenUsage,

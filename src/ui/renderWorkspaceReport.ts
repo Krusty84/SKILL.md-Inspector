@@ -12,6 +12,7 @@ import {
   COMPATIBILITY_ALL_AGENTS_DISABLED,
   DESCRIPTION_COMPLETENESS_DEFINITION,
   LOW_TEXT_COVERAGE_DEFINITION,
+  SECURITY_DEFINITION,
   authoringLabelText,
   compatibilityFooterText,
   compatibilityVerdictText,
@@ -94,7 +95,7 @@ export function renderWorkspaceReportHtml(
   <h2 id="skills">Skills</h2>
   <div class="scroll">
     <table>
-      <thead><tr><th>Name</th><th>Validation status</th><th title="${DESCRIPTION_COMPLETENESS_DEFINITION}">Completeness</th><th>Heuristic coverage</th><th title="${AUTHORING_HYGIENE_DEFINITION}">Hygiene</th><th>Errors</th><th>Warnings</th><th>Information</th><th>Token usage</th><th>External file issues</th></tr></thead>
+      <thead><tr><th>Name</th><th>Validation status</th><th title="${DESCRIPTION_COMPLETENESS_DEFINITION}">Completeness</th><th>Heuristic coverage</th><th title="${AUTHORING_HYGIENE_DEFINITION}">Hygiene</th><th>Errors</th><th>Warnings</th><th>Information</th><th title="${SECURITY_DEFINITION}">Security</th><th>Token usage</th><th>External file issues</th></tr></thead>
       <tbody>${analysis.skills.map(renderSkillRow).join('')}</tbody>
     </table>
   </div>
@@ -133,7 +134,21 @@ function renderSkillRow(skill: WorkspaceSkill): string {
     instructions.state === 'scored'
       ? `${instructions.score}/100 · ${authoringLabelText(instructions.label)}`
       : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
-  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${renderTokenCell(skill.tokenUsage)}${resourceIssueCell(skill)}</tr>`;
+  return `<tr><td><code>${escapeHtml(skill.name)}</code></td><td class="${statusClass(skill.validationStatus)}">${skill.validationStatus}</td><td>${renderDescriptionQuality(quality)}</td><td>${quality.coverage}</td><td>${instructionQuality}</td><td>${skill.errors}</td><td>${skill.warnings}</td><td>${skill.information}</td>${securityCell(skill)}${renderTokenCell(skill.tokenUsage)}${resourceIssueCell(skill)}</tr>`;
+}
+
+/**
+ * The Security column: "OK" when no security-kind findings, otherwise the count,
+ * colored red when any finding is an error and amber otherwise. Mirrors the
+ * External-file-issues cell so the two risk columns read the same way.
+ */
+function securityCell(skill: WorkspaceSkill): string {
+  const findings = skill.securityFindings ?? [];
+  if (findings.length === 0) {
+    return '<td class="ok">OK</td>';
+  }
+  const cls = findings.some((finding) => finding.severity === 'error') ? 'fail' : 'warn';
+  return `<td class="${cls}">${findings.length} issue${findings.length === 1 ? '' : 's'}</td>`;
 }
 
 function renderTokenCell(usage: WorkspaceSkill['tokenUsage']): string {

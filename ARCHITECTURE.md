@@ -353,9 +353,13 @@ workspace analysis marks the result as cancelled rather than presenting a partia
 cross-skill scan as complete.
 
 The same `WorkspaceAnalysis` model feeds the Skills tree and workspace report.
-`buildSkillsIndex` projects its per-skill records into schema-version-7 JSON for
-export as `skills.index.json`; version 7 adds each skill's per-agent
-compatibility projections (without display labels).
+Each per-skill record also carries `securityFindings` (security-kind
+diagnostics kept with their messages), which drives the workspace report's
+Security column and the exported index. `buildSkillsIndex` projects its
+per-skill records into schema-version-8 JSON for export as `skills.index.json`;
+version 8 adds each skill's `security` array (security findings with messages),
+and version 7 added each skill's per-agent compatibility projections (without
+display labels).
 
 The per-skill report is different: it analyzes the active editor buffer and can
 therefore include unsaved changes. Reports render escaped, script-disabled HTML in
