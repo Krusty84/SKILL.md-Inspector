@@ -17,6 +17,18 @@ export interface IndexDiagnostic {
   kind: SkillDiagnosticKind;
 }
 
+/**
+ * A security-kind finding kept with its message, so the workspace report's
+ * Security column and the exported index can describe *what* was found — not
+ * just count it. The compact {@link IndexDiagnostic} drops messages, so security
+ * findings carry their own type.
+ */
+export interface SecurityFinding {
+  code: string;
+  severity: SkillDiagnosticSeverity;
+  message: string;
+}
+
 export type ValidationStatus = 'pass' | 'warning' | 'fail';
 
 export type ResourceNodeKind =
@@ -55,6 +67,8 @@ export interface WorkspaceSkill {
   information: number;
   /** Every diagnostic (code, severity, kind), for the tree/report and index (Task 87). */
   diagnostics: IndexDiagnostic[];
+  /** Security-kind findings with their messages, for the Security column and index. */
+  securityFindings?: SecurityFinding[];
   profile: SkillProfileId;
   resourceGraph: ResourceGraph;
   /** Full o200k_base token metrics (SKILL.md body plus reference and other bundled files). */
@@ -184,13 +198,18 @@ export interface SkillsIndexEntry {
   information: number;
   /** The machine-readable rule output: every diagnostic's code, severity, and kind (Task 87). */
   diagnostics: IndexDiagnostic[];
+  /** Security-kind findings (code, severity, message), a focused subset of `diagnostics`. */
+  security: SecurityFinding[];
   /** Per-agent compatibility projections without the display labels. */
   compatibility: SkillsIndexCompatibility;
 }
 
 export interface SkillsIndex {
-  /** Version 7 adds per-agent `compatibility` projections to each skill. */
-  schemaVersion: 7;
+  /**
+   * Version 8 adds a per-skill `security` array (security-kind findings with
+   * messages); version 7 added per-agent `compatibility` projections.
+   */
+  schemaVersion: 8;
   generatedAt: string;
   skills: SkillsIndexEntry[];
 }

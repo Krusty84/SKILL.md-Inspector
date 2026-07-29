@@ -151,8 +151,10 @@ describe('workspace discovery + analysis', () => {
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
     const entry = index.skills.find((s) => s.name === 'pdf-report-formatter')!;
-    expect(index.schemaVersion).toBe(7);
+    expect(index.schemaVersion).toBe(8);
     expect(entry.path).toBe('skills/pdf-report-formatter/SKILL.md');
+    // Every entry carries a security array (a focused subset of diagnostics).
+    expect(Array.isArray(entry.security)).toBe(true);
     expect(entry.compatibility.verifiedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(entry.compatibility.projections.map((p) => p.agent)).toEqual([
       'spec',

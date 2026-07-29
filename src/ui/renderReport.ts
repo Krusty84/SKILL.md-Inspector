@@ -11,6 +11,7 @@ import {
   AUTHORING_HYGIENE_RESOURCES_HEADING,
   COMPATIBILITY_ALL_AGENTS_DISABLED,
   DESCRIPTION_COMPLETENESS_DEFINITION,
+  SECURITY_DEFINITION,
   authoringLabelText,
   compatibilityFooterText,
   compatibilityVerdictText,
@@ -28,6 +29,7 @@ export interface RenderOptions {
 // visible labels were renamed to match what the checks actually measure.
 const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
   { id: 'validation-findings', label: 'Validation findings' },
+  { id: 'security-findings', label: 'Security' },
   { id: 'agent-compatibility', label: 'Agent compatibility' },
   { id: 'trigger-quality-breakdown', label: 'Trigger quality breakdown' },
   { id: 'instruction-authoring-quality', label: AUTHORING_HYGIENE_INSTRUCTIONS_HEADING },
@@ -72,6 +74,13 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     instructions.state === 'scored' ? 'Authoring hygiene' : 'Instruction structure';
   const tokens = report.tokenUsage;
   const tokenCardValue = `${formatNumber(totalSkillTokens(tokens))}<div class="token-breakdown">Body ${formatNumber(tokens.body.tokens)} · Ref ${formatNumber(tokens.references.totalTokens)} · Other ${formatNumber(tokens.otherFiles.totalTokens)}</div>`;
+  const securityFindings = report.diagnostics.filter((d) => d.kind === 'security');
+  const securityCardClass =
+    securityFindings.some((d) => d.severity === 'error')
+      ? 'error'
+      : securityFindings.length > 0
+        ? 'warn'
+        : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -146,6 +155,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
     ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
     ${card('Warnings', String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
     ${card('Information', String(report.informationCount))}
+    ${card('Security', String(securityFindings.length), securityCardClass, SECURITY_DEFINITION)}
   </div>
   ${renderCompatibilityBar(report.compatibility)}
   ${renderGradeLimitations(q)}
@@ -159,6 +169,9 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
 
   <h2 id="validation-findings">Validation findings</h2>
   ${renderDiagnostics(report.diagnostics)}
+
+  <h2 id="security-findings">Security</h2>
+  ${renderSecurity(securityFindings)}
 
   <h2 id="agent-compatibility">Agent compatibility</h2>
   ${renderCompatibility(report.compatibility)}
@@ -288,6 +301,24 @@ function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
         `<tr><td>${escapeHtml(capitalize(diagnostic.severity))}</td><td><code>${escapeHtml(diagnostic.code)}</code></td><td>${escapeHtml(diagnostic.message)}</td></tr>`,
     )
     .join('')}</tbody></table>`;
+}
+
+/**
+ * The dedicated Security section: the security-kind findings on their own, so a
+ * risky command or leaked credential is not buried in the full findings table.
+ * The same findings still appear (by kind) under Validation findings.
+ */
+function renderSecurity(findings: SkillReport['diagnostics']): string {
+  if (findings.length === 0) {
+    return '<p class="empty">No security issues found.</p>';
+  }
+  const rows = findings
+    .map(
+      (finding) =>
+        `<tr><td>${escapeHtml(capitalize(finding.severity))}</td><td><code>${escapeHtml(finding.code)}</code></td><td>${escapeHtml(finding.message)}</td></tr>`,
+    )
+    .join('');
+  return `<p class="note">${SECURITY_DEFINITION}</p><table><thead><tr><th>Severity</th><th>Diagnostic code</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderAuthoring(

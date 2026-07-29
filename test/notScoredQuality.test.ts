@@ -148,7 +148,7 @@ describe('explicit not-scored quality state', () => {
     expect(result.resources).toMatchObject({ score: 90, label: 'minor-issues' });
   });
 
-  it('serializes the explicit state in skills index schema version 7', () => {
+  it('serializes the explicit state in skills index schema version 8', () => {
     const analysis = analyzeWorkspace(
       FIXTURE_ROOT,
       [fixturePath('json-formatter'), fixturePath('helper'), fixturePath('stuff')],
@@ -157,7 +157,7 @@ describe('explicit not-scored quality state', () => {
     const serialized = JSON.parse(JSON.stringify(buildSkillsIndex(analysis)));
 
     expect(serialized).toMatchObject({
-      schemaVersion: 7,
+      schemaVersion: 8,
       skills: expect.arrayContaining([
         expect.objectContaining({
           name: 'json-formatter',

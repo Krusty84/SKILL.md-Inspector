@@ -14,12 +14,18 @@
   assignments, with placeholder suppression and no echoing of the secret),
   `skill.security.promptInjection`, `skill.security.hiddenContent` (HTML-comment
   instructions and zero-width/bidi Unicode), and `skill.security.sensitivePath`.
-  Command and secret patterns are scanned in code contexts and — during full
-  validation — in bundled resource files (scripts and other text); prose is
-  scanned for injection, hidden content, and sensitive paths. New settings under
-  the **Security** group (`skillMdInspector.security.*`) toggle the scan and
-  resource scanning, cap scanned file size, and supply allowlists and additive
+  Commands, secrets, services, and sensitive paths are scanned in both prose and
+  code contexts — a SKILL.md body is the agent's instructions, so a command in a
+  sentence is as real as one in a fence — and, during full validation, in
+  bundled resource files (scripts and other text). New settings under the
+  **Security** group (`skillMdInspector.security.*`) toggle the scan and resource
+  scanning, cap scanned file size, and supply allowlists and additive
   command/service patterns. Every code honors `skillMdInspector.severityOverrides`.
+- **Security in the reports**: the per-skill SKILL.md Report gains a dedicated
+  **Security** section (and a summary card), the Workspace SKILL.md's Report
+  gains a **Security** column (OK, or an issue count colored by severity), and
+  `skills.index.json` is now `schemaVersion` 8 — each skill gains a `security`
+  array of its security findings (code, severity, message).
 - **Per-agent compatibility projection**: the skill and workspace reports gain
   an "Agent compatibility" section that projects one validated skill against
   documented behavior of the `skills-ref` spec baseline, Claude Code, Codex,
@@ -29,7 +35,7 @@
   fact carries a source URL and a verified-on date (`src/compat/`). The
   projection is a static, read-only layer: it emits no diagnostics, does not
   interact with severity overrides, and never changes validation status.
-  `skills.index.json` now has `schemaVersion` 7: each skill gains a
+  `skills.index.json` gained (in `schemaVersion` 7) a per-skill
   `compatibility` object with the projections (without display labels).
   Each agent has an enable/disable checkbox in the Validation settings
   (`skillMdInspector.validation.compatibilityAgents.*`, all on by default);
