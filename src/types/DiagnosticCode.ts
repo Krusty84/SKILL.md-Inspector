@@ -53,6 +53,15 @@ export const DiagnosticCode = {
   // Resources
   ResourceUnreferenced: 'skill.resource.unreferenced',
 
+  // Security — static risk assessment of the skill's instructions and bundled files.
+  SecurityCommandDangerous: 'skill.security.command.dangerous',
+  SecurityCommandRisky: 'skill.security.command.risky',
+  SecurityServiceRisky: 'skill.security.service.risky',
+  SecuritySecret: 'skill.security.secret',
+  SecurityPromptInjection: 'skill.security.promptInjection',
+  SecurityHiddenContent: 'skill.security.hiddenContent',
+  SecuritySensitivePath: 'skill.security.sensitivePath',
+
   // Token budgets
   BodyTokenLimit: 'skill.token.body.limit',
   BodyLineLimit: 'skill.token.body.lines',
@@ -104,6 +113,14 @@ export const KIND_BY_CODE: Record<string, SkillDiagnosticKind> = {
   [DiagnosticCode.LinkEscapesSkillRoot]: 'security',
   [DiagnosticCode.LinkRemoteSuspicious]: 'security',
   [DiagnosticCode.LinkRemoteCheckBlocked]: 'security',
+  // Security — static risk assessment of instructions and bundled files.
+  [DiagnosticCode.SecurityCommandDangerous]: 'security',
+  [DiagnosticCode.SecurityCommandRisky]: 'security',
+  [DiagnosticCode.SecurityServiceRisky]: 'security',
+  [DiagnosticCode.SecuritySecret]: 'security',
+  [DiagnosticCode.SecurityPromptInjection]: 'security',
+  [DiagnosticCode.SecurityHiddenContent]: 'security',
+  [DiagnosticCode.SecuritySensitivePath]: 'security',
   // Quality — discoverability recommendations.
   [DiagnosticCode.DescriptionTooShort]: 'quality',
   [DiagnosticCode.DescriptionTooVerbose]: 'quality',

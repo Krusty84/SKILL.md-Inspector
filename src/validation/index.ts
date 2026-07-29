@@ -12,13 +12,15 @@ import { validateResources } from './validateResources';
 import { validateBody } from './validateBody';
 import { validateTokenBudgets } from './validateTokenBudgets';
 import type { AnalyzedSkillTokenUsage } from '../types/SkillTokenUsage';
+import type { SecuritySettings } from '../analysis/security';
 
 export interface RunValidationsOptions {
-  /** Skip filesystem-dependent checks (linked-file existence, symlink escape). */
+  /** Skip filesystem-dependent checks (linked-file existence, symlink escape, resource scan). */
   skipFilesystem?: boolean;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
   tokenUsage?: AnalyzedSkillTokenUsage;
+  security?: SecuritySettings;
 }
 
 /**
@@ -39,6 +41,7 @@ export function runAllValidations(
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
     tokenUsage: options.tokenUsage,
+    security: options.security,
   });
   return sortDiagnostics(applyProfileOverrides(diagnostics, profile));
 }
@@ -102,6 +105,7 @@ export {
   validateBody,
   validateTokenBudgets,
 };
+export { validateSecurity } from '../analysis/security';
 export { toKebabCase, NAME_PATTERN } from './validateName';
 export { sortDiagnostics } from './util';
 export { runRules, VALIDATION_RULES } from './ruleRegistry';
