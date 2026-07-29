@@ -69,9 +69,9 @@ describe('security command scanning — false-positive guards', () => {
     expect(codesOf(scan(fenced('rm -rf ./build')))).not.toContain(RISKY);
   });
 
-  it('does not scan prose for commands (only code contexts)', () => {
+  it('scans prose for commands, since prose is the agent instructions', () => {
     const codes = codesOf(scan('Run rm -rf / only if you really mean it.'));
-    expect(codes).not.toContain(DANGEROUS);
+    expect(codes).toContain(DANGEROUS);
   });
 
   it('respects the allowedCommands allowlist', () => {

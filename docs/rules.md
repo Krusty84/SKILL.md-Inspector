@@ -270,10 +270,12 @@ connection is attempted.
 ### Static security scan
 
 The security scan is on by default and runs entirely offline; it never executes
-anything. Command and secret patterns are matched inside code contexts (fenced
-and inline code) and, in full validation, inside bundled resource files
-(scripts and other text files); injection, hidden-content, and sensitive-path
-checks target prose. Every code below is kind `security` and can be downgraded
+anything. A SKILL.md body is the instructions an agent may act on, so commands,
+secrets, risky services, and sensitive paths are scanned in both prose and code
+contexts (fenced and inline code) and, in full validation, inside bundled
+resource files (scripts and other text files). Prompt-injection wording and
+hidden content are scanned in prose and HTML comments. Every code below is kind
+`security` and can be downgraded
 or disabled per code through `skillMdInspector.severityOverrides`, or turned off
 entirely with `skillMdInspector.security.enabled`. Allowlists
 (`security.allowedCommands`, `security.allowedDomains`) and additive pattern
