@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type {
   NormalizedOpenCodeSession,
   SanitizationStatus,
@@ -234,7 +235,9 @@ export function buildOpenCodeTimelineEventDetails(
     raw: bounded(raw, hardLimit).text,
     temporalWarning:
       node.kind === 'skill'
-        ? 'Actions observed after a skill load are temporal observations and do not prove causation.'
+        ? l10n.t(
+            'Actions observed after a skill load are temporal observations and do not prove causation.',
+          )
         : undefined,
   };
 }
@@ -408,22 +411,23 @@ function diagnostics(session: NormalizedOpenCodeSession): OpenCodeTimelineDiagno
 function details(session: NormalizedOpenCodeSession): OpenCodeTimelineSessionDetails {
   return {
     metadata: [
-      ['Session ID', session.id],
-      ['Parent session ID', session.parentId],
-      ['Slug', session.details.slug],
-      ['Project ID', session.details.projectID],
-      ['Workspace ID', session.details.workspaceID],
-      ['Directory', stringValue(session.details.directory)],
-      ['Variant', session.details.variant],
+      [l10n.t('Session ID'), session.id],
+      [l10n.t('Parent session ID'), session.parentId],
+      [l10n.t('Slug'), session.details.slug],
+      [l10n.t('Project ID'), session.details.projectID],
+      [l10n.t('Workspace ID'), session.details.workspaceID],
+      [l10n.t('Directory'), stringValue(session.details.directory)],
+      [l10n.t('Variant'), session.details.variant],
     ].filter((r): r is [string, string] => r[1] !== undefined),
     changeSummary: [
-      ['Files changed', stringValue(metrics(session).filesChanged)],
-      ['Additions', stringValue(metrics(session).additions)],
-      ['Deletions', stringValue(metrics(session).deletions)],
+      [l10n.t('Files changed'), stringValue(metrics(session).filesChanged)],
+      [l10n.t('Additions'), stringValue(metrics(session).additions)],
+      [l10n.t('Deletions'), stringValue(metrics(session).deletions)],
     ].filter((r): r is [string, string] => r[1] !== undefined),
     skills: session.skills.map(skillSummary),
-    temporalWarning:
+    temporalWarning: l10n.t(
       'Actions observed after a skill load are temporal observations and do not prove that a SKILL.md rule caused an action.',
+    ),
   };
 }
 function skillSummary(s: SkillLoadObservation): {
@@ -437,11 +441,11 @@ function skillSummary(s: SkillLoadObservation): {
     skillName: s.skillName,
     status: s.status,
     followingActions: s.followingNodeIds.length,
-    matchingStatus: s.matchingSkills.map((m) => m.status).join(', ') || 'none',
+    matchingStatus: s.matchingSkills.map((m) => m.status).join(', ') || l10n.t('none'),
     actionSummary:
       Object.entries(s.actionSummary)
         .map(([k, v]) => `${k} × ${v}`)
-        .join(', ') || 'none',
+        .join(', ') || l10n.t('none'),
   };
 }
 function expandable(n: TrajectoryNode): boolean {
@@ -523,10 +527,11 @@ function files(n: TrajectoryNode): OpenCodeTimelineFileReference[] {
 }
 function stepLabel(n: TrajectoryNode): string {
   const finish = stringValue(n.details?.finish);
+  // {0} is the node's already-localized label; {1} the raw finish reason.
   return finish
-    ? `${n.label} finish · ${finish}`
+    ? l10n.t('{0} finish · {1}', n.label, finish)
     : n.incomplete
-      ? `${n.label} · incomplete`
+      ? l10n.t('{0} · incomplete', n.label)
       : n.label;
 }
 function bounded(
@@ -537,7 +542,7 @@ function bounded(
   if (original === undefined) return { truncated: false };
   return original.length > max
     ? {
-        text: `${original.slice(0, max)}\n… truncated ${original.length - max} characters`,
+        text: `${original.slice(0, max)}\n${l10n.t('… truncated {0} characters', original.length - max)}`,
         original,
         truncated: true,
       }

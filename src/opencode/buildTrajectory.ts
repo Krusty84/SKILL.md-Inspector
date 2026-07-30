@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type {
   NormalizedOpenCodeSession,
   NormalizeSessionOptions,
@@ -24,7 +25,7 @@ export function normalizeSession(
   const nodes: TrajectoryNode[] = [];
   const info = session.info;
   const id = asString(info.id) ?? asString(info.sessionID) ?? asString(info.sessionId);
-  const title = asString(info.title) ?? asString(info.name) ?? id ?? 'OpenCode Session';
+  const title = asString(info.title) ?? asString(info.name) ?? id ?? l10n.t('OpenCode Session');
   const created = asNumber(getPath(info, ['time', 'created'])) ?? asNumber(info.created);
   const updated = asNumber(getPath(info, ['time', 'updated'])) ?? asNumber(info.updated);
   const root: TrajectoryNode = {
@@ -77,7 +78,9 @@ export function normalizeSession(
     normalizedDiagnostics.push({
       severity: 'warning',
       code: 'opencode.sanitized.likely',
-      message: 'This export appears sanitized; detailed trajectory analysis may be incomplete.',
+      message: l10n.t(
+        'This export appears sanitized; detailed trajectory analysis may be incomplete.',
+      ),
     });
   }
 
@@ -154,7 +157,7 @@ function messageToNode(
           : 'unknown',
     parentId: 'session',
     sourceOrder,
-    label: `${message.role === 'unknown' ? `Unknown (${message.originalRole ?? 'missing'})` : message.role} message`,
+    label: messageLabel(message),
     start,
     end,
     durationMs: safeDuration(start, end),
@@ -164,6 +167,17 @@ function messageToNode(
     rawReference: `message-${message.sourceOrder}`,
     details: messageDetails(message),
   };
+}
+
+/**
+ * Roles are a closed set, so each label is a whole localization key rather
+ * than a `{role} message` composition; the unknown branch carries the raw
+ * role value (or the `missing` marker) as its argument.
+ */
+function messageLabel(message: ParsedMessage): string {
+  if (message.role === 'user') return l10n.t('user message');
+  if (message.role === 'assistant') return l10n.t('assistant message');
+  return l10n.t('Unknown ({0}) message', message.originalRole ?? 'missing');
 }
 
 function addFlatParts(
@@ -200,8 +214,8 @@ function addAssistantParts(
       kind: 'step',
       parentId: parent.id,
       sourceOrder: order++,
-      label: 'Ungrouped step',
-      description: 'Synthetic group for parts outside explicit step boundaries',
+      label: l10n.t('Ungrouped step'),
+      description: l10n.t('Synthetic group for parts outside explicit step boundaries'),
       children: [],
       synthetic: true,
     };
@@ -217,7 +231,7 @@ function addAssistantParts(
         diagnostics.push({
           severity: 'warning',
           code: 'opencode.step.repeatedStart',
-          message: 'A step-start appeared before the previous step-finish.',
+          message: l10n.t('A step-start appeared before the previous step-finish.'),
           path: part.id,
         });
       }
@@ -226,7 +240,7 @@ function addAssistantParts(
         kind: 'step',
         parentId: parent.id,
         sourceOrder: order++,
-        label: 'Step',
+        label: l10n.t('Step'),
         start: part.start,
         children: [],
         rawReference: `${parent.id}-step-${part.sourceOrder}`,
@@ -241,7 +255,7 @@ function addAssistantParts(
         diagnostics.push({
           severity: 'warning',
           code: 'opencode.step.unmatchedFinish',
-          message: 'A step-finish appeared without a matching step-start.',
+          message: l10n.t('A step-finish appeared without a matching step-start.'),
           path: part.id,
         });
       } else {
@@ -264,7 +278,7 @@ function addAssistantParts(
     diagnostics.push({
       severity: 'warning',
       code: 'opencode.step.unclosed',
-      message: 'A step-start was not closed by a step-finish.',
+      message: l10n.t('A step-start was not closed by a step-finish.'),
     });
     deriveParentTime(current, nodes);
   }
@@ -283,13 +297,13 @@ function partToNode(
 ): TrajectoryNode {
   const label =
     part.kind === 'skill'
-      ? `Skill: ${part.skillName ?? 'unknown'}`
+      ? l10n.t('Skill: {0}', part.skillName ?? 'unknown')
       : part.kind === 'tool'
         ? toolLabel(part)
         : part.kind === 'unknown'
-          ? `Unknown: ${part.originalType ?? 'missing type'}`
+          ? l10n.t('Unknown: {0}', part.originalType ?? 'missing type')
           : part.kind === 'agent' && asString(part.raw.name)
-            ? `Agent: ${asString(part.raw.name)}`
+            ? l10n.t('Agent: {0}', asString(part.raw.name)!)
             : part.kind === 'subtask'
               ? subtaskLabel(part)
               : part.kind;
@@ -350,7 +364,7 @@ function typeSpecificPreviewPaths(part: ParsedPart): string[][] {
 function subtaskLabel(part: ParsedPart): string {
   const detail =
     asString(part.raw.description) ?? asString(part.raw.agent) ?? asString(part.raw.command);
-  return detail ? `Subtask: ${short(detail)}` : 'Subtask';
+  return detail ? l10n.t('Subtask: {0}', short(detail)) : l10n.t('Subtask');
 }
 
 function short(value: string): string {
@@ -620,8 +634,8 @@ function retryPreview(root: Record<string, unknown>): unknown {
   const retryable = getPath(error, ['data', 'isRetryable']);
   const parts = [
     name && message ? `${name}: ${message}` : (message ?? name),
-    statusCode !== undefined ? `HTTP ${statusCode}` : undefined,
-    retryable === true ? 'retryable' : retryable === false ? 'not retryable' : undefined,
+    statusCode !== undefined ? l10n.t('HTTP {0}', statusCode) : undefined,
+    retryable === true ? l10n.t('retryable') : retryable === false ? l10n.t('not retryable') : undefined,
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : (root.error ?? root);
 }

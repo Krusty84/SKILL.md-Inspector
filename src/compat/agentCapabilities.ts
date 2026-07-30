@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type {
   AgentCapabilities,
   AgentCapabilityTable,
@@ -51,7 +52,13 @@ const SPEC_FIELDS = [
 
 const spec: AgentCapabilities = {
   agent: 'spec',
-  label: 'Regular SKILL.md',
+  // A getter, not a plain property: this table is built during module
+  // evaluation, before the l10n bundle is configured, so localizable display
+  // text must be resolved lazily on access. The tool agents' labels below are
+  // product names (Claude Code, Codex, OpenCode) and stay untranslated.
+  get label() {
+    return l10n.t('Regular SKILL.md');
+  },
   fields: verified(SPEC_FIELDS, SPEC_SOURCE),
   // The reference validator reports anything else as "Unexpected fields" (an error).
   unknownFields: verified('rejected', SPEC_VALIDATOR_SOURCE),
@@ -91,11 +98,15 @@ const claudeCode: AgentCapabilities = {
   fieldNotes: {
     // Honored with a consequence: the listed tools run without a permission
     // prompt during the invoking turn, so presence always deserves a note.
+    // Lazy getter: l10n.t() must not run during module evaluation.
     'allowed-tools': verified(
       {
         kind: 'tool-grant',
-        message:
-          '`allowed-tools` grants the listed tools without a permission prompt during the invoking turn; review the grant.',
+        get message() {
+          return l10n.t(
+            '`allowed-tools` grants the listed tools without a permission prompt during the invoking turn; review the grant.',
+          );
+        },
       },
       CLAUDE_CODE_SOURCE,
     ),
@@ -137,11 +148,15 @@ const opencode: AgentCapabilities = {
   unknownFields: verified('ignored', OPENCODE_SOURCE),
   fieldNotes: {
     // Not read at all: permissions live host-side in opencode.json.
+    // Lazy getter: l10n.t() must not run during module evaluation.
     'allowed-tools': verified(
       {
         kind: 'field-ignored',
-        message:
-          '`allowed-tools` is ignored; OpenCode permissions are configured in opencode.json.',
+        get message() {
+          return l10n.t(
+            '`allowed-tools` is ignored; OpenCode permissions are configured in opencode.json.',
+          );
+        },
       },
       OPENCODE_SOURCE,
     ),

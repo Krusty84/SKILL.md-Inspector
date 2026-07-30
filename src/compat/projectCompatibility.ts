@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type { SkillDocument, SkillFrontmatter } from '../types/SkillDocument';
 import type {
   AgentCapabilities,
@@ -34,7 +35,7 @@ function projectAgent(doc: SkillDocument, agent: AgentCapabilities): AgentProjec
       label: agent.label,
       verdict: 'not-evaluated',
       findings: [],
-      notEvaluatedReason: 'frontmatter could not be parsed',
+      notEvaluatedReason: l10n.t('frontmatter could not be parsed'),
     };
   }
 
@@ -109,7 +110,7 @@ function unknownFieldFinding(key: string, agent: AgentCapabilities): Compatibili
         agent: agent.agent,
         level: 'issue',
         kind: 'field-rejected',
-        message: `\`${key}\` is an unexpected field — the reference validator errors on it.`,
+        message: l10n.t('`{0}` is an unexpected field — the reference validator errors on it.', key),
         subject: key,
       };
     case 'unvalidated':
@@ -117,7 +118,11 @@ function unknownFieldFinding(key: string, agent: AgentCapabilities): Compatibili
         agent: agent.agent,
         level: 'note',
         kind: 'field-unvalidated',
-        message: `\`${key}\` is outside ${agent.label}'s validated field set; the loader tolerates it, but the bundled skill validator flags it.`,
+        message: l10n.t(
+          "`{0}` is outside {1}'s validated field set; the loader tolerates it, but the bundled skill validator flags it.",
+          key,
+          agent.label,
+        ),
         subject: key,
       };
     case 'ignored':
@@ -125,7 +130,11 @@ function unknownFieldFinding(key: string, agent: AgentCapabilities): Compatibili
         agent: agent.agent,
         level: 'note',
         kind: 'field-ignored',
-        message: `\`${key}\` is ignored — ${agent.label} ignores unknown frontmatter fields by design.`,
+        message: l10n.t(
+          '`{0}` is ignored — {1} ignores unknown frontmatter fields by design.',
+          key,
+          agent.label,
+        ),
         subject: key,
       };
     case 'tolerated':
@@ -133,7 +142,11 @@ function unknownFieldFinding(key: string, agent: AgentCapabilities): Compatibili
         agent: agent.agent,
         level: 'note',
         kind: 'field-ignored',
-        message: `\`${key}\` is not a documented ${agent.label} field; unknown fields are tolerated.`,
+        message: l10n.t(
+          '`{0}` is not a documented {1} field; unknown fields are tolerated.',
+          key,
+          agent.label,
+        ),
         subject: key,
       };
   }
@@ -152,7 +165,8 @@ function nameFindings(doc: SkillDocument, agent: AgentCapabilities): Compatibili
   if (folder === null) {
     return [];
   }
-  const base = `\`name\` "${name}" does not match the parent directory "${folder}"`;
+  // Whole-sentence keys per branch (not a shared "base" fragment) so each
+  // message translates as one unit; {0} name, {1} folder, {2} agent label.
   switch (agent.nameDirectoryRule.value) {
     case 'must-match':
       return [
@@ -162,8 +176,17 @@ function nameFindings(doc: SkillDocument, agent: AgentCapabilities): Compatibili
           kind: 'name-dir-mismatch-enforced',
           message:
             agent.agent === 'spec'
-              ? `${base} — the reference validator requires them to match.`
-              : `${base} — ${agent.label} requires the name to match the containing directory.`,
+              ? l10n.t(
+                  '`name` "{0}" does not match the parent directory "{1}" — the reference validator requires them to match.',
+                  name,
+                  folder,
+                )
+              : l10n.t(
+                  '`name` "{0}" does not match the parent directory "{1}" — {2} requires the name to match the containing directory.',
+                  name,
+                  folder,
+                  agent.label,
+                ),
           subject: 'name',
         },
       ];
@@ -173,7 +196,12 @@ function nameFindings(doc: SkillDocument, agent: AgentCapabilities): Compatibili
           agent: agent.agent,
           level: 'note',
           kind: 'name-dir-mismatch',
-          message: `${base}; ${agent.label} treats the name as display-only for non-plugin skills.`,
+          message: l10n.t(
+            '`name` "{0}" does not match the parent directory "{1}"; {2} treats the name as display-only for non-plugin skills.',
+            name,
+            folder,
+            agent.label,
+          ),
           subject: 'name',
         },
       ];
@@ -184,7 +212,12 @@ function nameFindings(doc: SkillDocument, agent: AgentCapabilities): Compatibili
           agent: agent.agent,
           level: 'note',
           kind: 'name-dir-mismatch',
-          message: `${base}; ${agent.label} is reported to default the skill name to the directory name.`,
+          message: l10n.t(
+            '`name` "{0}" does not match the parent directory "{1}"; {2} is reported to default the skill name to the directory name.',
+            name,
+            folder,
+            agent.label,
+          ),
           subject: 'name',
         },
       ];
@@ -212,7 +245,7 @@ function discoveryFindings(doc: SkillDocument, agent: AgentCapabilities): Compat
       agent: agent.agent,
       level: 'note',
       kind: 'no-discovery-path',
-      message: `No documented ${agent.label} discovery path contains this skill.`,
+      message: l10n.t('No documented {0} discovery path contains this skill.', agent.label),
     },
   ];
 }
@@ -228,14 +261,19 @@ function bodyFindings(doc: SkillDocument, agent: AgentCapabilities): Compatibili
             agent: agent.agent,
             level: 'note',
             kind: 'dynamic-context-executes',
-            message: `Dynamic context (!\`command\` lines and \`\`\`! fenced blocks) executes at load time, before the model reads the skill content; review the commands.`,
+            message: l10n.t(
+              'Dynamic context (!`command` lines and ```! fenced blocks) executes at load time, before the model reads the skill content; review the commands.',
+            ),
             subject: 'dynamic-context',
           }
         : {
             agent: agent.agent,
             level: 'note',
             kind: 'dynamic-context-inert',
-            message: `Dynamic context syntax (!\`command\`) is inert text — ${agent.label} does not execute it.`,
+            message: l10n.t(
+              'Dynamic context syntax (!`command`) is inert text — {0} does not execute it.',
+              agent.label,
+            ),
             subject: 'dynamic-context',
           },
     );
@@ -251,15 +289,19 @@ function bodyFindings(doc: SkillDocument, agent: AgentCapabilities): Compatibili
             agent: agent.agent,
             level: 'note',
             kind: 'substitution-applies',
-            message:
+            message: l10n.t(
               'Argument tokens ($ARGUMENTS, $N, and declared $name arguments) are substituted once at invocation, including inside fenced code.',
+            ),
             subject: 'arguments',
           }
         : {
             agent: agent.agent,
             level: 'note',
             kind: 'substitution-inert',
-            message: `Argument tokens such as $ARGUMENTS stay literal text — ${agent.label} performs no argument substitution.`,
+            message: l10n.t(
+              'Argument tokens such as $ARGUMENTS stay literal text — {0} performs no argument substitution.',
+              agent.label,
+            ),
             subject: 'arguments',
           },
     );

@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type { OpenCodeParseDiagnostic } from './model';
 import { asString, isRecord } from './util';
 
@@ -31,7 +32,10 @@ export function validateSessionCompatibility(
   diagnostics.push({
     severity: 'information',
     code: 'opencode.compat.schemaReference',
-    message: `Compatibility diagnostics use reconstructed OpenCode schema reference pinned to source commit ${options.schemaSourceCommit}.`,
+    message: l10n.t(
+      'Compatibility diagnostics use reconstructed OpenCode schema reference pinned to source commit {0}.',
+      options.schemaSourceCommit,
+    ),
     path: '$',
   });
   const info = isRecord(value.info) ? value.info : undefined;
@@ -45,21 +49,21 @@ export function validateSessionCompatibility(
       diagnostics,
       'opencode.id.sessionMissing',
       '$.info.id',
-      'Session info is missing schema-defined id.',
+      l10n.t('Session info is missing schema-defined id.'),
     );
   else if (!sessionId.startsWith('ses'))
     infoDiag(
       diagnostics,
       'opencode.id.sessionNoncanonical',
       '$.info.id',
-      `Session id uses noncanonical prefix: ${safe(sessionId)}.`,
+      l10n.t('Session id uses noncanonical prefix: {0}.', safe(sessionId)),
     );
   if (workspaceId && !workspaceId.startsWith('wrk'))
     infoDiag(
       diagnostics,
       'opencode.id.workspaceNoncanonical',
       '$.info.workspaceID',
-      `Workspace id uses noncanonical prefix: ${safe(workspaceId)}.`,
+      l10n.t('Workspace id uses noncanonical prefix: {0}.', safe(workspaceId)),
     );
 
   const messageIds = new Map<string, string>();
@@ -82,7 +86,7 @@ export function validateSessionCompatibility(
         diagnostics,
         'opencode.id.messageMissing',
         `${messagePath}.info.id`,
-        'Message info is missing schema-defined id.',
+        l10n.t('Message info is missing schema-defined id.'),
       );
     else {
       if (!messageId.startsWith('msg'))
@@ -90,7 +94,7 @@ export function validateSessionCompatibility(
           diagnostics,
           'opencode.id.messageNoncanonical',
           `${messagePath}.info.id`,
-          `Message id uses noncanonical prefix: ${safe(messageId)}.`,
+          l10n.t('Message id uses noncanonical prefix: {0}.', safe(messageId)),
         );
       duplicate(
         messageIds,
@@ -98,7 +102,7 @@ export function validateSessionCompatibility(
         `${messagePath}.info.id`,
         diagnostics,
         'opencode.id.messageDuplicate',
-        'Message id is duplicated',
+        l10n.t('Message id is duplicated'),
       );
     }
     if (sessionId && sessionRef && sessionRef !== sessionId)
@@ -106,7 +110,11 @@ export function validateSessionCompatibility(
         diagnostics,
         'opencode.invariant.messageSessionIdMismatch',
         `${messagePath}.info.sessionID`,
-        `Message sessionID mismatch: expected ${safe(sessionId)}, actual ${safe(sessionRef)}.`,
+        l10n.t(
+          'Message sessionID mismatch: expected {0}, actual {1}.',
+          safe(sessionId),
+          safe(sessionRef),
+        ),
       );
     const parentId = asString(messageInfo.parentID);
     if (role === 'assistant' && parentId && messageId)
@@ -122,7 +130,7 @@ export function validateSessionCompatibility(
           diagnostics,
           'opencode.id.partMissing',
           `${partPath}.id`,
-          'Part is missing schema-defined id.',
+          l10n.t('Part is missing schema-defined id.'),
         );
       const partId = asString(partValue.id);
       if (partId) {
@@ -131,7 +139,7 @@ export function validateSessionCompatibility(
             diagnostics,
             'opencode.id.partNoncanonical',
             `${partPath}.id`,
-            `Part id uses noncanonical prefix: ${safe(partId)}.`,
+            l10n.t('Part id uses noncanonical prefix: {0}.', safe(partId)),
           );
         duplicate(
           partIds,
@@ -139,7 +147,7 @@ export function validateSessionCompatibility(
           `${partPath}.id`,
           diagnostics,
           'opencode.id.partDuplicate',
-          'Part id is duplicated',
+          l10n.t('Part id is duplicated'),
         );
       }
       const partSessionId = asString(partValue.sessionID);
@@ -148,7 +156,11 @@ export function validateSessionCompatibility(
           diagnostics,
           'opencode.invariant.partSessionIdMismatch',
           `${partPath}.sessionID`,
-          `Part sessionID mismatch: expected ${safe(sessionId)}, actual ${safe(partSessionId)}.`,
+          l10n.t(
+            'Part sessionID mismatch: expected {0}, actual {1}.',
+            safe(sessionId),
+            safe(partSessionId),
+          ),
         );
       const partMessageId = asString(partValue.messageID);
       if (messageId && partMessageId && partMessageId !== messageId)
@@ -156,7 +168,11 @@ export function validateSessionCompatibility(
           diagnostics,
           'opencode.invariant.partMessageIdMismatch',
           `${partPath}.messageID`,
-          `Part messageID mismatch: expected ${safe(messageId)}, actual ${safe(partMessageId)}.`,
+          l10n.t(
+            'Part messageID mismatch: expected {0}, actual {1}.',
+            safe(messageId),
+            safe(partMessageId),
+          ),
         );
       if (type) requirePartType(partValue, type, partPath, diagnostics);
       const callId = asString(partValue.callID) ?? asString(partValue.callId);
@@ -167,7 +183,7 @@ export function validateSessionCompatibility(
           `${partPath}.callID`,
           diagnostics,
           'opencode.id.toolCallDuplicate',
-          'Tool call id is duplicated',
+          l10n.t('Tool call id is duplicated'),
         );
     });
   });
@@ -177,14 +193,14 @@ export function validateSessionCompatibility(
         diagnostics,
         'opencode.invariant.assistantParentSelfReference',
         parent.path,
-        `Assistant parentID self-references message ${safe(parent.id)}.`,
+        l10n.t('Assistant parentID self-references message {0}.', safe(parent.id)),
       );
     else if (!messageIds.has(parent.parentId))
       warn(
         diagnostics,
         'opencode.invariant.assistantParentMissing',
         parent.path,
-        `Assistant parentID references missing message ${safe(parent.parentId)}.`,
+        l10n.t('Assistant parentID references missing message {0}.', safe(parent.parentId)),
       );
   }
   return diagnostics;
@@ -311,7 +327,7 @@ export function requireString(
       diagnostics,
       'opencode.required.string',
       `${path}.${field}`,
-      `Required string field ${field} is missing or invalid.`,
+      l10n.t('Required string field {0} is missing or invalid.', field),
     );
 }
 export function requireObject(
@@ -325,7 +341,7 @@ export function requireObject(
       diagnostics,
       'opencode.required.object',
       `${path}.${field}`,
-      `Required object field ${field} is missing or invalid.`,
+      l10n.t('Required object field {0} is missing or invalid.', field),
     );
 }
 export function requireArray(
@@ -339,7 +355,7 @@ export function requireArray(
       diagnostics,
       'opencode.required.array',
       `${path}.${field}`,
-      `Required array field ${field} is missing or invalid.`,
+      l10n.t('Required array field {0} is missing or invalid.', field),
     );
 }
 export function requireNumber(
@@ -353,7 +369,7 @@ export function requireNumber(
       diagnostics,
       'opencode.required.number',
       `${path}.${field}`,
-      `Required number field ${field} is missing or invalid.`,
+      l10n.t('Required number field {0} is missing or invalid.', field),
     );
 }
 export function requireBoolean(
@@ -367,7 +383,7 @@ export function requireBoolean(
       diagnostics,
       'opencode.required.boolean',
       `${path}.${field}`,
-      `Required boolean field ${field} is missing or invalid.`,
+      l10n.t('Required boolean field {0} is missing or invalid.', field),
     );
 }
 function requirePresent(
@@ -381,7 +397,7 @@ function requirePresent(
       diagnostics,
       'opencode.required.present',
       `${path}.${field}`,
-      `Required field ${field} is missing.`,
+      l10n.t('Required field {0} is missing.', field),
     );
 }
 function duplicate(
@@ -393,7 +409,9 @@ function duplicate(
   label: string,
 ): void {
   const first = seen.get(id);
-  if (first) warn(diagnostics, code, path, `${label}: ${safe(id)} (first seen at ${first}).`);
+  // {0} receives the already-localized label passed by the call site.
+  if (first)
+    warn(diagnostics, code, path, l10n.t('{0}: {1} (first seen at {2}).', label, safe(id), first));
   else seen.set(id, path);
 }
 function warn(

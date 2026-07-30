@@ -1,4 +1,5 @@
 import { isIP } from 'node:net';
+import * as l10n from '@vscode/l10n';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import { DiagnosticCode } from '../types/DiagnosticCode';
@@ -113,7 +114,7 @@ export class RemoteLinkCheckSession {
 
     const parsed = parseHttpUrl(raw);
     if ('error' in parsed) {
-      return Promise.resolve({ kind: 'blocked', reason: parsed.error });
+      return Promise.resolve({ kind: 'blocked', reason: parsed.error.url });
     }
     parsed.url.hash = '';
     const key = parsed.url.href;
@@ -154,31 +155,34 @@ export class RemoteLinkCheckSession {
       }
       if (isRedirectStatus(terminal.statusCode)) {
         if (!terminal.location) {
-          return { kind: 'failed', reason: `HTTP ${terminal.statusCode} redirect has no Location header` };
+          return {
+            kind: 'failed',
+            reason: l10n.t('HTTP {0} redirect has no Location header', terminal.statusCode),
+          };
         }
         if (redirects >= MAX_REDIRECTS) {
-          return { kind: 'failed', reason: `redirect limit of ${MAX_REDIRECTS} was exceeded` };
+          return {
+            kind: 'failed',
+            reason: l10n.t('redirect limit of {0} was exceeded', MAX_REDIRECTS),
+          };
         }
         let next: URL;
         try {
           next = new URL(terminal.location, current);
         } catch {
-          return { kind: 'failed', reason: 'redirect Location is not a valid URL' };
+          return { kind: 'failed', reason: l10n.t('redirect Location is not a valid URL') };
         }
         const parsed = parseHttpUrl(next.href);
         if ('error' in parsed) {
-          return {
-            kind: 'blocked',
-            reason: `the redirect target ${parsed.error.replace(/^the URL /, '')}`,
-          };
+          return { kind: 'blocked', reason: parsed.error.redirectTarget };
         }
         next = parsed.url;
         next.hash = '';
         if (current.protocol === 'https:' && next.protocol === 'http:') {
-          return { kind: 'blocked', reason: 'an HTTPS link redirected to insecure HTTP' };
+          return { kind: 'blocked', reason: l10n.t('an HTTPS link redirected to insecure HTTP') };
         }
         if (visited.has(next.href)) {
-          return { kind: 'failed', reason: 'redirect loop detected' };
+          return { kind: 'failed', reason: l10n.t('redirect loop detected') };
         }
         redirects += 1;
         visited.add(next.href);
@@ -188,7 +192,10 @@ export class RemoteLinkCheckSession {
       if (terminal.statusCode >= 400 && terminal.statusCode <= 599) {
         return { kind: 'unavailable', statusCode: terminal.statusCode };
       }
-      return { kind: 'failed', reason: `unexpected terminal HTTP status ${terminal.statusCode}` };
+      return {
+        kind: 'failed',
+        reason: l10n.t('unexpected terminal HTTP status {0}', terminal.statusCode),
+      };
     }
 
     return { kind: 'cancelled' };
@@ -227,7 +234,7 @@ export class RemoteLinkCheckSession {
       ) {
         return {
           kind: 'blocked',
-          reason: 'the connected socket did not use the validated public address',
+          reason: l10n.t('the connected socket did not use the validated public address'),
         };
       }
       return response;
@@ -251,13 +258,16 @@ async function validateTarget(
 ): Promise<{ address: string } | CheckResult> {
   const parsed = parseHttpUrl(url.href);
   if ('error' in parsed) {
-    return { kind: 'blocked', reason: parsed.error };
+    return { kind: 'blocked', reason: parsed.error.url };
   }
   const hostname = unbracket(parsed.url.hostname);
   if (isIP(hostname)) {
     return isPublicIpAddress(hostname)
       ? { address: hostname }
-      : { kind: 'blocked', reason: `${hostname} is a prohibited non-public destination` };
+      : {
+          kind: 'blocked',
+          reason: l10n.t('{0} is a prohibited non-public destination', hostname),
+        };
   }
 
   let addresses: readonly ResolvedAddress[];
@@ -267,10 +277,10 @@ async function validateTarget(
     if (signal.aborted) {
       return { kind: 'cancelled' };
     }
-    return { kind: 'failed', reason: networkFailureMessage(error, 'DNS resolution failed') };
+    return { kind: 'failed', reason: networkFailureMessage(error, l10n.t('DNS resolution failed')) };
   }
   if (addresses.length === 0) {
-    return { kind: 'failed', reason: 'DNS resolution returned no addresses' };
+    return { kind: 'failed', reason: l10n.t('DNS resolution returned no addresses') };
   }
   const invalid = addresses.find(
     (entry) => entry.family !== isIP(entry.address) || !isPublicIpAddress(entry.address),
@@ -278,7 +288,7 @@ async function validateTarget(
   if (invalid) {
     return {
       kind: 'blocked',
-      reason: `${hostname} resolved to prohibited destination ${invalid.address}`,
+      reason: l10n.t('{0} resolved to prohibited destination {1}', hostname, invalid.address),
     };
   }
   return { address: addresses[0].address };
@@ -290,9 +300,9 @@ function waitForResolution<T>(
   signal: AbortSignal,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const onAbort = (): void => finish(() => reject(new Error('request cancelled')));
+    const onAbort = (): void => finish(() => reject(new Error(l10n.t('request cancelled'))));
     const timeout = setTimeout(
-      () => finish(() => reject(new Error(`request timed out after ${timeoutMs}ms`))),
+      () => finish(() => reject(new Error(l10n.t('request timed out after {0}ms', timeoutMs)))),
       timeoutMs,
     );
     let settled = false;
@@ -315,22 +325,54 @@ function waitForResolution<T>(
   });
 }
 
-function parseHttpUrl(raw: string): { url: URL } | { error: string } {
+/**
+ * A blocked-URL reason in the two phrasings the checker embeds in diagnostics.
+ * Both are full localized fragments — deriving one from the other by string
+ * surgery would break under translation.
+ */
+interface BlockedUrlReason {
+  /** Phrased for the link itself, e.g. "the URL is malformed". */
+  url: string;
+  /** The same fact phrased for a redirect target. */
+  redirectTarget: string;
+}
+
+function parseHttpUrl(raw: string): { url: URL } | { error: BlockedUrlReason } {
   let url: URL;
   try {
     url = new URL(raw);
   } catch {
-    return { error: 'the URL is malformed' };
+    return {
+      error: {
+        url: l10n.t('the URL is malformed'),
+        redirectTarget: l10n.t('the redirect target is malformed'),
+      },
+    };
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    return { error: 'the URL uses a prohibited scheme' };
+    return {
+      error: {
+        url: l10n.t('the URL uses a prohibited scheme'),
+        redirectTarget: l10n.t('the redirect target uses a prohibited scheme'),
+      },
+    };
   }
   if (url.username || url.password) {
-    return { error: 'the URL contains embedded credentials' };
+    return {
+      error: {
+        url: l10n.t('the URL contains embedded credentials'),
+        redirectTarget: l10n.t('the redirect target contains embedded credentials'),
+      },
+    };
   }
   const hostname = unbracket(url.hostname);
   if (!isValidHostname(hostname)) {
-    return { error: 'the URL has a malformed or local-only hostname' };
+    return {
+      error: {
+        url: l10n.t('the URL has a malformed or local-only hostname'),
+        redirectTarget: l10n.t('the redirect target has a malformed or local-only hostname'),
+      },
+    };
   }
   return { url };
 }
@@ -383,21 +425,22 @@ function diagnosticForResult(
       return diag(
         DiagnosticCode.LinkRemoteUnavailable,
         'warning',
-        `Remote link is unavailable (HTTP ${result.statusCode}): ${raw}`,
+        l10n.t('Remote link is unavailable (HTTP {0}): {1}', result.statusCode, raw),
         range,
       );
     case 'failed':
       return diag(
         DiagnosticCode.LinkRemoteCheckFailed,
         'information',
-        `Could not determine remote link availability for ${raw}: ${result.reason}.`,
+        // {1} receives an already-localized reason fragment produced above.
+        l10n.t('Could not determine remote link availability for {0}: {1}.', raw, result.reason),
         range,
       );
     case 'blocked':
       return diag(
         DiagnosticCode.LinkRemoteCheckBlocked,
         'warning',
-        `Remote link was not requested because ${result.reason}: ${raw}`,
+        l10n.t('Remote link was not requested because {0}: {1}', result.reason, raw),
         range,
       );
   }
