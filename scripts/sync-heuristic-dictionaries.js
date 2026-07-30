@@ -7,50 +7,13 @@ const catalogPath = path.join(root, 'src', 'quality', 'defaultHeuristicDictionar
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
 
-const descriptions = {
-  actionVerbs:
-    'Base verbs recognized as concrete capabilities in description diagnostics, description completeness, local improvement, and collision features.',
-  actionVerbForms:
-    'Explicit surface forms for action verbs. Keys are base verbs and values are recognized forms; explicit entries take precedence over regular morphology.',
-  vagueTerms:
-    'Words and phrases treated as vague in description diagnostics and description completeness.',
-  artifactHints:
-    'High-signal artifact and domain terms used by description quality and collision feature extraction.',
-  lowSignalArtifactTerms:
-    'Generic artifact terms that count only when accompanied by an artifact support term.',
-  multiWordArtifacts:
-    'Multi-word artifact phrases recognized by description quality and collision feature extraction.',
-  artifactSupportTerms:
-    'Domain terms that make a low-signal artifact such as file, data, code, or document concrete.',
-  acronyms: 'Acronyms and technology names recognized as concrete artifact or domain evidence.',
-  uppercaseOnlyAcronyms:
-    'Ambiguous acronyms that count only when their matched spelling is uppercase.',
-  positiveTriggerPhrases: 'Phrases that introduce a positive usage-trigger clause.',
-  negativeBoundaryPhrases:
-    'Phrases that introduce a negative usage boundary and separate collision scopes.',
-  exclusiveTriggerPhrases:
-    'Phrases that act as both a positive usage trigger and an exclusive boundary.',
-  restrictiveBoundaryPhrases:
-    'Non-negative phrases that restrict scope for boundary detection and scoring.',
-  scopeRestrictionPhrases:
-    'Phrases such as only for or limited to that name the skill scope rather than exclude one; they earn boundary credit in scoring but are not collision exclusions.',
-  overbroadTriggerPhrases:
-    'Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.',
-  frontLoadedFillerTerms:
-    'Terms ignored when deciding whether the opening sentence names a concrete capability object.',
-  scopeStopwords:
-    'Terms ignored when evaluating whether trigger and boundary clauses contain concrete scope.',
-  scopeVagueTerms:
-    'Terms that make trigger and boundary clause content too vague to receive full credit.',
-  irregularSingularForms:
-    'Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.',
-  collisionStopwords:
-    'Common terms removed before workspace description collision similarity is calculated.',
-  capabilitySynonymGroups:
-    'Capability verbs that count as the same capability when comparing two skills\' scope. Keys are group ids and values are the verbs in that group; groups must not share a verb. A verb outside "actionVerbs" is simply never matched.',
-  artifactSynonymGroups:
-    'Artifact terms that count as the same kind of object when comparing two skills\' scope (for example spreadsheet, xlsx and workbook). Keys are group ids and values are the terms in that group; groups must not share a term.',
-};
+// Each generated setting's description is an NLS placeholder; the English text
+// lives in package.nls.json under the same key. Adding a catalog key therefore
+// also requires adding its description to package.nls.json (test/packageNls.test.ts
+// fails until both sides agree).
+function nlsDescription(key) {
+  return `%skillMdInspector.config.heuristics.dictionaryValues.${key}.description%`;
+}
 
 const mappingKeys = new Set([
   'actionVerbForms',
@@ -72,7 +35,7 @@ function visibleSetting(key) {
       type: 'object',
       scope: 'resource',
       default: value,
-      description: descriptions[key],
+      description: nlsDescription(key),
       propertyNames: { minLength: 1 },
       additionalProperties: stringArraySchema(),
     };
@@ -81,7 +44,7 @@ function visibleSetting(key) {
     type: 'array',
     scope: 'resource',
     default: value,
-    description: descriptions[key],
+    description: nlsDescription(key),
     items: { type: 'string' },
   };
 }

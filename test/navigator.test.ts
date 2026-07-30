@@ -13,7 +13,12 @@ import {
 } from '../src/navigator/favoritesStore';
 import { normalizeAdditionalRoots } from '../src/navigator/normalizeAdditionalRoots';
 import type { AgentFileName } from '../src/navigator/types';
-import packageJson from '../package.json';
+import rawPackageJson from '../package.json';
+import { resolveNls } from './helpers/nls';
+
+// Manifest strings live in package.nls.json as %key% placeholders; resolve them
+// so assertions keep checking the user-visible English text.
+const packageJson = resolveNls(rawPackageJson);
 
 describe('navigator pure modules', () => {
   it('resolves built-in agent sources', () => {

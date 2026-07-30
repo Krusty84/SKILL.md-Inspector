@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import packageJson from '../package.json';
+import rawPackageJson from '../package.json';
 import { activatesFor } from './helpers/activationContract';
+import { resolveNls } from './helpers/nls';
+
+// Manifest strings live in package.nls.json as %key% placeholders; resolve them
+// so assertions keep checking the user-visible English text.
+const packageJson = resolveNls(rawPackageJson);
 
 describe('sidebar view contributions', () => {
   it('declares independent SKILL.md Inspector views and preserves the analysis panel', () => {

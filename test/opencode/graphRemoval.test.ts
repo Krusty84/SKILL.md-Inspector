@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import packageJson from '../../package.json';
+import rawPackageJson from '../../package.json';
+import { resolveNls } from '../helpers/nls';
+
+// Manifest strings live in package.nls.json as %key% placeholders; resolve them
+// so the serialized-manifest guards keep scanning the user-visible text.
+const packageJson = resolveNls(rawPackageJson);
 
 vi.mock('vscode', () => {
   class TreeItem {

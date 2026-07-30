@@ -1,3 +1,4 @@
+import './l10nSetup';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DiagnosticsProvider } from './diagnostics/diagnosticsProvider';
