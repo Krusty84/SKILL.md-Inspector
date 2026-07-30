@@ -261,6 +261,57 @@ function card(label: string, value: string, valueClass = '', title = ''): string
   return `<div class="card"${tooltip}><div class="label">${label}</div><div class="value ${valueClass}">${value}</div></div>`;
 }
 
+/**
+ * Display text for a finding's criterion name. The stored names are machine
+ * identifiers (exported into skills.index.json and branched on by the scoring
+ * itself), so they are localized only here at render time; unknown names pass
+ * through unchanged.
+ */
+export function criterionText(criterion: string): string {
+  switch (criterion) {
+    case 'Action verb / capability':
+      return l10n.t('Action verb / capability');
+    case 'Usage trigger phrase':
+      return l10n.t('Usage trigger phrase');
+    case 'Concrete artifact / domain':
+      return l10n.t('Concrete artifact / domain');
+    case 'Boundary phrase':
+      return l10n.t('Boundary phrase');
+    case 'Front-loaded intent':
+      return l10n.t('Front-loaded intent');
+    case 'Low vagueness':
+      return l10n.t('Low vagueness');
+    case 'Language support':
+      return l10n.t('Language support');
+    case 'Substantive body':
+      return l10n.t('Substantive body');
+    case 'Substantive instructions':
+      return l10n.t('Substantive instructions');
+    case 'Unclosed code fence':
+      return l10n.t('Unclosed code fence');
+    case 'Placeholders':
+      return l10n.t('Placeholders');
+    case 'Examples':
+      return l10n.t('Examples');
+    case 'Empty section':
+      return l10n.t('Empty section');
+    case 'Duplicate sections':
+      return l10n.t('Duplicate sections');
+    case 'Length':
+      return l10n.t('Length');
+    case 'Repetitive instructions':
+      return l10n.t('Repetitive instructions');
+    case 'Undocumented script':
+      return l10n.t('Undocumented script');
+    case 'Unreferenced resource':
+      return l10n.t('Unreferenced resource');
+    case 'Large resource':
+      return l10n.t('Large resource');
+    default:
+      return criterion;
+  }
+}
+
 function renderFinding(finding: StaticDescriptionQualityFinding): string {
   const state =
     finding.pointsEarned === finding.pointsPossible
@@ -268,7 +319,7 @@ function renderFinding(finding: StaticDescriptionQualityFinding): string {
       : finding.pointsEarned === 0
         ? { cls: 'no', glyph: '✗' }
         : { cls: 'partial', glyph: '◐' };
-  return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(finding.criterion)}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
+  return `<li><span class="mark ${state.cls}">${state.glyph}</span><span><strong>${escapeHtml(criterionText(finding.criterion))}</strong> <span class="msg">— ${escapeHtml(finding.message)}</span></span><span class="pts">${finding.pointsEarned}/${finding.pointsPossible}</span></li>`;
 }
 
 /**
@@ -368,7 +419,7 @@ function renderAuthoring(
       : `<ul>${result.findings
           .map(
             (finding) =>
-              `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}<br /><span class="msg">${l10n.t('Suggestion: {0}', escapeHtml(finding.suggestion))}</span></span></li>`,
+              `<li><span class="mark no">!</span><span><strong>${escapeHtml(criterionText(finding.criterion))}</strong> — ${escapeHtml(finding.message)}<br /><span class="msg">${l10n.t('Suggestion: {0}', escapeHtml(finding.suggestion))}</span></span></li>`,
           )
           .join('')}</ul>`;
   return `<p><strong>${result.score}/100 · ${authoringLabelText(result.label)}</strong></p>${findings}`;
