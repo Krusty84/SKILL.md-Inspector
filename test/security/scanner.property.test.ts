@@ -11,6 +11,20 @@ function docFrom(body: string) {
   );
 }
 
+/**
+ * The default `fc.string()` generates roughly 0-10 characters from the full
+ * alphabet, which cannot reach a superlinear pattern's blow-up range. These
+ * characters are the ones the command and URL patterns treat as fresh match
+ * positions, and the length is where quadratic behavior becomes visible.
+ */
+const adversarialText = fc.string({
+  unit: fc.constantFrom(...'a.- /$*|:@'.split('')),
+  maxLength: 4096,
+});
+
+/** Scanning must stay interactive: this runs on a debounced keystroke. */
+const SCAN_BUDGET_MS = 250;
+
 describe('security scanner robustness (property)', () => {
   it('never throws on arbitrary body text', () => {
     fc.assert(
@@ -25,6 +39,30 @@ describe('security scanner robustness (property)', () => {
       }),
       { numRuns: 300 },
     );
+  });
+
+  it('stays within budget on adversarial single-line input', () => {
+    fc.assert(
+      fc.property(adversarialText, (body) => {
+        const doc = docFrom(body);
+        const started = performance.now();
+        validateSecurity({ doc, settings: DEFAULT_SECURITY_SETTINGS, skipFilesystem: true });
+        const elapsed = performance.now() - started;
+        expect(elapsed, `${body.length} characters took ${elapsed.toFixed(0)}ms`).toBeLessThan(
+          SCAN_BUDGET_MS,
+        );
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('scans a 256KB single line within budget', () => {
+    const body = 'a.b-c'.repeat(52429).slice(0, 256 * 1024);
+    const doc = docFrom(body);
+    const started = performance.now();
+    validateSecurity({ doc, settings: DEFAULT_SECURITY_SETTINGS, skipFilesystem: true });
+    const elapsed = performance.now() - started;
+    expect(elapsed, `256KB line took ${elapsed.toFixed(0)}ms`).toBeLessThan(SCAN_BUDGET_MS);
   });
 
   it('never emits a range outside the document', () => {

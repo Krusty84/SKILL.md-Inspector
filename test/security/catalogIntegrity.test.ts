@@ -48,6 +48,47 @@ describe('default security catalog integrity', () => {
   });
 });
 
+/**
+ * Catastrophic backtracking in one catalog entry stalls the whole extension
+ * host, because every scan runs the entire catalog over the whole content of
+ * every bundled resource. These inputs are the shapes that trigger it: a long
+ * single line of characters the command patterns treat as a fresh starting
+ * position. Deterministic and offline; no fuzzing.
+ */
+describe('security catalog pattern budget', () => {
+  const ADVERSARIAL = [
+    'a.'.repeat(16000),
+    'a-'.repeat(16000),
+    'curl '.repeat(6400),
+    'nc -e /bin/sh '.repeat(2300),
+    'dd if=/dev/x '.repeat(2400),
+    'rm -rf a '.repeat(3500),
+    'git clean -fdx '.repeat(2100),
+  ];
+  const BUDGET_MS = 25;
+
+  const singletons: CatalogEntry[] = [
+    { id: 'secretAssignment', source: catalog.secretAssignment.source },
+    { id: 'credentialedUrl', source: catalog.credentialedUrl.source },
+  ];
+
+  it.each([...allEntries, ...singletons].map((entry) => [entry.id, entry.source]))(
+    '%s completes within budget on adversarial input',
+    (id, source) => {
+      const re = new RegExp(source, 'gi');
+      for (const input of ADVERSARIAL) {
+        re.lastIndex = 0;
+        const started = performance.now();
+        re.test(input);
+        const elapsed = performance.now() - started;
+        expect(elapsed, `${id} took ${elapsed.toFixed(0)}ms on a ${input.length}-char line`).toBeLessThan(
+          BUDGET_MS,
+        );
+      }
+    },
+  );
+});
+
 describe('security catalog demo-skill calibration', () => {
   const fixturesDir = path.resolve('demo_skills/skills');
   const explicitSecurityFixtures = new Set(['Docker-Deploy-Helper', 'malicious-exfil']);
