@@ -49,9 +49,9 @@ import * as vscode from 'vscode';
 import { computeWorkspaceAnalysis } from '../src/analysis/workspaceAnalysis';
 import { SkillTreeProvider } from '../src/ui/skillTreeProvider';
 import {
-  AUTHORING_HYGIENE_DEFINITION,
-  DESCRIPTION_COMPLETENESS_DEFINITION,
-  LOW_TEXT_COVERAGE_DEFINITION,
+  authoringHygieneDefinition,
+  descriptionCompletenessDefinition,
+  lowTextCoverageDefinition,
 } from '../src/ui/metricDefinitions';
 import type { WorkspaceAnalysis } from '../src/types/Workspace';
 
@@ -143,8 +143,8 @@ describe('SkillTreeProvider workspace skill tooltip', () => {
     expect(tooltip).toContain('heuristic coverage high');
     expect(tooltip).toContain('Authoring hygiene: 0/100 (defects)');
     // Each metric name is followed by what it actually measures.
-    expect(tooltip).toContain(DESCRIPTION_COMPLETENESS_DEFINITION);
-    expect(tooltip).toContain(AUTHORING_HYGIENE_DEFINITION);
+    expect(tooltip).toContain(descriptionCompletenessDefinition());
+    expect(tooltip).toContain(authoringHygieneDefinition());
   });
 
   it('does not show adjustment details when no ceiling was applied', async () => {
@@ -234,7 +234,7 @@ describe('SkillTreeProvider collision tooltip', () => {
   }
 
   it('caveats a similarity the text metrics could not contribute to', async () => {
-    expect(await collisionTooltip('low')).toContain(LOW_TEXT_COVERAGE_DEFINITION);
+    expect(await collisionTooltip('low')).toContain(lowTextCoverageDefinition());
   });
 
   it('stays quiet when the descriptions were comparable', async () => {

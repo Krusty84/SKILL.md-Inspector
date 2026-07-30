@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type { OpenCodeTimelineEventDetails, ReportWebviewToExtensionMessage } from './model';
 
 type DetailRequestSender = (eventId: string) => void;
@@ -10,23 +11,23 @@ export function renderDetailsInto(
   container.textContent = '';
   const detail = details.get(eventId);
   if (!detail) {
-    container.append(textEl('p', 'Loading details…'));
+    container.append(textEl('p', l10n.t('Loading details…')));
     return;
   }
-  for (const [label, value] of [
-    ['INPUT', detail.input],
-    ['OUTPUT', detail.output],
-    ['ERROR', detail.error],
-    ['METADATA', detail.metadata],
-    ['ATTACHMENTS', detail.attachments],
-    ['PATCH', detail.patch],
-    ['RAW', detail.raw],
+  for (const [label, value, copyable] of [
+    [l10n.t('INPUT'), detail.input, true],
+    [l10n.t('OUTPUT'), detail.output, false],
+    [l10n.t('ERROR'), detail.error, false],
+    [l10n.t('METADATA'), detail.metadata, false],
+    [l10n.t('ATTACHMENTS'), detail.attachments, false],
+    [l10n.t('PATCH'), detail.patch, false],
+    [l10n.t('RAW'), detail.raw, false],
   ] as const)
     if (value) {
       const h = el('div', 'detail-label');
       h.append(textEl('b', label));
-      if (label === 'INPUT') {
-        const copy = button('Copy JSON', 'copy');
+      if (copyable) {
+        const copy = button(l10n.t('Copy JSON'), 'copy');
         copy.dataset.value = value;
         h.append(copy);
       }

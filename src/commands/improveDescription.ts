@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { readConfig } from '../config';
 import { parseSkillFile, frontmatterStartLine } from '../parser/parseSkillFile';
@@ -15,7 +16,9 @@ export async function improveDescriptionLocally(
 ): Promise<void> {
   const target = await resolveSkillTarget(uri, {
     requireEditor: true,
-    warningAction: 'improve its description',
+    missingEditorMessage: l10n.t(
+      'SKILL.md Inspector: open a SKILL.md file to improve its description.',
+    ),
   });
   if (!target || !target.editor) {
     return;
@@ -33,18 +36,20 @@ export async function improveDescriptionLocally(
     dictionaries: config.heuristicDictionaries,
   });
 
+  const replaceLabel = l10n.t('Replace in file');
+  const copyLabel = l10n.t('Copy');
   const choice = await vscode.window.showInformationMessage(
-    'SKILL.md Inspector — suggested description',
+    l10n.t('SKILL.md Inspector — suggested description'),
     { modal: true, detail: improved },
-    'Replace in file',
-    'Copy',
+    replaceLabel,
+    copyLabel,
   );
 
-  if (choice === 'Copy') {
+  if (choice === copyLabel) {
     await vscode.env.clipboard.writeText(improved);
     return;
   }
-  if (choice !== 'Replace in file') {
+  if (choice !== replaceLabel) {
     return;
   }
 

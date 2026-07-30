@@ -9,9 +9,9 @@ import { buildReportModel } from '../src/ui/reportModel';
 import { renderReportHtml } from '../src/ui/renderReport';
 import { renderWorkspaceReportHtml } from '../src/ui/renderWorkspaceReport';
 import {
-  AUTHORING_HYGIENE_DEFINITION,
-  DESCRIPTION_COMPLETENESS_DEFINITION,
-  LOW_TEXT_COVERAGE_DEFINITION,
+  authoringHygieneDefinition,
+  descriptionCompletenessDefinition,
+  lowTextCoverageDefinition,
 } from '../src/ui/metricDefinitions';
 import { detectCollisions } from '../src/workspace/detectSkillCollisions';
 import type { SkillDocument } from '../src/types/SkillDocument';
@@ -140,8 +140,8 @@ describe('skill report headings say what they measure', () => {
   });
 
   it('carries the verbatim metric definitions as tooltips', () => {
-    expect(html).toContain(DESCRIPTION_COMPLETENESS_DEFINITION);
-    expect(html).toContain(AUTHORING_HYGIENE_DEFINITION);
+    expect(html).toContain(descriptionCompletenessDefinition());
+    expect(html).toContain(authoringHygieneDefinition());
   });
 });
 
@@ -200,8 +200,8 @@ describe('workspace report columns say what they measure', () => {
     expect(html).toContain('>Completeness</th>');
     expect(html).not.toContain('Instruction authoring quality');
     expect(html).not.toContain('Adjusted description quality');
-    expect(html).toContain(DESCRIPTION_COMPLETENESS_DEFINITION);
-    expect(html).toContain(AUTHORING_HYGIENE_DEFINITION);
+    expect(html).toContain(descriptionCompletenessDefinition());
+    expect(html).toContain(authoringHygieneDefinition());
   });
 
   it('marks a pair the text metrics could not read', () => {
@@ -210,7 +210,7 @@ describe('workspace report columns say what they measure', () => {
     const collisions = detectCollisions(TOO_SHORT_PAIR, { threshold: 0 });
     const html = render(collisions);
     expect(html).toContain('text coverage: low');
-    expect(html).toContain(LOW_TEXT_COVERAGE_DEFINITION);
+    expect(html).toContain(lowTextCoverageDefinition());
   });
 
   it('no longer marks Cyrillic as unreadable, since plan 10 tokenizes it', () => {

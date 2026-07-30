@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
@@ -28,7 +29,10 @@ export function validateResources(
       diag(
         DiagnosticCode.ResourceUnreferenced,
         'warning',
-        `File exists in the skill package but is not referenced from SKILL.md: ${resource.relativePath}`,
+        l10n.t(
+          'File exists in the skill package but is not referenced from SKILL.md: {0}',
+          resource.relativePath,
+        ),
         range,
         { quickFixId: QuickFixId.AddResourceLink, data: { relativePath: resource.relativePath } },
       ),

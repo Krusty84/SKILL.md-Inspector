@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { parentUri } from '../../navigator/workspaceExplorer';
 import type { WorkspaceExplorerNode } from '../../navigator/workspaceExplorerTypes';
@@ -142,16 +143,16 @@ async function resolveDestination(
     .filter((uri): uri is vscode.Uri => !!uri);
   const dirs = uniqueUris(selected);
   if (dirs.length === 1) return dirs[0];
-  if (dirs.length > 1) return pickUri('Select destination', dirs);
+  if (dirs.length > 1) return pickUri(l10n.t('Select destination'), dirs);
   const folders = vscode.workspace.workspaceFolders ?? [];
   if (folders.length === 1) return folders[0].uri;
   if (folders.length > 1)
     return pickUri(
-      'Select workspace folder',
+      l10n.t('Select workspace folder'),
       folders.map((folder) => folder.uri),
     );
   await vscode.window.showInformationMessage(
-    'Add a folder to the workspace before creating files.',
+    l10n.t('Add a folder to the workspace before creating files.'),
   );
   await addFolders(d.output);
   return undefined;
@@ -167,11 +168,18 @@ async function newEntry(
   const destination = await resolveDestination(d, targets[0], targets);
   if (
     !destination ||
-    !(await writable(destination, `${kind === 'file' ? 'create a file' : 'create a folder'}`))
+    !(await writable(
+      destination,
+      kind === 'file'
+        ? l10n.t('Unable to create a file: the filesystem is read-only.')
+        : l10n.t('Unable to create a folder: the filesystem is read-only.'),
+    ))
   )
     return;
   const value = (
-    await vscode.window.showInputBox({ prompt: kind === 'file' ? 'File name' : 'Folder name' })
+    await vscode.window.showInputBox({
+      prompt: kind === 'file' ? l10n.t('File name') : l10n.t('Folder name'),
+    })
   )?.trim();
   if (value === undefined) return;
   const parsed = safeRelative(destination, value, true);
@@ -181,7 +189,7 @@ async function newEntry(
   }
   try {
     await vscode.workspace.fs.stat(parsed.uri);
-    void vscode.window.showErrorMessage('A file or folder with this name already exists.');
+    void vscode.window.showErrorMessage(l10n.t('A file or folder with this name already exists.'));
     return;
   } catch {
     /* missing is expected */
@@ -198,7 +206,13 @@ async function newEntry(
     if (node) await d.view.reveal(node, { select: true });
     if (kind === 'file') await vscode.commands.executeCommand('vscode.open', parsed.uri);
   } catch (error) {
-    report(d.output, `Unable to create ${kind} “${value}”`, error);
+    report(
+      d.output,
+      kind === 'file'
+        ? l10n.t('Unable to create file “{0}”', value)
+        : l10n.t('Unable to create folder “{0}”', value),
+      error,
+    );
   }
 }
 
@@ -211,8 +225,8 @@ async function openFolderInNewWindow(d: Deps, target?: WorkspaceCommandTarget): 
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
-        openLabel: 'Open',
-        title: 'Open Folder in New Window',
+        openLabel: l10n.t('Open'),
+        title: l10n.t('Open Folder in New Window'),
       })
     )?.[0];
   if (uri) await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
@@ -221,17 +235,18 @@ async function openFolderInNewWindow(d: Deps, target?: WorkspaceCommandTarget): 
 async function removeFolder(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {
   const node = target instanceof vscode.Uri ? d.provider.getRootForUri(target) : target;
   if (!node || node.type !== 'workspaceRoot') return;
+  const removeLabel = l10n.t('Remove Folder');
   const choice = await vscode.window.showWarningMessage(
-    `Remove “${node.folder.name}” from the workspace?`,
+    l10n.t('Remove “{0}” from the workspace?', node.folder.name),
     { modal: true },
-    'Remove Folder',
+    removeLabel,
   );
-  if (choice !== 'Remove Folder') return;
+  if (choice !== removeLabel) return;
   try {
     if (!vscode.workspace.updateWorkspaceFolders(node.folder.index, 1))
-      throw new Error('VS Code rejected the workspace folder update.');
+      throw new Error(l10n.t('VS Code rejected the workspace folder update.'));
   } catch (error) {
-    report(d.output, `Unable to remove “${node.folder.name}”`, error);
+    report(d.output, l10n.t('Unable to remove “{0}”', node.folder.name), error);
   }
 }
 
@@ -252,17 +267,19 @@ async function openFiles(
 async function rename(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {
   const node = target instanceof vscode.Uri ? d.provider.getNodeForUri(target) : target;
   if (!node || node.type === 'workspaceRoot' || node.type === 'workspaceError') return;
-  if (!(await writable(node.uri, 'rename'))) return;
-  const name = (await vscode.window.showInputBox({ prompt: 'New name', value: node.name }))?.trim();
+  if (!(await writable(node.uri, l10n.t('Unable to rename: the filesystem is read-only.')))) return;
+  const name = (
+    await vscode.window.showInputBox({ prompt: l10n.t('New name'), value: node.name })
+  )?.trim();
   if (name === undefined) return;
   if (!name || name === '.' || name === '..' || /[\\/]/.test(name)) {
-    void vscode.window.showErrorMessage('Invalid filename.');
+    void vscode.window.showErrorMessage(l10n.t('Invalid filename.'));
     return;
   }
   const targetUri = vscode.Uri.joinPath(node.parentUri, name);
   try {
     await vscode.workspace.fs.stat(targetUri);
-    void vscode.window.showErrorMessage('A file or folder with this name already exists.');
+    void vscode.window.showErrorMessage(l10n.t('A file or folder with this name already exists.'));
     return;
   } catch {
     /* expected */
@@ -274,7 +291,7 @@ async function rename(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {
     const renamed = d.provider.getNodeForUri(targetUri);
     if (renamed) await d.view.reveal(renamed, { select: true });
   } catch (error) {
-    report(d.output, `Unable to rename “${node.name}”`, error);
+    report(d.output, l10n.t('Unable to rename “{0}”', node.name), error);
   }
 }
 
@@ -289,21 +306,24 @@ async function deleteTargets(
     ),
   );
   if (targets.length === 0) return;
-  const label = targets.length === 1 ? `“${targets[0].name}”` : `${targets.length} selected items`;
+  const moveLabel = l10n.t('Move to Trash');
   const choice = await vscode.window.showWarningMessage(
-    `Move ${label} to Trash?`,
+    targets.length === 1
+      ? l10n.t('Move “{0}” to Trash?', targets[0].name)
+      : l10n.t('Move {0} selected items to Trash?', targets.length),
     { modal: true },
-    'Move to Trash',
+    moveLabel,
   );
-  if (choice !== 'Move to Trash') return;
+  if (choice !== moveLabel) return;
   const parents = new Set<string>();
   for (const node of targets) {
-    if (!(await writable(node.uri, 'delete'))) continue;
+    if (!(await writable(node.uri, l10n.t('Unable to delete: the filesystem is read-only.'))))
+      continue;
     try {
       await vscode.workspace.fs.delete(node.uri, { recursive: true, useTrash: true });
       parents.add(key(node.parentUri));
     } catch (error) {
-      report(d.output, `Unable to delete “${node.name}”`, error);
+      report(d.output, l10n.t('Unable to delete “{0}”', node.name), error);
     }
   }
   for (const p of parents) d.provider.invalidate(vscode.Uri.parse(p));
@@ -336,13 +356,29 @@ async function paste(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {
       ? (d.provider.getNodeForUri(target) ?? d.provider.getRootForUri(target))
       : target;
   const dest = destinationOf(node);
-  if (!dest || !(await writable(dest, 'paste'))) return;
+  if (!dest || !(await writable(dest, l10n.t('Unable to paste: the filesystem is read-only.'))))
+    return;
+  const skipLabel = l10n.t({
+    message: 'Skip',
+    args: [],
+    comment: ['Button: skip pasting the conflicting item'],
+  });
+  const replaceLabel = l10n.t({
+    message: 'Replace',
+    args: [],
+    comment: ['Button: overwrite the existing item when pasting'],
+  });
+  const cancelLabel = l10n.t({
+    message: 'Cancel',
+    args: [],
+    comment: ['Button: stop pasting the remaining items'],
+  });
   const remaining: vscode.Uri[] = [];
   for (const source of clipboard.uris) {
     const targetUri = vscode.Uri.joinPath(dest, basename(source));
     if (isSameOrDescendant(dest, source)) {
       void vscode.window.showErrorMessage(
-        'Cannot paste a folder into itself or one of its descendants.',
+        l10n.t('Cannot paste a folder into itself or one of its descendants.'),
       );
       remaining.push(source);
       continue;
@@ -351,16 +387,16 @@ async function paste(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {
     try {
       await vscode.workspace.fs.stat(targetUri);
       const choice = await vscode.window.showWarningMessage(
-        `“${basename(source)}” already exists.`,
-        'Skip',
-        'Replace',
-        'Cancel',
+        l10n.t('“{0}” already exists.', basename(source)),
+        skipLabel,
+        replaceLabel,
+        cancelLabel,
       );
-      if (choice === 'Cancel' || !choice) {
+      if (choice === cancelLabel || !choice) {
         remaining.push(source, ...clipboard.uris.slice(clipboard.uris.indexOf(source) + 1));
         break;
       }
-      if (choice === 'Skip') {
+      if (choice === skipLabel) {
         remaining.push(source);
         continue;
       }
@@ -376,7 +412,7 @@ async function paste(d: Deps, target?: WorkspaceCommandTarget): Promise<void> {
       d.provider.invalidateParent(source);
     } catch (error) {
       remaining.push(source);
-      report(d.output, `Unable to paste “${basename(source)}”`, error);
+      report(d.output, l10n.t('Unable to paste “{0}”', basename(source)), error);
     }
   }
   if (clipboard.operation === 'cut')
@@ -419,7 +455,7 @@ async function openTerminal(d: Deps, target?: WorkspaceCommandTarget): Promise<v
     const terminal = vscode.window.createTerminal({ cwd });
     terminal.show();
   } catch (error) {
-    report(d.output, 'Unable to open integrated terminal here', error);
+    report(d.output, l10n.t('Unable to open integrated terminal here'), error);
   }
 }
 
@@ -446,23 +482,26 @@ function safeRelative(
   value: string,
   allowNested: boolean,
 ): { ok: true; uri: vscode.Uri } | { ok: false; message: string } {
-  if (!value || value === '.' || value === '..') return { ok: false, message: 'Invalid filename.' };
+  if (!value || value === '.' || value === '..')
+    return { ok: false, message: l10n.t('Invalid filename.') };
   if (/^([a-zA-Z][a-zA-Z0-9+.-]*:|[\\/])/.test(value))
-    return { ok: false, message: 'Absolute paths are not allowed.' };
+    return { ok: false, message: l10n.t('Absolute paths are not allowed.') };
   if (!allowNested && /[\\/]/.test(value))
-    return { ok: false, message: 'Path separators are not allowed.' };
+    return { ok: false, message: l10n.t('Path separators are not allowed.') };
   const parts = value.split(/[\\/]+/).filter(Boolean);
   if (parts.some((part) => part === '.' || part === '..'))
-    return { ok: false, message: 'Path traversal is not allowed.' };
+    return { ok: false, message: l10n.t('Path traversal is not allowed.') };
   const uri = vscode.Uri.joinPath(base, ...parts);
   return isSameOrDescendant(uri, base)
     ? { ok: true, uri }
-    : { ok: false, message: 'Path traversal is not allowed.' };
+    : { ok: false, message: l10n.t('Path traversal is not allowed.') };
 }
 
-async function writable(uri: vscode.Uri, action: string): Promise<boolean> {
+// The caller passes a complete localized sentence: the failed action conjugates
+// with the sentence in many languages, so it cannot be substituted in here.
+async function writable(uri: vscode.Uri, readOnlyMessage: string): Promise<boolean> {
   if (vscode.workspace.fs.isWritableFileSystem(uri.scheme) === false) {
-    void vscode.window.showErrorMessage(`Unable to ${action}: the filesystem is read-only.`);
+    void vscode.window.showErrorMessage(readOnlyMessage);
     return false;
   }
   return true;

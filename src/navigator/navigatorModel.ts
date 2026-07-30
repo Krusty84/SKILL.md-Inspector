@@ -1,8 +1,9 @@
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import type { DiscoveredFile, FavoriteEntry } from './types';
 
 export type NavigatorNode =
-  | { type: 'section'; id: string; label: 'Favorites' | 'Workspace' | 'Installed Agents' }
+  | { type: 'section'; id: string; label: string }
   | { type: 'message'; id: string; label: string }
   | { type: 'agent'; id: string; label: string }
   | { type: 'group'; id: string; label: string }
@@ -12,15 +13,17 @@ export type NavigatorNode =
 
 export function rootSections(): NavigatorNode[] {
   return [
-    { type: 'section', id: 'section:favorites', label: 'Favorites' },
-    { type: 'section', id: 'section:workspace', label: 'Workspace' },
-    { type: 'section', id: 'section:installed', label: 'Installed Agents' },
+    { type: 'section', id: 'section:favorites', label: l10n.t('Favorites') },
+    { type: 'section', id: 'section:workspace', label: l10n.t('Workspace') },
+    { type: 'section', id: 'section:installed', label: l10n.t('Installed Agents') },
   ];
 }
 
 export function favoriteNodes(entries: FavoriteEntry[], existing: Set<string>): NavigatorNode[] {
   if (entries.length === 0)
-    return [{ type: 'message', id: 'favorites:empty', label: 'No favorite SKILL.md files yet.' }];
+    return [
+      { type: 'message', id: 'favorites:empty', label: l10n.t('No favorite SKILL.md files yet.') },
+    ];
   return entries.map((entry) => {
     const fsPath = uriToFsPath(entry.uri);
     const exists = fsPath ? existing.has(fsPath) : false;
@@ -31,7 +34,11 @@ export function favoriteNodes(entries: FavoriteEntry[], existing: Set<string>): 
 export function groupInstalledFiles(files: DiscoveredFile[]): NavigatorNode[] {
   if (files.length === 0)
     return [
-      { type: 'message', id: 'installed:empty', label: 'No supported local agent files found.' },
+      {
+        type: 'message',
+        id: 'installed:empty',
+        label: l10n.t('No supported local agent files found.'),
+      },
     ];
   const byAgent = new Map<string, DiscoveredFile[]>();
   for (const file of files) {

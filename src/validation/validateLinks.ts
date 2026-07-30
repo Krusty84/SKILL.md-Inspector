@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
@@ -41,7 +42,10 @@ export function validateLinks(
           diag(
             DiagnosticCode.LinkRemoteSuspicious,
             'warning',
-            `Suspicious remote link: ${link.raw}. Verify it is safe before an agent follows it.`,
+            l10n.t(
+              'Suspicious remote link: {0}. Verify it is safe before an agent follows it.',
+              link.raw,
+            ),
             link.range,
           ),
         );
@@ -50,7 +54,10 @@ export function validateLinks(
           diag(
             DiagnosticCode.LinkRemoteSuspicious,
             'information',
-            `Remote link: ${link.raw}. Prefer bundling referenced material inside the skill package.`,
+            l10n.t(
+              'Remote link: {0}. Prefer bundling referenced material inside the skill package.',
+              link.raw,
+            ),
             link.range,
           ),
         );
@@ -63,7 +70,10 @@ export function validateLinks(
         diag(
           DiagnosticCode.LinkAbsolute,
           'warning',
-          `Absolute local path is not portable: ${link.raw}. Use a path relative to SKILL.md.`,
+          l10n.t(
+            'Absolute local path is not portable: {0}. Use a path relative to SKILL.md.',
+            link.raw,
+          ),
           link.range,
         ),
       );
@@ -77,7 +87,7 @@ export function validateLinks(
         diag(
           DiagnosticCode.LinkEscapesSkillRoot,
           'error',
-          `Linked path escapes the skill package: ${cleanLinkTarget(link.raw)}`,
+          l10n.t('Linked path escapes the skill package: {0}', cleanLinkTarget(link.raw)),
           link.range,
         ),
       );
@@ -96,7 +106,11 @@ export function validateLinks(
         diag(
           DiagnosticCode.LinkCaseMismatch,
           'warning',
-          `Link case does not match the file on disk: ${cleanLinkTarget(link.raw)} vs ${caseMatch.relativePath}. Case-sensitive systems cannot resolve it.`,
+          l10n.t(
+            'Link case does not match the file on disk: {0} vs {1}. Case-sensitive systems cannot resolve it.',
+            cleanLinkTarget(link.raw),
+            caseMatch.relativePath,
+          ),
           link.range,
           { data: { actualRelativePath: caseMatch.relativePath } },
         ),
@@ -108,7 +122,7 @@ export function validateLinks(
         diag(
           DiagnosticCode.LinkMissing,
           'error',
-          `Linked file does not exist: ${cleanLinkTarget(link.raw)}`,
+          l10n.t('Linked file does not exist: {0}', cleanLinkTarget(link.raw)),
           link.range,
           {
             quickFixId: QuickFixId.CreateMissingLinkedFile,
@@ -123,7 +137,7 @@ export function validateLinks(
         diag(
           DiagnosticCode.LinkEscapesSkillRoot,
           'warning',
-          `Linked path escapes the skill package: ${cleanLinkTarget(link.raw)}`,
+          l10n.t('Linked path escapes the skill package: {0}', cleanLinkTarget(link.raw)),
           link.range,
         ),
       );

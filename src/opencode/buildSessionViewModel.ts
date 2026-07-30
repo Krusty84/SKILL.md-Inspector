@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { analyzeSkill } from '../analysis/analyzeSkill';
@@ -54,7 +55,7 @@ export async function attachSkillMatches(session: NormalizedOpenCodeSession): Pr
           : {
               status: 'multiple',
               candidates: found,
-              warning: 'Multiple SKILL.md files match this skill name.',
+              warning: l10n.t('Multiple SKILL.md files match this skill name.'),
             };
     skill.matchingSkills = [match];
   }

@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type { SkillDocument, SkillResource } from '../types/SkillDocument';
 import type { QualityAssessmentState } from '../types/QualityAssessment';
 import { DiagnosticCode } from '../types/DiagnosticCode';
@@ -122,8 +123,8 @@ function toResult(findings: AuthoringFinding[]): ResourceQualityResult {
 
 function instructionNotScoredReason(doc: SkillDocument): string {
   return doc.parseErrors.some((error) => error.code === DiagnosticCode.FrontmatterMissing)
-    ? 'frontmatter is missing'
-    : 'frontmatter could not be parsed';
+    ? l10n.t('frontmatter is missing')
+    : l10n.t('frontmatter could not be parsed');
 }
 
 function notScoredInstructions(reason: string): InstructionQualityResult {
@@ -160,8 +161,10 @@ function assessInstructions(
     findings.push({
       criterion: 'Substantive body',
       severity: 'major',
-      message: 'Instruction body is empty.',
-      suggestion: 'Write the instructions the agent should follow after the skill triggers.',
+      message: l10n.t('Instruction body is empty.'),
+      suggestion: l10n.t(
+        'Write the instructions the agent should follow after the skill triggers.',
+      ),
     });
     return findings; // every other body check is meaningless on an empty body
   }
@@ -178,15 +181,17 @@ function assessInstructions(
     findings.push({
       criterion: 'Substantive body',
       severity: 'major',
-      message: 'Body contains headings only, with no instruction content.',
-      suggestion: 'Add concrete instructions under the headings.',
+      message: l10n.t('Body contains headings only, with no instruction content.'),
+      suggestion: l10n.t('Add concrete instructions under the headings.'),
     });
   } else if (!hasSubstantiveInstructions(lines, dictionaries)) {
     findings.push({
       criterion: 'Substantive instructions',
       severity: 'moderate',
-      message: 'Body does not contain enough meaningful prose or concrete instruction steps.',
-      suggestion: 'Add specific guidance or at least three concrete workflow steps.',
+      message: l10n.t(
+        'Body does not contain enough meaningful prose or concrete instruction steps.',
+      ),
+      suggestion: l10n.t('Add specific guidance or at least three concrete workflow steps.'),
     });
   }
 
@@ -196,8 +201,11 @@ function assessInstructions(
     findings.push({
       criterion: 'Unclosed code fence',
       severity: 'major',
-      message: `Code fence opened on line ${openingLine} remains open at the end of the file.`,
-      suggestion: `Add a matching ${marker} closing fence.`,
+      message: l10n.t(
+        'Code fence opened on line {0} remains open at the end of the file.',
+        openingLine,
+      ),
+      suggestion: l10n.t('Add a matching {0} closing fence.', marker),
     });
   }
 
@@ -212,8 +220,8 @@ function assessInstructions(
     findings.push({
       criterion: 'Placeholders',
       severity: 'moderate',
-      message: 'Template placeholder (TODO / FIXME / <describe ...>) found in the body.',
-      suggestion: 'Replace placeholders with skill-specific guidance.',
+      message: l10n.t('Template placeholder (TODO / FIXME / <describe ...>) found in the body.'),
+      suggestion: l10n.t('Replace placeholders with skill-specific guidance.'),
     });
   }
 
@@ -221,8 +229,8 @@ function assessInstructions(
     findings.push({
       criterion: 'Examples',
       severity: 'moderate',
-      message: `Section "${title}" has no content.`,
-      suggestion: 'Add a representative input and expected outcome.',
+      message: l10n.t('Section "{0}" has no content.', title),
+      suggestion: l10n.t('Add a representative input and expected outcome.'),
     });
   }
 
@@ -231,8 +239,8 @@ function assessInstructions(
       findings.push({
         criterion: 'Empty section',
         severity: 'minor',
-        message: `Section "${section.title}" has no content.`,
-        suggestion: 'Fill the section in or remove the heading.',
+        message: l10n.t('Section "{0}" has no content.', section.title),
+        suggestion: l10n.t('Fill the section in or remove the heading.'),
       });
     }
   }
@@ -245,8 +253,8 @@ function assessInstructions(
     findings.push({
       criterion: 'Examples',
       severity: 'minor',
-      message: 'Body has no concrete example evidence.',
-      suggestion: 'Add a representative input and expected outcome.',
+      message: l10n.t('Body has no concrete example evidence.'),
+      suggestion: l10n.t('Add a representative input and expected outcome.'),
     });
   }
 
@@ -255,8 +263,11 @@ function assessInstructions(
     findings.push({
       criterion: 'Duplicate sections',
       severity: 'minor',
-      message: `Duplicate section heading${duplicates.length > 1 ? 's' : ''}: ${duplicates.join(', ')}.`,
-      suggestion: 'Merge duplicate sections so instructions are stated once.',
+      message:
+        duplicates.length > 1
+          ? l10n.t('Duplicate section headings: {0}.', duplicates.join(', '))
+          : l10n.t('Duplicate section heading: {0}.', duplicates.join(', ')),
+      suggestion: l10n.t('Merge duplicate sections so instructions are stated once.'),
     });
   }
 
@@ -264,8 +275,8 @@ function assessInstructions(
     findings.push({
       criterion: 'Length',
       severity: 'moderate',
-      message: `Body exceeds ${MAX_BODY_LINES} lines, creating a maintainability risk.`,
-      suggestion: 'Move detailed material into referenced resource files.',
+      message: l10n.t('Body exceeds {0} lines, creating a maintainability risk.', MAX_BODY_LINES),
+      suggestion: l10n.t('Move detailed material into referenced resource files.'),
     });
   }
 
@@ -273,8 +284,10 @@ function assessInstructions(
     findings.push({
       criterion: 'Repetitive instructions',
       severity: 'moderate',
-      message: 'At least 25% of the substantive content lines repeat earlier instructions.',
-      suggestion: 'Consolidate repeated steps or move repeated detail into a referenced resource.',
+      message: l10n.t('At least 25% of the substantive content lines repeat earlier instructions.'),
+      suggestion: l10n.t(
+        'Consolidate repeated steps or move repeated detail into a referenced resource.',
+      ),
     });
   }
 
@@ -290,19 +303,22 @@ function assessResources(resources: readonly SkillResource[]): AuthoringFinding[
         criterion: isScript ? 'Undocumented script' : 'Unreferenced resource',
         severity: isScript ? 'moderate' : 'minor',
         message: isScript
-          ? `${resource.relativePath} is a bundled script that SKILL.md never references or explains.`
-          : `${resource.relativePath} is not referenced from SKILL.md.`,
+          ? l10n.t(
+              '{0} is a bundled script that SKILL.md never references or explains.',
+              resource.relativePath,
+            )
+          : l10n.t('{0} is not referenced from SKILL.md.', resource.relativePath),
         suggestion: isScript
-          ? 'Document when the agent should run the script and what it does.'
-          : 'Link it from surrounding explanatory text, or remove it.',
+          ? l10n.t('Document when the agent should run the script and what it does.')
+          : l10n.t('Link it from surrounding explanatory text, or remove it.'),
       });
     }
     if (resource.sizeBytes > LARGE_RESOURCE_BYTES) {
       findings.push({
         criterion: 'Large resource',
         severity: 'minor',
-        message: `${resource.relativePath} exceeds 1 MiB.`,
-        suggestion: 'Reduce the file, or document why the large resource is needed.',
+        message: l10n.t('{0} exceeds 1 MiB.', resource.relativePath),
+        suggestion: l10n.t('Reduce the file, or document why the large resource is needed.'),
       });
     }
   }

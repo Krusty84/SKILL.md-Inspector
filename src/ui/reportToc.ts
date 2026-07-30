@@ -1,3 +1,5 @@
+import * as l10n from '@vscode/l10n';
+
 export interface TocEntry {
   id: string;
   label: string;
@@ -33,7 +35,7 @@ function renderList(entries: readonly TocEntry[]): string {
 
 /** Renders the left-hand section navigation as pure HTML anchor links (no scripts). */
 export function renderToc(entries: readonly TocEntry[]): string {
-  return `<nav class="report-toc" aria-label="Report sections"><p class="report-toc-title">Contents</p>${renderList(
+  return `<nav class="report-toc" aria-label="${escapeHtml(l10n.t('Report sections'))}"><p class="report-toc-title">${escapeHtml(l10n.t('Contents'))}</p>${renderList(
     entries,
   )}</nav>`;
 }

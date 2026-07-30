@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import {
   DEFAULT_OPEN_CODE_DISCOVERY,
@@ -26,16 +27,16 @@ export class OpenCodeSessionTreeItem extends vscode.TreeItem {
     this.description = [
       summary.updated ? new Date(summary.updated).toLocaleString() : undefined,
       [summary.provider, summary.model].filter(Boolean).join('/') || undefined,
-      `${summary.toolCalls} tools`,
-      `${summary.skillCalls} skills`,
-      summary.errors ? `${summary.errors} errors` : undefined,
+      l10n.t('{0} tools', summary.toolCalls),
+      l10n.t('{0} skills', summary.skillCalls),
+      summary.errors ? l10n.t('{0} errors', summary.errors) : undefined,
     ]
       .filter(Boolean)
       .join(' · ');
     this.tooltip = summary.uriString;
     this.command = {
       command: 'skillMdInspector.openCode.openReport',
-      title: 'Open OpenCode Session Report',
+      title: l10n.t('Open OpenCode Session Report'),
       arguments: [this],
     };
     this.iconPath = new vscode.ThemeIcon(summary.errors ? 'warning' : 'debug-alt');
@@ -46,7 +47,7 @@ export class OpenCodeSessionsLoadingTreeItem extends vscode.TreeItem {
   readonly type = 'loading';
 
   constructor() {
-    super('Scanning OpenCode sessions…', vscode.TreeItemCollapsibleState.None);
+    super(l10n.t('Scanning OpenCode sessions…'), vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon('loading~spin');
   }
 }
@@ -143,7 +144,7 @@ export class OpenCodeSessionsTreeProvider
       this.watcher.onDidDelete(schedule);
     } catch (e) {
       this.output.appendLine(`OpenCode sessions refresh failed: ${String(e)}`);
-      void vscode.window.showWarningMessage('Unable to refresh OpenCode sessions folder.');
+      void vscode.window.showWarningMessage(l10n.t('Unable to refresh OpenCode sessions folder.'));
     }
   }
 

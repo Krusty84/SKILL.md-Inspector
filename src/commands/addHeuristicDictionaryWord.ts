@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { DEFAULT_HEURISTIC_DICTIONARIES } from '../quality/dictionaries';
 
@@ -118,15 +119,31 @@ export async function addHeuristicDictionaryWordCommand(
   const result = await addHeuristicDictionaryWord(args);
   if (result.status === 'rejected') {
     await vscode.window.showWarningMessage(
-      'SKILL.md Inspector: that word cannot be added to the heuristic dictionaries.',
+      l10n.t('SKILL.md Inspector: that word cannot be added to the heuristic dictionaries.'),
     );
     return;
   }
-  const scope = result.target === vscode.ConfigurationTarget.Workspace ? 'workspace' : 'user';
-  const list = args?.key === 'actionVerbs' ? 'action verbs' : 'artifacts';
-  await vscode.window.showInformationMessage(
-    result.status === 'added'
-      ? `Added "${args?.word}" to the recognized ${list} (${scope} settings).`
-      : `"${args?.word}" is already in the recognized ${list}.`,
-  );
+  // Whole sentences per variant: the list and scope nouns decline with the
+  // sentence in many languages, so they cannot be substituted as fragments.
+  const workspace = result.target === vscode.ConfigurationTarget.Workspace;
+  const verbs = args?.key === 'actionVerbs';
+  // A missing word is rejected above, so this fallback never renders.
+  const word = args?.word ?? '';
+  let message: string;
+  if (result.status === 'added') {
+    if (verbs) {
+      message = workspace
+        ? l10n.t('Added "{0}" to the recognized action verbs (workspace settings).', word)
+        : l10n.t('Added "{0}" to the recognized action verbs (user settings).', word);
+    } else {
+      message = workspace
+        ? l10n.t('Added "{0}" to the recognized artifacts (workspace settings).', word)
+        : l10n.t('Added "{0}" to the recognized artifacts (user settings).', word);
+    }
+  } else {
+    message = verbs
+      ? l10n.t('"{0}" is already in the recognized action verbs.', word)
+      : l10n.t('"{0}" is already in the recognized artifacts.', word);
+  }
+  await vscode.window.showInformationMessage(message);
 }

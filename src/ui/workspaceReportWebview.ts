@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import type { WorkspaceAnalysis } from '../types/Workspace';
 import {
@@ -17,7 +18,7 @@ export class WorkspaceReportPanel {
   private constructor() {
     this.panel = vscode.window.createWebviewPanel(
       'skillMdInspector.workspaceReport',
-      'Workspace SKILL.md Report',
+      l10n.t('Workspace SKILL.md Report'),
       vscode.ViewColumn.Active,
       { enableScripts: false, retainContextWhenHidden: true },
     );
@@ -45,6 +46,7 @@ export class WorkspaceReportPanel {
       cspSource: this.panel.webview.cspSource,
       scope,
       generatedAt: formatTimestamp(new Date(), readConfig().timeFormat),
+      locale: vscode.env.language,
     });
   }
 }

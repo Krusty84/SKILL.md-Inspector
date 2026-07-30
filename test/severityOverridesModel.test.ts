@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SEVERITY_CHOICES,
+  severityChoices,
   applyOverride,
   groupCodesByKind,
   isProtectedDowngrade,
@@ -77,8 +77,8 @@ describe('severity overrides model (picker helpers)', () => {
     });
   });
 
-  it('SEVERITY_CHOICES matches the manifest enum order exactly', () => {
-    expect(SEVERITY_CHOICES.map((choice) => choice.value)).toEqual([
+  it('severityChoices matches the manifest enum order exactly', () => {
+    expect(severityChoices().map((choice) => choice.value)).toEqual([
       'error',
       'warning',
       'information',

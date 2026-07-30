@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode } from '../types/DiagnosticCode';
 import { phraseRegex } from '../quality/textMatch';
 import type { BodySectionSpec } from '../types/SkillProfile';
@@ -8,11 +9,16 @@ import type { SkillHeading } from '../parser/parseMarkdownHeadings';
  * or by an alias phrase — never by bare substring — so `Examples` and
  * `Example usage` match while `Counterexamples` or `Formatting output…` do not.
  * Profiles compose their section lists from these (brief §7.4).
+ *
+ * `message` is a getter on each spec so l10n.t() runs when a diagnostic is
+ * built (module bodies evaluate before the translation bundle is configured).
  */
 export const EXAMPLES_SECTION: BodySectionSpec = {
   id: 'examples',
   code: DiagnosticCode.BodyNoExamples,
-  message: 'No examples section found. Add examples showing how the skill is used.',
+  get message() {
+    return l10n.t('No examples section found. Add examples showing how the skill is used.');
+  },
   tokens: ['example', 'examples', 'sample', 'samples'],
   phrases: ['example usage', 'sample usage'],
 };
@@ -20,7 +26,9 @@ export const EXAMPLES_SECTION: BodySectionSpec = {
 export const WHEN_TO_USE_SECTION: BodySectionSpec = {
   id: 'whenToUse',
   code: DiagnosticCode.BodyNoWhenToUse,
-  message: 'No "When to use" section found. Describe the situations the skill applies to.',
+  get message() {
+    return l10n.t('No "When to use" section found. Describe the situations the skill applies to.');
+  },
   tokens: ['usage'],
   phrases: ['when to use', 'use when', 'when the user', 'when the agent'],
 };
@@ -28,8 +36,11 @@ export const WHEN_TO_USE_SECTION: BodySectionSpec = {
 export const BOUNDARY_SECTION: BodySectionSpec = {
   id: 'boundary',
   code: DiagnosticCode.BodySuggestBoundary,
-  message:
-    'Consider adding "Do not use when..." boundaries so the agent knows when to skip the skill.',
+  get message() {
+    return l10n.t(
+      'Consider adding "Do not use when..." boundaries so the agent knows when to skip the skill.',
+    );
+  },
   tokens: ['constraint', 'constraints', 'limitation', 'limitations', 'boundary', 'boundaries'],
   phrases: ['do not use', 'when not to use'],
 };
@@ -37,7 +48,9 @@ export const BOUNDARY_SECTION: BodySectionSpec = {
 export const IO_SECTION: BodySectionSpec = {
   id: 'io',
   code: DiagnosticCode.BodySuggestIO,
-  message: 'Consider documenting the expected input and output format.',
+  get message() {
+    return l10n.t('Consider documenting the expected input and output format.');
+  },
   tokens: ['input', 'inputs', 'output', 'outputs', 'format', 'formats'],
   phrases: ['input and output', 'inputs and outputs'],
 };

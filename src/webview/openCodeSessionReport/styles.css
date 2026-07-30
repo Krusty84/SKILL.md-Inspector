@@ -272,6 +272,7 @@ th {
   font-weight: 700;
   font-size: 0.72rem;
   color: var(--vscode-symbolIcon-keywordForeground);
+  text-transform: uppercase;
 }
 small,
 .preview {

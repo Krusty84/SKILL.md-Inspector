@@ -1,7 +1,7 @@
 {
   "name": "skill-md-inspector",
-  "displayName": "SKILL.md Inspector",
-  "description": "Offline-first! Lint, validate, and inspect SKILL.md files for AI agent skill systems.",
+  "displayName": "%skillMdInspector.displayName%",
+  "description": "%skillMdInspector.description%",
   "version": "1.0.4",
   "license": "MIT",
   "publisher": "AlexeySedoykin",
@@ -37,6 +37,7 @@
     "skill-validator"
   ],
   "main": "./dist/extension.js",
+  "l10n": "./l10n",
   "activationEvents": [
     "onLanguage:markdown",
     "workspaceContains:**/SKILL.md"
@@ -45,337 +46,337 @@
     "commands": [
       {
         "command": "skillMdInspector.validateCurrentSkill",
-        "title": "Validate Current SKILL.md",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.validateCurrentSkill.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.validateWorkspaceSkills",
-        "title": "Validate SKILL.md's'",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.validateWorkspaceSkills.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.insertTemplate",
-        "title": "Insert SKILL.md Template",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.insertTemplate.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.showSkillReport",
-        "title": "Show SKILL.md Report",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.showSkillReport.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.improveDescriptionLocally",
-        "title": "Improve Description Locally",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.improveDescriptionLocally.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.showWorkspaceReport",
-        "title": "Show Report",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.showWorkspaceReport.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.installedAgents.validateSkills",
-        "title": "Validate SKILL.md's",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.installedAgents.validateSkills.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.installedAgents.showReport",
-        "title": "Show Report",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.installedAgents.showReport.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.exportSkillsIndex",
-        "title": "Export SKILL.md's Report Index",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.exportSkillsIndex.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.refreshSkills",
-        "title": "Refresh SKILL.md's",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.refreshSkills.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.openTemplateSettings",
-        "title": "Open Template Settings",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.openTemplateSettings.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.openHeuristicDictionarySettings",
-        "title": "Open Heuristic Dictionary Settings",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.openHeuristicDictionarySettings.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.configureSeverityOverrides",
-        "title": "Configure Severity Overrides",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.configureSeverityOverrides.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.resetTemplates",
-        "title": "Reset Templates to Defaults",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.resetTemplates.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.addToFavorites",
-        "title": "Add SKILL.md to Favorites",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.addToFavorites.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(star-empty)"
       },
       {
         "command": "skillMdInspector.removeFromFavorites",
-        "title": "Remove from Favorites",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.removeFromFavorites.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(star-full)"
       },
       {
         "command": "skillMdInspector.toggleFavorite",
-        "title": "Add or Remove Favorite",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.toggleFavorite.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(star)"
       },
       {
         "command": "skillMdInspector.clearFavorites",
-        "title": "Clear All Favorites",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.clearFavorites.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.refreshNavigator",
-        "title": "Refresh Inspector Views",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.refreshNavigator.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.refreshFavorites",
-        "title": "Refresh Favorites",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.refreshFavorites.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.refreshWorkspace",
-        "title": "Refresh Workspace",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.refreshWorkspace.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.refreshInstalledAgents",
-        "title": "Refresh Installed Agents",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.refreshInstalledAgents.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.workspace.selectSkillsFolder",
-        "title": "Select SKILLs Folder",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.selectSkillsFolder.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(folder-opened)"
       },
       {
         "command": "skillMdInspector.workspace.newFile",
-        "title": "New File",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.newFile.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(new-file)"
       },
       {
         "command": "skillMdInspector.workspace.newFolder",
-        "title": "New Folder",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.newFolder.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(new-folder)"
       },
       {
         "command": "skillMdInspector.workspace.addFolders",
-        "title": "Add Folder to Workspace...",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.addFolders.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(folder-library)"
       },
       {
         "command": "skillMdInspector.workspace.openFolderInNewWindow",
-        "title": "Open Folder in New Window...",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.openFolderInNewWindow.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.removeFolder",
-        "title": "Remove Folder from Workspace",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.removeFolder.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.open",
-        "title": "Open",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.open.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.openToSide",
-        "title": "Open to the Side",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.openToSide.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.rename",
-        "title": "Rename",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.rename.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.delete",
-        "title": "Delete",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.delete.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(trash)"
       },
       {
         "command": "skillMdInspector.workspace.copy",
-        "title": "Copy",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.copy.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.cut",
-        "title": "Cut",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.cut.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.paste",
-        "title": "Paste",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.paste.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.copyPath",
-        "title": "Copy Path",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.copyPath.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.copyRelativePath",
-        "title": "Copy Relative Path",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.copyRelativePath.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.openInTerminal",
-        "title": "Open in Integrated Terminal",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.openInTerminal.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(terminal)"
       },
       {
         "command": "skillMdInspector.workspace.refreshFolder",
-        "title": "Refresh",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.refreshFolder.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.workspace.newFileContext",
-        "title": "New File...",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.newFileContext.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(new-file)"
       },
       {
         "command": "skillMdInspector.workspace.newFolderContext",
-        "title": "New Folder...",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.workspace.newFolderContext.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(new-folder)"
       },
       {
         "command": "skillMdInspector.workspace.renameContext",
-        "title": "Rename...",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.renameContext.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.openPreview",
-        "title": "Open Preview",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.openPreview.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.openWith",
-        "title": "Open With...",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.openWith.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.revealInOS.windows",
-        "title": "Reveal in File Explorer",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.revealInOS.windows.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.revealInOS.mac",
-        "title": "Reveal in Finder",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.revealInOS.mac.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.revealInOS.linux",
-        "title": "Open Containing Folder",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.revealInOS.linux.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.openImagesPreview",
-        "title": "Open in Images Preview",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.openImagesPreview.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.selectForCompare",
-        "title": "Select for Compare",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.selectForCompare.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.compareWithSelected",
-        "title": "Compare with Selected",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.compareWithSelected.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.findFileReferences",
-        "title": "Find File References",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.findFileReferences.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.openTimeline",
-        "title": "Open Timeline",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.openTimeline.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.findInFolder",
-        "title": "Find in Folder...",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.findInFolder.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.workspace.revealInOS",
-        "title": "Reveal in File Explorer",
-        "category": "SKILL.md Inspector"
+        "title": "%skillMdInspector.command.workspace.revealInOS.title%",
+        "category": "%skillMdInspector.command.category%"
       },
       {
         "command": "skillMdInspector.openCode.selectSessionsFolder",
-        "title": "Select OpenCode Sessions Folder",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.selectSessionsFolder.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(folder-opened)"
       },
       {
         "command": "skillMdInspector.openCode.clearSessionsFolder",
-        "title": "Clear OpenCode Sessions Folder",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.clearSessionsFolder.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(clear-all)"
       },
       {
         "command": "skillMdInspector.openCode.refreshSessions",
-        "title": "Refresh OpenCode Sessions",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.refreshSessions.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(refresh)"
       },
       {
         "command": "skillMdInspector.openCode.openReport",
-        "title": "Open OpenCode Session Report",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.openReport.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(preview)"
       },
       {
         "command": "skillMdInspector.openCode.openRawJson",
-        "title": "Open Raw OpenCode Session JSON",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.openRawJson.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(json)"
       },
       {
         "command": "skillMdInspector.openCode.revealInOS",
-        "title": "Reveal in Operating System",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.revealInOS.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(go-to-file)"
       },
       {
         "command": "skillMdInspector.openCode.copySessionId",
-        "title": "Copy Session ID",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.copySessionId.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(copy)"
       },
       {
         "command": "skillMdInspector.openCode.copyFilePath",
-        "title": "Copy File Path",
-        "category": "SKILL.md Inspector",
+        "title": "%skillMdInspector.command.openCode.copyFilePath.title%",
+        "category": "%skillMdInspector.command.category%",
         "icon": "$(copy)"
       }
     ],
@@ -383,29 +384,29 @@
       "skillMdInspector": [
         {
           "id": "skillMdInspectorFavorites",
-          "name": "FAVORITES",
-          "contextualTitle": "SKILL.md INSPECTOR"
+          "name": "%skillMdInspector.view.favorites.name%",
+          "contextualTitle": "%skillMdInspector.view.favorites.contextualTitle%"
         },
         {
           "id": "skillMdInspectorWorkspace",
-          "name": "WORKSPACE",
-          "contextualTitle": "SKILL.md INSPECTOR"
+          "name": "%skillMdInspector.view.workspace.name%",
+          "contextualTitle": "%skillMdInspector.view.workspace.contextualTitle%"
         },
         {
           "id": "skillMdInspectorInstalledAgents",
-          "name": "INSTALLED AGENTS",
-          "contextualTitle": "SKILL.md INSPECTOR"
+          "name": "%skillMdInspector.view.installedAgents.name%",
+          "contextualTitle": "%skillMdInspector.view.installedAgents.contextualTitle%"
         },
         {
           "id": "skillMdInspectorOpenCodeSessions",
-          "name": "OPENCODE SESSIONS",
-          "contextualTitle": "OpenCode Sessions"
+          "name": "%skillMdInspector.view.openCodeSessions.name%",
+          "contextualTitle": "%skillMdInspector.view.openCodeSessions.contextualTitle%"
         }
       ],
       "skillMdInspectorPanel": [
         {
           "id": "skillMdInspectorSkills",
-          "name": "SKILL.md Skills"
+          "name": "%skillMdInspector.view.skills.name%"
         }
       ]
     },
@@ -874,7 +875,7 @@
     },
     "configuration": [
       {
-        "title": "General",
+        "title": "%skillMdInspector.config.general.title%",
         "order": 1,
         "properties": {
           "skillMdInspector.general.timeFormat": {
@@ -884,58 +885,58 @@
               "usa"
             ],
             "enumDescriptions": [
-              "24-hour clock, 00:00–23:59 (e.g. 15/01/2026, 14:30:45).",
-              "12-hour clock with AM/PM (e.g. 1/15/2026, 2:30:45 PM)."
+              "%skillMdInspector.config.general.timeFormat.enumDescriptions.european%",
+              "%skillMdInspector.config.general.timeFormat.enumDescriptions.usa%"
             ],
             "default": "european",
-            "description": "Time format for the \"Generated\" timestamp shown in generated reports. \"european\" uses a 24-hour clock; \"usa\" uses a 12-hour clock with AM/PM."
+            "description": "%skillMdInspector.config.general.timeFormat.description%"
           }
         }
       },
       {
-        "title": "Validation",
+        "title": "%skillMdInspector.config.validation.title%",
         "order": 2,
         "properties": {
           "skillMdInspector.validation.enabled": {
             "type": "boolean",
             "default": true,
-            "description": "Enable deterministic validation of SKILL.md files.",
+            "description": "%skillMdInspector.config.validation.enabled.description%",
             "order": 1
           },
           "skillMdInspector.validation.runOnSave": {
             "type": "boolean",
             "default": true,
-            "description": "Re-run validation whenever a SKILL.md file is saved.",
+            "description": "%skillMdInspector.config.validation.runOnSave.description%",
             "order": 2
           },
           "skillMdInspector.validation.compatibilityAgents.spec": {
             "type": "boolean",
             "default": true,
-            "description": "Include the specification baseline (skills-ref) in the agent compatibility projection.",
+            "description": "%skillMdInspector.config.validation.compatibilityAgents.spec.description%",
             "order": 3
           },
           "skillMdInspector.validation.compatibilityAgents.claudeCode": {
             "type": "boolean",
             "default": true,
-            "description": "Include Claude Code in the agent compatibility projection.",
+            "description": "%skillMdInspector.config.validation.compatibilityAgents.claudeCode.description%",
             "order": 4
           },
           "skillMdInspector.validation.compatibilityAgents.codex": {
             "type": "boolean",
             "default": true,
-            "description": "Include Codex in the agent compatibility projection.",
+            "description": "%skillMdInspector.config.validation.compatibilityAgents.codex.description%",
             "order": 5
           },
           "skillMdInspector.validation.compatibilityAgents.openCode": {
             "type": "boolean",
             "default": true,
-            "description": "Include OpenCode in the agent compatibility projection.",
+            "description": "%skillMdInspector.config.validation.compatibilityAgents.openCode.description%",
             "order": 6
           }
         }
       },
       {
-        "title": "Content quality",
+        "title": "%skillMdInspector.config.contentQuality.title%",
         "order": 3,
         "properties": {
           "skillMdInspector.body.strictness": {
@@ -946,7 +947,7 @@
               "strict"
             ],
             "default": "recommended",
-            "description": "How strictly to surface advisory body-section recommendations (examples, when-to-use, etc.). \"off\" disables them; \"recommended\" uses information-level diagnostics; \"strict\" uses warnings. Structural body errors are unaffected."
+            "description": "%skillMdInspector.config.body.strictness.description%"
           },
           "skillMdInspector.description.language": {
             "type": "string",
@@ -955,27 +956,27 @@
               "auto"
             ],
             "default": "auto",
-            "description": "Language used by description heuristics. \"en\" forces English analysis; \"auto\" marks the quality score as language-limited when it detects a non-Latin script (Cyrillic, CJK, …) or a common Latin-script language (German, French, Spanish, Italian, Portuguese) via stopword profiles. Other languages may still be scored as English."
+            "description": "%skillMdInspector.config.description.language.description%"
           },
           "skillMdInspector.description.maxLength": {
             "type": "number",
             "default": 1024,
-            "description": "Maximum allowed length of the description field."
+            "description": "%skillMdInspector.config.description.maxLength.description%"
           },
           "skillMdInspector.description.minLength": {
             "type": "number",
             "default": 40,
-            "description": "Minimum recommended length of the description field."
+            "description": "%skillMdInspector.config.description.minLength.description%"
           },
           "skillMdInspector.name.maxLength": {
             "type": "number",
             "default": 64,
-            "description": "Maximum allowed length of the name field."
+            "description": "%skillMdInspector.config.name.maxLength.description%"
           }
         }
       },
       {
-        "title": "Collision detection",
+        "title": "%skillMdInspector.config.collisionDetection.title%",
         "order": 4,
         "properties": {
           "skillMdInspector.collision.boundarySeparationWeight": {
@@ -983,21 +984,21 @@
             "default": 0.5,
             "minimum": 0,
             "maximum": 1,
-            "description": "How strongly mutually-exclusive \"Do not use for...\" boundaries reduce the composite collision score (0 = ignore boundaries, 1 = fully cancel overlap when scopes are mutually excluded)."
+            "description": "%skillMdInspector.config.collision.boundarySeparationWeight.description%"
           },
           "skillMdInspector.collision.ngramSize": {
             "type": "number",
             "default": 3,
             "minimum": 2,
             "maximum": 5,
-            "description": "Character n-gram size used by the collision character-similarity metric."
+            "description": "%skillMdInspector.config.collision.ngramSize.description%"
           },
           "skillMdInspector.collision.threshold": {
             "type": "number",
             "default": 0.3,
             "minimum": 0,
             "maximum": 1,
-            "description": "Composite similarity (0-1) at or above which two skills are reported as a potential collision. The default was lowered from 0.4 to 0.3 when the composite became scope-led: scores are lower across the board, and 0.3 is where the labeled benchmark corpus gives the best precision."
+            "description": "%skillMdInspector.config.collision.threshold.description%"
           },
           "skillMdInspector.collision.weights": {
             "type": "object",
@@ -1005,27 +1006,27 @@
               "scopeOverlap": {
                 "type": "number",
                 "minimum": 0,
-                "description": "Weight of scope overlap: how much two skills agree on what they operate on and what they do to it. Omitting this key from a customized weights object keeps the default weight rather than dropping the metric."
+                "description": "%skillMdInspector.config.collision.weights.scopeOverlap.description%"
               },
               "jaccard": {
                 "type": "number",
                 "minimum": 0,
-                "description": "Weight of pairwise token Jaccard."
+                "description": "%skillMdInspector.config.collision.weights.jaccard.description%"
               },
               "cosine": {
                 "type": "number",
                 "minimum": 0,
-                "description": "Weight of TF-IDF cosine."
+                "description": "%skillMdInspector.config.collision.weights.cosine.description%"
               },
               "charNgram": {
                 "type": "number",
                 "minimum": 0,
-                "description": "Weight of character n-gram similarity."
+                "description": "%skillMdInspector.config.collision.weights.charNgram.description%"
               },
               "nameSimilarity": {
                 "type": "number",
                 "minimum": 0,
-                "description": "Weight of skill-name similarity."
+                "description": "%skillMdInspector.config.collision.weights.nameSimilarity.description%"
               }
             },
             "additionalProperties": false,
@@ -1036,19 +1037,19 @@
               "charNgram": 0.05,
               "nameSimilarity": 0.05
             },
-            "description": "Relative weights blended into the composite collision similarity (normalized to sum to 1). Scope overlap leads because it is the only metric that compares what the skills do rather than how similarly they are worded; the lexical metrics corroborate it. A weights object saved before scopeOverlap existed still works - the missing key takes its default weight."
+            "description": "%skillMdInspector.config.collision.weights.description%"
           },
           "skillMdInspector.names.similarityThreshold": {
             "type": "number",
             "default": 0.8,
             "minimum": 0,
             "maximum": 1,
-            "description": "Similarity (0–1) at or above which two different skill names are flagged as confusingly similar. Exact duplicates are always reported."
+            "description": "%skillMdInspector.config.names.similarityThreshold.description%"
           }
         }
       },
       {
-        "title": "Heuristics",
+        "title": "%skillMdInspector.config.heuristics.title%",
         "order": 5,
         "properties": {
           "skillMdInspector.heuristics.dictionaryValues.acronyms": {
@@ -1139,7 +1140,7 @@
               "yaml",
               "zip"
             ],
-            "description": "Acronyms and technology names recognized as concrete artifact or domain evidence.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.acronyms.description%",
             "items": {
               "type": "string"
             }
@@ -1268,7 +1269,7 @@
                 "written"
               ]
             },
-            "description": "Explicit surface forms for action verbs. Keys are base verbs and values are recognized forms; explicit entries take precedence over regular morphology.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.actionVerbForms.description%",
             "propertyNames": {
               "minLength": 1
             },
@@ -1453,7 +1454,7 @@
               "visualize",
               "write"
             ],
-            "description": "Base verbs recognized as concrete capabilities in description diagnostics, description completeness, local improvement, and collision features.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.actionVerbs.description%",
             "items": {
               "type": "string"
             }
@@ -1720,7 +1721,7 @@
               "yaml",
               "zip"
             ],
-            "description": "High-signal artifact and domain terms used by description quality and collision feature extraction.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.artifactHints.description%",
             "items": {
               "type": "string"
             }
@@ -1740,7 +1741,7 @@
               "flight",
               "json"
             ],
-            "description": "Domain terms that make a low-signal artifact such as file, data, code, or document concrete.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.artifactSupportTerms.description%",
             "items": {
               "type": "string"
             }
@@ -1868,7 +1869,7 @@
               "you",
               "your"
             ],
-            "description": "Common terms removed before workspace description collision similarity is calculated.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.collisionStopwords.description%",
             "items": {
               "type": "string"
             }
@@ -1880,7 +1881,7 @@
               "only use when",
               "only use for"
             ],
-            "description": "Phrases that act as both a positive usage trigger and an exclusive boundary.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.exclusiveTriggerPhrases.description%",
             "items": {
               "type": "string"
             }
@@ -1910,7 +1911,7 @@
               "any",
               "all"
             ],
-            "description": "Terms ignored when deciding whether the opening sentence names a concrete capability object.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.frontLoadedFillerTerms.description%",
             "items": {
               "type": "string"
             }
@@ -1953,7 +1954,7 @@
                 "vertices"
               ]
             },
-            "description": "Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.irregularSingularForms.description%",
             "propertyNames": {
               "minLength": 1
             },
@@ -1989,7 +1990,7 @@
               "task",
               "title"
             ],
-            "description": "Generic artifact terms that count only when accompanied by an artifact support term.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.lowSignalArtifactTerms.description%",
             "items": {
               "type": "string"
             }
@@ -2073,7 +2074,7 @@
               "wiring harness",
               "word document"
             ],
-            "description": "Multi-word artifact phrases recognized by description quality and collision feature extraction.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.multiWordArtifacts.description%",
             "items": {
               "type": "string"
             }
@@ -2095,7 +2096,7 @@
               "not designed for",
               "not suitable for"
             ],
-            "description": "Phrases that introduce a negative usage boundary and separate collision scopes.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.negativeBoundaryPhrases.description%",
             "items": {
               "type": "string"
             }
@@ -2114,7 +2115,7 @@
               "basically always",
               "any kind of output"
             ],
-            "description": "Conservative phrases that indicate an overbroad skill-selection scope when used in a usage or trigger context.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.overbroadTriggerPhrases.description%",
             "items": {
               "type": "string"
             }
@@ -2134,7 +2135,7 @@
               "appropriate for",
               "intended for"
             ],
-            "description": "Phrases that introduce a positive usage-trigger clause.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.positiveTriggerPhrases.description%",
             "items": {
               "type": "string"
             }
@@ -2148,7 +2149,7 @@
               "except when",
               "except for"
             ],
-            "description": "Non-negative phrases that restrict scope for boundary detection and scoring.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.restrictiveBoundaryPhrases.description%",
             "items": {
               "type": "string"
             }
@@ -2185,7 +2186,7 @@
               "by",
               "not"
             ],
-            "description": "Terms ignored when evaluating whether trigger and boundary clauses contain concrete scope.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.scopeStopwords.description%",
             "items": {
               "type": "string"
             }
@@ -2223,7 +2224,7 @@
               "requests",
               "specific"
             ],
-            "description": "Terms that make trigger and boundary clause content too vague to receive full credit.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.scopeVagueTerms.description%",
             "items": {
               "type": "string"
             }
@@ -2237,7 +2238,7 @@
               "pr",
               "step"
             ],
-            "description": "Ambiguous acronyms that count only when their matched spelling is uppercase.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.uppercaseOnlyAcronyms.description%",
             "items": {
               "type": "string"
             }
@@ -2278,7 +2279,7 @@
               "robust",
               "comprehensive"
             ],
-            "description": "Words and phrases treated as vague in description diagnostics and description completeness.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.vagueTerms.description%",
             "items": {
               "type": "string"
             }
@@ -2290,7 +2291,7 @@
               "limited to",
               "only for"
             ],
-            "description": "Phrases such as only for or limited to that name the skill scope rather than exclude one; they earn boundary credit in scoring but are not collision exclusions.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.scopeRestrictionPhrases.description%",
             "items": {
               "type": "string"
             }
@@ -2444,7 +2445,7 @@
                 "translate"
               ]
             },
-            "description": "Capability verbs that count as the same capability when comparing two skills' scope. Keys are group ids and values are the verbs in that group; groups must not share a verb. A verb outside \"actionVerbs\" is simply never matched.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.capabilitySynonymGroups.description%",
             "propertyNames": {
               "minLength": 1
             },
@@ -2607,7 +2608,7 @@
                 "url"
               ]
             },
-            "description": "Artifact terms that count as the same kind of object when comparing two skills' scope (for example spreadsheet, xlsx and workbook). Keys are group ids and values are the terms in that group; groups must not share a term.",
+            "description": "%skillMdInspector.config.heuristics.dictionaryValues.artifactSynonymGroups.description%",
             "propertyNames": {
               "minLength": 1
             },
@@ -2621,7 +2622,7 @@
         }
       },
       {
-        "title": "Discovery & resources",
+        "title": "%skillMdInspector.config.discoveryResources.title%",
         "order": 6,
         "properties": {
           "skillMdInspector.discovery.exclude": {
@@ -2636,7 +2637,7 @@
               "**/out/**",
               "**/.vscode-test/**"
             ],
-            "description": "Glob patterns for directories to skip when discovering SKILL.md files across the workspace (the tree view and workspace report). Setting this replaces the defaults."
+            "description": "%skillMdInspector.config.discovery.exclude.description%"
           },
           "skillMdInspector.resources.directories": {
             "type": "array",
@@ -2649,7 +2650,7 @@
               "assets",
               "templates"
             ],
-            "description": "Relative resource directories monitored for unreferenced bundled files. This replaces the default list; absolute paths and .. traversal are ignored."
+            "description": "%skillMdInspector.config.resources.directories.description%"
           },
           "skillMdInspector.resources.exclude": {
             "type": "array",
@@ -2662,48 +2663,48 @@
               "**/dist/**",
               "**/out/**"
             ],
-            "description": "Glob patterns for files and folders to exclude from resource discovery. Setting this replaces the defaults."
+            "description": "%skillMdInspector.config.resources.exclude.description%"
           }
         }
       },
       {
-        "title": "Links",
+        "title": "%skillMdInspector.config.links.title%",
         "order": 7,
         "properties": {
           "skillMdInspector.links.onlineCheck.enabled": {
             "type": "boolean",
             "default": false,
-            "description": "Check remote-link availability during full validation. Enabling this sends HTTP requests to URLs referenced by SKILL.md files."
+            "description": "%skillMdInspector.config.links.onlineCheck.enabled.description%"
           },
           "skillMdInspector.links.onlineCheck.maxConcurrency": {
             "type": "integer",
             "default": 4,
             "minimum": 1,
             "maximum": 10,
-            "description": "Maximum number of concurrent remote-link requests across one complete validation operation."
+            "description": "%skillMdInspector.config.links.onlineCheck.maxConcurrency.description%"
           }
         }
       },
       {
-        "title": "Security",
+        "title": "%skillMdInspector.config.security.title%",
         "order": 8,
         "properties": {
           "skillMdInspector.security.enabled": {
             "type": "boolean",
             "default": true,
-            "description": "Statically scan SKILL.md files for security risks (dangerous/risky commands, risky public services, hardcoded credentials, prompt-injection wording, hidden content, and sensitive-path references). Analysis is local and offline; nothing is executed."
+            "description": "%skillMdInspector.config.security.enabled.description%"
           },
           "skillMdInspector.security.scanResourceFiles": {
             "type": "boolean",
             "default": true,
-            "description": "Also scan bundled resource files during full validation. Scripts are checked for commands, secrets, risky services, sensitive paths, and invisible Unicode; text resources also receive prompt-injection and hidden-comment checks."
+            "description": "%skillMdInspector.config.security.scanResourceFiles.description%"
           },
           "skillMdInspector.security.maxScannedFileSizeKb": {
             "type": "integer",
             "default": 256,
             "minimum": 1,
             "maximum": 4096,
-            "description": "Bundled resource files larger than this size (in KiB) are skipped by the security scan."
+            "description": "%skillMdInspector.config.security.maxScannedFileSizeKb.description%"
           },
           "skillMdInspector.security.allowedDomains": {
             "type": "array",
@@ -2711,7 +2712,7 @@
               "type": "string"
             },
             "default": [],
-            "description": "Host suffixes to treat as trusted, suppressing risky-service findings (e.g. \"internal.example.com\")."
+            "description": "%skillMdInspector.config.security.allowedDomains.description%"
           },
           "skillMdInspector.security.allowedCommands": {
             "type": "array",
@@ -2719,7 +2720,7 @@
               "type": "string"
             },
             "default": [],
-            "description": "Substrings that suppress a command finding when they appear on the matched line (e.g. a known-safe command you use often)."
+            "description": "%skillMdInspector.config.security.allowedCommands.description%"
           },
           "skillMdInspector.security.additionalRiskyCommands": {
             "type": "array",
@@ -2727,7 +2728,7 @@
               "type": "string"
             },
             "default": [],
-            "description": "Additional regular expressions (JavaScript syntax) that flag a line as a risky command (warning). Invalid patterns are ignored with a configuration warning."
+            "description": "%skillMdInspector.config.security.additionalRiskyCommands.description%"
           },
           "skillMdInspector.security.additionalDangerousCommands": {
             "type": "array",
@@ -2735,7 +2736,7 @@
               "type": "string"
             },
             "default": [],
-            "description": "Additional regular expressions (JavaScript syntax) that flag a line as a dangerous command (error). Invalid patterns are ignored with a configuration warning."
+            "description": "%skillMdInspector.config.security.additionalDangerousCommands.description%"
           },
           "skillMdInspector.security.additionalServiceDomains": {
             "type": "array",
@@ -2743,12 +2744,12 @@
               "type": "string"
             },
             "default": [],
-            "description": "Additional host suffixes to flag as risky public services (e.g. paste or file-upload endpoints)."
+            "description": "%skillMdInspector.config.security.additionalServiceDomains.description%"
           }
         }
       },
       {
-        "title": "Severity",
+        "title": "%skillMdInspector.config.severity.title%",
         "order": 9,
         "properties": {
           "skillMdInspector.severityOverrides": {
@@ -2763,23 +2764,23 @@
               ]
             },
             "default": {},
-            "markdownDescription": "Override the severity of diagnostics by code, or disable one with `off` (e.g. `{ \"skill.description.vague\": \"information\" }`). Specification errors are protected unless `#skillMdInspector.severity.allowSpecificationOverrides#` is enabled.\n\n[Configure with a picker…](command:skillMdInspector.configureSeverityOverrides)"
+            "markdownDescription": "%skillMdInspector.config.severityOverrides.markdownDescription%"
           },
           "skillMdInspector.severity.allowSpecificationOverrides": {
             "type": "boolean",
             "default": false,
-            "description": "Allow skillMdInspector.severityOverrides to downgrade or disable specification-level errors (an invalid file). Off by default so structural errors are not hidden accidentally."
+            "description": "%skillMdInspector.config.severity.allowSpecificationOverrides.description%"
           }
         }
       },
       {
-        "title": "Templates",
+        "title": "%skillMdInspector.config.templates.title%",
         "order": 10,
         "properties": {
           "skillMdInspector.templates": {
             "type": "array",
             "default": [],
-            "description": "Custom SKILL.md templates. A non-empty array replaces the bundled templates.",
+            "description": "%skillMdInspector.config.templates.description%",
             "items": {
               "type": "object",
               "required": [
@@ -2792,16 +2793,16 @@
                 "id": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "Stable unique template identifier."
+                  "description": "%skillMdInspector.config.templates.item.id.description%"
                 },
                 "label": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "Template name displayed in the selection list."
+                  "description": "%skillMdInspector.config.templates.item.label.description%"
                 },
                 "description": {
                   "type": "string",
-                  "description": "Optional explanation displayed in the selection list."
+                  "description": "%skillMdInspector.config.templates.item.description.description%"
                 },
                 "frontmatter": {
                   "type": "array",
@@ -2809,14 +2810,14 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "YAML frontmatter lines without the opening and closing --- delimiters."
+                  "description": "%skillMdInspector.config.templates.item.frontmatter.description%"
                 },
                 "body": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   },
-                  "description": "Markdown body lines. Use an empty string to insert a blank line."
+                  "description": "%skillMdInspector.config.templates.item.body.description%"
                 }
               },
               "additionalProperties": false
@@ -2825,13 +2826,13 @@
         }
       },
       {
-        "title": "Views",
+        "title": "%skillMdInspector.config.views.title%",
         "order": 11,
         "properties": {
           "skillMdInspector.navigator.additionalRoots": {
             "type": "array",
             "default": [],
-            "description": "Additional local agent roots to show in the Installed Agents view.",
+            "description": "%skillMdInspector.config.navigator.additionalRoots.description%",
             "items": {
               "type": "object",
               "required": [
@@ -2876,26 +2877,26 @@
             "default": 1000,
             "minimum": 1,
             "maximum": 10000,
-            "description": "Maximum OpenCode session JSON files to discover."
+            "description": "%skillMdInspector.config.openCode.maxDiscoveredSessions.description%"
           },
           "skillMdInspector.openCode.maxPreviewCharacters": {
             "type": "number",
             "default": 20000,
             "minimum": 1000,
             "maximum": 100000,
-            "description": "Maximum characters retained in OpenCode previews."
+            "description": "%skillMdInspector.config.openCode.maxPreviewCharacters.description%"
           },
           "skillMdInspector.openCode.maxSessionFileSizeMb": {
             "type": "number",
             "default": 25,
             "minimum": 1,
             "maximum": 100,
-            "description": "Maximum OpenCode session export file size to read, in MiB."
+            "description": "%skillMdInspector.config.openCode.maxSessionFileSizeMb.description%"
           },
           "skillMdInspector.openCode.scanRecursively": {
             "type": "boolean",
             "default": true,
-            "description": "Scan the selected OpenCode sessions folder recursively."
+            "description": "%skillMdInspector.config.openCode.scanRecursively.description%"
           }
         }
       }
@@ -2903,41 +2904,41 @@
     "submenus": [
       {
         "id": "skillMdInspector/context",
-        "label": "SKILL.md Inspector"
+        "label": "%skillMdInspector.submenu.label%"
       },
       {
         "id": "skillMdInspector/workspaceFileSkillContext",
-        "label": "SKILL.md Inspector"
+        "label": "%skillMdInspector.submenu.label%"
       },
       {
         "id": "skillMdInspector/favoriteSkillContext",
-        "label": "SKILL.md Inspector"
+        "label": "%skillMdInspector.submenu.label%"
       },
       {
         "id": "skillMdInspector/installedAgentsFileSkillContext",
-        "label": "SKILL.md Inspector"
+        "label": "%skillMdInspector.submenu.label%"
       },
       {
         "id": "skillMdInspector/workspaceFolderSkillContext",
-        "label": "SKILL.md Inspector"
+        "label": "%skillMdInspector.submenu.label%"
       },
       {
         "id": "skillMdInspector/installedAgentsFolderSkillContext",
-        "label": "SKILL.md Inspector"
+        "label": "%skillMdInspector.submenu.label%"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "skillMdInspector",
-          "title": "SKILL.md Inspector",
+          "title": "%skillMdInspector.viewsContainer.activitybar.title%",
           "icon": "media/icon.svg"
         }
       ],
       "panel": [
         {
           "id": "skillMdInspectorPanel",
-          "title": "SKILL.md Inspector",
+          "title": "%skillMdInspector.viewsContainer.panel.title%",
           "icon": "media/icon.svg"
         }
       ]
@@ -2945,12 +2946,12 @@
     "viewsWelcome": [
       {
         "view": "skillMdInspectorWorkspace",
-        "contents": "No SKILL.md's folder is selected.\n\n[Select SKILL.md's Folder](command:skillMdInspector.workspace.selectSkillsFolder)",
+        "contents": "%skillMdInspector.viewsWelcome.workspace.contents%",
         "when": "workspaceFolderCount == 0"
       },
       {
         "view": "skillMdInspectorOpenCodeSessions",
-        "contents": "No OpenCode sessions folder is selected.\n\n[Select Sessions Folder](command:skillMdInspector.openCode.selectSessionsFolder)",
+        "contents": "%skillMdInspector.viewsWelcome.openCodeSessions.contents%",
         "when": "!skillMdInspector.openCode.hasFolder"
       }
     ]
@@ -2963,6 +2964,8 @@
     "lint": "eslint src",
     "sync:heuristic-dictionaries": "node scripts/sync-heuristic-dictionaries.js",
     "check:heuristic-dictionaries": "node scripts/sync-heuristic-dictionaries.js --check",
+    "l10n:export": "vscode-l10n-dev export --outDir ./l10n ./src && node scripts/merge-l10n-data.js",
+    "l10n:pseudo": "vscode-l10n-dev generate-pseudo ./l10n/bundle.l10n.json ./package.nls.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:eval": "vitest run test/evaluation",
@@ -2972,6 +2975,7 @@
     "benchmark": "vitest run test/benchmarks"
   },
   "dependencies": {
+    "@vscode/l10n": "^0.0.18",
     "js-tiktoken": "^1.0.21",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
@@ -2982,6 +2986,7 @@
     "@eslint/js": "^9.11.0",
     "@types/node": "^22.7.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/l10n-dev": "^0.0.35",
     "esbuild": "^0.24.0",
     "eslint": "^9.11.0",
     "fast-check": "^4.9.0",

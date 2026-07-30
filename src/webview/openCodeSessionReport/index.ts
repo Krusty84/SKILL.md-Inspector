@@ -1,3 +1,5 @@
+import './l10nSetup';
+import * as l10n from '@vscode/l10n';
 import type {
   OpenCodeTimelineEvent,
   OpenCodeTimelineEventDetails,
@@ -31,20 +33,24 @@ let state: OpenCodeTimelineState | undefined;
 const details = new Map<string, OpenCodeTimelineEventDetails>();
 const requested = new Set<string>();
 const tooltipId = 'report-tooltip';
-const tooltips: Record<string, string> = {
-  all: 'Show all session events',
-  tools: 'Show all tool calls, including skill calls',
-  skills: 'Show skill calls only',
-  reasoning: 'Show reasoning events only',
-  errors: 'Show failed tools, failed skills, and assistant errors',
-  diffs: 'Show patch and diff events',
-  text: 'Show user and assistant text events',
-  subtasks: 'Show subtask and agent events',
-  'expand-all': 'Expand all visible events',
-  'collapse-all': 'Collapse all visible events',
-  raw: 'Open the current session JSON',
-  search: 'Search session events',
-};
+// Built at render time (never at module scope) so l10n.t() runs only after
+// l10nSetup has configured the bundle.
+function tooltipStrings(): Record<string, string> {
+  return {
+    all: l10n.t('Show all session events'),
+    tools: l10n.t('Show all tool calls, including skill calls'),
+    skills: l10n.t('Show skill calls only'),
+    reasoning: l10n.t('Show reasoning events only'),
+    errors: l10n.t('Show failed tools, failed skills, and assistant errors'),
+    diffs: l10n.t('Show patch and diff events'),
+    text: l10n.t('Show user and assistant text events'),
+    subtasks: l10n.t('Show subtask and agent events'),
+    'expand-all': l10n.t('Expand all visible events'),
+    'collapse-all': l10n.t('Collapse all visible events'),
+    raw: l10n.t('Open the current session JSON'),
+    search: l10n.t('Search session events'),
+  };
+}
 export const filterOrder: OpenCodeTimelineFilter[] = [
   'all',
   'tools',
@@ -163,9 +169,9 @@ function header(): HTMLElement {
       'p',
       [
         model!.session.id,
-        model!.session.agent && `agent ${model!.session.agent}`,
+        model!.session.agent && l10n.t('agent {0}', model!.session.agent),
         [model!.session.provider, model!.session.model].filter(Boolean).join('/'),
-        model!.session.version && `OpenCode v${model!.session.version}`,
+        model!.session.version && l10n.t('OpenCode v{0}', model!.session.version),
       ]
         .filter(Boolean)
         .join(' · '),
@@ -175,16 +181,21 @@ function header(): HTMLElement {
   const right = el('div', 'metrics');
   const m = model!.metrics;
   [
-    ['Cost', money(m.totalCost)],
+    [l10n.t('Cost'), money(m.totalCost)],
     [
-      'Tokens',
+      l10n.t('Tokens'),
       compact(m.totalTokens) +
-        (m.cachedShare !== undefined ? ` · ${Math.round(m.cachedShare * 100)}% cached` : ''),
+        (m.cachedShare !== undefined
+          ? ` · ${l10n.t('{0}% cached', Math.round(m.cachedShare * 100))}`
+          : ''),
     ],
-    ['Duration', duration(m.durationMs)],
-    ['Diff', diffMetric()],
-    ['Files', m.filesChanged === undefined ? '—' : `${m.filesChanged} files`],
-    ['Errors', `${m.errorCount} errors · ${m.retryCount} retries`],
+    [l10n.t('Duration'), duration(m.durationMs)],
+    [l10n.t('Diff'), diffMetric()],
+    [l10n.t('Files'), m.filesChanged === undefined ? '—' : l10n.t('{0} files', m.filesChanged)],
+    [
+      l10n.t('Errors'),
+      `${l10n.t('{0} errors', m.errorCount)} · ${l10n.t('{0} retries', m.retryCount)}`,
+    ],
   ].forEach(([k, v]) => {
     const item = el('div', 'metric');
     item.append(textEl('b', v || '—'), textEl('span', k));
@@ -204,15 +215,16 @@ function renderToolbar(): void {
   const bar = qs('#toolbar');
   if (!bar) return;
   bar.textContent = '';
+  const tooltips = tooltipStrings();
   const label: Record<OpenCodeTimelineFilter, string> = {
-    all: 'All',
-    tools: 'Tools',
-    skills: 'Skills',
-    reasoning: 'Reasoning',
-    errors: 'Errors',
-    diffs: 'Diffs',
-    text: 'Text',
-    subtasks: 'Subtasks',
+    all: l10n.t('All'),
+    tools: l10n.t('Tools'),
+    skills: l10n.t('Skills'),
+    reasoning: l10n.t('Reasoning'),
+    errors: l10n.t('Errors'),
+    diffs: l10n.t('Diffs'),
+    text: l10n.t('Text'),
+    subtasks: l10n.t('Subtasks'),
   };
   const chips = el('div', 'chips');
   for (const f of filterOrder) {
@@ -225,9 +237,9 @@ function renderToolbar(): void {
   const search = document.createElement('input');
   search.id = 'search';
   search.type = 'search';
-  search.placeholder = 'Search session…';
+  search.placeholder = l10n.t('Search session…');
   search.value = state.draftQuery;
-  search.setAttribute('aria-label', 'Search session events');
+  search.setAttribute('aria-label', l10n.t('Search session events'));
   attachTooltip(search, tooltips.search);
   search.addEventListener('input', () => {
     state = setTimelineSearchDraft(state!, search.value);
@@ -237,13 +249,17 @@ function renderToolbar(): void {
     event.preventDefault();
     applySearch();
   });
+  // openCodeSessionReportStructure.test.ts pins this literal call; the visible
+  // caption is localized separately just below (identity in English).
+  const searchButton = button('Search', 'search', tooltips.search);
+  searchButton.textContent = l10n.t('Search');
   actions.append(
     search,
-    button('Search', 'search', tooltips.search),
-    textEl('span', 'Matches ' + visibleTimelineEvents(model.events, state).length),
-    button('Expand all', 'expand-all', tooltips['expand-all']),
-    button('Collapse all', 'collapse-all', tooltips['collapse-all']),
-    button('Raw JSON', 'raw', tooltips.raw),
+    searchButton,
+    textEl('span', l10n.t('Matches {0}', visibleTimelineEvents(model.events, state).length)),
+    button(l10n.t('Expand all'), 'expand-all', tooltips['expand-all']),
+    button(l10n.t('Collapse all'), 'collapse-all', tooltips['collapse-all']),
+    button(l10n.t('Raw JSON'), 'raw', tooltips.raw),
   );
   bar.append(chips, actions);
 }
@@ -265,25 +281,31 @@ function renderSessionDetails(): void {
   s.hidden = !state.sessionDetailsExpanded;
   if (s.hidden) return;
   s.append(
-    textEl('h2', 'Session details'),
+    textEl('h2', l10n.t('Session details')),
     textEl(
       'p',
-      `Pinned reference: OpenCode source commit ${model.diagnosticsSummary.reconstructedSchema}. Schema status: reconstructed compatibility reference.`,
+      l10n.t(
+        'Pinned reference: OpenCode source commit {0}. Schema status: reconstructed compatibility reference.',
+        model.diagnosticsSummary.reconstructedSchema,
+      ),
     ),
     table([...model.details.metadata, ...model.details.changeSummary]),
-    textEl('h3', 'Compatibility diagnostics'),
+    textEl('h3', l10n.t('Compatibility diagnostics')),
     table(
       model.diagnosticsSummary.diagnostics.map((d) => [
         d.severity,
         `${d.code} ${d.path ?? ''} ${d.message}`,
       ]),
     ),
-    textEl('h3', 'Loaded skills'),
+    textEl('h3', l10n.t('Loaded skills')),
     textEl('p', model.details.temporalWarning),
     table(
       model.details.skills.map((sk) => [
-        sk.skillName ?? 'Unknown',
-        `${sk.status}; ${sk.followingActions} following actions; matching ${sk.matchingStatus}; ${sk.actionSummary}`,
+        sk.skillName ?? l10n.t('Unknown'),
+        `${sk.status}; ${l10n.t('{0} following actions', sk.followingActions)}; ${l10n.t(
+          'matching {0}',
+          sk.matchingStatus,
+        )}; ${sk.actionSummary}`,
       ]),
     ),
   );
@@ -296,10 +318,27 @@ function timelineShell(): HTMLElement {
 function rowHead(): HTMLElement {
   const r = el('div', 'timeline-row timeline-head timeline-columns-header');
   r.append(
-    textEl('div', 'T+'),
+    textEl(
+      'div',
+      l10n.t({
+        message: 'T+',
+        args: [],
+        comment: ['Timeline column header: elapsed time since session start'],
+      }),
+    ),
     el('div', 'rail'),
-    textEl('div', 'EVENT'),
-    textEl('div', 'LATENCY · TOKENS · COST'),
+    textEl(
+      'div',
+      l10n.t({ message: 'EVENT', args: [], comment: ['Timeline column header: event summary'] }),
+    ),
+    textEl(
+      'div',
+      l10n.t({
+        message: 'LATENCY · TOKENS · COST',
+        args: [],
+        comment: ['Timeline column header: per-event latency, token, and cost figures'],
+      }),
+    ),
   );
   return r;
 }
@@ -318,7 +357,11 @@ function renderTimeline(): void {
     frag.append(
       textEl(
         'p',
-        `Rendering first ${limit} of ${events.length} matching events. Refine filters or search for faster inspection.`,
+        l10n.t(
+          'Rendering first {0} of {1} matching events. Refine filters or search for faster inspection.',
+          limit,
+          events.length,
+        ),
       ),
     );
   t.append(frag);
@@ -339,7 +382,10 @@ function eventRow(event: OpenCodeTimelineEvent): HTMLElement {
   const head = el('div', 'event-head');
   const content = el('div', 'event-head-content');
   const title = el('div', 'title');
-  title.append(textEl('span', 'badge', badge(event)), highlight(event.label, state!.query));
+  title.append(
+    textEl('span', 'badge', eventKindLabel(event.kind)),
+    highlight(event.label, state!.query),
+  );
   if (event.secondaryLabel) title.append(textEl('small', event.secondaryLabel));
   content.append(title);
   if (event.preview) content.append(highlight(event.preview, state!.query, 'preview'));
@@ -398,7 +444,7 @@ function moveFocus(id: string | undefined, delta: number): void {
   toggles[Math.max(0, Math.min(toggles.length - 1, base + delta))]?.focus();
 }
 function eventToggle(event: OpenCodeTimelineEvent, expanded: boolean): HTMLButtonElement {
-  const presentation = eventTogglePresentation(expanded, badge(event));
+  const presentation = eventTogglePresentation(expanded, eventKindLabel(event.kind));
   const b = button('', 'toggle-event', presentation.tooltip);
   b.className = 'event-toggle';
   b.dataset.eventId = event.id;
@@ -460,8 +506,10 @@ function button(label: string, action: string, tooltip?: string): HTMLButtonElem
 }
 function diagnosticsBadge(): HTMLElement {
   const values = [
-    model!.diagnosticsSummary.error ? `${model!.diagnosticsSummary.error} errors` : '',
-    model!.diagnosticsSummary.warning ? `${model!.diagnosticsSummary.warning} warnings` : '',
+    model!.diagnosticsSummary.error ? l10n.t('{0} errors', model!.diagnosticsSummary.error) : '',
+    model!.diagnosticsSummary.warning
+      ? l10n.t('{0} warnings', model!.diagnosticsSummary.warning)
+      : '',
   ].filter(Boolean);
   const badge = textEl('span', 'diagnostics-badge', values.join(' · '));
   badge.hidden = !values.length;
@@ -470,7 +518,9 @@ function diagnosticsBadge(): HTMLElement {
 function renderSessionChevron(): void {
   const b = qs<HTMLButtonElement>('#session-details-toggle');
   if (!b || !state) return;
-  const tip = state.sessionDetailsExpanded ? 'Hide session details' : 'Show session details';
+  const tip = state.sessionDetailsExpanded
+    ? l10n.t('Hide session details')
+    : l10n.t('Show session details');
   b.textContent = state.sessionDetailsExpanded ? '⌄' : '›';
   b.setAttribute('aria-label', tip);
   b.setAttribute('aria-expanded', String(state.sessionDetailsExpanded));
@@ -560,7 +610,19 @@ function duration(v?: number): string {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  return h ? `${h}h ${m}m ${sec}s` : m ? `${m}m ${sec}s` : `${sec}s`;
+  if (h)
+    return l10n.t({
+      message: '{0}h {1}m {2}s',
+      args: [h, m, sec],
+      comment: ['Abbreviated duration: hours, minutes, seconds'],
+    });
+  if (m)
+    return l10n.t({
+      message: '{0}m {1}s',
+      args: [m, sec],
+      comment: ['Abbreviated duration: minutes, seconds'],
+    });
+  return l10n.t({ message: '{0}s', args: [sec], comment: ['Abbreviated duration: seconds'] });
 }
 function elapsed(v: number): string {
   const s = Math.floor(v / 1000);
@@ -575,8 +637,45 @@ function diffMetric(): string {
     ? '—'
     : `+${m.additions ?? 0} −${m.deletions ?? 0}`;
 }
-function badge(e: OpenCodeTimelineEvent): string {
-  return e.kind.replace('-', ' ').toUpperCase();
+// Natural-case labels for the event badge; styles.css uppercases the badge so
+// the rendered English stays visually identical to the old mechanical
+// kind.replace('-', ' ').toUpperCase() transform.
+function eventKindLabel(kind: OpenCodeTimelineEvent['kind']): string {
+  switch (kind) {
+    case 'user-message':
+      return l10n.t('User message');
+    case 'assistant-message':
+      return l10n.t('Assistant message');
+    case 'step':
+      return l10n.t('Step');
+    case 'reasoning':
+      return l10n.t('Reasoning');
+    case 'text':
+      return l10n.t('Text');
+    case 'tool':
+      return l10n.t('Tool');
+    case 'skill':
+      return l10n.t('Skill');
+    case 'file':
+      return l10n.t('File');
+    case 'patch':
+      return l10n.t('Patch');
+    case 'snapshot':
+      return l10n.t('Snapshot');
+    case 'agent':
+      return l10n.t('Agent');
+    case 'subtask':
+      return l10n.t('Subtask');
+    case 'retry':
+      return l10n.t('Retry');
+    case 'compaction':
+      return l10n.t('Compaction');
+    case 'unknown':
+      return l10n.t('Unknown');
+    default:
+      // Future kinds not yet in the union fall back to the mechanical label.
+      return String(kind).replace('-', ' ').toUpperCase();
+  }
 }
 function marker(e: OpenCodeTimelineEvent): string {
   if (e.category === 'error') return '✕';

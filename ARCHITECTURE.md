@@ -579,9 +579,36 @@ Prettier, and VS Code type definitions.
   `benchmark:static`, `benchmark:calibration`, and `benchmark:collisions` scripts run
   them individually.
 - `scripts/sync-heuristic-dictionaries.js --check` detects drift between the
-  canonical dictionary catalog and contributed VS Code settings.
+  canonical dictionary catalog and contributed VS Code settings. The generated
+  setting descriptions are `%…%` NLS placeholders; their English text lives in
+  `package.nls.json`, so adding a catalog key also means adding its description
+  there (`test/packageNls.test.ts` enforces both directions).
 - Diagnostic codes should have corresponding user documentation in
   `docs/rules.md`.
+
+### Localization
+
+- Manifest strings live in `package.nls.json`; `package.json` holds `%key%`
+  placeholders that VS Code substitutes at load time.
+- Runtime strings go through `l10n.t()` from **`@vscode/l10n`** everywhere —
+  extension host, pure analysis modules, and the browser webview bundle alike.
+  `vscode.l10n` is referenced only in `src/l10nSetup.ts` (the first import of
+  `extension.ts`), which feeds the host-selected bundle into `@vscode/l10n`;
+  the OpenCode webview has its own `l10nSetup.ts` that reads the bundle from an
+  inert JSON data block embedded in the webview HTML. Unconfigured, `t()`
+  returns its input, which keeps pure modules vitest-testable and English
+  output byte-stable.
+- Rules: the first argument of `l10n.t()` is always a string literal (the
+  extractor requires it; the one exception is security-catalog values, merged
+  into the bundle by `scripts/merge-l10n-data.js`); no `t()` call may run at
+  module top level (module bodies evaluate before the bundle is configured) —
+  top-level English constants become functions; sentences are never composed
+  from translated fragments; dialog-button results are compared against
+  captured localized constants. Output-channel logs, generated SKILL.md
+  content, and diagnostic codes stay English by design.
+- `npm run l10n:export` regenerates `l10n/bundle.l10n.json` (extraction plus
+  the catalog merge); translations ship as `bundle.l10n.<lang>.json` and
+  `package.nls.<lang>.json`.
 
 The standard contributor checks are:
 

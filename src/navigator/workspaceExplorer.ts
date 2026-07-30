@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { createWorkspaceExcludeMatcher } from './workspaceExcludes';
 import { compareWorkspaceNodes, isDirectoryType } from './workspaceSorting';
@@ -48,7 +49,7 @@ export class WorkspaceExplorer implements vscode.Disposable {
       {
         type: 'loading',
         id: `workspace-loading:${node.uri.toString()}`,
-        label: 'Loading folder…',
+        label: l10n.t('Loading folder…'),
         parentUri: node.uri,
       },
     ];
@@ -74,7 +75,7 @@ export class WorkspaceExplorer implements vscode.Disposable {
       const child: WorkspaceExplorerNode = {
         type: 'workspaceError',
         id: `workspace-error:${node.uri.toString()}`,
-        label: 'Unable to read this folder.',
+        label: l10n.t('Unable to read this folder.'),
         parentUri: node.uri,
       };
       this.cache.set(key, [child]);

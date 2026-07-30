@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
@@ -46,7 +47,7 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionMissing,
         'error',
-        'Missing required `description` field in frontmatter.',
+        l10n.t('Missing required `description` field in frontmatter.'),
         range,
         { quickFixId: QuickFixId.InsertDescription },
       ),
@@ -55,7 +56,12 @@ export function validateDescription(
 
   if (typeof value !== 'string') {
     return [
-      diag(DiagnosticCode.DescriptionType, 'error', '`description` must be a string.', range),
+      diag(
+        DiagnosticCode.DescriptionType,
+        'error',
+        l10n.t('`description` must be a string.'),
+        range,
+      ),
     ];
   }
 
@@ -71,7 +77,9 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionXmlTags,
         'error',
-        '`description` must not contain `<` or `>`. Anthropic\'s platform rejects descriptions with XML tags or angle brackets.',
+        l10n.t(
+          '`description` must not contain `<` or `>`. Anthropic\'s platform rejects descriptions with XML tags or angle brackets.',
+        ),
         range,
       ),
     );
@@ -82,7 +90,7 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionTooLong,
         'error',
-        `\`description\` is ${analysis.length} characters; the maximum is ${maxLength}.`,
+        l10n.t('`description` is {0} characters; the maximum is {1}.', analysis.length, maxLength),
         range,
       ),
     );
@@ -91,7 +99,11 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionTooVerbose,
         'warning',
-        `\`description\` is ${analysis.length} characters; aim for at most ${RECOMMENDED_DESCRIPTION_MAX_LENGTH} and move detailed procedure to the Markdown body.`,
+        l10n.t(
+          '`description` is {0} characters; aim for at most {1} and move detailed procedure to the Markdown body.',
+          analysis.length,
+          RECOMMENDED_DESCRIPTION_MAX_LENGTH,
+        ),
         range,
       ),
     );
@@ -102,7 +114,11 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionTooShort,
         'warning',
-        `\`description\` is only ${analysis.length} characters. Aim for at least ${minLength} so the agent can tell what the skill does and when to use it.`,
+        l10n.t(
+          '`description` is only {0} characters. Aim for at least {1} so the agent can tell what the skill does and when to use it.',
+          analysis.length,
+          minLength,
+        ),
         range,
       ),
     );
@@ -117,7 +133,9 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionLanguageLimited,
         'information',
-        '`description` does not appear to be English, so the English wording checks (action verb, trigger, boundary, vagueness) were skipped. Structural rules still apply.',
+        l10n.t(
+          '`description` does not appear to be English, so the English wording checks (action verb, trigger, boundary, vagueness) were skipped. Structural rules still apply.',
+        ),
         range,
       ),
     );
@@ -129,7 +147,10 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionVague,
         'warning',
-        `\`description\` uses vague wording (${analysis.vagueTerms.join(', ')}). Describe the concrete task instead.`,
+        l10n.t(
+          '`description` uses vague wording ({0}). Describe the concrete task instead.',
+          analysis.vagueTerms.join(', '),
+        ),
         range,
       ),
     );
@@ -140,7 +161,10 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionOverbroadTrigger,
         'warning',
-        `\`description\` claims an overbroad usage scope ("${analysis.overbroadTrigger.matched}"). Narrow when the skill should trigger. Description completeness is capped at 69.`,
+        l10n.t(
+          '`description` claims an overbroad usage scope ("{0}"). Narrow when the skill should trigger. Description completeness is capped at 69.',
+          String(analysis.overbroadTrigger.matched),
+        ),
         range,
       ),
     );
@@ -151,7 +175,9 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionInstructionHeavy,
         'warning',
-        '`description` embeds a detailed workflow. Frontmatter should describe capability and trigger scope; detailed procedure belongs in the Markdown body. Description completeness is capped at 74.',
+        l10n.t(
+          '`description` embeds a detailed workflow. Frontmatter should describe capability and trigger scope; detailed procedure belongs in the Markdown body. Description completeness is capped at 74.',
+        ),
         range,
       ),
     );
@@ -172,7 +198,10 @@ export function validateDescription(
         ? diag(
             DiagnosticCode.DescriptionNoVerb,
             'information',
-            `\`description\` opens with "${unregistered}", which reads like a capability verb but is not in the configured vocabulary. Add it to score the capability criterion fully.`,
+            l10n.t(
+              '`description` opens with "{0}", which reads like a capability verb but is not in the configured vocabulary. Add it to score the capability criterion fully.',
+              unregistered,
+            ),
             range,
             {
               quickFixId: QuickFixId.AddActionVerbToDictionary,
@@ -182,7 +211,9 @@ export function validateDescription(
         : diag(
             DiagnosticCode.DescriptionNoVerb,
             'warning',
-            '`description` does not contain a clear action verb (e.g. "format", "analyze", "generate").',
+            l10n.t(
+              '`description` does not contain a clear action verb (e.g. "format", "analyze", "generate").',
+            ),
             range,
           ),
     );
@@ -197,7 +228,10 @@ export function validateDescription(
         diag(
           DiagnosticCode.DescriptionNoArtifact,
           'information',
-          `\`description\` names "${unregistered}", which reads like a concrete artifact but is not in the configured vocabulary. Add it to score the artifact criterion fully.`,
+          l10n.t(
+            '`description` names "{0}", which reads like a concrete artifact but is not in the configured vocabulary. Add it to score the artifact criterion fully.',
+            unregistered,
+          ),
           range,
           {
             quickFixId: QuickFixId.AddArtifactToDictionary,
@@ -214,8 +248,12 @@ export function validateDescription(
         DiagnosticCode.DescriptionNoTrigger,
         'warning',
         analysis.triggerClause.markerFound
-          ? '`description` has a trigger marker, but its scope content is too vague. State a concrete context.'
-          : '`description` does not explain when to use the skill. Add a trigger clause such as "Use when...".',
+          ? l10n.t(
+              '`description` has a trigger marker, but its scope content is too vague. State a concrete context.',
+            )
+          : l10n.t(
+              '`description` does not explain when to use the skill. Add a trigger clause such as "Use when...".',
+            ),
         range,
         { quickFixId: QuickFixId.InsertUseWhenClause },
       ),
@@ -230,8 +268,12 @@ export function validateDescription(
         DiagnosticCode.DescriptionNoBoundary,
         'information',
         analysis.boundaryClause.markerFound
-          ? '`description` has a boundary marker, but its scope content is too vague. State a concrete excluded context.'
-          : '`description` does not define when NOT to use the skill. Add a boundary such as "Do not use when...".',
+          ? l10n.t(
+              '`description` has a boundary marker, but its scope content is too vague. State a concrete excluded context.',
+            )
+          : l10n.t(
+              '`description` does not define when NOT to use the skill. Add a boundary such as "Do not use when...".',
+            ),
         range,
         { quickFixId: QuickFixId.InsertDoNotUseClause },
       ),
@@ -243,7 +285,9 @@ export function validateDescription(
       diag(
         DiagnosticCode.DescriptionNotFrontLoaded,
         'information',
-        'State the main capability in the first few words of `description` so the agent can match it quickly.',
+        l10n.t(
+          'State the main capability in the first few words of `description` so the agent can match it quickly.',
+        ),
         range,
       ),
     );

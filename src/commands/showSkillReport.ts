@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { analyzeSkill } from '../analysis/analyzeSkill';
 import { analysisContextFromConfig, readConfig } from '../config';
 import { buildReportModel } from '../ui/reportModel';
@@ -12,7 +13,9 @@ export async function showSkillReport(
   uri?: Parameters<typeof resolveSkillTarget>[0],
   remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
 ): Promise<void> {
-  const target = await resolveSkillTarget(uri, { warningAction: 'show its report' });
+  const target = await resolveSkillTarget(uri, {
+    missingEditorMessage: l10n.t('SKILL.md Inspector: open a SKILL.md file to show its report.'),
+  });
   if (!target) {
     return;
   }

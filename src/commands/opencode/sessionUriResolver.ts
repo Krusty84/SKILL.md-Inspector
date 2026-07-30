@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import type { OpenCodeSessionTreeItem } from '../../ui/openCodeSessionsTreeProvider';
 
@@ -39,9 +40,9 @@ export async function resolveOpenCodeSessionUri(
     canSelectFiles: true,
     canSelectFolders: false,
     canSelectMany: false,
-    openLabel: 'Open OpenCode Session',
+    openLabel: l10n.t('Open OpenCode Session'),
     filters: {
-      'OpenCode Session Export': ['json'],
+      [l10n.t('OpenCode Session Export')]: ['json'],
     },
   });
 

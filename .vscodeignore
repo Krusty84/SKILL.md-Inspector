@@ -13,3 +13,4 @@ vitest.config.ts
 **/*.map
 **/*.ts
 !dist/**
+**/*.qps-ploc.json

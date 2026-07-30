@@ -1,5 +1,41 @@
+import * as l10n from '@vscode/l10n';
 import { DESCRIPTION_PLACEHOLDER } from '../codeActions/templates';
 import type { SkillTemplateDefinition } from './types';
+
+/**
+ * Localized quick-pick presentation for the bundled templates. A function, not
+ * data on the array, so no l10n.t() runs at module load and the template
+ * content itself (the inserted frontmatter/body) stays English. Custom
+ * templates from settings keep their user-provided label and description.
+ */
+export function builtInTemplateDisplay(
+  id: string,
+): { label: string; description: string } | undefined {
+  switch (id) {
+    case 'minimal':
+      return {
+        label: l10n.t('Minimal'),
+        description: l10n.t('A compact SKILL.md with required frontmatter and a short body.'),
+      };
+    case 'standard':
+      return {
+        label: l10n.t('Standard'),
+        description: l10n.t('A balanced starter template for most skills.'),
+      };
+    case 'detailed':
+      return {
+        label: l10n.t('Detailed'),
+        description: l10n.t('A fuller template with scope, resources, examples, and constraints.'),
+      };
+    case 'workflow':
+      return {
+        label: l10n.t('Workflow-oriented'),
+        description: l10n.t('A step-by-step template for repeatable procedures.'),
+      };
+    default:
+      return undefined;
+  }
+}
 
 export const builtInTemplates: SkillTemplateDefinition[] = [
   {

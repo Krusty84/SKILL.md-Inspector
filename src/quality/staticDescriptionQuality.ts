@@ -16,6 +16,7 @@
  * listed one, which is a separate problem. Recorded here and in docs/rules.md so
  * it is not mistaken for something this module handles.
  */
+import * as l10n from '@vscode/l10n';
 import { analyzeDescription, type DescriptionAnalysis } from './descriptionHeuristics';
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
 import { normalizeContentToken } from './wordForms';
@@ -49,11 +50,15 @@ function unrecognizedVocabularyMessage(
   word: string,
   setting: 'actionVerbs' | 'artifactHints',
 ): string {
-  const kind = setting === 'actionVerbs' ? 'capability verb' : 'concrete artifact';
-  return (
-    `No recognized ${kind}; "${word}" reads like one but is not in the configured ` +
-    `vocabulary. Add it to skillMdInspector.heuristics.dictionaryValues.${setting} to score it fully.`
-  );
+  return setting === 'actionVerbs'
+    ? l10n.t(
+        'No recognized capability verb; "{0}" reads like one but is not in the configured vocabulary. Add it to skillMdInspector.heuristics.dictionaryValues.actionVerbs to score it fully.',
+        word,
+      )
+    : l10n.t(
+        'No recognized concrete artifact; "{0}" reads like one but is not in the configured vocabulary. Add it to skillMdInspector.heuristics.dictionaryValues.artifactHints to score it fully.',
+        word,
+      );
 }
 
 /** Points allotted to each criterion (brief §10.1). Sum = 100. */
@@ -75,10 +80,11 @@ export function computeStaticDescriptionQuality(
   description: unknown,
   options: StaticDescriptionQualityOptions = {},
 ): StaticDescriptionQualityResult {
-  if (description === undefined) return notScoredResult('description is missing');
-  if (description === null) return notScoredResult('description is null');
-  if (typeof description !== 'string') return notScoredResult('description is not a string');
-  if (description.trim() === '') return notScoredResult('description is empty');
+  if (description === undefined) return notScoredResult(l10n.t('description is missing'));
+  if (description === null) return notScoredResult(l10n.t('description is null'));
+  if (typeof description !== 'string')
+    return notScoredResult(l10n.t('description is not a string'));
+  if (description.trim() === '') return notScoredResult(l10n.t('description is empty'));
   return scoreAnalysis(analyzeDescription(description, options.dictionaries), options);
 }
 
@@ -91,7 +97,7 @@ export function assessDocumentDescriptionQuality(
     doc.frontmatter === null &&
     !doc.parseErrors.some((error) => error.code === DiagnosticCode.FrontmatterMissing)
   ) {
-    return notScoredResult('frontmatter could not be parsed');
+    return notScoredResult(l10n.t('frontmatter could not be parsed'));
   }
   return computeStaticDescriptionQuality(doc.frontmatter?.description, options);
 }
@@ -144,26 +150,32 @@ export function scoreAnalysis(
           : 0,
       weights.actionVerb,
       capability.dictionary
-        ? `States the capability with "${analysis.actionVerb.matched}".`
+        ? l10n.t('States the capability with "{0}".', String(analysis.actionVerb.matched))
         : capability.structural
           ? unrecognizedVocabularyMessage(capability.structuralTerm ?? '', 'actionVerbs')
-          : 'No action verb — start with a capability such as "format" or "generate".',
+          : l10n.t('No action verb — start with a capability such as "format" or "generate".'),
       capability.dictionary
         ? undefined
         : capability.structural
-          ? `Add "${capability.structuralTerm}" to skillMdInspector.heuristics.dictionaryValues.actionVerbs.`
-          : 'Lead with a capability verb.',
+          ? l10n.t(
+              'Add "{0}" to skillMdInspector.heuristics.dictionaryValues.actionVerbs.',
+              String(capability.structuralTerm),
+            )
+          : l10n.t('Lead with a capability verb.'),
     ),
     finding(
       'Usage trigger phrase',
       triggerPoints,
       weights.triggerPhrase,
       analysis.triggerClause.contentFound
-        ? `Explains when to use the skill ("${analysis.triggerClause.matchedPhrase}").`
+        ? l10n.t(
+            'Explains when to use the skill ("{0}").',
+            String(analysis.triggerClause.matchedPhrase),
+          )
         : analysis.triggerClause.markerFound
-          ? 'Usage trigger is present, but its scope content is too vague.'
-          : 'No usage trigger — add a clause like "Use when ...".',
-      analysis.triggerClause.contentFound ? undefined : 'Add "Use when <context>".',
+          ? l10n.t('Usage trigger is present, but its scope content is too vague.')
+          : l10n.t('No usage trigger — add a clause like "Use when ...".'),
+      analysis.triggerClause.contentFound ? undefined : l10n.t('Add "Use when <context>".'),
     ),
     finding(
       'Concrete artifact / domain',
@@ -174,58 +186,68 @@ export function scoreAnalysis(
           : 0,
       weights.concreteArtifact,
       analysis.concreteArtifact
-        ? 'Names a concrete artifact or domain.'
+        ? l10n.t('Names a concrete artifact or domain.')
         : structuralArtifactOnly
           ? unrecognizedVocabularyMessage(
               analysis.artifactEvidence.structuralTerm ?? '',
               'artifactHints',
             )
-          : 'No concrete artifact — say what the skill operates on.',
+          : l10n.t('No concrete artifact — say what the skill operates on.'),
       analysis.concreteArtifact
         ? undefined
         : structuralArtifactOnly
-          ? `Add "${analysis.artifactEvidence.structuralTerm}" to skillMdInspector.heuristics.dictionaryValues.artifactHints.`
-          : 'Name the artifact (e.g. "PDF reports").',
+          ? l10n.t(
+              'Add "{0}" to skillMdInspector.heuristics.dictionaryValues.artifactHints.',
+              String(analysis.artifactEvidence.structuralTerm),
+            )
+          : l10n.t('Name the artifact (e.g. "PDF reports").'),
     ),
     finding(
       'Boundary phrase',
       boundaryPoints,
       weights.boundary,
       boundary
-        ? `Defines a boundary ("${analysis.boundaryClause.matchedPhrase}").`
+        ? l10n.t('Defines a boundary ("{0}").', String(analysis.boundaryClause.matchedPhrase))
         : analysis.boundaryClause.markerFound
-          ? 'Boundary marker is present, but its scope content is too vague.'
-          : 'No boundary — add "Do not use when ...".',
-      boundary ? undefined : 'Add a concrete excluded context after the boundary marker.',
+          ? l10n.t('Boundary marker is present, but its scope content is too vague.')
+          : l10n.t('No boundary — add "Do not use when ...".'),
+      boundary ? undefined : l10n.t('Add a concrete excluded context after the boundary marker.'),
     ),
     finding(
       'Front-loaded intent',
       frontLoaded ? weights.frontLoaded : 0,
       weights.frontLoaded,
       frontLoaded
-        ? 'States the main capability in the first words.'
-        : 'Main capability is not stated up front.',
-      frontLoaded ? undefined : 'Put the capability in the first ~10 words.',
+        ? l10n.t('States the main capability in the first words.')
+        : l10n.t('Main capability is not stated up front.'),
+      frontLoaded ? undefined : l10n.t('Put the capability in the first ~10 words.'),
     ),
     finding(
       'Low vagueness',
       vaguePoints,
       weights.lowVagueness,
       analysis.vagueTerms.length === 0
-        ? 'No vague wording.'
-        : `Vague wording: ${analysis.vagueTerms.join(', ')}.`,
-      analysis.vagueTerms.length === 0 ? undefined : 'Replace vague words with concrete detail.',
+        ? l10n.t('No vague wording.')
+        : l10n.t('Vague wording: {0}.', analysis.vagueTerms.join(', ')),
+      analysis.vagueTerms.length === 0
+        ? undefined
+        : l10n.t('Replace vague words with concrete detail.'),
     ),
     finding(
       'Good length',
       lengthPoints,
       weights.goodLength,
       lengthPoints === weights.goodLength
-        ? `Length is ${analysis.length} characters.`
-        : `Length is ${analysis.length} characters (aim for ${goodLengthMin}–${goodLengthMax}).`,
+        ? l10n.t('Length is {0} characters.', analysis.length)
+        : l10n.t(
+            'Length is {0} characters (aim for {1}–{2}).',
+            analysis.length,
+            goodLengthMin,
+            goodLengthMax,
+          ),
       lengthPoints === weights.goodLength
         ? undefined
-        : `Aim for roughly ${goodLengthMin}–${goodLengthMax} characters.`,
+        : l10n.t('Aim for roughly {0}–{1} characters.', goodLengthMin, goodLengthMax),
     ),
   ];
 
@@ -235,7 +257,9 @@ export function scoreAnalysis(
         'Language support',
         0,
         0,
-        'Description does not appear to be English; deterministic semantic analysis (verbs, triggers, vagueness) may be incomplete.',
+        l10n.t(
+          'Description does not appear to be English; deterministic semantic analysis (verbs, triggers, vagueness) may be incomplete.',
+        ),
       ),
     );
   }
@@ -304,8 +328,9 @@ function assessGradeLimitations(
     limitations.push({
       code: 'over-maximum-length',
       ceiling: 59,
-      reason:
+      reason: l10n.t(
         'The description exceeds the configured maximum length, which is a specification error, so the adjusted score cannot exceed 59.',
+      ),
     });
   }
 
@@ -317,8 +342,9 @@ function assessGradeLimitations(
     limitations.push({
       code: 'echoed-scope-content',
       ceiling: 69,
-      reason:
+      reason: l10n.t(
         'The usage trigger and boundary describe the same scope, so neither adds distinguishing guidance; the adjusted score cannot exceed 69.',
+      ),
     });
   }
 
@@ -329,8 +355,9 @@ function assessGradeLimitations(
     limitations.push({
       code: 'unfilled-placeholder',
       ceiling: 59,
-      reason:
+      reason: l10n.t(
         'A scope clause still contains an unfilled template placeholder such as "<trigger context>", so the adjusted score cannot exceed 59.',
+      ),
     });
   }
 
@@ -344,30 +371,34 @@ function assessGradeLimitations(
     limitations.push({
       code: 'missing-action-capability',
       ceiling: 59,
-      reason: 'No action capability is present, so the adjusted score cannot exceed 59.',
+      reason: l10n.t('No action capability is present, so the adjusted score cannot exceed 59.'),
     });
   }
   if (!analysis.concreteArtifact && !analysis.artifactEvidence.structural) {
     limitations.push({
       code: 'missing-concrete-artifact',
       ceiling: 59,
-      reason: 'No concrete artifact or domain is present, so the adjusted score cannot exceed 59.',
+      reason: l10n.t(
+        'No concrete artifact or domain is present, so the adjusted score cannot exceed 59.',
+      ),
     });
   }
   if (analysis.overbroadTrigger.found) {
     limitations.push({
       code: 'overbroad-usage-scope',
       ceiling: 69,
-      reason:
+      reason: l10n.t(
         'The description claims an overbroad usage scope, so the adjusted score cannot exceed 69.',
+      ),
     });
   }
   if (analysis.instructionHeavy.found) {
     limitations.push({
       code: 'instruction-heavy-description',
       ceiling: 74,
-      reason:
+      reason: l10n.t(
         'The frontmatter description embeds detailed procedure that belongs in the Markdown body, so the adjusted score cannot exceed 74.',
+      ),
     });
   }
   if (analysis.triggerClause.contentFound) {
@@ -377,15 +408,17 @@ function assessGradeLimitations(
     limitations.push({
       code: 'vague-usage-trigger',
       ceiling: 74,
-      reason:
+      reason: l10n.t(
         'The usage-trigger marker has only vague content, so the adjusted score cannot exceed 74.',
+      ),
     });
   } else {
     limitations.push({
       code: 'missing-usage-trigger',
       ceiling: 69,
-      reason:
+      reason: l10n.t(
         'No concrete usage-trigger content is present, so the adjusted score cannot exceed 69.',
+      ),
     });
   }
 
@@ -405,19 +438,24 @@ function assessCoverage(
 
   if (analysis.trimmed.length === 0) {
     limitations.push(
-      'The description is empty, so the score reflects only missing-field penalties.',
+      l10n.t('The description is empty, so the score reflects only missing-field penalties.'),
     );
     return { coverage: 'low', limitations };
   }
   if (languageLimited) {
     coverage = 'low';
     limitations.push(
-      'The description does not appear to be English, so the semantic checks (action verb, trigger, vagueness) may be unreliable.',
+      l10n.t(
+        'The description does not appear to be English, so the semantic checks (action verb, trigger, vagueness) may be unreliable.',
+      ),
     );
   }
   if (analysis.length < minLength) {
     limitations.push(
-      `The description is shorter than the recommended minimum (${minLength} characters), so some signals are weak.`,
+      l10n.t(
+        'The description is shorter than the recommended minimum ({0} characters), so some signals are weak.',
+        minLength,
+      ),
     );
     if (coverage === 'high') {
       coverage = 'medium';

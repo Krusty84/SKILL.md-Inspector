@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import packageJson from '../package.json';
+import rawPackageJson from '../package.json';
 import catalog from '../src/quality/defaultHeuristicDictionaries.json';
 import { activatesFor } from './helpers/activationContract';
+import { resolveNls } from './helpers/nls';
+
+// Manifest strings live in package.nls.json as %key% placeholders; resolve them
+// so assertions keep checking the user-visible English text.
+const packageJson = resolveNls(rawPackageJson);
 
 // `contributes.configuration` is an array of titled categories (labeled sections in
 // the Settings UI); merge their property maps so a setting can be looked up by id

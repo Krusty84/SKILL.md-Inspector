@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 # SKILL.md Inspector generated index export
 skills.index.json
 skill-md-inspector-*.vsix
+
+**/*.qps-ploc.json

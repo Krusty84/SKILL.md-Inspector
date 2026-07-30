@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type {
   OpenCodeParseDiagnostic,
   ParsedMessage,
@@ -30,13 +31,17 @@ const knownStatuses = new Set(['pending', 'running', 'completed', 'error']);
 export function parseSessionExport(value: unknown): ParseResult {
   const diagnostics: OpenCodeParseDiagnostic[] = [];
   if (!isRecord(value))
-    return fatal('opencode.root.invalid', 'OpenCode export root must be an object.');
+    return fatal('opencode.root.invalid', l10n.t('OpenCode export root must be an object.'));
   if (!isRecord(value.info))
-    return fatal('opencode.info.invalid', 'OpenCode export info must be an object.', '$.info');
+    return fatal(
+      'opencode.info.invalid',
+      l10n.t('OpenCode export info must be an object.'),
+      '$.info',
+    );
   if (!Array.isArray(value.messages))
     return fatal(
       'opencode.messages.invalid',
-      'OpenCode export messages must be an array.',
+      l10n.t('OpenCode export messages must be an array.'),
       '$.messages',
     );
   diagnostics.push(...validateSessionCompatibility(value));
@@ -46,7 +51,7 @@ export function parseSessionExport(value: unknown): ParseResult {
       diagnostics.push(
         warn(
           'opencode.message.invalid',
-          'Message is not an object.',
+          l10n.t('Message is not an object.'),
           `$.messages[${messageIndex}]`,
         ),
       );
@@ -57,7 +62,7 @@ export function parseSessionExport(value: unknown): ParseResult {
       diagnostics.push(
         warn(
           'opencode.message.info.invalid',
-          'Message info is missing or not an object.',
+          l10n.t('Message info is missing or not an object.'),
           `$.messages[${messageIndex}].info`,
         ),
       );
@@ -68,7 +73,7 @@ export function parseSessionExport(value: unknown): ParseResult {
       diagnostics.push({
         severity: 'information',
         code: 'opencode.message.role.unknown',
-        message: `Unknown message role: ${roleText ?? '<missing>'}.`,
+        message: l10n.t('Unknown message role: {0}.', roleText ?? '<missing>'),
         path: `$.messages[${messageIndex}].info.role`,
       });
     const partsArray = Array.isArray(messageValue.parts) ? messageValue.parts : [];
@@ -76,7 +81,7 @@ export function parseSessionExport(value: unknown): ParseResult {
       diagnostics.push(
         warn(
           'opencode.message.parts.invalid',
-          'Message parts is missing or not an array.',
+          l10n.t('Message parts is missing or not an array.'),
           `$.messages[${messageIndex}].parts`,
         ),
       );
@@ -114,7 +119,7 @@ function parsePart(
 ): ParsedPart | undefined {
   const path = `$.messages[${messageIndex}].parts[${partIndex}]`;
   if (!isRecord(value)) {
-    diagnostics.push(warn('opencode.part.invalid', 'Part is not an object.', path));
+    diagnostics.push(warn('opencode.part.invalid', l10n.t('Part is not an object.'), path));
     return undefined;
   }
   const type = asString(value.type);
@@ -124,7 +129,7 @@ function parsePart(
     diagnostics.push({
       severity: 'information',
       code: 'opencode.part.type.unknown',
-      message: `Unknown part type: ${type ?? '<missing>'}.`,
+      message: l10n.t('Unknown part type: {0}.', type ?? '<missing>'),
       path: `${path}.type`,
     });
   } else if (type === 'tool') kind = asString(value.tool) === 'skill' ? 'skill' : 'tool';
@@ -136,7 +141,7 @@ function parsePart(
     diagnostics.push({
       severity: 'information',
       code: 'opencode.tool.status.unknown',
-      message: `Unknown tool status: ${status}.`,
+      message: l10n.t('Unknown tool status: {0}.', status),
       path: `${path}.state.status`,
     });
   const input = isRecord(state?.input) ? state.input : undefined;

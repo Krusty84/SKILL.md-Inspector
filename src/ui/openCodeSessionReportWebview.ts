@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import {
   buildOpenCodeTimelineEventDetails,
@@ -35,7 +36,7 @@ export class OpenCodeSessionReportPanel {
       this.current = new OpenCodeSessionReportPanel(
         vscode.window.createWebviewPanel(
           'skillMdInspector.openCodeReport',
-          'OpenCode Session Report',
+          l10n.t('OpenCode Session Report'),
           vscode.ViewColumn.Beside,
           {
             enableScripts: true,
@@ -81,7 +82,7 @@ export class OpenCodeSessionReportPanel {
         void this.panel.webview.postMessage({
           type: 'eventDetailsError',
           eventId: message.eventId,
-          message: 'Unknown event for current session.',
+          message: l10n.t('Unknown event for current session.'),
         });
         return;
       }
@@ -95,7 +96,7 @@ export class OpenCodeSessionReportPanel {
           : {
               type: 'eventDetailsError',
               eventId: message.eventId,
-              message: 'No details are available for this event.',
+              message: l10n.t('No details are available for this event.'),
             },
       );
     } else if (message.type === 'copyText') {
@@ -125,7 +126,13 @@ export class OpenCodeSessionReportPanel {
     );
     const scriptNonce = createNonce();
     const csp = `default-src 'none'; img-src ${this.panel.webview.cspSource} data:; style-src ${this.panel.webview.cspSource}; script-src 'nonce-${scriptNonce}'; font-src ${this.panel.webview.cspSource};`;
-    return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="${style}"><title>OpenCode Session Report</title></head><body><p>Loading OpenCode session timeline…</p><script nonce="${scriptNonce}" src="${script}"></script></body></html>`;
+    // The active l10n bundle travels to the browser bundle as an inert JSON
+    // data block (type="application/json" is never executed, so the strict CSP
+    // stays unchanged); the webview's l10nSetup reads it before any UI renders.
+    // \u003c-escaping keeps a literal "</script" in a translation from
+    // terminating the block.
+    const bundleJson = JSON.stringify(vscode.l10n.bundle ?? {}).replace(/</g, '\\u003c');
+    return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="${style}"><title>${escapeHtml(l10n.t('OpenCode Session Report'))}</title></head><body><p>${escapeHtml(l10n.t('Loading OpenCode session timeline…'))}</p><script type="application/json" id="skill-md-l10n">${bundleJson}</script><script nonce="${scriptNonce}" src="${script}"></script></body></html>`;
   }
 }
 
@@ -148,6 +155,13 @@ function isMessage(value: unknown): value is ReportWebviewToExtensionMessage {
       (message.fileIndex as number) >= 0
     );
   return false;
+}
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 function createNonce(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

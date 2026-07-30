@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import type { WorkspaceExplorerNode } from '../../navigator/workspaceExplorerTypes';
 import type { WorkspaceTreeProvider } from '../../ui/workspaceTreeProvider';
@@ -95,7 +96,7 @@ async function openPreview(d: Deps, target?: WorkspaceCommandTarget): Promise<vo
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.openMarkdownPreview,
-    'Markdown Preview is not available.',
+    l10n.t('Markdown Preview is not available.'),
     uri,
   );
 }
@@ -105,7 +106,7 @@ async function openWith(d: Deps, target?: WorkspaceCommandTarget): Promise<void>
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.openWith,
-    'Open With is not available.',
+    l10n.t('Open With is not available.'),
     uri,
   );
 }
@@ -115,7 +116,7 @@ async function revealInOS(d: Deps, target?: WorkspaceCommandTarget): Promise<voi
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.revealInOS,
-    'Reveal in OS is not available for this resource.',
+    l10n.t('Reveal in OS is not available for this resource.'),
     uri,
   );
 }
@@ -125,7 +126,7 @@ async function openImagesPreview(d: Deps, target?: WorkspaceCommandTarget): Prom
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.openImagesPreview,
-    'Images Preview is not available.',
+    l10n.t('Images Preview is not available.'),
     uri,
   );
 }
@@ -141,7 +142,7 @@ async function selectForCompare(d: Deps, target?: WorkspaceCommandTarget): Promi
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.selectForCompare,
-    'Select for Compare is not available.',
+    l10n.t('Select for Compare is not available.'),
     uri,
   );
 }
@@ -161,7 +162,7 @@ async function findFileReferences(d: Deps, target?: WorkspaceCommandTarget): Pro
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.findMarkdownFileReferences,
-    'Markdown file references are not available.',
+    l10n.t('Markdown file references are not available.'),
     uri,
   );
 }
@@ -171,7 +172,7 @@ async function openTimeline(d: Deps, target?: WorkspaceCommandTarget): Promise<v
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.openTimeline,
-    'Timeline is not available.',
+    l10n.t('Timeline is not available.'),
     uri,
   );
 }
@@ -185,7 +186,7 @@ async function findInFolder(d: Deps, target?: WorkspaceCommandTarget): Promise<v
   await executeOptionalBuiltIn(
     d.adapter,
     builtInCommandIds.findInFiles,
-    'Find in Files is not available.',
+    l10n.t('Find in Files is not available.'),
     { filesToInclude, triggerSearch: true },
   );
 }
