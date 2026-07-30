@@ -306,9 +306,34 @@ Additional commands:
 | `npm run benchmark:collisions`         | Run the labeled collision-pair gate.                               |
 | `npm run check:heuristic-dictionaries` | Verify dictionary defaults match the extension manifest.           |
 | `npm run sync:heuristic-dictionaries`  | Synchronize manifest defaults after catalog changes.               |
+| `npm run l10n:export`                  | Regenerate `l10n/bundle.l10n.json` from `l10n.t()` calls in `src/`. |
+| `npm run l10n:pseudo`                  | Generate pseudo-locale files for localization smoke testing.       |
 
 The production build creates the Node extension-host bundle and a separate
 browser bundle for the OpenCode report.
+
+### Localization
+
+All user-visible text is externalized for translation:
+
+- **`package.nls.json`** holds every localizable `package.json` string (command
+  titles, settings descriptions, view names). Manifest values are `%key%`
+  placeholders that VS Code resolves at load time.
+- **`l10n/bundle.l10n.json`** holds every runtime string. Source code calls
+  `l10n.t('…')` from `@vscode/l10n`; with no translation bundle active the
+  English default is returned unchanged. Run `npm run l10n:export` after adding
+  or changing `l10n.t()` strings — it re-extracts the bundle and merges the
+  security-catalog messages that the static extractor cannot see.
+
+To add a language, create `package.nls.<lang>.json` and
+`l10n/bundle.l10n.<lang>.json` with translated values for the same keys (bundle
+keys are the English default strings). Translation rules: keep `{0}`-style
+placeholders, `(command:…)` links, `#setting#` references, and backticked code
+spans exactly as they appear in the English text. Generated SKILL.md template
+content, quick-fix insertions, and output-channel logs are intentionally not
+localized. For a quick end-to-end check, run `npm run l10n:pseudo`, install the
+Pseudo Language language pack in the Extension Development Host, and switch the
+display language to it.
 
 ## More documentation
 

@@ -1,17 +1,19 @@
+import * as l10n from '@vscode/l10n';
 import type { SkillReport } from './reportModel';
 import type {
+  HeuristicCoverage,
   StaticDescriptionQualityFinding,
   StaticDescriptionQualityLabel,
 } from '../types/StaticDescriptionQuality';
-import { renderToc, slugify, TOC_STYLES, type TocEntry } from './reportToc';
+import { renderToc, TOC_STYLES, type TocEntry } from './reportToc';
 import {
-  AGENT_COMPATIBILITY_DEFINITION,
-  AUTHORING_HYGIENE_DEFINITION,
-  AUTHORING_HYGIENE_INSTRUCTIONS_HEADING,
-  AUTHORING_HYGIENE_RESOURCES_HEADING,
-  COMPATIBILITY_ALL_AGENTS_DISABLED,
-  DESCRIPTION_COMPLETENESS_DEFINITION,
-  SECURITY_DEFINITION,
+  agentCompatibilityDefinition,
+  authoringHygieneDefinition,
+  authoringHygieneInstructionsHeading,
+  authoringHygieneResourcesHeading,
+  compatibilityAllAgentsDisabledText,
+  descriptionCompletenessDefinition,
+  securityDefinition,
   authoringLabelText,
   compatibilityFooterText,
   compatibilityVerdictText,
@@ -23,57 +25,80 @@ export interface RenderOptions {
   cspSource: string;
   /** Local date & time string for when the report was generated. */
   generatedAt?: string;
+  /** BCP 47 tag used for number formatting and the document language. */
+  locale?: string;
 }
 
-// The section ids are load-bearing (existing anchors and links); only the
-// visible labels were renamed to match what the checks actually measure.
-const SKILL_REPORT_SECTIONS: readonly TocEntry[] = [
-  { id: 'validation-findings', label: 'Validation findings' },
-  { id: 'security-findings', label: 'Security Issues' },
-  { id: 'agent-compatibility', label: 'Agent compatibility' },
-  { id: 'trigger-quality-breakdown', label: 'Trigger quality breakdown' },
-  { id: 'instruction-authoring-quality', label: AUTHORING_HYGIENE_INSTRUCTIONS_HEADING },
-  { id: 'resource-authoring-quality', label: AUTHORING_HYGIENE_RESOURCES_HEADING },
-  { id: 'referenced-files', label: 'Referenced files' },
-  { id: 'unreferenced-files', label: 'Unreferenced files' },
-  {
-    id: 'token-usage',
-    label: 'Token usage',
-    children: [
-      { id: 'reference-files', label: 'Reference files' },
-      { id: 'non-standard-files', label: 'Other text files' },
-    ],
-  },
-];
+// The section ids are load-bearing (existing anchors and links) and stay
+// locale-independent; only the visible labels are localized. A function so no
+// l10n.t() runs at module load.
+function skillReportSections(): readonly TocEntry[] {
+  return [
+    { id: 'validation-findings', label: l10n.t('Validation findings') },
+    { id: 'security-findings', label: l10n.t('Security Issues') },
+    { id: 'agent-compatibility', label: l10n.t('Agent compatibility') },
+    { id: 'trigger-quality-breakdown', label: l10n.t('Trigger quality breakdown') },
+    { id: 'instruction-authoring-quality', label: authoringHygieneInstructionsHeading() },
+    { id: 'resource-authoring-quality', label: authoringHygieneResourcesHeading() },
+    { id: 'referenced-files', label: l10n.t('Referenced files') },
+    { id: 'unreferenced-files', label: l10n.t('Unreferenced files') },
+    {
+      id: 'token-usage',
+      label: l10n.t('Token usage'),
+      children: [
+        { id: 'reference-files', label: l10n.t('Reference files') },
+        { id: 'non-standard-files', label: l10n.t('Other text files') },
+      ],
+    },
+  ];
+}
+
+/**
+ * Locale for number formatting, set per render. Module state is safe here: the
+ * render is synchronous and single-threaded, and the default keeps English
+ * output byte-stable for tests.
+ */
+let activeLocale = 'en-US';
 
 /** Renders the skill report as a self-contained, theme-aware HTML document. */
 export function renderReportHtml(report: SkillReport, opts: RenderOptions): string {
+  activeLocale = opts.locale ?? 'en-US';
   const statusClass =
     report.status === 'pass' ? 'ok' : report.status === 'warning' ? 'warning' : 'fail';
   const statusLabel =
     report.status === 'pass'
-      ? 'VALID'
+      ? l10n.t('VALID')
       : report.status === 'warning'
-        ? 'VALID WITH WARNINGS'
-        : 'INVALID';
+        ? l10n.t('VALID WITH WARNINGS')
+        : l10n.t('INVALID');
   const q = report.staticDescriptionQuality;
   const instructions = report.authoringQuality.instructions;
   const descriptionBadge =
     q.state === 'scored'
-      ? `<span class="badge ${scoreBadgeClass(q.label)}" title="${DESCRIPTION_COMPLETENESS_DEFINITION}">Description completeness ${q.adjustedScore}/100 · ${escapeHtml(capitalize(q.label))}</span>`
-      : `<span class="badge q-not-scored">Description completeness: Not scored — ${escapeHtml(q.notScoredReason)}</span>`;
+      ? `<span class="badge ${scoreBadgeClass(q.label)}" title="${descriptionCompletenessDefinition()}">${l10n.t('Description completeness {0}/100 · {1}', q.adjustedScore, escapeHtml(qualityLabelText(q.label)))}</span>`
+      : `<span class="badge q-not-scored">${l10n.t('Description completeness: Not scored — {0}', escapeHtml(q.notScoredReason))}</span>`;
   const descriptionCard =
     q.state === 'scored'
       ? `<span class="score">${q.adjustedScore}<span class="max"> / 100</span></span>`
-      : `Not scored — ${escapeHtml(q.notScoredReason)}`;
+      : l10n.t('Not scored — {0}', escapeHtml(q.notScoredReason));
   const instructionCard =
     instructions.state === 'scored'
       ? `${instructions.score}/100 · ${authoringLabelText(instructions.label)}`
-      : `Not scored — ${escapeHtml(instructions.notScoredReason)}`;
+      : l10n.t('Not scored — {0}', escapeHtml(instructions.notScoredReason));
   const instructionCardLabel =
-    instructions.state === 'scored' ? 'Authoring hygiene' : 'Instruction structure';
+    instructions.state === 'scored' ? l10n.t('Authoring hygiene') : l10n.t('Instruction structure');
   const tokens = report.tokenUsage;
-  const tokenCardValue = `${formatNumber(totalSkillTokens(tokens))}<div class="token-breakdown">Body ${formatNumber(tokens.body.tokens)} · Ref ${formatNumber(tokens.references.totalTokens)} · Other ${formatNumber(tokens.otherFiles.totalTokens)}</div>`;
+  const tokenCardValue = `${formatNumber(totalSkillTokens(tokens))}<div class="token-breakdown">${l10n.t(
+    {
+      message: 'Body {0} · Ref {1} · Other {2}',
+      args: [
+        formatNumber(tokens.body.tokens),
+        formatNumber(tokens.references.totalTokens),
+        formatNumber(tokens.otherFiles.totalTokens),
+      ],
+      comment: ['Token-count breakdown: SKILL.md body, references/ files, other text files'],
+    },
+  )}</div>`;
   const securityFindings = report.diagnostics.filter((d) => d.kind === 'security');
   const securityCardClass =
     securityFindings.some((d) => d.severity === 'error')
@@ -83,7 +108,7 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
         : '';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(activeLocale.split('-')[0] || 'en')}">
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${opts.cspSource} 'nonce-${opts.nonce}';" />
@@ -136,68 +161,68 @@ export function renderReportHtml(report: SkillReport, opts: RenderOptions): stri
   th, td { border-bottom: 1px solid var(--vscode-panel-border); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
   th { font-size: 0.72rem; text-transform: uppercase; opacity: 0.65; }${TOC_STYLES}
 </style>
-<title>Skill Report</title>
+<title>${escapeHtml(l10n.t('Skill Report'))}</title>
 </head>
 <body>
   <div class="report-layout">
-  ${renderToc(SKILL_REPORT_SECTIONS)}
+  ${renderToc(skillReportSections())}
   <main class="report-content">
-  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">Validation status: ${statusLabel}</span> ${descriptionBadge}</h1>
-  ${opts.generatedAt ? `<p class="note">Generated: ${escapeHtml(opts.generatedAt)}</p>` : ''}
-  <p class="note">Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION} It is deterministic and does not guarantee that an agent will select this skill at runtime.</p>
+  <h1><code>${escapeHtml(report.name)}</code> <span class="badge ${statusClass}">${l10n.t('Validation status: {0}', statusLabel)}</span> ${descriptionBadge}</h1>
+  ${opts.generatedAt ? `<p class="note">${l10n.t('Generated: {0}', escapeHtml(opts.generatedAt))}</p>` : ''}
+  <p class="note">${l10n.t('Description completeness: {0} It is deterministic and does not guarantee that an agent will select this skill at runtime.', descriptionCompletenessDefinition())}</p>
   <div class="grid">
-    ${card('Description completeness', descriptionCard, '', DESCRIPTION_COMPLETENESS_DEFINITION)}
-    ${card(instructionCardLabel, instructionCard, '', AUTHORING_HYGIENE_DEFINITION)}
-    ${card('Coverage', `<span class="conf-${q.coverage}">${capitalize(q.coverage)}</span>`)}
-    ${card('Description', `${report.descriptionLength} chars`)}
-    ${card('Lines', formatNumber(report.tokenUsage.body.lines), '', 'Line count of the SKILL.md Markdown body.')}
-    ${card('Token usage', tokenCardValue)}
-    ${card('Errors', String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
-    ${card('Warnings', String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
-    ${card('Information', String(report.informationCount))}
-    ${card('Security', String(securityFindings.length), securityCardClass, SECURITY_DEFINITION)}
+    ${card(l10n.t('Description completeness'), descriptionCard, '', descriptionCompletenessDefinition())}
+    ${card(instructionCardLabel, instructionCard, '', authoringHygieneDefinition())}
+    ${card(l10n.t('Coverage'), `<span class="conf-${q.coverage}">${coverageText(q.coverage)}</span>`)}
+    ${card(l10n.t('Description'), l10n.t('{0} chars', report.descriptionLength))}
+    ${card(l10n.t('Lines'), formatNumber(report.tokenUsage.body.lines), '', l10n.t('Line count of the SKILL.md Markdown body.'))}
+    ${card(l10n.t('Token usage'), tokenCardValue)}
+    ${card(l10n.t('Errors'), String(report.errorCount), report.errorCount > 0 ? 'error' : '')}
+    ${card(l10n.t('Warnings'), String(report.warningCount), report.warningCount > 0 ? 'warn' : '')}
+    ${card(l10n.t('Information'), String(report.informationCount))}
+    ${card(l10n.t('Security'), String(securityFindings.length), securityCardClass, securityDefinition())}
   </div>
   ${renderCompatibilityBar(report.compatibility)}
   ${renderGradeLimitations(q)}
   ${
     q.limitations.length > 0
-      ? `<div class="limitations"><strong>Heuristic coverage limitations</strong><ul>${q.limitations
+      ? `<div class="limitations"><strong>${l10n.t('Heuristic coverage limitations')}</strong><ul>${q.limitations
           .map((l) => `<li>${escapeHtml(l)}</li>`)
           .join('')}</ul></div>`
       : ''
   }
 
-  <h2 id="validation-findings">Validation findings</h2>
+  <h2 id="validation-findings">${l10n.t('Validation findings')}</h2>
   ${renderDiagnostics(report.diagnostics.filter((d) => d.kind !== 'security'))}
 
-  <h2 id="security-findings">Security Issues</h2>
+  <h2 id="security-findings">${l10n.t('Security Issues')}</h2>
   ${renderSecurity(securityFindings)}
 
-  <h2 id="agent-compatibility">Agent compatibility</h2>
+  <h2 id="agent-compatibility">${l10n.t('Agent compatibility')}</h2>
   ${renderCompatibility(report.compatibility)}
 
-  <h2 id="trigger-quality-breakdown">Trigger quality breakdown</h2>
-  ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">Description completeness was not scored — ${escapeHtml(q.notScoredReason)}.</p>`}
+  <h2 id="trigger-quality-breakdown">${l10n.t('Trigger quality breakdown')}</h2>
+  ${q.state === 'scored' ? `<ul>${q.findings.map(renderFinding).join('')}</ul>` : `<p class="empty">${l10n.t('Description completeness was not scored — {0}.', escapeHtml(q.notScoredReason))}</p>`}
 
-  <h2 id="instruction-authoring-quality">${AUTHORING_HYGIENE_INSTRUCTIONS_HEADING}</h2>
+  <h2 id="instruction-authoring-quality">${authoringHygieneInstructionsHeading()}</h2>
   ${renderAuthoring(report.authoringQuality.instructions)}
-  <h2 id="resource-authoring-quality">${AUTHORING_HYGIENE_RESOURCES_HEADING}</h2>
+  <h2 id="resource-authoring-quality">${authoringHygieneResourcesHeading()}</h2>
   ${renderAuthoring(report.authoringQuality.resources)}
-  <p class="note">Authoring hygiene: ${AUTHORING_HYGIENE_DEFINITION} It is reported on its own and never combined with description completeness.</p>
+  <p class="note">${l10n.t('Authoring hygiene: {0} It is reported on its own and never combined with description completeness.', authoringHygieneDefinition())}</p>
 
-  <h2 id="referenced-files">Referenced files</h2>
-  ${renderFileList(report.referencedFiles, 'No referenced resource files.')}
+  <h2 id="referenced-files">${l10n.t('Referenced files')}</h2>
+  ${renderFileList(report.referencedFiles, l10n.t('No referenced resource files.'))}
 
-  <h2 id="unreferenced-files">Unreferenced files</h2>
-  ${renderFileList(report.unreferencedFiles, 'No unreferenced resource files.')}
+  <h2 id="unreferenced-files">${l10n.t('Unreferenced files')}</h2>
+  ${renderFileList(report.unreferencedFiles, l10n.t('No unreferenced resource files.'))}
 
-  <h2 id="token-usage">Token usage (${escapeHtml(report.tokenUsage.encoding)})</h2>
+  <h2 id="token-usage">${l10n.t('Token usage ({0})', escapeHtml(report.tokenUsage.encoding))}</h2>
   <table><tbody>
-    <tr><th>Content</th><th>Tokens</th><th>Lines</th></tr>
-    <tr><td><code>SKILL.md</code> body</td><td>${formatNumber(report.tokenUsage.body.tokens)}</td><td>${formatNumber(report.tokenUsage.body.lines)}</td></tr>
+    <tr><th>${l10n.t('Content')}</th><th>${l10n.t('Tokens')}</th><th>${l10n.t('Lines')}</th></tr>
+    <tr><td>${l10n.t('{0} body', '<code>SKILL.md</code>')}</td><td>${formatNumber(report.tokenUsage.body.tokens)}</td><td>${formatNumber(report.tokenUsage.body.lines)}</td></tr>
   </tbody></table>
-  ${renderTokenGroup('Reference files', report.tokenUsage.references)}
-  ${renderTokenGroup('Other text files', report.tokenUsage.otherFiles)}
+  ${renderTokenGroup('reference-files', l10n.t('Reference files'), report.tokenUsage.references)}
+  ${renderTokenGroup('non-standard-files', l10n.t('Other text files'), report.tokenUsage.otherFiles)}
   </main>
   </div>
 </body>
@@ -210,15 +235,24 @@ function renderGradeLimitations(quality: SkillReport['staticDescriptionQuality']
   }
   const scoreSummary =
     quality.rawScore !== quality.adjustedScore
-      ? `<p>Raw criterion score: <strong>${quality.rawScore}/100</strong>. Adjusted score after ceilings: <strong>${quality.adjustedScore}/100</strong>.</p>`
+      ? `<p>${l10n.t(
+          'Raw criterion score: {0}. Adjusted score after ceilings: {1}.',
+          `<strong>${quality.rawScore}/100</strong>`,
+          `<strong>${quality.adjustedScore}/100</strong>`,
+        )}</p>`
       : '';
   const limitations = quality.gradeLimitations
     .map(
       (limitation) =>
-        `<li><code>${escapeHtml(limitation.code)}</code> — ceiling: ${limitation.ceiling}/100. ${escapeHtml(limitation.reason)}</li>`,
+        `<li>${l10n.t(
+          '{0} — ceiling: {1}/100. {2}',
+          `<code>${escapeHtml(limitation.code)}</code>`,
+          limitation.ceiling,
+          escapeHtml(limitation.reason),
+        )}</li>`,
     )
     .join('');
-  return `<div class="adjustments"><strong>Grade limitations and score adjustments</strong>${scoreSummary}<ul>${limitations}</ul></div>`;
+  return `<div class="adjustments"><strong>${l10n.t('Grade limitations and score adjustments')}</strong>${scoreSummary}<ul>${limitations}</ul></div>`;
 }
 
 /** `title` is a static definition string, never user content, so it is not escaped. */
@@ -253,10 +287,10 @@ function renderCompatibilityBar(compatibility: SkillReport['compatibility']): st
   }
   const agents = compatibility.projections
     .map((projection) => {
-      const name = projection.agent === 'spec' ? 'Regular SKILL.md' : projection.label;
+      const name = projection.agent === 'spec' ? l10n.t('Regular SKILL.md') : projection.label;
       const lamp =
         projection.verdict === 'not-evaluated'
-          ? '<span class="empty">not evaluated</span>'
+          ? `<span class="empty">${l10n.t('not evaluated')}</span>`
           : `<span class="semaphore ${
               projection.verdict === 'issues'
                 ? 'red'
@@ -267,38 +301,38 @@ function renderCompatibilityBar(compatibility: SkillReport['compatibility']): st
       return `<span class="compat-agent">${escapeHtml(name)}${lamp}</span>`;
     })
     .join('');
-  return `<div class="card compat-bar" title="${AGENT_COMPATIBILITY_DEFINITION}"><div class="label">Agent compatibility</div>${agents}</div>`;
+  return `<div class="card compat-bar" title="${agentCompatibilityDefinition()}"><div class="label">${l10n.t('Agent compatibility')}</div>${agents}</div>`;
 }
 
 /** One row per agent: verdict plus the findings behind it (plan §7). */
 function renderCompatibility(compatibility: SkillReport['compatibility']): string {
   if (compatibility.projections.length === 0) {
-    return `<p class="empty">${COMPATIBILITY_ALL_AGENTS_DISABLED}</p>`;
+    return `<p class="empty">${compatibilityAllAgentsDisabledText()}</p>`;
   }
   const rows = compatibility.projections
     .map((projection) => {
       const findings =
         projection.verdict === 'not-evaluated'
-          ? `<span class="empty">${escapeHtml(projection.notEvaluatedReason ?? 'not evaluated')}</span>`
+          ? `<span class="empty">${escapeHtml(projection.notEvaluatedReason ?? l10n.t('not evaluated'))}</span>`
           : projection.findings.length === 0
-            ? '<span class="empty">None</span>'
+            ? `<span class="empty">${l10n.t('None')}</span>`
             : `<ul>${projection.findings
                 .map((finding) => `<li>${escapeHtml(finding.message)}</li>`)
                 .join('')}</ul>`;
       return `<tr><td>${escapeHtml(projection.label)}</td><td>${compatibilityVerdictText(projection.verdict)}</td><td>${findings}</td></tr>`;
     })
     .join('');
-  return `<table><thead><tr><th>Agent</th><th>Verdict</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table><p class="note">${escapeHtml(compatibilityFooterText(compatibility.verifiedOn))}</p>`;
+  return `<table><thead><tr><th>${l10n.t('Agent')}</th><th>${l10n.t('Verdict')}</th><th>${l10n.t('Findings')}</th></tr></thead><tbody>${rows}</tbody></table><p class="note">${escapeHtml(compatibilityFooterText(compatibility.verifiedOn))}</p>`;
 }
 
 function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
   if (diagnostics.length === 0) {
-    return '<p class="empty">No validation findings.</p>';
+    return `<p class="empty">${l10n.t('No validation findings.')}</p>`;
   }
-  return `<table><thead><tr><th>Severity</th><th>Diagnostic code</th><th>Message</th></tr></thead><tbody>${diagnostics
+  return `<table><thead><tr><th>${l10n.t('Severity')}</th><th>${l10n.t('Diagnostic code')}</th><th>${l10n.t('Message')}</th></tr></thead><tbody>${diagnostics
     .map(
       (diagnostic) =>
-        `<tr><td>${escapeHtml(capitalize(diagnostic.severity))}</td><td><code>${escapeHtml(diagnostic.code)}</code></td><td>${escapeHtml(diagnostic.message)}</td></tr>`,
+        `<tr><td>${escapeHtml(severityText(diagnostic.severity))}</td><td><code>${escapeHtml(diagnostic.code)}</code></td><td>${escapeHtml(diagnostic.message)}</td></tr>`,
     )
     .join('')}</tbody></table>`;
 }
@@ -310,15 +344,15 @@ function renderDiagnostics(diagnostics: SkillReport['diagnostics']): string {
  */
 function renderSecurity(findings: SkillReport['diagnostics']): string {
   if (findings.length === 0) {
-    return '<p class="empty">No security issues found.</p>';
+    return `<p class="empty">${l10n.t('No security issues found.')}</p>`;
   }
   const rows = findings
     .map(
       (finding) =>
-        `<tr><td>${escapeHtml(capitalize(finding.severity))}</td><td><code>${escapeHtml(finding.code)}</code></td><td>${escapeHtml(finding.message)}</td></tr>`,
+        `<tr><td>${escapeHtml(severityText(finding.severity))}</td><td><code>${escapeHtml(finding.code)}</code></td><td>${escapeHtml(finding.message)}</td></tr>`,
     )
     .join('');
-  return `<p class="note">${SECURITY_DEFINITION}</p><table><thead><tr><th>Severity</th><th>Diagnostic code</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<p class="note">${securityDefinition()}</p><table><thead><tr><th>${l10n.t('Severity')}</th><th>${l10n.t('Diagnostic code')}</th><th>${l10n.t('Message')}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderAuthoring(
@@ -326,15 +360,15 @@ function renderAuthoring(
     SkillReport['authoringQuality']['instructions'] | SkillReport['authoringQuality']['resources'],
 ): string {
   if ('state' in result && result.state === 'not-scored') {
-    return `<p><strong>Not scored — ${escapeHtml(result.notScoredReason)}</strong></p>`;
+    return `<p><strong>${l10n.t('Not scored — {0}', escapeHtml(result.notScoredReason))}</strong></p>`;
   }
   const findings =
     result.findings.length === 0
-      ? '<p class="empty">No structural findings.</p>'
+      ? `<p class="empty">${l10n.t('No structural findings.')}</p>`
       : `<ul>${result.findings
           .map(
             (finding) =>
-              `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}<br /><span class="msg">Suggestion: ${escapeHtml(finding.suggestion)}</span></span></li>`,
+              `<li><span class="mark no">!</span><span><strong>${escapeHtml(finding.criterion)}</strong> — ${escapeHtml(finding.message)}<br /><span class="msg">${l10n.t('Suggestion: {0}', escapeHtml(finding.suggestion))}</span></span></li>`,
           )
           .join('')}</ul>`;
   return `<p><strong>${result.score}/100 · ${authoringLabelText(result.label)}</strong></p>${findings}`;
@@ -347,7 +381,13 @@ function renderFileList(files: string[], emptyMessage: string): string {
   return `<ul>${files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join('')}</ul>`;
 }
 
-function renderTokenGroup(label: string, group: SkillReport['tokenUsage']['references']): string {
+// The anchor id is fixed (it must match the TOC entry in every locale); only
+// the visible label is localized.
+function renderTokenGroup(
+  id: string,
+  label: string,
+  group: SkillReport['tokenUsage']['references'],
+): string {
   const rows = group.files
     .map(
       (entry) =>
@@ -356,13 +396,13 @@ function renderTokenGroup(label: string, group: SkillReport['tokenUsage']['refer
     .join('');
   const fileRows =
     rows.length > 0
-      ? `<table><thead><tr><th>Path</th><th>Tokens</th></tr></thead><tbody>${rows}</tbody></table>`
-      : '<p class="empty">No counted files.</p>';
-  return `<h3 id="${slugify(label)}">${escapeHtml(label)} (${formatNumber(group.files.length)})</h3>${fileRows}<p><strong>Aggregate total: ${formatNumber(group.totalTokens)} tokens</strong></p>`;
+      ? `<table><thead><tr><th>${l10n.t('Path')}</th><th>${l10n.t('Tokens')}</th></tr></thead><tbody>${rows}</tbody></table>`
+      : `<p class="empty">${l10n.t('No counted files.')}</p>`;
+  return `<h3 id="${id}">${escapeHtml(label)} (${formatNumber(group.files.length)})</h3>${fileRows}<p><strong>${l10n.t('Aggregate total: {0} tokens', formatNumber(group.totalTokens))}</strong></p>`;
 }
 
 function formatNumber(value: number): string {
-  return escapeHtml(value.toLocaleString('en-US'));
+  return escapeHtml(value.toLocaleString(activeLocale));
 }
 
 function scoreBadgeClass(label: StaticDescriptionQualityLabel): string {
@@ -371,8 +411,41 @@ function scoreBadgeClass(label: StaticDescriptionQualityLabel): string {
   return 'q-low';
 }
 
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+function qualityLabelText(label: StaticDescriptionQualityLabel): string {
+  switch (label) {
+    case 'excellent':
+      return l10n.t('Excellent');
+    case 'good':
+      return l10n.t('Good');
+    case 'acceptable':
+      return l10n.t('Acceptable');
+    case 'weak':
+      return l10n.t('Weak');
+    case 'poor':
+      return l10n.t('Poor');
+  }
+}
+
+function coverageText(coverage: HeuristicCoverage): string {
+  switch (coverage) {
+    case 'high':
+      return l10n.t('High');
+    case 'medium':
+      return l10n.t('Medium');
+    case 'low':
+      return l10n.t('Low');
+  }
+}
+
+function severityText(severity: SkillReport['diagnostics'][number]['severity']): string {
+  switch (severity) {
+    case 'error':
+      return l10n.t('Error');
+    case 'warning':
+      return l10n.t('Warning');
+    case 'information':
+      return l10n.t('Information');
+  }
 }
 
 function escapeHtml(value: string): string {

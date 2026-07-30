@@ -57,6 +57,19 @@
 
 ### Changed
 
+- **Prepared for localization.** Every user-visible string is externalized:
+  `package.json` manifest strings (command titles, settings sections and
+  descriptions, view names, welcome views) now live in `package.nls.json` as
+  `%key%` placeholders, and all runtime UI text — notifications, dialogs, quick
+  picks, tree views, HTML reports, the OpenCode session webview, and
+  validation/security/quality diagnostics — goes through `l10n.t()` from
+  `@vscode/l10n`, backed by `l10n/bundle.l10n.json`. English output is
+  unchanged; adding a display language now only requires shipping
+  `package.nls.<lang>.json` and `l10n/bundle.l10n.<lang>.json`. Generated
+  SKILL.md template content, quick-fix insertions, and output-channel logs
+  intentionally stay English. New dev scripts: `npm run l10n:export` and
+  `npm run l10n:pseudo`; see the Localization sections in README and
+  ARCHITECTURE.
 - The skill report's summary row drops the Profile card and gains a Lines card
   (Markdown body line count). The Profile card was vestigial — validation has
   used a single generic policy since the vendor profiles were removed (PR #57),
@@ -253,6 +266,10 @@ poor` but `clean | minor-issues | issues | defects`. The checks look for
 
 ### Fixed
 
+- The "Validate SKILL.md's" command title no longer carries a stray trailing
+  apostrophe, and the per-skill report's "Other text files" heading anchor now
+  matches its table-of-contents link (`#non-standard-files`), so the link
+  scrolls to the section.
 - **`only for X` / `limited to X` no longer damp a true collision.** Those
   phrases name the skill's scope, but collision analysis pooled them with the
   exclusion phrases, so two skills that both say "Only for PDF files" — i.e. a
