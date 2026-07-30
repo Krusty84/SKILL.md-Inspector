@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import type { AgentFileName, AgentSource, DiscoveryResult, DiscoveredFile } from './types';
 
 export interface DiscoveryOptions {
@@ -29,7 +30,7 @@ export async function discoverExternalFiles(
     try {
       absolutePath = await fs.realpath(filePath);
     } catch {
-      messages.push(`Cannot read ${filePath}.`);
+      messages.push(l10n.t('Cannot read {0}.', filePath));
       return;
     }
     const canonicalPath = process.platform === 'win32' ? absolutePath.toLowerCase() : absolutePath;
@@ -53,7 +54,7 @@ export async function discoverExternalFiles(
     try {
       real = await fs.realpath(dir);
     } catch {
-      messages.push(`Cannot read ${dir}.`);
+      messages.push(l10n.t('Cannot read {0}.', dir));
       return;
     }
     if (seen.has(real)) return;
@@ -62,7 +63,7 @@ export async function discoverExternalFiles(
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
     } catch {
-      messages.push(`Cannot read ${dir}.`);
+      messages.push(l10n.t('Cannot read {0}.', dir));
       return;
     }
     entries.sort(compareDirents);
@@ -80,7 +81,7 @@ export async function discoverExternalFiles(
           if (stat.isDirectory()) await walk(fullPath, depth + 1);
           else if (stat.isFile()) await addFile(fullPath);
         } catch {
-          messages.push(`Cannot read ${fullPath}.`);
+          messages.push(l10n.t('Cannot read {0}.', fullPath));
         }
       }
       if (files.length >= options.maxResults) {
@@ -97,7 +98,7 @@ export async function discoverExternalFiles(
   } catch {
     return { files: [], messages: [] };
   }
-  if (truncated) messages.push('Results truncated. Narrow the configured search root.');
+  if (truncated) messages.push(l10n.t('Results truncated. Narrow the configured search root.'));
   files.sort(compareDiscoveredFiles);
   return { files, messages };
 }

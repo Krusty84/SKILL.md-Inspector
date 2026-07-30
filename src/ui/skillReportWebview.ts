@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import type { SkillReport } from './reportModel';
 import { renderReportHtml } from './renderReport';
@@ -13,7 +14,7 @@ export class SkillReportPanel {
   private constructor() {
     this.panel = vscode.window.createWebviewPanel(
       'skillMdInspector.report',
-      'SKILL.md Report',
+      l10n.t('SKILL.md Report'),
       vscode.ViewColumn.Beside,
       { enableScripts: false, retainContextWhenHidden: true },
     );
@@ -39,6 +40,7 @@ export class SkillReportPanel {
       nonce,
       cspSource: this.panel.webview.cspSource,
       generatedAt: formatTimestamp(new Date(), readConfig().timeFormat),
+      locale: vscode.env.language,
     });
   }
 }

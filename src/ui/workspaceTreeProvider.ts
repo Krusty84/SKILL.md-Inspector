@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { FAVORITES_KEY, restoreFavorites } from '../navigator/favoritesStore';
 import { parentUri, WorkspaceExplorer } from '../navigator/workspaceExplorer';
@@ -80,7 +81,7 @@ export class WorkspaceTreeProvider
     const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.None);
     item.resourceUri = node.uri;
     item.tooltip = node.uri.toString();
-    item.command = { command: 'vscode.open', title: 'Open', arguments: [node.uri] };
+    item.command = { command: 'vscode.open', title: l10n.t('Open'), arguments: [node.uri] };
     if (node.name === 'SKILL.md')
       item.contextValue = this.isFavoriteUri(node.uri)
         ? 'skillMdInspector.favoriteSkillFile'

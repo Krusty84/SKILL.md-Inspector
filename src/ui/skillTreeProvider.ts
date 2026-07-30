@@ -1,6 +1,12 @@
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { computeWorkspaceAnalysis } from '../analysis/workspaceAnalysis';
+import type { AuthoringLabel } from '../authoring/authoringQuality';
+import type {
+  HeuristicCoverage,
+  StaticDescriptionQualityLabel,
+} from '../types/StaticDescriptionQuality';
 import type {
   WorkspaceAnalysis,
   WorkspaceSkill,
@@ -11,9 +17,9 @@ import type {
 } from '../types/Workspace';
 import { loadingTreeItem, SingleFlight } from './treeLoading';
 import {
-  AUTHORING_HYGIENE_DEFINITION,
-  DESCRIPTION_COMPLETENESS_DEFINITION,
-  LOW_TEXT_COVERAGE_DEFINITION,
+  authoringHygieneDefinition,
+  descriptionCompletenessDefinition,
+  lowTextCoverageDefinition,
 } from './metricDefinitions';
 
 type TreeNode =
@@ -51,7 +57,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         return loadingTreeItem(node.text);
       case 'nameConflicts': {
         const item = new vscode.TreeItem(
-          `Duplicate names (${node.conflicts.length})`,
+          l10n.t('Duplicate names ({0})', node.conflicts.length),
           vscode.TreeItemCollapsibleState.Expanded,
         );
         item.iconPath = new vscode.ThemeIcon('error');
@@ -60,14 +66,14 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       case 'nameConflict': {
         const c = node.conflict;
         const item = new vscode.TreeItem(c.normalized, vscode.TreeItemCollapsibleState.None);
-        item.description = `${c.entries.length} skills`;
+        item.description = l10n.t('{0} skills', c.entries.length);
         item.tooltip = c.entries.map((e) => `${e.name} — ${e.path}`).join('\n');
         item.iconPath = new vscode.ThemeIcon('error');
         return item;
       }
       case 'similarNames': {
         const item = new vscode.TreeItem(
-          `Similar names (${node.similar.length})`,
+          l10n.t('Similar names ({0})', node.similar.length),
           vscode.TreeItemCollapsibleState.Expanded,
         );
         item.iconPath = new vscode.ThemeIcon('warning');
@@ -83,7 +89,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       }
       case 'collisions': {
         const item = new vscode.TreeItem(
-          `Potential collisions (${node.collisions.length})`,
+          l10n.t('Potential collisions ({0})', node.collisions.length),
           vscode.TreeItemCollapsibleState.Expanded,
         );
         item.iconPath = new vscode.ThemeIcon('warning');
@@ -93,16 +99,28 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         const c = node.collision;
         const m = c.metrics;
         const item = new vscode.TreeItem(`${c.a} ↔ ${c.b}`, vscode.TreeItemCollapsibleState.None);
-        item.description = `${c.risk} · ${c.similarity.toFixed(2)} · ${c.confidence} conf`;
+        item.description = `${riskText(c.risk)} · ${c.similarity.toFixed(2)} · ${l10n.t(
+          '{0} conf',
+          confidenceText(c.confidence),
+        )}`;
         const sep =
-          m.boundarySeparation > 0 ? `, boundary sep ${m.boundarySeparation.toFixed(2)}` : '';
+          m.boundarySeparation > 0
+            ? `, ${l10n.t('boundary sep {0}', m.boundarySeparation.toFixed(2))}`
+            : '';
         const coverage =
-          c.textCoverage === 'low' ? `\nText coverage low — ${LOW_TEXT_COVERAGE_DEFINITION}` : '';
+          c.textCoverage === 'low'
+            ? `\n${l10n.t('Text coverage low — {0}', lowTextCoverageDefinition())}`
+            : '';
         item.tooltip =
-          `Risk ${c.risk} · confidence ${c.confidence}\n` +
-          `Metrics — Jaccard ${m.jaccard.toFixed(2)}, cosine ${m.cosine.toFixed(2)}, ` +
-          `char n-gram ${m.charNgram.toFixed(2)}, name ${m.nameSimilarity.toFixed(2)}${sep}\n` +
-          `Shared: ${c.sharedTerms.join(', ')}${coverage}\n${c.recommendation}`;
+          `${l10n.t('Risk {0}', riskText(c.risk))} · ${l10n.t('confidence {0}', confidenceText(c.confidence))}\n` +
+          `${l10n.t(
+            'Metrics — Jaccard {0}, cosine {1}, char n-gram {2}, name {3}',
+            m.jaccard.toFixed(2),
+            m.cosine.toFixed(2),
+            m.charNgram.toFixed(2),
+            m.nameSimilarity.toFixed(2),
+          )}${sep}\n` +
+          `${l10n.t('Shared: {0}', c.sharedTerms.join(', '))}${coverage}\n${c.recommendation}`;
         item.iconPath = new vscode.ThemeIcon(riskIcon(c.risk));
         return item;
       }
@@ -141,15 +159,15 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     if (!this.hasAnalysisResult) {
       if (!this.analysisAttempted) void this.startAnalysis();
       if (this.analysisLoad.isRunning) {
-        return [{ type: 'loading', text: 'Analyzing workspace skills…' }];
+        return [{ type: 'loading', text: l10n.t('Analyzing workspace skills…') }];
       }
-      return [{ type: 'message', text: 'Unable to analyze workspace skills.' }];
+      return [{ type: 'message', text: l10n.t('Unable to analyze workspace skills.') }];
     }
     if (!this.analysis) {
-      return [{ type: 'message', text: 'Open a folder to scan for SKILL.md files.' }];
+      return [{ type: 'message', text: l10n.t('Open a folder to scan for SKILL.md files.') }];
     }
     if (this.analysis.skills.length === 0) {
-      return [{ type: 'message', text: 'No SKILL.md files found in this workspace.' }];
+      return [{ type: 'message', text: l10n.t('No SKILL.md files found in this workspace.') }];
     }
     const nodes: TreeNode[] = [];
     if (this.analysis.nameConflicts.length > 0) {
@@ -205,38 +223,57 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     const instructions = skill.authoringQuality.instructions;
     const scoreAdjustment =
       quality.state === 'scored' && quality.rawScore !== quality.adjustedScore
-        ? `Raw description completeness: ${quality.rawScore}/100  \n`
+        ? `${l10n.t('Raw description completeness: {0}/100', quality.rawScore)}  \n`
         : '';
     const gradeLimitations =
       quality.state === 'scored' && quality.gradeLimitations.length > 0
-        ? `Grade limitations:  \n${quality.gradeLimitations
+        ? `${l10n.t('Grade limitations:')}  \n${quality.gradeLimitations
             .map(
               (limitation) =>
-                `- ${escapeMarkdown(limitation.code)} — ceiling ${limitation.ceiling}/100. ${escapeMarkdown(limitation.reason)}  \n`,
+                `- ${escapeMarkdown(limitation.code)} — ${l10n.t('ceiling {0}/100.', limitation.ceiling)} ${escapeMarkdown(limitation.reason)}  \n`,
             )
             .join('')}`
         : '';
     const descriptionSummary =
       quality.state === 'scored'
-        ? `Adjusted description completeness: ${quality.adjustedScore}/100 (${quality.label}) · heuristic coverage ${quality.coverage}  \n`
-        : `Description completeness: Not scored — ${escapeMarkdown(quality.notScoredReason)}  \n`;
+        ? `${l10n.t(
+            'Adjusted description completeness: {0}/100 ({1})',
+            quality.adjustedScore,
+            qualityLabelText(quality.label),
+          )} · ${l10n.t('heuristic coverage {0}', coverageText(quality.coverage))}  \n`
+        : `${l10n.t('Description completeness: Not scored')} — ${escapeMarkdown(quality.notScoredReason)}  \n`;
     const instructionSummary =
       instructions.state === 'scored'
-        ? `Authoring hygiene: ${instructions.score}/100 (${instructions.label})  \n`
-        : `Instruction structure: Not scored — ${escapeMarkdown(instructions.notScoredReason)}  \n`;
-    const treeScore = quality.state === 'scored' ? String(quality.adjustedScore) : 'Not scored';
-    item.description = `Validation ${skill.validationStatus} · Completeness ${treeScore} · ${skill.errors}E/${skill.warnings}W · ${skill.profile}`;
+        ? `${l10n.t(
+            'Authoring hygiene: {0}/100 ({1})',
+            instructions.score,
+            instructionLabelText(instructions.label),
+          )}  \n`
+        : `${l10n.t('Instruction structure: Not scored')} — ${escapeMarkdown(instructions.notScoredReason)}  \n`;
+    const treeScore =
+      quality.state === 'scored' ? String(quality.adjustedScore) : l10n.t('Not scored');
+    item.description = `${l10n.t('Validation {0}', validationStatusText(skill.validationStatus))} · ${l10n.t(
+      'Completeness {0}',
+      treeScore,
+    )} · ${l10n.t({
+      message: '{0}E/{1}W',
+      args: [skill.errors, skill.warnings],
+      comment: ['Abbreviated error/warning counts'],
+    })} · ${skill.profile}`;
     item.tooltip = new vscode.MarkdownString(
       [
         `**${escapeMarkdown(skill.name)}**  \n`,
-        `Validation status: ${skill.validationStatus}  \n`,
+        `${l10n.t('Validation status: {0}', validationStatusText(skill.validationStatus))}  \n`,
         descriptionSummary,
         scoreAdjustment,
         gradeLimitations,
         instructionSummary,
-        `Errors: ${skill.errors} · Warnings: ${skill.warnings} · Info: ${skill.information}  \n`,
-        `_Description completeness: ${DESCRIPTION_COMPLETENESS_DEFINITION} It is deterministic and does not guarantee an agent will select this skill at runtime._  \n`,
-        `_Authoring hygiene: ${AUTHORING_HYGIENE_DEFINITION}_`,
+        `${l10n.t('Errors: {0}', skill.errors)} · ${l10n.t('Warnings: {0}', skill.warnings)} · ${l10n.t('Info: {0}', skill.information)}  \n`,
+        `${l10n.t(
+          '_Description completeness: {0} It is deterministic and does not guarantee an agent will select this skill at runtime._',
+          descriptionCompletenessDefinition(),
+        )}  \n`,
+        l10n.t('_Authoring hygiene: {0}_', authoringHygieneDefinition()),
       ].join(''),
     );
     item.iconPath = new vscode.ThemeIcon(
@@ -249,7 +286,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     item.resourceUri = vscode.Uri.file(skill.absolutePath);
     item.command = {
       command: 'vscode.open',
-      title: 'Open SKILL.md',
+      title: l10n.t('Open SKILL.md'),
       arguments: [vscode.Uri.file(skill.absolutePath)],
     };
     item.contextValue = 'skillMdInspector.skill';
@@ -258,13 +295,14 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
   private resourceItem(node: ResourceNode, skillDir: string): vscode.TreeItem {
     const item = new vscode.TreeItem(node.path, vscode.TreeItemCollapsibleState.None);
-    const flags = node.flags.length > 0 ? ` [${node.flags.join(', ')}]` : '';
-    item.description = `${node.kind}${flags}`;
+    const flags =
+      node.flags.length > 0 ? ` [${node.flags.map(resourceFlagText).join(', ')}]` : '';
+    item.description = `${resourceKindText(node.kind)}${flags}`;
     item.iconPath = new vscode.ThemeIcon(resourceIcon(node.kind));
     if (node.kind === 'referenced' || node.kind === 'unreferenced') {
       const fileUri = vscode.Uri.file(path.join(skillDir, node.path));
       item.resourceUri = fileUri;
-      item.command = { command: 'vscode.open', title: 'Open file', arguments: [fileUri] };
+      item.command = { command: 'vscode.open', title: l10n.t('Open file'), arguments: [fileUri] };
     }
     return item;
   }
@@ -272,6 +310,114 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
 function riskIcon(risk: SkillCollision['risk']): string {
   return risk === 'High' ? 'error' : 'warning';
+}
+
+/**
+ * Reader-facing words for enum values that previously leaked into the tree
+ * verbatim. Each branch is a literal l10n.t() call so the extractor sees the
+ * key, and each English default is byte-identical to the raw enum member it
+ * replaces (icons and contextValues keep using the raw values).
+ */
+function validationStatusText(status: WorkspaceSkill['validationStatus']): string {
+  switch (status) {
+    case 'pass':
+      return l10n.t('pass');
+    case 'warning':
+      return l10n.t('warning');
+    case 'fail':
+      return l10n.t('fail');
+  }
+}
+
+/** Lower-case, unlike the reports' quality labels: the tree showed the raw value. */
+function qualityLabelText(label: StaticDescriptionQualityLabel): string {
+  switch (label) {
+    case 'excellent':
+      return l10n.t('excellent');
+    case 'good':
+      return l10n.t('good');
+    case 'acceptable':
+      return l10n.t('acceptable');
+    case 'weak':
+      return l10n.t('weak');
+    case 'poor':
+      return l10n.t('poor');
+  }
+}
+
+/** Kebab-case like the raw stored label the tree always showed. */
+function instructionLabelText(label: AuthoringLabel): string {
+  switch (label) {
+    case 'clean':
+      return l10n.t('clean');
+    case 'minor-issues':
+      return l10n.t('minor-issues');
+    case 'issues':
+      return l10n.t('issues');
+    case 'defects':
+      return l10n.t('defects');
+  }
+}
+
+function coverageText(coverage: HeuristicCoverage): string {
+  switch (coverage) {
+    case 'high':
+      return l10n.t('high');
+    case 'medium':
+      return l10n.t('medium');
+    case 'low':
+      return l10n.t('low');
+  }
+}
+
+function riskText(risk: SkillCollision['risk']): string {
+  switch (risk) {
+    case 'High':
+      return l10n.t('High');
+    case 'Medium':
+      return l10n.t('Medium');
+    case 'Low':
+      return l10n.t('Low');
+  }
+}
+
+function confidenceText(confidence: SkillCollision['confidence']): string {
+  switch (confidence) {
+    case 'high':
+      return l10n.t('high');
+    case 'medium':
+      return l10n.t('medium');
+    case 'low':
+      return l10n.t('low');
+  }
+}
+
+function resourceKindText(kind: ResourceNode['kind']): string {
+  switch (kind) {
+    case 'referenced':
+      return l10n.t('referenced');
+    case 'unreferenced':
+      return l10n.t('unreferenced');
+    case 'missing':
+      return l10n.t('missing');
+    case 'absolute':
+      return l10n.t('absolute');
+    case 'remote':
+      return l10n.t('remote');
+  }
+}
+
+function resourceFlagText(flag: ResourceNode['flags'][number]): string {
+  switch (flag) {
+    case 'script':
+      return l10n.t('script');
+    case 'binary':
+      return l10n.t('binary');
+    case 'large':
+      return l10n.t('large');
+    case 'remote':
+      return l10n.t('remote');
+  }
 }
 
 function escapeMarkdown(value: string): string {

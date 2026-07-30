@@ -1,5 +1,6 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { resolveBuiltInAgentSources } from '../navigator/builtInAgentSources';
 import { discoverExternalFiles } from '../navigator/discoverExternalFiles';
@@ -110,9 +111,9 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     if (!node) {
       if (!this.loaded && !this.loadAttempted) void this.startDiscovery();
       if (!this.loaded && this.discoveryLoad.isRunning)
-        return [{ type: 'loading', label: 'Discovering installed agent skills…' }];
+        return [{ type: 'loading', label: l10n.t('Discovering installed agent skills…') }];
       if (!this.loaded)
-        return [{ type: 'message', label: 'Unable to discover installed agent skills.' }];
+        return [{ type: 'message', label: l10n.t('Unable to discover installed agent skills.') }];
       return this.installedChildren();
     }
     if (node.type === 'agent')
@@ -174,7 +175,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
       const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.None);
       item.resourceUri = node.uri;
       item.tooltip = node.uri.fsPath;
-      item.command = { command: 'vscode.open', title: 'Open', arguments: [node.uri] };
+      item.command = { command: 'vscode.open', title: l10n.t('Open'), arguments: [node.uri] };
       item.contextValue =
         node.name === 'SKILL.md'
           ? this.isFavorite(node.uri.fsPath)
@@ -214,7 +215,10 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
   private installedChildren(): InstalledAgentsNode[] {
     if (this.installedFiles.length === 0)
       return [
-        { type: 'message', label: this.messages[0] ?? 'No supported local agent files found.' },
+        {
+          type: 'message',
+          label: this.messages[0] ?? l10n.t('No supported local agent files found.'),
+        },
       ];
     return unique(this.installedFiles.map((f) => f.sourceId.split(':')[0])).map((id) => ({
       type: 'agent',
@@ -233,8 +237,8 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     const uri = vscode.Uri.file(file.absolutePath);
     item.resourceUri = uri;
     item.description = file.relativePath;
-    item.tooltip = `${file.absolutePath}\nSource: ${file.sourceLabel}`;
-    item.command = { command: 'vscode.open', title: 'Open', arguments: [uri] };
+    item.tooltip = `${file.absolutePath}\n${l10n.t('Source: {0}', file.sourceLabel)}`;
+    item.command = { command: 'vscode.open', title: l10n.t('Open'), arguments: [uri] };
     item.contextValue =
       file.fileName === 'SKILL.md'
         ? favorite
@@ -287,7 +291,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
       return children;
     } catch (error) {
       this.output.appendLine(`Unable to read installed skill folder ${key}: ${String(error)}`);
-      return [{ type: 'message', label: 'Unable to read this folder.' }];
+      return [{ type: 'message', label: l10n.t('Unable to read this folder.') }];
     }
   }
 
@@ -329,7 +333,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
     const normalized = normalizeAdditionalRoots(raw);
     if (normalized.ignoredCount > 0)
       void vscode.window.showWarningMessage(
-        'Some SKILL.md Inspector additional roots were ignored because they are malformed.',
+        l10n.t('Some SKILL.md Inspector additional roots were ignored because they are malformed.'),
       );
     const additional = normalized.roots
       .map((root): AgentSource | undefined => {
@@ -343,7 +347,7 @@ export class InstalledAgentsTreeProvider implements vscode.TreeDataProvider<Inst
               id: root.id,
               agentId: root.id,
               agentLabel: root.label,
-              groupLabel: 'Configured Files',
+              groupLabel: l10n.t('Configured Files'),
               rootPath: expanded,
               files: root.files,
               recursive: root.recursive,
