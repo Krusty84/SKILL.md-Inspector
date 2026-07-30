@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import catalog from './defaultSecurityCatalog.json';
 import type { SecuritySettings } from './settings';
 
@@ -126,7 +127,7 @@ export function resolveSecurityPatterns(settings: SecuritySettings): CompiledSec
           ...settings.additionalDangerousCommands.map((re, i) => ({
             id: `user-dangerous-${i}`,
             re: normalizeUserPattern(re),
-            message: 'matches a user-configured dangerous-command pattern.',
+            message: l10n.t('matches a user-configured dangerous-command pattern.'),
           })),
         ];
   const riskyCommands =
@@ -137,7 +138,7 @@ export function resolveSecurityPatterns(settings: SecuritySettings): CompiledSec
           ...settings.additionalRiskyCommands.map((re, i) => ({
             id: `user-risky-${i}`,
             re: normalizeUserPattern(re),
-            message: 'matches a user-configured risky-command pattern.',
+            message: l10n.t('matches a user-configured risky-command pattern.'),
           })),
         ];
   const hosts =

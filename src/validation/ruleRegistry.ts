@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
@@ -84,7 +85,10 @@ function ruleFailureDiagnostic(ruleId: string, error: unknown): SkillDiagnostic 
   return diag(
     DiagnosticCode.RuleInternalError,
     'information',
-    `The "${ruleId}" validation rule did not finish (${detail.split('\n')[0]}). ` +
-      'Other checks still ran; this is a linter error, not a problem with the skill.',
+    l10n.t(
+      'The "{0}" validation rule did not finish ({1}). Other checks still ran; this is a linter error, not a problem with the skill.',
+      ruleId,
+      detail.split('\n')[0],
+    ),
   );
 }

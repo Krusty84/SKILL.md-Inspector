@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
@@ -44,7 +45,7 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
       diag(
         DiagnosticCode.NameMissing,
         'error',
-        'Missing required `name` field in frontmatter.',
+        l10n.t('Missing required `name` field in frontmatter.'),
         range,
         { quickFixId: QuickFixId.InsertName },
       ),
@@ -52,7 +53,7 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
   }
 
   if (typeof value !== 'string') {
-    return [diag(DiagnosticCode.NameType, 'error', '`name` must be a string.', range)];
+    return [diag(DiagnosticCode.NameType, 'error', l10n.t('`name` must be a string.'), range)];
   }
 
   const diagnostics: SkillDiagnostic[] = [];
@@ -62,7 +63,7 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
       diag(
         DiagnosticCode.NameTooLong,
         'error',
-        `\`name\` is ${value.length} characters; the maximum is ${profile.nameMaxLength}.`,
+        l10n.t('`name` is {0} characters; the maximum is {1}.', value.length, profile.nameMaxLength),
         range,
       ),
     );
@@ -73,7 +74,9 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
       diag(
         DiagnosticCode.NameFormat,
         'error',
-        '`name` must use lowercase letters, numbers, and hyphens only, with no spaces and no leading or trailing hyphen.',
+        l10n.t(
+          '`name` must use lowercase letters, numbers, and hyphens only, with no spaces and no leading or trailing hyphen.',
+        ),
         range,
         { quickFixId: QuickFixId.ConvertNameToKebabCase, data: { suggestion: toKebabCase(value) } },
       ),
@@ -86,7 +89,10 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
       diag(
         DiagnosticCode.NameReservedWord,
         'error',
-        `\`name\` contains the reserved word "${reserved}". Anthropic's platform rejects skill names containing "anthropic" or "claude".`,
+        l10n.t(
+          '`name` contains the reserved word "{0}". Anthropic\'s platform rejects skill names containing "anthropic" or "claude".',
+          reserved,
+        ),
         range,
       ),
     );
@@ -98,7 +104,7 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
       diag(
         DiagnosticCode.NameFolderMismatch,
         'error',
-        `\`name\` "${value}" does not match the parent folder "${folder}".`,
+        l10n.t('`name` "{0}" does not match the parent folder "{1}".', value, folder),
         range,
         { quickFixId: QuickFixId.RenameParentFolder, data: { expected: value, folder } },
       ),

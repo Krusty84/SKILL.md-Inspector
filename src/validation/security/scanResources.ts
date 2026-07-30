@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type { SkillDiagnostic, SkillDiagnosticRange } from '../../types/SkillDiagnostic';
 import type { SkillDocument, SkillResource } from '../../types/SkillDocument';
 import {
@@ -113,7 +114,13 @@ export function scanResources(
           {
             code: match.code,
             severity: match.severity,
-            message: `Bundled file \`${resource.relativePath}\` (line ${line}): ${match.message}`,
+            // match.message is already localized by the scanText builders.
+            message: l10n.t(
+              'Bundled file `{0}` (line {1}): {2}',
+              resource.relativePath,
+              line,
+              match.message,
+            ),
           },
           range,
           {

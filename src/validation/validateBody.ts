@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, QuickFixId } from '../types/DiagnosticCode';
 import type { SkillDiagnostic, SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
 import type { SkillDocument } from '../types/SkillDocument';
@@ -40,7 +41,7 @@ export function validateBody(
       diag(
         DiagnosticCode.BodyMissing,
         'warning',
-        'No Markdown body after the frontmatter. Document the workflow, inputs, and outputs.',
+        l10n.t('No Markdown body after the frontmatter. Document the workflow, inputs, and outputs.'),
         range,
         { quickFixId: QuickFixId.InsertBodyTemplate },
       ),
@@ -79,7 +80,10 @@ export function validateBody(
       // — say what was actually checked instead.
       const message =
         spec.id === 'examples' && evidence.nonConcreteExampleHeadings.length > 0
-          ? `The "${evidence.nonConcreteExampleHeadings[0]}" section shows no recognizable concrete example (fenced code, an Input:/Output: pair, or a before/after pair). Add a representative input and expected outcome.`
+          ? l10n.t(
+              'The "{0}" section shows no recognizable concrete example (fenced code, an Input:/Output: pair, or a before/after pair). Add a representative input and expected outcome.',
+              evidence.nonConcreteExampleHeadings[0],
+            )
           : spec.message;
       diagnostics.push(diag(spec.code, severity, message, range));
     }

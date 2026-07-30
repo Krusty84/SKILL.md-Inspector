@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { measureBodyTokenUsage } from '../analysis/tokenUsage';
 import { DiagnosticCode } from '../types/DiagnosticCode';
 import type { SkillDocument } from '../types/SkillDocument';
@@ -29,7 +30,11 @@ export function validateTokenBudgets(
       diag(
         DiagnosticCode.BodyTokenLimit,
         'warning',
-        `SKILL.md body has ${format(usage.body.tokens)} o200k_base tokens, exceeding the ${format(BODY_TOKEN_WARNING)}-token limit.`,
+        l10n.t(
+          'SKILL.md body has {0} o200k_base tokens, exceeding the {1}-token limit.',
+          format(usage.body.tokens),
+          format(BODY_TOKEN_WARNING),
+        ),
         range,
       ),
     );
@@ -39,7 +44,11 @@ export function validateTokenBudgets(
       diag(
         DiagnosticCode.BodyLineLimit,
         'warning',
-        `SKILL.md body has ${format(usage.body.lines)} lines, exceeding the ${format(BODY_LINE_WARNING)}-line limit.`,
+        l10n.t(
+          'SKILL.md body has {0} lines, exceeding the {1}-line limit.',
+          format(usage.body.lines),
+          format(BODY_LINE_WARNING),
+        ),
         range,
       ),
     );
@@ -55,7 +64,12 @@ export function validateTokenBudgets(
         diag(
           DiagnosticCode.ReferenceFileTokenLimit,
           'warning',
-          `Reference file ${JSON.stringify(entry.relativePath)} has ${format(entry.tokens)} o200k_base tokens (advisory threshold: ${format(REFERENCE_FILE_WARNING)}). The Agent Skills spec sets no limit on bundled resources, but a file this large costs significant context whenever the agent reads it.`,
+          l10n.t(
+            'Reference file {0} has {1} o200k_base tokens (advisory threshold: {2}). The Agent Skills spec sets no limit on bundled resources, but a file this large costs significant context whenever the agent reads it.',
+            JSON.stringify(entry.relativePath),
+            format(entry.tokens),
+            format(REFERENCE_FILE_WARNING),
+          ),
           range,
         ),
       );
@@ -66,7 +80,7 @@ export function validateTokenBudgets(
     diagnostics,
     usage.references,
     DiagnosticCode.ReferencesTokenLimit,
-    '`references/` files',
+    l10n.t('`references/` files'),
     REFERENCES_TOTAL_WARNING,
     range,
   );
@@ -74,7 +88,7 @@ export function validateTokenBudgets(
     diagnostics,
     usage.otherFiles,
     DiagnosticCode.OtherFilesTokenLimit,
-    'Text files outside `SKILL.md`, `references/`, `scripts/`, and `assets/`',
+    l10n.t('Text files outside `SKILL.md`, `references/`, `scripts/`, and `assets/`'),
     OTHER_FILES_TOTAL_WARNING,
     range,
   );
@@ -94,7 +108,12 @@ function addAggregateDiagnostic(
     diag(
       code,
       'warning',
-      `${label} total ${format(group.totalTokens)} o200k_base tokens (advisory threshold: ${format(warning)}). Bundled resources load on demand and have no spec limit; consider splitting very large files so the agent can read only what it needs.`,
+      l10n.t(
+        '{0} total {1} o200k_base tokens (advisory threshold: {2}). Bundled resources load on demand and have no spec limit; consider splitting very large files so the agent can read only what it needs.',
+        label,
+        format(group.totalTokens),
+        format(warning),
+      ),
       range,
     ),
   );

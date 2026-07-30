@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode } from '../../types/DiagnosticCode';
 import type { SkillDiagnosticSeverity } from '../../types/SkillDiagnostic';
 import type { CompiledSecurityPatterns } from './patterns';
@@ -105,7 +106,9 @@ function toCommandMatch(
   return {
     code,
     severity,
-    message: `\`${formatSnippet(line.text)}\` — ${message}`,
+    // The catalog/user-supplied explanation is the translatable part; the
+    // snippet and the em-dash glue stay as-is.
+    message: `\`${formatSnippet(line.text)}\` — ${l10n.t(message)}`,
     index: match.index,
     length: Math.max(1, match[0].length),
   };
@@ -142,7 +145,10 @@ export function scanServices(
     matches.push({
       code: DiagnosticCode.SecurityServiceRisky,
       severity: 'warning',
-      message: `Risky public service: \`${host}\`. These endpoints are commonly used to exfiltrate data or fetch unverified content; confirm it is intended.`,
+      message: l10n.t(
+        'Risky public service: `{0}`. These endpoints are commonly used to exfiltrate data or fetch unverified content; confirm it is intended.',
+        host,
+      ),
       index: hostIndex,
       length: host.length,
     });
@@ -166,7 +172,10 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
       const candidate: RawMatch = {
         code: DiagnosticCode.SecuritySecret,
         severity: 'error',
-        message: `${sig.label} detected. Remove the hardcoded credential from the skill and rotate it if it is real.`,
+        message: l10n.t(
+          '{0} detected. Remove the hardcoded credential from the skill and rotate it if it is real.',
+          l10n.t(sig.label),
+        ),
         index: match.index,
         length: match[0].length,
       };
@@ -183,7 +192,10 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
     const candidate: RawMatch = {
       code: DiagnosticCode.SecuritySecret,
       severity: 'error',
-      message: `Hardcoded credential in \`${match[1]}\`. Read it from an environment variable or secret store instead.`,
+      message: l10n.t(
+        'Hardcoded credential in `{0}`. Read it from an environment variable or secret store instead.',
+        match[1],
+      ),
       index: match.index,
       length: match[0].length,
     };
@@ -195,7 +207,10 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
     const candidate: RawMatch = {
       code: DiagnosticCode.SecuritySecret,
       severity: 'error',
-      message: `${patterns.credentialedUrl.label}. Move the username and password out of the URL.`,
+      message: l10n.t(
+        '{0}. Move the username and password out of the URL.',
+        l10n.t(patterns.credentialedUrl.label),
+      ),
       index: match.index,
       length: match[0].length,
     };
@@ -218,7 +233,11 @@ export function scanInjection(value: string, patterns: CompiledSecurityPatterns)
       matches.push({
         code: DiagnosticCode.SecurityPromptInjection,
         severity: 'warning',
-        message: `Possible prompt injection: \`${formatSnippet(match[0])}\` — ${pattern.message}`,
+        message: l10n.t(
+          'Possible prompt injection: `{0}` — {1}',
+          formatSnippet(match[0]),
+          l10n.t(pattern.message),
+        ),
         index: match.index,
         length: match[0].length,
       });
@@ -244,7 +263,10 @@ export function scanHtmlCommentInstructions(
     matches.push({
       code: DiagnosticCode.SecurityHiddenContent,
       severity: 'warning',
-      message: `Hidden instruction in an HTML comment: \`${formatSnippet(inner)}\` — this text is invisible in rendered Markdown but read by an agent. Remove it or make it visible.`,
+      message: l10n.t(
+        'Hidden instruction in an HTML comment: `{0}` — this text is invisible in rendered Markdown but read by an agent. Remove it or make it visible.',
+        formatSnippet(inner),
+      ),
       index: match.index,
       length: match[0].length,
     });
@@ -270,7 +292,10 @@ export function scanInvisible(
     matches.push({
       code: DiagnosticCode.SecurityHiddenContent,
       severity: 'warning',
-      message: `Invisible Unicode character (U+${hex}) in the text; it can hide or reorder instructions from human review. Remove it.`,
+      message: l10n.t(
+        'Invisible Unicode character (U+{0}) in the text; it can hide or reorder instructions from human review. Remove it.',
+        hex,
+      ),
       index: match.index,
       length: match[0].length,
     });
@@ -292,7 +317,11 @@ export function scanSensitivePaths(value: string, patterns: CompiledSecurityPatt
       matches.push({
         code: DiagnosticCode.SecuritySensitivePath,
         severity: 'information',
-        message: `Sensitive path referenced: \`${formatSnippet(match[0])}\` — ${pattern.message}`,
+        message: l10n.t(
+          'Sensitive path referenced: `{0}` — {1}',
+          formatSnippet(match[0]),
+          l10n.t(pattern.message),
+        ),
         index: match.index,
         length: match[0].length,
       });

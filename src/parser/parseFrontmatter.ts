@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { parseDocument, LineCounter, isMap, isScalar } from 'yaml';
 import { DiagnosticCode } from '../types/DiagnosticCode';
 import type { SkillDiagnosticRange } from '../types/SkillDiagnostic';
@@ -79,16 +80,17 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     if (fenceIndex === -1) {
       errors.push({
         code: DiagnosticCode.FrontmatterMissing,
-        message:
+        message: l10n.t(
           'SKILL.md is missing YAML frontmatter. Add a `---` block with `name` and `description` at the top of the file.',
+        ),
         range: singleLineRange(0),
       });
     } else {
       errors.push({
         code: DiagnosticCode.FrontmatterNotAtTop,
         message: onlyBlankBefore
-          ? 'YAML frontmatter must start on the very first line, with no blank lines before it.'
-          : 'YAML frontmatter must be at the top of the file, before any other content.',
+          ? l10n.t('YAML frontmatter must start on the very first line, with no blank lines before it.')
+          : l10n.t('YAML frontmatter must be at the top of the file, before any other content.'),
         range: singleLineRange(fenceIndex),
       });
     }
@@ -111,7 +113,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   if (closingIndex === -1) {
     errors.push({
       code: DiagnosticCode.FrontmatterInvalid,
-      message: 'YAML frontmatter is not terminated. Add a closing `---` line.',
+      message: l10n.t('YAML frontmatter is not terminated. Add a closing `---` line.'),
       range: singleLineRange(0),
     });
     return {
@@ -178,7 +180,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     if (err.code === 'DUPLICATE_KEY') {
       errors.push({
         code: DiagnosticCode.FrontmatterDuplicateKey,
-        message: `Duplicate frontmatter key: ${err.message.split('\n')[0]}`,
+        message: l10n.t('Duplicate frontmatter key: {0}', err.message.split('\n')[0]),
         range: err.pos ? toRange(err.pos[0], err.pos[1]) : frontmatterRange,
       });
     }
@@ -188,7 +190,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   if (fatal.length > 0) {
     errors.push({
       code: DiagnosticCode.FrontmatterInvalid,
-      message: `Invalid YAML in frontmatter: ${fatal[0].message.split('\n')[0]}`,
+      message: l10n.t('Invalid YAML in frontmatter: {0}', fatal[0].message.split('\n')[0]),
       range: fatal[0].pos ? toRange(fatal[0].pos[0], fatal[0].pos[1]) : frontmatterRange,
     });
     return baseResult(null);
@@ -206,7 +208,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   } catch (error) {
     errors.push({
       code: DiagnosticCode.FrontmatterInvalid,
-      message: `Invalid YAML in frontmatter: ${firstLine(error)}`,
+      message: l10n.t('Invalid YAML in frontmatter: {0}', firstLine(error)),
       range: frontmatterRange,
     });
     return baseResult(null);
@@ -221,7 +223,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   if (typeof parsed !== 'object' || Array.isArray(parsed)) {
     errors.push({
       code: DiagnosticCode.FrontmatterInvalid,
-      message: 'Frontmatter must be a YAML mapping of keys to values.',
+      message: l10n.t('Frontmatter must be a YAML mapping of keys to values.'),
       range: frontmatterRange,
     });
     return baseResult(null);
