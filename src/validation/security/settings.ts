@@ -14,7 +14,12 @@ export interface SecuritySettings {
   maxScannedFileSizeBytes: number;
   /** Host suffixes to treat as trusted (suppress service findings). Lowercased. */
   allowedDomains: readonly string[];
-  /** Substrings that suppress a command finding when present in the match. Lowercased. */
+  /**
+   * Substrings that suppress a **risky-tier** command finding, either by naming
+   * the matched command or by being a fuller command line that contains it and
+   * appears on the same line. Never suppresses a dangerous-tier finding.
+   * Lowercased.
+   */
   allowedCommands: readonly string[];
   /** User-added risky-command patterns (compiled and validated in config.ts). */
   additionalRiskyCommands: readonly RegExp[];

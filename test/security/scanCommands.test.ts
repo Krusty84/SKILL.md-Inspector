@@ -57,6 +57,31 @@ describe('security command scanning — dangerous tier', () => {
     expect(codes.filter((c) => c === DANGEROUS)).toHaveLength(1);
     expect(codes).not.toContain(RISKY);
   });
+
+  /**
+   * Suppression used to be span-based, so a risky match elsewhere on the line
+   * survived alongside the dangerous one and the same line reported twice.
+   * docs/rules.md has always promised a catastrophic command reports exactly
+   * once, at the higher severity — the bare `rm -rf /` form above happened to
+   * satisfy it, these forms did not.
+   */
+  it('reports once per line even when a risky pattern also matches that line', () => {
+    const codes = codesOf(scan(fenced('sudo rm -rf /')));
+    expect(codes.filter((c) => c === DANGEROUS)).toHaveLength(1);
+    expect(codes).not.toContain(RISKY);
+  });
+
+  it('does not stack duplicate warnings from one line', () => {
+    const codes = codesOf(
+      scan(fenced('sudo chmod -R 777 /var/www && sudo chown -R www:www /var/www')),
+    );
+    expect(codes.filter((c) => c === RISKY)).toHaveLength(1);
+  });
+
+  it('keeps separate lines separate', () => {
+    const codes = codesOf(scan(fenced('sudo apt-get update\nchmod 777 /srv')));
+    expect(codes.filter((c) => c === RISKY)).toHaveLength(2);
+  });
 });
 
 describe('security command scanning — risky tier', () => {
@@ -126,6 +151,31 @@ describe('security command scanning — false-positive guards', () => {
   it('respects the allowedCommands allowlist', () => {
     const codes = codesOf(scan(fenced('sudo apt-get update'), { allowedCommands: ['sudo apt-get update'] }));
     expect(codes).not.toContain(RISKY);
+  });
+
+  /**
+   * The allowlist matched any allowlisted substring anywhere on the containing
+   * line, and applied to both tiers — so a fragment of a dangerous flag could
+   * switch off the error naming that very flag, and allowlisting a benign
+   * command silenced whatever else shared its line. It is a warning-tier
+   * convenience, not a way to turn off `error`.
+   */
+  it('never lets the allowlist suppress a dangerous command', () => {
+    expect(codesOf(scan(fenced('rm -rf / --no-preserve-root'), { allowedCommands: ['preserve-root'] }))).toContain(
+      DANGEROUS,
+    );
+    const chained = codesOf(
+      scan(fenced('sudo apt-get update && rm -rf / --no-preserve-root'), {
+        allowedCommands: ['sudo apt-get update'],
+      }),
+    );
+    expect(chained).toContain(DANGEROUS);
+  });
+
+  it('matches the allowlist against the command, not the whole line', () => {
+    // `sudo` is allowlisted; `chmod 777` on the same line still reports.
+    const codes = codesOf(scan(fenced('sudo chmod 777 /srv'), { allowedCommands: ['sudo'] }));
+    expect(codes).toContain(RISKY);
   });
 
   it('applies user-added dangerous patterns', () => {

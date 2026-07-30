@@ -33,6 +33,7 @@ export function scanFrontmatter(
         toSecurityDiagnostic(
           { code: match.code, severity: match.severity, message: match.message },
           range,
+          match.ruleId ? { ruleId: match.ruleId } : undefined,
         ),
       );
     }
