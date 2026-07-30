@@ -95,6 +95,12 @@ function pushMatches(
   matches: RawMatch[],
 ): void {
   for (const match of matches) {
-    out.push(toSecurityDiagnostic(match, offsetRange(origin, value, match.index, match.length)));
+    out.push(
+      toSecurityDiagnostic(
+        match,
+        offsetRange(origin, value, match.index, match.length),
+        match.ruleId ? { ruleId: match.ruleId } : undefined,
+      ),
+    );
   }
 }

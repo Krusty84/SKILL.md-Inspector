@@ -174,6 +174,28 @@
   the other command patterns; the worst single pattern went from 557 ms to under
   6 ms on adversarial input. Both budgets are now asserted by tests, per pattern
   and end to end.
+- **A security rule can be silenced without disabling its whole class.**
+  `skillMdInspector.severityOverrides` now accepts a `code#ruleId` key naming a
+  single catalog pattern, so `"skill.security.command.risky#sudo": "off"`
+  silences `sudo` while the other seventeen risky-command patterns keep
+  reporting. The bare code still addresses the whole class, and the narrower key
+  wins. Rule ids are the `id` fields in the security catalog and are listed in
+  [docs/rules.md](docs/rules.md).
+- **`security.allowedCommands` can no longer switch off an error.** It applied
+  to both tiers and matched any substring of the containing line, so
+  `allowedCommands: ["preserve-root"]` suppressed the `rm -rf / --no-preserve-root`
+  **error** — a fragment of the dangerous flag disarming the rule that names it —
+  and allowlisting one benign command silenced whatever was chained after it.
+  It now applies to the risky tier only, and an entry must either name the
+  matched command or be a fuller command line containing it. Adding the exact
+  line, as the docs recommend, still works.
+- **A command reports once per line, per tier.** `sudo rm -rf /` emitted an
+  error plus a redundant `sudo` warning, and
+  `sudo chmod -R 777 /var/www && sudo chown -R www:www /var/www` emitted four
+  warnings that all opened with the same snippet. Cross-tier suppression is now
+  line-scoped, and same-tier matches on a line merge into one finding naming
+  each distinct rule — the behavior [docs/rules.md](docs/rules.md) already
+  described.
 
 ### Removed
 

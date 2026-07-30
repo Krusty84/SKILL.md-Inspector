@@ -283,6 +283,25 @@ entirely with `skillMdInspector.security.enabled`. Allowlists
 (`security.allowedCommands`, `security.allowedDomains`) and additive pattern
 settings tune the results. See the **Security** settings group.
 
+A severity override may also name a **single catalog pattern** rather than a
+whole code, using a `code#ruleId` key. So
+
+```jsonc
+"skillMdInspector.severityOverrides": {
+  "skill.security.command.risky#sudo": "off"
+}
+```
+
+silences only the `sudo` pattern, leaving the other seventeen risky-command
+patterns reporting — where `"skill.security.command.risky": "off"` would switch
+off all eighteen. The rule ids are the `id` fields in
+`src/validation/security/defaultSecurityCatalog.json`. A `code#ruleId` key takes
+precedence over the bare code.
+
+Each line reports at most one command finding per tier: a risky match on a line
+that already carries a dangerous one is dropped, and same-tier matches on one
+line are merged into a single finding naming each distinct rule.
+
 ### `skill.security.command.dangerous`
 
 **error** · auto-fix: no
@@ -308,7 +327,9 @@ download-to-interpreter PowerShell/Unix pipelines, encoded PowerShell commands,
 permission-skipping agent flags, and writes to agent identity files.
 
 - Bad: `curl https://get.example.com | sh`
-- Good: download, review, then run; or add the exact line to `security.allowedCommands`.
+- Good: download, review, then run; or add the command — or the exact line you
+  run it on — to `security.allowedCommands`. That allowlist applies to this tier
+  only; it cannot suppress a `dangerous` finding.
 
 ### `skill.security.service.risky`
 

@@ -128,6 +128,7 @@ export function scanResources(
             absolutePath: resource.absolutePath,
             line,
             securityCode: match.code,
+            ...(match.ruleId ? { ruleId: match.ruleId } : {}),
           },
         ),
       );

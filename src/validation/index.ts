@@ -63,7 +63,13 @@ function applyProfileOverrides(
   const allowSpecification = profile.allowSpecificationOverrides === true;
   const result: SkillDiagnostic[] = [];
   for (const diagnostic of diagnostics) {
-    const override = overrides[diagnostic.code];
+    // A `code#ruleId` key addresses one catalog pattern; the bare code still
+    // addresses its whole class. The narrower key wins, so an author can keep
+    // a rule class enabled while silencing a single pattern within it.
+    const ruleId = diagnostic.data?.ruleId;
+    const override =
+      (typeof ruleId === 'string' ? overrides[`${diagnostic.code}#${ruleId}`] : undefined) ??
+      overrides[diagnostic.code];
     if (override === undefined) {
       result.push(diagnostic);
       continue;

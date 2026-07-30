@@ -11,6 +11,13 @@ import type { CompiledSecurityPatterns } from './patterns';
  */
 export interface RawMatch {
   code: string;
+  /**
+   * The catalog entry that produced this match. Carried through to the
+   * diagnostic's `data` so `severityOverrides` can address a single pattern
+   * (`skill.security.command.risky#sudo`) instead of its whole class — the
+   * alternative to disabling eighteen rules to silence one.
+   */
+  ruleId?: string;
   severity: SkillDiagnosticSeverity;
   message: string;
   index: number;
@@ -109,10 +116,17 @@ function spansOverlap(aStart: number, aLen: number, bStart: number, bLen: number
 
 /**
  * Command scanning over a code string (fenced/inline code or a resource-file
- * line). Two tiers; a risky match overlapping a dangerous one is dropped so a
- * catastrophic command reports exactly once, at the higher severity.
- * `allowedCommands` suppresses a match whose containing line includes any
- * allowlisted substring.
+ * line). Two tiers; a risky match on a line that already carries a dangerous
+ * one is dropped, so a catastrophic command reports exactly once, at the higher
+ * severity. Same-tier matches on one line collapse into a single finding that
+ * names each distinct rule.
+ *
+ * Suppression and de-duplication are both line-scoped rather than span-scoped:
+ * a command occupies a line, and `sudo rm -rf /` is one dangerous instruction,
+ * not a dangerous one plus an unrelated warning about `sudo`.
+ *
+ * `allowedCommands` suppresses a match whose *matched text* includes an
+ * allowlisted substring, and applies to the risky tier only.
  */
 export function scanCommands(
   value: string,
@@ -129,10 +143,12 @@ export function scanCommands(
           'error',
           pattern.message,
           patterns,
+          pattern.id,
         ),
       );
     }
   }
+  const dangerousLines = new Set(dangerous.map((m) => lineAt(value, m.index).start));
   const risky: RawMatch[] = [];
   for (const pattern of patterns.riskyCommands) {
     for (const match of execAll(pattern.re, value)) {
@@ -142,14 +158,59 @@ export function scanCommands(
         'warning',
         pattern.message,
         patterns,
+        pattern.id,
       );
-      if (dangerous.some((d) => spansOverlap(d.index, d.length, candidate.index, candidate.length))) {
+      if (dangerousLines.has(lineAt(value, candidate.index).start)) {
+        continue;
+      }
+      // The allowlist is a warning-tier convenience. It must never be able to
+      // switch off an `error`, so it is applied here and not to the tier above.
+      if (isAllowed(value, candidate, allowedCommands)) {
         continue;
       }
       risky.push(candidate);
     }
   }
-  return [...dangerous, ...risky].filter((m) => !isAllowed(value, m, allowedCommands));
+  return [...mergePerLine(value, dangerous), ...mergePerLine(value, risky)];
+}
+
+/**
+ * Collapses same-tier matches that share a line into one finding at the
+ * earliest index, joining the distinct explanations. Four warnings whose
+ * messages all open with the same snippet are noise, not four problems.
+ */
+function mergePerLine(value: string, matches: RawMatch[]): RawMatch[] {
+  if (matches.length < 2) {
+    return matches;
+  }
+  const byLine = new Map<number, RawMatch[]>();
+  for (const match of matches) {
+    const line = lineAt(value, match.index).start;
+    const group = byLine.get(line);
+    if (group) {
+      group.push(match);
+    } else {
+      byLine.set(line, [match]);
+    }
+  }
+  const merged: RawMatch[] = [];
+  for (const group of byLine.values()) {
+    if (group.length === 1) {
+      merged.push(group[0]);
+      continue;
+    }
+    group.sort((a, b) => a.index - b.index);
+    const seen = new Set<string>();
+    const messages: string[] = [];
+    for (const match of group) {
+      if (!seen.has(match.message)) {
+        seen.add(match.message);
+        messages.push(match.message);
+      }
+    }
+    merged.push({ ...group[0], message: messages.join(' ') });
+  }
+  return merged.sort((a, b) => a.index - b.index);
 }
 
 function toCommandMatch(
@@ -158,9 +219,11 @@ function toCommandMatch(
   severity: SkillDiagnosticSeverity,
   message: string,
   patterns: CompiledSecurityPatterns,
+  ruleId: string,
 ): RawMatch {
   return {
     code,
+    ruleId,
     severity,
     // The catalog/user-supplied explanation is the translatable part; the
     // snippet and the em-dash glue stay as-is. The snippet is the matched
@@ -175,12 +238,33 @@ function toCommandMatch(
   };
 }
 
+/**
+ * An allowlist entry must have something to do with the finding it silences.
+ *
+ * Testing the whole containing line let an unrelated fragment do the job:
+ * `allowedCommands: ['preserve-root']` silenced the very error that
+ * `--no-preserve-root` raises, and allowlisting one benign command silenced
+ * everything chained after it on the same line.
+ *
+ * Testing only the matched span would fix that but break the documented use —
+ * `docs/rules.md` tells authors to "add the exact line", and no pattern ever
+ * matches a whole command line, so every such entry would silently stop
+ * working. So an entry qualifies two ways: it names the matched command (or
+ * part of it), or it is a fuller command line that both contains what matched
+ * and actually appears here.
+ */
 function isAllowed(value: string, match: RawMatch, allowedCommands: readonly string[]): boolean {
   if (allowedCommands.length === 0) {
     return false;
   }
+  const matched = value.slice(match.index, match.index + match.length).toLowerCase();
   const line = lineAt(value, match.index).text.toLowerCase();
-  return allowedCommands.some((allowed) => allowed.length > 0 && line.includes(allowed));
+  return allowedCommands.some((allowed) => {
+    if (allowed.length === 0) {
+      return false;
+    }
+    return matched.includes(allowed) || (allowed.includes(matched) && line.includes(allowed));
+  });
 }
 
 /** Flags references to known risky public services (paste/exfil/tunnel/IP-echo). */
@@ -205,6 +289,7 @@ export function scanServices(
     const hostIndex = match.index + match[0].indexOf(host);
     matches.push({
       code: DiagnosticCode.SecurityServiceRisky,
+      ruleId: host.toLowerCase(),
       severity: 'warning',
       message: l10n.t(
         'Risky public service: `{0}`. These endpoints are commonly used to exfiltrate data or fetch unverified content; confirm it is intended.',
@@ -232,6 +317,7 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
       }
       const candidate: RawMatch = {
         code: DiagnosticCode.SecuritySecret,
+        ruleId: sig.id,
         severity: 'error',
         message: l10n.t(
           '{0} detected. Remove the hardcoded credential from the skill and rotate it if it is real.',
@@ -252,6 +338,7 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
     }
     const candidate: RawMatch = {
       code: DiagnosticCode.SecuritySecret,
+      ruleId: patterns.secretAssignment.id,
       severity: 'error',
       message: l10n.t(
         'Hardcoded credential in `{0}`. Read it from an environment variable or secret store instead.',
@@ -267,6 +354,7 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
   for (const match of execAll(patterns.credentialedUrl.re, value)) {
     const candidate: RawMatch = {
       code: DiagnosticCode.SecuritySecret,
+      ruleId: patterns.credentialedUrl.id,
       severity: 'error',
       message: l10n.t(
         '{0}. Move the username and password out of the URL.',
@@ -293,6 +381,7 @@ export function scanInjection(value: string, patterns: CompiledSecurityPatterns)
     for (const match of execAll(pattern.re, value)) {
       matches.push({
         code: DiagnosticCode.SecurityPromptInjection,
+        ruleId: pattern.id,
         severity: 'warning',
         message: l10n.t(
           'Possible prompt injection: `{0}` — {1}',
@@ -323,6 +412,7 @@ export function scanHtmlCommentInstructions(
     }
     matches.push({
       code: DiagnosticCode.SecurityHiddenContent,
+      ruleId: 'hiddenImperative',
       severity: 'warning',
       message: l10n.t(
         'Hidden instruction in an HTML comment: `{0}` — this text is invisible in rendered Markdown but read by an agent. Remove it or make it visible.',
@@ -352,6 +442,7 @@ export function scanInvisible(
     const hex = code.toString(16).toUpperCase().padStart(4, '0');
     matches.push({
       code: DiagnosticCode.SecurityHiddenContent,
+      ruleId: 'hiddenUnicode',
       severity: 'warning',
       message: l10n.t(
         'Invisible Unicode character (U+{0}) in the text; it can hide or reorder instructions from human review. Remove it.',
@@ -377,6 +468,7 @@ export function scanSensitivePaths(value: string, patterns: CompiledSecurityPatt
     for (const match of execAll(pattern.re, value)) {
       matches.push({
         code: DiagnosticCode.SecuritySensitivePath,
+        ruleId: pattern.id,
         severity: 'information',
         message: l10n.t(
           'Sensitive path referenced: `{0}` — {1}',
