@@ -141,7 +141,7 @@
   "skillMdInspector.config.security.scanResourceFiles.description": "Also scan bundled resource files during full validation. Scripts are checked for commands, secrets, risky services, sensitive paths, and invisible Unicode; text resources also receive prompt-injection and hidden-comment checks.",
   "skillMdInspector.config.security.maxScannedFileSizeKb.description": "Bundled resource files larger than this size (in KiB) are skipped by the security scan.",
   "skillMdInspector.config.security.allowedDomains.description": "Host suffixes to treat as trusted, suppressing risky-service findings (e.g. \"internal.example.com\").",
-  "skillMdInspector.config.security.allowedCommands.description": "Substrings that suppress a command finding when they appear on the matched line (e.g. a known-safe command you use often).",
+  "skillMdInspector.config.security.allowedCommands.description": "Known-safe commands that suppress a risky-tier command warning: either the command itself, or the exact line you use it on. Dangerous-tier findings are never suppressed; use severityOverrides for those.",
   "skillMdInspector.config.security.additionalRiskyCommands.description": "Additional regular expressions (JavaScript syntax) that flag a line as a risky command (warning). Invalid patterns are ignored with a configuration warning.",
   "skillMdInspector.config.security.additionalDangerousCommands.description": "Additional regular expressions (JavaScript syntax) that flag a line as a dangerous command (error). Invalid patterns are ignored with a configuration warning.",
   "skillMdInspector.config.security.additionalServiceDomains.description": "Additional host suffixes to flag as risky public services (e.g. paste or file-upload endpoints).",
