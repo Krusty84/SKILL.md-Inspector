@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { isSkillFile } from '../diagnostics/mapping';
 
@@ -26,12 +27,14 @@ export function resolveSkillUri(target?: SkillCommandTarget): vscode.Uri | undef
 
 export async function resolveSkillTarget(
   uri: SkillCommandTarget | undefined,
-  options: { requireEditor?: boolean; warningAction?: string } = {},
+  // A full sentence, not a fragment, so each command's warning translates as a
+  // whole (word order differs across languages).
+  options: { requireEditor?: boolean; missingEditorMessage?: string } = {},
 ): Promise<SkillTarget | undefined> {
   const resolvedUri = resolveSkillUri(uri);
   if (resolvedUri) {
     if (!isSkillUri(resolvedUri)) {
-      vscode.window.showWarningMessage('SKILL.md Inspector: select a SKILL.md file.');
+      vscode.window.showWarningMessage(l10n.t('SKILL.md Inspector: select a SKILL.md file.'));
       return undefined;
     }
     const document = await vscode.workspace.openTextDocument(resolvedUri);
@@ -44,12 +47,14 @@ export async function resolveSkillTarget(
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage(
-      `SKILL.md Inspector: open a SKILL.md file${options.warningAction ? ` to ${options.warningAction}` : ''}.`,
+      options.missingEditorMessage ?? l10n.t('SKILL.md Inspector: open a SKILL.md file.'),
     );
     return undefined;
   }
   if (!isSkillFile(editor.document)) {
-    vscode.window.showWarningMessage('SKILL.md Inspector: the active file is not a SKILL.md file.');
+    vscode.window.showWarningMessage(
+      l10n.t('SKILL.md Inspector: the active file is not a SKILL.md file.'),
+    );
     return undefined;
   }
   return { uri: editor.document.uri, document: editor.document, editor };

@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { computeWorkspaceAnalysisOnline } from '../analysis/workspaceAnalysis';
 import { buildSkillsIndex } from '../workspace/analyzeWorkspace';
@@ -8,7 +9,7 @@ export async function exportSkillsIndex(): Promise<void> {
   const result = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Analyzing skills for index',
+      title: l10n.t('Analyzing skills for index'),
       cancellable: true,
     },
     (progress, token) =>
@@ -23,12 +24,14 @@ export async function exportSkillsIndex(): Promise<void> {
   );
 
   if (!result) {
-    vscode.window.showWarningMessage('SKILL.md Inspector: open a folder to export a skills index.');
+    vscode.window.showWarningMessage(
+      l10n.t('SKILL.md Inspector: open a folder to export a skills index.'),
+    );
     return;
   }
   if (result.analysis.cancelled) {
     vscode.window.showWarningMessage(
-      'SKILL.md Inspector: index export cancelled; nothing written.',
+      l10n.t('SKILL.md Inspector: index export cancelled; nothing written.'),
     );
     return;
   }
@@ -41,6 +44,6 @@ export async function exportSkillsIndex(): Promise<void> {
   const document = await vscode.workspace.openTextDocument(target);
   await vscode.window.showTextDocument(document);
   vscode.window.showInformationMessage(
-    `SKILL.md Inspector: exported ${index.skills.length} skill(s) to skills.index.json.`,
+    l10n.t('SKILL.md Inspector: exported {0} skill(s) to skills.index.json.', index.skills.length),
   );
 }

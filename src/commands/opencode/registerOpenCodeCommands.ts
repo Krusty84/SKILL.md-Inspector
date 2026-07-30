@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { loadOpenCodeSession } from '../../opencode/loadSession';
 import { OpenCodeSessionFolderStore } from '../../opencode/sessionFolderStore';
@@ -58,7 +59,7 @@ export function registerOpenCodeCommands(
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
-        openLabel: 'Select OpenCode Sessions Folder',
+        openLabel: l10n.t('Select OpenCode Sessions Folder'),
       });
       if (!picked?.[0]) return;
       await deps.store.set(picked[0]);

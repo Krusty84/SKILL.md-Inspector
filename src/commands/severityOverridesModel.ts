@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, KIND_BY_CODE } from '../types/DiagnosticCode';
 import type { SkillDiagnosticKind, SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
 
@@ -17,24 +18,36 @@ export type SeverityOverrideMap = Record<string, SeverityOverrideValue>;
 /** Kinds a user can meaningfully override, i.e. everything except `internal`. */
 export type PickableKind = Exclude<SkillDiagnosticKind, 'internal'>;
 
-/** Ordered severity choices offered in the picker, with human-readable descriptions. */
-export const SEVERITY_CHOICES: ReadonlyArray<{
+/**
+ * Ordered severity choices offered in the picker, with human-readable
+ * descriptions. A function so descriptions are localized at call time, after
+ * the l10n bundle is configured.
+ */
+export function severityChoices(): ReadonlyArray<{
   value: SeverityOverrideValue;
   description: string;
-}> = [
-  { value: 'error', description: 'Report as an error' },
-  { value: 'warning', description: 'Report as a warning' },
-  { value: 'information', description: 'Report as an information hint' },
-  { value: 'off', description: 'Disable this diagnostic entirely' },
-];
+}> {
+  return [
+    { value: 'error', description: l10n.t('Report as an error') },
+    { value: 'warning', description: l10n.t('Report as a warning') },
+    { value: 'information', description: l10n.t('Report as an information hint') },
+    { value: 'off', description: l10n.t('Disable this diagnostic entirely') },
+  ];
+}
 
-/** Human-readable section headers for each diagnostic kind shown in the code picker. */
-export const KIND_LABELS: Record<PickableKind, string> = {
-  specification: 'Specification — structural (protected by default)',
-  security: 'Security',
-  compatibility: 'Compatibility',
-  quality: 'Quality',
-};
+/** Human-readable section header for a diagnostic kind shown in the code picker. */
+export function kindLabel(kind: PickableKind): string {
+  switch (kind) {
+    case 'specification':
+      return l10n.t('Specification — structural (protected by default)');
+    case 'security':
+      return l10n.t('Security');
+    case 'compatibility':
+      return l10n.t('Compatibility');
+    case 'quality':
+      return l10n.t('Quality');
+  }
+}
 
 /**
  * Order the kinds appear as separators in the code picker. `internal` is
@@ -70,7 +83,7 @@ export function groupCodesByKind(): Array<{
   }
   return KIND_ORDER.map((kind) => ({
     kind,
-    label: KIND_LABELS[kind],
+    label: kindLabel(kind),
     entries: entries.filter((entry) => entry.kind === kind),
   })).filter((group) => group.entries.length > 0);
 }

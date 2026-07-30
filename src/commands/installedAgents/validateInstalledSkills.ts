@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import type { DiagnosticsProvider } from '../../diagnostics/diagnosticsProvider';
 import type {
@@ -21,14 +22,14 @@ export async function validateInstalledSkills(
   const paths = installedProvider.resolveSkillMdPathsForNode(node);
   if (paths.length === 0) {
     vscode.window.showInformationMessage(
-      'SKILL.md Inspector: no SKILL.md files found in this scope.',
+      l10n.t('SKILL.md Inspector: no SKILL.md files found in this scope.'),
     );
     return;
   }
   const result = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Validating installed skills',
+      title: l10n.t('Validating installed skills'),
       cancellable: true,
     },
     (progress, token) => diagnostics.validatePaths(paths, token, progress),
@@ -36,11 +37,18 @@ export async function validateInstalledSkills(
 
   if (result.cancelled) {
     vscode.window.showWarningMessage(
-      `SKILL.md Inspector: validation cancelled after ${result.processed} of ${result.total} file(s); results are partial.`,
+      l10n.t(
+        'SKILL.md Inspector: validation cancelled after {0} of {1} file(s); results are partial.',
+        result.processed,
+        result.total,
+      ),
     );
     return;
   }
   vscode.window.showInformationMessage(
-    `SKILL.md Inspector: validated ${result.processed} SKILL.md file(s). See the Problems panel.`,
+    l10n.t(
+      'SKILL.md Inspector: validated {0} SKILL.md file(s). See the Problems panel.',
+      result.processed,
+    ),
   );
 }

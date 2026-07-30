@@ -1,7 +1,8 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { KIND_BY_CODE } from '../types/DiagnosticCode';
 import {
-  SEVERITY_CHOICES,
+  severityChoices,
   applyOverride,
   groupCodesByKind,
   isProtectedDowngrade,
@@ -78,17 +79,19 @@ async function showManagePanel(
     const severity = current[code];
     const kind = KIND_BY_CODE[code] ?? 'quality';
     const protectedNote =
-      kind === 'specification' && !allowSpec ? '  ·  (protected — needs allowSpecificationOverrides)' : '';
+      kind === 'specification' && !allowSpec
+        ? `  ·  ${l10n.t('(protected — needs allowSpecificationOverrides)')}`
+        : '';
     return { label: code, description: `→ ${severity}  ·  ${kind}${protectedNote}`, action: 'edit', code };
   });
 
   items.push({ label: '', kind: vscode.QuickPickItemKind.Separator });
-  items.push({ label: '$(add) Add override…', action: 'add' });
-  items.push({ label: '$(discard) Clear all overrides', action: 'clear' });
+  items.push({ label: `$(add) ${l10n.t('Add override…')}`, action: 'add' });
+  items.push({ label: `$(discard) ${l10n.t('Clear all overrides')}`, action: 'clear' });
 
   return vscode.window.showQuickPick(items, {
-    title: 'Configure Severity Overrides',
-    placeHolder: 'Select an override to edit, or add a new one',
+    title: l10n.t('Configure Severity Overrides'),
+    placeHolder: l10n.t('Select an override to edit, or add a new one'),
   });
 }
 
@@ -113,10 +116,10 @@ async function addOverride(current: SeverityOverrideMap): Promise<void> {
 async function editOverride(code: string): Promise<void> {
   const action = await vscode.window.showQuickPick(
     [
-      { label: '$(edit) Change severity…', value: 'change' as const },
-      { label: '$(trash) Remove override', value: 'remove' as const },
+      { label: `$(edit) ${l10n.t('Change severity…')}`, value: 'change' as const },
+      { label: `$(trash) ${l10n.t('Remove override')}`, value: 'remove' as const },
     ],
-    { title: `Override: ${code}`, placeHolder: 'Choose an action' },
+    { title: l10n.t('Override: {0}', code), placeHolder: l10n.t('Choose an action') },
   );
   if (!action) {
     return;
@@ -132,7 +135,7 @@ async function editOverride(code: string): Promise<void> {
   const existingScopes = resolveScopesFor(code);
   const scope =
     existingScopes.length > 0
-      ? await pickScope(existingScopes, `Change ${code} in which settings?`)
+      ? await pickScope(existingScopes, l10n.t('Change {0} in which settings?', code))
       : await pickWriteScope();
   if (!scope) {
     return;
@@ -150,15 +153,15 @@ async function pickCode(current: SeverityOverrideMap): Promise<string | undefine
       const lock = entry.kind === 'specification' ? '$(lock) ' : '';
       items.push({
         label: `${lock}${entry.code}`,
-        description: existing ? `${entry.kind} · currently: ${existing}` : entry.kind,
+        description: existing ? `${entry.kind} · ${l10n.t('currently: {0}', existing)}` : entry.kind,
         detail: entry.constName,
         code: entry.code,
       });
     }
   }
   const selected = await vscode.window.showQuickPick(items, {
-    title: 'Configure Severity Overrides — pick a diagnostic',
-    placeHolder: 'Select the diagnostic code to override',
+    title: l10n.t('Configure Severity Overrides — pick a diagnostic'),
+    placeHolder: l10n.t('Select the diagnostic code to override'),
     matchOnDescription: true,
     matchOnDetail: true,
   });
@@ -167,14 +170,14 @@ async function pickCode(current: SeverityOverrideMap): Promise<string | undefine
 
 /** Presents the four predefined severity levels with descriptions. */
 async function pickSeverity(code: string): Promise<SeverityOverrideValue | undefined> {
-  const items: SeverityItem[] = SEVERITY_CHOICES.map((choice) => ({
+  const items: SeverityItem[] = severityChoices().map((choice) => ({
     label: choice.value,
     description: choice.description,
     value: choice.value,
   }));
   const selected = await vscode.window.showQuickPick(items, {
-    title: `Severity for ${code}`,
-    placeHolder: 'Select a severity level',
+    title: l10n.t('Severity for {0}', code),
+    placeHolder: l10n.t('Select a severity level'),
   });
   return selected?.value;
 }
@@ -191,16 +194,21 @@ async function commitOverride(
 
   let enableSpec = false;
   if (isProtectedDowngrade(code, severity, allowSpec)) {
+    const enableAndApply = l10n.t('Enable & apply');
+    const applyAnyway = l10n.t('Apply anyway');
     const decision = await vscode.window.showWarningMessage(
-      `"${code}" is a specification-level error. Overrides that downgrade or disable specification errors are ignored unless "skillMdInspector.severity.allowSpecificationOverrides" is enabled.`,
+      l10n.t(
+        '"{0}" is a specification-level error. Overrides that downgrade or disable specification errors are ignored unless "skillMdInspector.severity.allowSpecificationOverrides" is enabled.',
+        code,
+      ),
       { modal: true },
-      'Enable & apply',
-      'Apply anyway',
+      enableAndApply,
+      applyAnyway,
     );
     if (!decision) {
       return;
     }
-    enableSpec = decision === 'Enable & apply';
+    enableSpec = decision === enableAndApply;
   }
 
   await writeMap(scope, applyOverride(readScopeMap(scope), code, severity));
@@ -209,7 +217,7 @@ async function commitOverride(
       .getConfiguration(CONFIG_SECTION)
       .update(ALLOW_SPEC_KEY, true, scope.target);
   }
-  vscode.window.showInformationMessage(`SKILL.md Inspector: set ${code} → ${severity}.`);
+  vscode.window.showInformationMessage(l10n.t('SKILL.md Inspector: set {0} → {1}.', code, severity));
 }
 
 /**
@@ -222,17 +230,24 @@ async function removeOverrideEverywhere(code: string): Promise<void> {
   const scopes = resolveScopesFor(code);
   if (scopes.length === 0) {
     vscode.window.showInformationMessage(
-      `SKILL.md Inspector: ${code} is not set in a writable scope.`,
+      l10n.t('SKILL.md Inspector: {0} is not set in a writable scope.', code),
     );
     return;
   }
   for (const scope of scopes) {
     await writeMap(scope, removeOverride(readScopeMap(scope), code));
   }
+  // At most two scopes exist (User and Workspace), so both list shapes are
+  // whole sentences instead of an English " and " join.
   vscode.window.showInformationMessage(
-    `SKILL.md Inspector: removed override for ${code} (${scopes
-      .map((scope) => scope.label)
-      .join(' and ')}).`,
+    scopes.length === 1
+      ? l10n.t('SKILL.md Inspector: removed override for {0} ({1}).', code, scopes[0].label)
+      : l10n.t(
+          'SKILL.md Inspector: removed override for {0} ({1} and {2}).',
+          code,
+          scopes[0].label,
+          scopes[1].label,
+        ),
   );
 }
 
@@ -242,27 +257,28 @@ async function clearAllOverrides(): Promise<void> {
   if (scopes.length === 0) {
     return;
   }
-  const scope = await pickScope(scopes, 'Clear all overrides from which settings?');
+  const scope = await pickScope(scopes, l10n.t('Clear all overrides from which settings?'));
   if (!scope) {
     return;
   }
+  const clearLabel = l10n.t('Clear overrides');
   const confirmation = await vscode.window.showWarningMessage(
-    `Remove all severity overrides from ${scope.label} settings?`,
+    l10n.t('Remove all severity overrides from {0} settings?', scope.label),
     { modal: true },
-    'Clear overrides',
+    clearLabel,
   );
-  if (confirmation !== 'Clear overrides') {
+  if (confirmation !== clearLabel) {
     return;
   }
   await writeMap(scope, {});
-  vscode.window.showInformationMessage('SKILL.md Inspector: severity overrides cleared.');
+  vscode.window.showInformationMessage(l10n.t('SKILL.md Inspector: severity overrides cleared.'));
 }
 
 /** Offers the writable scopes for a new value: User always, Workspace when one is open. */
 async function pickWriteScope(): Promise<ScopeItem | undefined> {
   const userScope: ScopeItem = {
-    label: 'User',
-    description: 'Applies to every workspace',
+    label: l10n.t('User'),
+    description: l10n.t('Applies to every workspace'),
     target: vscode.ConfigurationTarget.Global,
   };
   if ((vscode.workspace.workspaceFolders ?? []).length === 0) {
@@ -272,12 +288,12 @@ async function pickWriteScope(): Promise<ScopeItem | undefined> {
     [
       userScope,
       {
-        label: 'Workspace',
-        description: 'Applies to this workspace only',
+        label: l10n.t('Workspace'),
+        description: l10n.t('Applies to this workspace only'),
         target: vscode.ConfigurationTarget.Workspace,
       },
     ],
-    'Where should this override be saved?',
+    l10n.t('Where should this override be saved?'),
   );
 }
 
@@ -286,7 +302,7 @@ async function pickScope(scopes: ScopeItem[], title: string): Promise<ScopeItem 
   if (scopes.length === 1) {
     return scopes[0];
   }
-  return vscode.window.showQuickPick(scopes, { title, placeHolder: 'Select settings scope' });
+  return vscode.window.showQuickPick(scopes, { title, placeHolder: l10n.t('Select settings scope') });
 }
 
 /** Scopes whose own value defines `code` (User and/or Workspace). */
@@ -296,10 +312,10 @@ function resolveScopesFor(code: string): ScopeItem[] {
     .inspect<SeverityOverrideMap>(OVERRIDES_KEY);
   const scopes: ScopeItem[] = [];
   if (inspected?.globalValue && code in inspected.globalValue) {
-    scopes.push({ label: 'User', target: vscode.ConfigurationTarget.Global });
+    scopes.push({ label: l10n.t('User'), target: vscode.ConfigurationTarget.Global });
   }
   if (inspected?.workspaceValue && code in inspected.workspaceValue) {
-    scopes.push({ label: 'Workspace', target: vscode.ConfigurationTarget.Workspace });
+    scopes.push({ label: l10n.t('Workspace'), target: vscode.ConfigurationTarget.Workspace });
   }
   return scopes;
 }
@@ -311,10 +327,10 @@ function scopesWithOverrides(): ScopeItem[] {
     .inspect<SeverityOverrideMap>(OVERRIDES_KEY);
   const scopes: ScopeItem[] = [];
   if (inspected?.globalValue && Object.keys(inspected.globalValue).length > 0) {
-    scopes.push({ label: 'User', target: vscode.ConfigurationTarget.Global });
+    scopes.push({ label: l10n.t('User'), target: vscode.ConfigurationTarget.Global });
   }
   if (inspected?.workspaceValue && Object.keys(inspected.workspaceValue).length > 0) {
-    scopes.push({ label: 'Workspace', target: vscode.ConfigurationTarget.Workspace });
+    scopes.push({ label: l10n.t('Workspace'), target: vscode.ConfigurationTarget.Workspace });
   }
   return scopes;
 }

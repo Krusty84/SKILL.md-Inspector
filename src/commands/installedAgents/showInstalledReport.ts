@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { computeScopedAnalysisOnline } from '../../analysis/workspaceAnalysis';
 import { WorkspaceReportPanel } from '../../ui/workspaceReportWebview';
@@ -42,7 +43,7 @@ export async function showInstalledReport(
   const paths = installedProvider.resolveSkillMdPathsForNode(node);
   if (paths.length === 0) {
     vscode.window.showInformationMessage(
-      'SKILL.md Inspector: no SKILL.md files found in this scope.',
+      l10n.t('SKILL.md Inspector: no SKILL.md files found in this scope.'),
     );
     return;
   }
@@ -54,7 +55,7 @@ export async function showInstalledReport(
   const analysis = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Building installed skills report',
+      title: l10n.t('Building installed skills report'),
       cancellable: true,
     },
     (progress, token) =>
@@ -75,13 +76,13 @@ export async function showInstalledReport(
 
   if (analysis.cancelled) {
     vscode.window.showWarningMessage(
-      'SKILL.md Inspector: installed skills report cancelled; not shown.',
+      l10n.t('SKILL.md Inspector: installed skills report cancelled; not shown.'),
     );
     return;
   }
   WorkspaceReportPanel.show(analysis, {
     kind: 'installed-agent',
-    agentLabel: installedProvider.resolveAgentLabelForNode(node) ?? 'Unknown agent',
+    agentLabel: installedProvider.resolveAgentLabelForNode(node) ?? l10n.t('Unknown agent'),
     folderPath,
   });
 }

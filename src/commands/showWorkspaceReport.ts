@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { computeWorkspaceAnalysisOnline } from '../analysis/workspaceAnalysis';
 import { WorkspaceReportPanel } from '../ui/workspaceReportWebview';
@@ -7,7 +8,7 @@ export async function showWorkspaceReport(): Promise<void> {
   const result = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Building workspace report',
+      title: l10n.t('Building workspace report'),
       cancellable: true,
     },
     (progress, token) =>
@@ -23,12 +24,14 @@ export async function showWorkspaceReport(): Promise<void> {
 
   if (!result) {
     vscode.window.showWarningMessage(
-      'SKILL.md Inspector: open a folder to build a workspace report.',
+      l10n.t('SKILL.md Inspector: open a folder to build a workspace report.'),
     );
     return;
   }
   if (result.analysis.cancelled) {
-    vscode.window.showWarningMessage('SKILL.md Inspector: workspace report cancelled; not shown.');
+    vscode.window.showWarningMessage(
+      l10n.t('SKILL.md Inspector: workspace report cancelled; not shown.'),
+    );
     return;
   }
   WorkspaceReportPanel.show(result.analysis, {

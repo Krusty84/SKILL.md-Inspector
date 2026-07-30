@@ -1,4 +1,5 @@
 import './l10nSetup';
+import * as l10n from '@vscode/l10n';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DiagnosticsProvider } from './diagnostics/diagnosticsProvider';
@@ -46,7 +47,7 @@ const SAVE_TREE_REFRESH_MAX_WAIT_MS = 5000;
 const TOKENIZER_WARM_UP_DELAY_MS = 2000;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const output = vscode.window.createOutputChannel('SKILL.md Inspector');
+  const output = vscode.window.createOutputChannel(l10n.t('SKILL.md Inspector'));
   context.subscriptions.push(output);
   // Activation marker: if this line reappears (and the channel resets) right
   // after adding/removing a workspace folder, VS Code terminated and restarted
@@ -132,7 +133,14 @@ export function activate(context: vscode.ExtensionContext): void {
       output.appendLine(`- ${warning.setting}: ${warning.message}`);
     }
     void vscode.window.showWarningMessage(
-      `SKILL.md Inspector ignored invalid heuristic dictionary configuration (${warnings.length} ${warnings.length === 1 ? 'warning' : 'warnings'}). See the SKILL.md Inspector output for details.`,
+      warnings.length === 1
+        ? l10n.t(
+            'SKILL.md Inspector ignored invalid heuristic dictionary configuration (1 warning). See the SKILL.md Inspector output for details.',
+          )
+        : l10n.t(
+            'SKILL.md Inspector ignored invalid heuristic dictionary configuration ({0} warnings). See the SKILL.md Inspector output for details.',
+            warnings.length,
+          ),
     );
   };
   registerOpenCodeCommands(context, {
@@ -240,14 +248,14 @@ export function activate(context: vscode.ExtensionContext): void {
         const uri = resolveFavoriteTarget(target);
         if (!uri || uri.path.split('/').pop() !== 'SKILL.md') {
           void vscode.window.showWarningMessage(
-            'Only files named SKILL.md can be added to Favorites.',
+            l10n.t('Only files named SKILL.md can be added to Favorites.'),
           );
           return;
         }
         const current = restoreFavorites(context.globalState.get(FAVORITES_KEY));
         const result = addFavorite(current, uri.toString());
         if (!result.added) {
-          void vscode.window.showInformationMessage('This SKILL.md is already in Favorites.');
+          void vscode.window.showInformationMessage(l10n.t('This SKILL.md is already in Favorites.'));
           return;
         }
         await context.globalState.update(FAVORITES_KEY, result.entries);
@@ -274,7 +282,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const uri = resolveFavoriteTarget(target);
         if (!uri || uri.path.split('/').pop() !== 'SKILL.md') {
           void vscode.window.showWarningMessage(
-            'Only files named SKILL.md can be added to or removed from Favorites.',
+            l10n.t('Only files named SKILL.md can be added to or removed from Favorites.'),
           );
           return;
         }
@@ -293,12 +301,13 @@ export function activate(context: vscode.ExtensionContext): void {
       if (current.length === 0) {
         return;
       }
+      const clearLabel = l10n.t('Clear Favorites');
       const choice = await vscode.window.showWarningMessage(
-        'Clear all SKILL.md Inspector Favorites?',
+        l10n.t('Clear all SKILL.md Inspector Favorites?'),
         { modal: true },
-        'Clear Favorites',
+        clearLabel,
       );
-      if (choice !== 'Clear Favorites') {
+      if (choice !== clearLabel) {
         return;
       }
       await context.globalState.update(FAVORITES_KEY, []);
@@ -310,7 +319,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await vscode.workspace.fs.stat(uri);
         await vscode.commands.executeCommand('vscode.open', uri);
       } catch {
-        void vscode.window.showWarningMessage(`Favorite is unavailable: ${uriString}`);
+        void vscode.window.showWarningMessage(l10n.t('Favorite is unavailable: {0}', uriString));
       }
     }),
     resourceWatcher,

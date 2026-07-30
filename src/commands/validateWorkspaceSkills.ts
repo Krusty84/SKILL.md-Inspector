@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import type { DiagnosticsProvider } from '../diagnostics/diagnosticsProvider';
 
@@ -6,7 +7,7 @@ export async function validateWorkspaceSkills(provider: DiagnosticsProvider): Pr
   const result = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Validating workspace skills',
+      title: l10n.t('Validating workspace skills'),
       cancellable: true,
     },
     (progress, token) => provider.validateWorkspace(token, progress),
@@ -14,11 +15,18 @@ export async function validateWorkspaceSkills(provider: DiagnosticsProvider): Pr
 
   if (result.cancelled) {
     vscode.window.showWarningMessage(
-      `SKILL.md Inspector: validation cancelled after ${result.processed} of ${result.total} file(s); results are partial.`,
+      l10n.t(
+        'SKILL.md Inspector: validation cancelled after {0} of {1} file(s); results are partial.',
+        result.processed,
+        result.total,
+      ),
     );
     return;
   }
   vscode.window.showInformationMessage(
-    `SKILL.md Inspector: validated ${result.processed} SKILL.md file(s). See the Problems panel.`,
+    l10n.t(
+      'SKILL.md Inspector: validated {0} SKILL.md file(s). See the Problems panel.',
+      result.processed,
+    ),
   );
 }

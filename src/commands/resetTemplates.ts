@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 
 interface ResetScopeItem extends vscode.QuickPickItem {
@@ -9,24 +10,27 @@ export async function resetTemplates(uri?: vscode.Uri): Promise<void> {
   const scopes = collectScopes(uri);
 
   if (scopes.length === 0) {
-    vscode.window.showInformationMessage('SKILL.md Inspector: no custom templates are configured.');
+    vscode.window.showInformationMessage(
+      l10n.t('SKILL.md Inspector: no custom templates are configured.'),
+    );
     return;
   }
 
   const selected =
     scopes.length === 1
       ? scopes[0]
-      : await vscode.window.showQuickPick(scopes, { title: 'Reset SKILL.md Templates' });
+      : await vscode.window.showQuickPick(scopes, { title: l10n.t('Reset SKILL.md Templates') });
   if (!selected) {
     return;
   }
 
+  const resetLabel = l10n.t('Reset Templates');
   const confirmation = await vscode.window.showWarningMessage(
-    `Remove the ${selected.label} template override and return to bundled templates?`,
+    l10n.t('Remove the {0} template override and return to bundled templates?', selected.label),
     { modal: true },
-    'Reset Templates',
+    resetLabel,
   );
-  if (confirmation !== 'Reset Templates') {
+  if (confirmation !== resetLabel) {
     return;
   }
 
@@ -34,7 +38,7 @@ export async function resetTemplates(uri?: vscode.Uri): Promise<void> {
     .getConfiguration('skillMdInspector', selected.uri)
     .update('templates', undefined, selected.target);
   vscode.window.showInformationMessage(
-    'SKILL.md Inspector: template override removed. Bundled templates are active.',
+    l10n.t('SKILL.md Inspector: template override removed. Bundled templates are active.'),
   );
 }
 
@@ -43,10 +47,10 @@ function collectScopes(uri?: vscode.Uri): ResetScopeItem[] {
   const scopes: ResetScopeItem[] = [];
 
   if (inspected?.globalValue !== undefined) {
-    scopes.push({ label: 'User', target: vscode.ConfigurationTarget.Global });
+    scopes.push({ label: l10n.t('User'), target: vscode.ConfigurationTarget.Global });
   }
   if (inspected?.workspaceValue !== undefined) {
-    scopes.push({ label: 'Workspace', target: vscode.ConfigurationTarget.Workspace });
+    scopes.push({ label: l10n.t('Workspace'), target: vscode.ConfigurationTarget.Workspace });
   }
 
   if (uri) {
@@ -66,7 +70,7 @@ function collectScopes(uri?: vscode.Uri): ResetScopeItem[] {
       .inspect('templates');
     if (folderInspection?.workspaceFolderValue !== undefined) {
       scopes.push({
-        label: `Workspace Folder: ${folder.name}`,
+        label: l10n.t('Workspace Folder: {0}', folder.name),
         target: vscode.ConfigurationTarget.WorkspaceFolder,
         uri: folder.uri,
       });
@@ -78,5 +82,5 @@ function collectScopes(uri?: vscode.Uri): ResetScopeItem[] {
 
 function workspaceFolderLabel(uri: vscode.Uri): string {
   const folder = vscode.workspace.getWorkspaceFolder(uri);
-  return folder ? `Workspace Folder: ${folder.name}` : 'Workspace Folder';
+  return folder ? l10n.t('Workspace Folder: {0}', folder.name) : l10n.t('Workspace Folder');
 }
