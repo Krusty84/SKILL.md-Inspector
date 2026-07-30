@@ -91,7 +91,11 @@ describe('security catalog pattern budget', () => {
 
 describe('security catalog demo-skill calibration', () => {
   const fixturesDir = path.resolve('demo_skills/skills');
-  const explicitSecurityFixtures = new Set(['Docker-Deploy-Helper', 'malicious-exfil']);
+  // `Docker-Deploy-Helper` was exempted for one prose sentence — "If any step
+  // fails, try running it again with sudo." — which the bare-word `sudo` rule
+  // read as a command. It is a quality fixture, not a security one, so it
+  // belongs in the calibration set.
+  const explicitSecurityFixtures = new Set(['malicious-exfil']);
 
   it('adds no security findings to fixtures that do not intentionally exercise security', () => {
     for (const fixtureName of fs.readdirSync(fixturesDir)) {

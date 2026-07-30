@@ -7,6 +7,11 @@ export interface CompiledCommandPattern {
   id: string;
   re: RegExp;
   message: string;
+  /**
+   * Skip this pattern in prose. For rules whose source is an ordinary English
+   * word (`sudo`, `eval`), which carry meaning only in a command position.
+   */
+  codeOnly?: boolean;
 }
 
 /** A secret signature: the raw value is never echoed, only the label is shown. */
@@ -46,6 +51,7 @@ interface RawCommand {
   id: string;
   source: string;
   message: string;
+  codeOnly?: boolean;
 }
 interface RawSecret {
   id: string;
@@ -54,7 +60,12 @@ interface RawSecret {
 }
 
 function compileCommands(entries: readonly RawCommand[]): CompiledCommandPattern[] {
-  return entries.map((e) => ({ id: e.id, re: new RegExp(e.source, 'gi'), message: e.message }));
+  return entries.map((e) => ({
+    id: e.id,
+    re: new RegExp(e.source, 'gi'),
+    message: e.message,
+    ...(e.codeOnly ? { codeOnly: true } : {}),
+  }));
 }
 
 const BUILTIN_DANGEROUS = compileCommands(catalog.dangerousCommands as RawCommand[]);

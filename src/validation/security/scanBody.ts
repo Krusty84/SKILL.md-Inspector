@@ -54,7 +54,7 @@ export function scanBody(
     if (node.type === 'code' || node.type === 'inlineCode') {
       const origin = valueOrigin(node, doc.bodyStartLine);
       pushMatches(out, origin, value, [
-        ...scanCommands(value, patterns, settings.allowedCommands),
+        ...scanCommands(value, patterns, settings.allowedCommands, 'code'),
         ...scanSecrets(value, patterns),
         ...scanServices(value, patterns, settings.allowedDomains),
         ...scanSensitivePaths(value, patterns),
@@ -64,10 +64,11 @@ export function scanBody(
       pushMatches(out, origin, value, [
         // Prose in a SKILL.md is itself the agent's instructions, so a command
         // written as an ordinary sentence is scanned too — not only fenced or
-        // inline code. The dangerous-tier patterns are specific enough that
-        // prose false positives are rare; risky-tier prose hits (e.g. "sudo")
-        // are warnings and can be allowlisted or overridden.
-        ...scanCommands(value, patterns, settings.allowedCommands),
+        // inline code. The policy stands; what changed is that the handful of
+        // rules whose source is a bare English word (`sudo`, `eval`) are marked
+        // `codeOnly` in the catalog and sit out this pass, because in prose
+        // they match ordinary sentences rather than commands.
+        ...scanCommands(value, patterns, settings.allowedCommands, 'prose'),
         ...scanInjection(value, patterns),
         ...scanSecrets(value, patterns),
         ...scanSensitivePaths(value, patterns),

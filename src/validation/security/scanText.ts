@@ -24,6 +24,15 @@ export interface RawMatch {
   length: number;
 }
 
+/**
+ * Whether the scanned string is a code context (a fence, inline code, or a
+ * script resource) or prose. Prose in a SKILL.md is still the agent's
+ * instructions and is still scanned — but a handful of catalog rules are bare
+ * English words (`sudo`, `eval`) that mean something only in a command
+ * position, and those are marked `codeOnly`.
+ */
+export type ScanContext = 'code' | 'prose';
+
 const HTML_COMMENT_RE = /<!--([\s\S]*?)-->/g;
 const EMOJI_BEFORE_ZWJ_RE =
   /\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?$/u;
@@ -132,9 +141,13 @@ export function scanCommands(
   value: string,
   patterns: CompiledSecurityPatterns,
   allowedCommands: readonly string[],
+  context: ScanContext = 'code',
 ): RawMatch[] {
   const dangerous: RawMatch[] = [];
   for (const pattern of patterns.dangerousCommands) {
+    if (pattern.codeOnly && context === 'prose') {
+      continue;
+    }
     for (const match of execAll(pattern.re, value)) {
       dangerous.push(
         toCommandMatch(
@@ -151,6 +164,9 @@ export function scanCommands(
   const dangerousLines = new Set(dangerous.map((m) => lineAt(value, m.index).start));
   const risky: RawMatch[] = [];
   for (const pattern of patterns.riskyCommands) {
+    if (pattern.codeOnly && context === 'prose') {
+      continue;
+    }
     for (const match of execAll(pattern.re, value)) {
       const candidate = toCommandMatch(
         match,
@@ -333,6 +349,9 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
   }
   for (const match of execAll(patterns.secretAssignment.re, value)) {
     const secretValue = match[2] ?? '';
+    if (!looksLikeLiteralCredential(secretValue, patterns)) {
+      continue;
+    }
     if (patterns.secretPlaceholder.test(secretValue)) {
       continue;
     }
@@ -372,6 +391,33 @@ export function scanSecrets(value: string, patterns: CompiledSecurityPatterns): 
 
 function matchesOverlap(a: RawMatch, b: RawMatch): boolean {
   return spansOverlap(a.index, a.length, b.index, b.length);
+}
+
+/**
+ * A value is only a hardcoded credential if it is a literal that looks like
+ * one. The assignment pattern's value group accepts any 8+ non-space
+ * characters, so it read `api_key: os.environ["API_KEY"]` as a credential —
+ * erroring on the very remediation the diagnostic's message recommends — and
+ * `password: choose something memorable` as another.
+ *
+ * Gating on credential *shape* rather than enumerating what a value must not
+ * be: a function call, an interpolation, or a secret-manager lookup is not a
+ * literal, and a literal credential carries mixed alphanumerics or is a long
+ * opaque run.
+ */
+const NONLITERAL_VALUE =
+  /[([{]|\$\{|\bos\.environ\b|\bgetenv\b|\bprocess\.env\b|\bvault\b|\bkeyring\b|\bsecret_manager\b/i;
+const CREDENTIAL_SHAPE =
+  /^(?=.*[0-9])(?=.*[A-Za-z])[A-Za-z0-9_\-.+/=]{8,}$|^[A-Za-z0-9_\-+/=]{16,}$/;
+
+function looksLikeLiteralCredential(value: string, patterns: CompiledSecurityPatterns): boolean {
+  if (value.length === 0 || NONLITERAL_VALUE.test(value)) {
+    return false;
+  }
+  if (patterns.secretPlaceholder.test(value)) {
+    return false;
+  }
+  return CREDENTIAL_SHAPE.test(value);
 }
 
 /** Flags prompt-injection / agent-manipulation wording (prose and HTML comments). */
@@ -461,11 +507,21 @@ function isEmojiJoiner(value: string, index: number, length: number): boolean {
   return EMOJI_BEFORE_ZWJ_RE.test(before) && EMOJI_AFTER_ZWJ_RE.test(after);
 }
 
+/**
+ * Wording that makes a sensitive-path mention advice about *protecting* the
+ * file rather than reading it. "Add .env to .gitignore" is the recommended
+ * practice, not a finding.
+ */
+const PROTECTIVE_CONTEXT = /\.gitignore|\.dockerignore|never\s+commit|do\s+not\s+commit/i;
+
 /** Flags references to credential stores and other sensitive paths. */
 export function scanSensitivePaths(value: string, patterns: CompiledSecurityPatterns): RawMatch[] {
   const matches: RawMatch[] = [];
   for (const pattern of patterns.sensitivePaths) {
     for (const match of execAll(pattern.re, value)) {
+      if (PROTECTIVE_CONTEXT.test(lineAt(value, match.index).text)) {
+        continue;
+      }
       matches.push({
         code: DiagnosticCode.SecuritySensitivePath,
         ruleId: pattern.id,
