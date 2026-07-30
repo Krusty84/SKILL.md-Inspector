@@ -28,7 +28,7 @@
     },
     {
       "id": "shutdown",
-      "source": "\\b(?:shutdown|poweroff|halt|reboot|init\\s+0)\\b",
+      "source": "(?:^|[;&|]\\s*|\\bsudo\\s+|\\bsystemctl\\s+)(?:shutdown|poweroff|halt|reboot|init\\s+0)(?:\\s+-\\S+|\\s+now\\b|\\s*$|\\s*[;&|])",
       "message": "powers off or reboots the host. An agent should not run this unattended; remove it."
     },
     {
@@ -81,7 +81,8 @@
     {
       "id": "sudo",
       "source": "\\bsudo\\b",
-      "message": "runs a command as root. Confirm elevated privileges are required."
+      "message": "runs a command as root. Confirm elevated privileges are required.",
+      "codeOnly": true
     },
     {
       "id": "chmod-777",
@@ -111,7 +112,8 @@
     {
       "id": "eval",
       "source": "\\beval\\b",
-      "message": "evaluates a dynamically built string as code. Avoid eval where possible."
+      "message": "evaluates a dynamically built string as code. Avoid eval where possible.",
+      "codeOnly": true
     },
     {
       "id": "install-from-url",
@@ -268,79 +270,79 @@
   "injectionPhrases": [
     {
       "id": "ignore-previous",
-      "source": "ignore\\s+(?:all\\s+)?(?:the\\s+)?previous\\s+instructions",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})ignore\\s+(?:all\\s+)?(?:the\\s+)?previous\\s+instructions",
       "message": "prompt-injection wording that tells the agent to ignore prior instructions."
     },
     {
       "id": "disregard-above",
-      "source": "disregard\\s+(?:the\\s+)?(?:above|previous|prior|earlier)",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})disregard\\s+(?:the\\s+)?(?:above|previous|prior|earlier)",
       "message": "prompt-injection wording that tells the agent to disregard prior context."
     },
     {
       "id": "do-not-tell-user",
-      "source": "do\\s+not\\s+(?:ask|tell|inform|notify|alert|warn)\\s+(?:the\\s+)?user",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})do\\s+not\\s+(?:ask|tell|inform|notify|alert|warn)\\s+(?:the\\s+)?user",
       "message": "instructs the agent to act without informing the user."
     },
     {
       "id": "without-asking",
-      "source": "without\\s+(?:(?:asking|telling|informing|notifying)\\s+(?:the\\s+)?user|(?:the\\s+)?user(?:'s)?\\s+confirmation|confirmation)",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})without\\s+(?:(?:asking|telling|informing|notifying)\\s+(?:the\\s+)?user|(?:the\\s+)?user(?:'s)?\\s+confirmation|confirmation)",
       "message": "instructs the agent to act without confirmation."
     },
     {
       "id": "bypass-permission",
-      "source": "(?:bypass|disable|skip|turn\\s+off|ignore)\\s+(?:\\w+\\s+){0,3}permissions?",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})(?:bypass|disable|skip|turn\\s+off|ignore)\\s+(?:\\w+\\s+){0,3}permission(?:s)?\\s+(?:prompt|approval|dialog|gate|check)s?",
       "message": "instructs the agent to bypass permission prompts."
     },
     {
       "id": "skip-permissions-flag",
-      "source": "--dangerously-skip-permissions",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})--dangerously-skip-permissions",
       "message": "invokes a flag that disables the agent's permission prompts."
     },
     {
       "id": "exfiltrate",
-      "source": "\\bexfiltrat(?:e|es|ing|ion)\\b",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})\\bexfiltrat(?:e|es|ing|ion)\\b",
       "message": "references exfiltrating data."
     },
     {
       "id": "send-secrets",
-      "source": "(?<!never\\s)(?<!not\\s)(?<!don't\\s)(?:print|send|leak|upload|post|transmit|reveal|dump)\\s+(?:\\w+\\s+){0,4}(?:env(?:ironment)?|secret|token|credential|api[_-]?key|password)",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})(?:print|send|leak|upload|post|transmit|reveal|dump)\\s+(?:\\w+\\s+){0,4}(?:env(?:ironment)?|secret|token|credential|api[_-]?key|password)",
       "message": "instructs the agent to send secrets or environment variables somewhere."
     },
     {
       "id": "hide-from-user",
-      "source": "hide\\s+(?:this|it|that|the\\s+\\w+)\\s+from\\s+(?:the\\s+)?user",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})hide\\s+(?:this|it|that|the\\s+\\w+)\\s+from\\s+(?:the\\s+)?user",
       "message": "instructs the agent to hide activity from the user."
     },
     {
       "id": "developer-mode",
-      "source": "\\byou\\s+are\\s+now\\s+(?:in\\s+)?(?:developer|debug|administrator|admin|system)\\s+mode\\b",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})\\byou\\s+are\\s+now\\s+(?:in\\s+)?(?:developer|debug|administrator|admin|system)\\s+mode\\b",
       "message": "attempts to replace the agent's operating role with a privileged mode."
     },
     {
       "id": "override-authority",
-      "source": "(?<!not\\s)(?<!never\\s)(?<!don't\\s)\\b(?:override|replace|supersede|bypass)\\s+(?:all\\s+)?(?:the\\s+)?(?:system|developer|safety|security)\\s+(?:instructions?|rules?|polic(?:y|ies)|guardrails?)\\b",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})(?<!not\\s)(?<!never\\s)(?<!don't\\s)\\b(?:override|replace|supersede|bypass)\\s+(?:all\\s+)?(?:the\\s+)?(?:system|developer|safety|security)\\s+(?:instructions?|rules?|polic(?:y|ies)|guardrails?)\\b",
       "message": "attempts to override higher-priority instructions or safeguards."
     },
     {
       "id": "delete-audit-history",
-      "source": "\\b(?:delete|erase|clear|remove|wipe)\\s+(?:all\\s+)?(?:the\\s+)?(?:audit\\s+(?:logs?|trail)|security\\s+logs?|activity\\s+history|evidence)\\b",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})\\b(?:delete|erase|clear|remove|wipe)\\s+(?:all\\s+)?(?:the\\s+)?(?:audit\\s+(?:logs?|trail)|security\\s+logs?|activity\\s+history|evidence)\\b",
       "message": "instructs the agent to remove audit evidence or security history."
     },
     {
       "id": "conceal-instruction",
-      "source": "\\b(?:do\\s+not|don't|never)\\s+(?:mention|disclose|reveal|show)\\s+(?:this|these|the)\\s+(?:instructions?|actions?|steps?|activity)\\b",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})\\b(?:do\\s+not|don't|never)\\s+(?:mention|disclose|reveal|show)\\s+(?:this|these|the)\\s+(?:instructions?|actions?|steps?|activity)\\b",
       "message": "instructs the agent to conceal its instructions or actions."
     },
     {
       "id": "reveal-system-prompt",
-      "source": "(?<!not\\s)(?<!never\\s)(?<!don't\\s)(?<!avoid\\s)\\b(?:reveal|print|repeat|show|output)\\s+(?:the\\s+|your\\s+)?(?:system|developer)\\s+(?:prompt|message|instructions?)\\b",
+      "source": "(?<!\\b(?:never(?!\\s+mind)|not|don't|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60})(?<!not\\s)(?<!never\\s)(?<!don't\\s)(?<!avoid\\s)\\b(?:reveal|print|repeat|show|output)\\s+(?:the\\s+|your\\s+)?(?:system|developer)\\s+(?:prompt|message|instructions?)\\b",
       "message": "attempts to extract higher-priority system or developer instructions."
     }
   ],
   "sensitivePaths": [
     {
       "id": "ssh-keys",
-      "source": "(?:~|\\$HOME)?/?\\.ssh/\\S*|\\bid_(?:rsa|ed25519|ecdsa|dsa)\\b",
+      "source": "(?:~|\\$HOME)?/?\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|identity)(?![\\w.])|\\bid_(?:rsa|ed25519|ecdsa|dsa)\\b(?!\\.pub)",
       "message": "references SSH private keys."
     },
     {
@@ -423,6 +425,6 @@
     "source": "[\\u200B-\\u200D\\u2060\\uFEFF\\u202A-\\u202E\\u2066-\\u2069]|[\\u{E0000}-\\u{E007F}]"
   },
   "hiddenImperative": {
-    "source": "\\b(?:ignore|disregard|run|execute|exec|delete|remove|send|upload|curl|wget|eval|bypass|disable|exfiltrat|do\\s+not\\s+tell|password|token|secret|credential)\\b"
+    "source": "^(?=[\\s\\S]*\\b(?:you|your|assistant|claude|agent|system|instructions?|model)\\b)[\\s\\S]*\\b(?:ignore|disregard|run|execute|exec|delete|remove|send|upload|curl|wget|eval|bypass|disable|exfiltrat(?:e|es|ing|ion)|do\\s+not\\s+tell|password|token|secret|credential)\\b|^\\s*(?:ignore|disregard|run|execute|exec|delete|remove|send|upload|curl|wget|eval|bypass|disable|exfiltrat(?:e|es|ing|ion)|do\\s+not\\s+tell)\\b"
   }
 }
