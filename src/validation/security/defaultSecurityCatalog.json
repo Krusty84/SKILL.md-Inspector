@@ -3,7 +3,7 @@
   "dangerousCommands": [
     {
       "id": "rm-rf-root",
-      "source": "\\brm\\b(?=[^\\n]*?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]*?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]*?\\s(?:--no-preserve-root\\s+)?(?:--\\s+)?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
+      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s(?:--no-preserve-root\\s+)?(?:--\\s+)?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
       "message": "recursive force-delete of the filesystem root, a system directory, or the home directory; near-certainly destructive. Remove it or scope the path."
     },
     {
@@ -13,12 +13,12 @@
     },
     {
       "id": "dd-to-device",
-      "source": "\\bdd\\b[^\\n]*\\sof=/dev/(?:sd|nvme|hd|disk|mmcblk|vd)",
+      "source": "\\bdd\\b[^\\n]{0,200}\\sof=/dev/(?:sd|nvme|hd|disk|mmcblk|vd)",
       "message": "writes raw data directly to a block device; destroys the disk. Remove it."
     },
     {
       "id": "mkfs-device",
-      "source": "\\bmkfs(?:\\.\\w+)?\\b[^\\n]*\\s/dev/(?:sd|nvme|hd|disk|mmcblk|vd)",
+      "source": "\\bmkfs(?:\\.\\w+)?\\b[^\\n]{0,200}\\s/dev/(?:sd|nvme|hd|disk|mmcblk|vd)",
       "message": "reformats a block device; erases all data on it. Remove it."
     },
     {
@@ -38,44 +38,44 @@
     },
     {
       "id": "credential-exfil-pipe",
-      "source": "\\b(?:cat|less|more|head|tail|cp|tar|gzip|base64)\\b[^\\n|]*(?:\\.ssh/|/\\.ssh|\\.aws/credentials|/etc/shadow|\\.npmrc|\\.netrc|id_rsa|id_ed25519)[^\\n|]*\\|[^\\n]*\\b(?:curl|wget|nc|ncat|netcat|scp|ssh)\\b",
+      "source": "\\b(?:cat|less|more|head|tail|cp|tar|gzip|base64)\\b[^\\n|]{0,200}(?:\\.ssh/|/\\.ssh|\\.aws/credentials|/etc/shadow|\\.npmrc|\\.netrc|id_rsa|id_ed25519)[^\\n|]{0,200}\\|[^\\n]{0,200}\\b(?:curl|wget|nc|ncat|netcat|scp|ssh)\\b",
       "message": "reads a credential file and pipes it to a network tool; credential exfiltration. Remove it."
     },
     {
       "id": "obfuscated-exec",
-      "source": "\\b(?:base64\\s+(?:-d|--decode)|xxd\\s+-r|openssl\\s+(?:enc\\s+)?-d\\b[^\\n]*-base64|openssl\\s+base64\\s+-d)\\b[^\\n]*\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|python|python3|perl|ruby|node)\\b",
+      "source": "\\b(?:base64\\s+(?:-d|--decode)|xxd\\s+-r|openssl\\s+(?:enc\\s+)?-d\\b[^\\n]{0,200}-base64|openssl\\s+base64\\s+-d)\\b[^\\n]{0,200}\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|python|python3|perl|ruby|node)\\b",
       "message": "decodes obfuscated content and pipes it straight to an interpreter; hides what runs. Remove it."
     },
     {
       "id": "eval-download",
-      "source": "\\beval\\b[^\\n]*(?:curl|wget)\\b[^\\n]*https?://",
+      "source": "\\beval\\b[^\\n]{0,200}(?:curl|wget)\\b[^\\n]{0,200}https?://",
       "message": "evaluates content downloaded from the network; runs arbitrary remote code. Remove it."
     },
     {
       "id": "reverse-shell-dev-tcp",
-      "source": "\\b(?:bash|sh|zsh|ksh)\\b[^\\n]*\\s-i\\b[^\\n]*/dev/(?:tcp|udp)/[^\\s/]+/\\d{1,5}\\b",
+      "source": "\\b(?:bash|sh|zsh|ksh)\\b[^\\n]{0,200}\\s-i\\b[^\\n]{0,200}/dev/(?:tcp|udp)/[^\\s/]+/\\d{1,5}\\b",
       "message": "opens an interactive shell over a /dev/tcp or /dev/udp socket; this is a reverse shell. Remove it."
     },
     {
       "id": "reverse-shell-netcat",
-      "source": "\\b(?:nc|ncat|netcat)\\b(?=[^\\n]*(?:\\s-e\\s+|\\s--exec(?:=|\\s+))(?:(?:/usr)?/bin/)?(?:sh|bash|zsh|ksh)\\b)[^\\n]*\\s(?:[a-z0-9.-]+|\\[[0-9a-f:]+\\])\\s+\\d{2,5}\\b",
+      "source": "\\b(?:nc|ncat|netcat)\\b(?=[^\\n]{0,200}(?:\\s-e\\s+|\\s--exec(?:=|\\s+))(?:(?:/usr)?/bin/)?(?:sh|bash|zsh|ksh)\\b)[^\\n]{0,200}\\s(?:[a-z0-9.-]+|\\[[0-9a-f:]+\\])\\s+\\d{2,5}\\b",
       "message": "uses netcat to attach a shell to a remote endpoint; this is a reverse shell. Remove it."
     },
     {
       "id": "credential-exfil-upload",
-      "source": "\\b(?:curl|wget)\\b(?=[^\\n]*\\b(?:https?|ftp)://)(?=[^\\n]*(?:--data(?:-binary|-raw)?|--upload-file|--post-file|--form|-[TF])\\b)[^\\n]*(?:\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|config)|\\.aws/credentials|/etc/shadow|\\.netrc|\\.npmrc|Login\\s+Data|cookies\\.sqlite|key4\\.db)",
+      "source": "\\b(?:curl|wget)\\b(?=[^\\n]{0,200}\\b(?:https?|ftp)://)(?=[^\\n]{0,200}(?:--data(?:-binary|-raw)?|--upload-file|--post-file|--form|-[TF])\\b)[^\\n]{0,200}(?:\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|config)|\\.aws/credentials|/etc/shadow|\\.netrc|\\.npmrc|Login\\s+Data|cookies\\.sqlite|key4\\.db)",
       "message": "uploads a credential file directly to a network endpoint; credential exfiltration. Remove it."
     },
     {
       "id": "credential-exfil-copy",
-      "source": "\\bscp\\b[^\\n]*(?:\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|config)|\\.aws/credentials|/etc/shadow|\\.netrc|\\.npmrc|Login\\s+Data|cookies\\.sqlite|key4\\.db)[^\\n]*\\s(?:[^\\s@:]+@)?(?:[\\w.-]+|\\[[0-9a-f:]+\\]):\\S*",
+      "source": "\\bscp\\b[^\\n]{0,200}(?:\\.ssh/(?:id_(?:rsa|ed25519|ecdsa|dsa)|config)|\\.aws/credentials|/etc/shadow|\\.netrc|\\.npmrc|Login\\s+Data|cookies\\.sqlite|key4\\.db)[^\\n]{0,200}\\s(?:[^\\s@:]+@)?(?:[\\w.-]+|\\[[0-9a-f:]+\\]):\\S*",
       "message": "copies a credential file to a remote host; credential exfiltration. Remove it."
     }
   ],
   "riskyCommands": [
     {
       "id": "rm-rf-generic",
-      "source": "\\brm\\b(?=[^\\n]*?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]*?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]*?\\s\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
+      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
       "message": "recursive force-delete of a variable or unquoted-glob path; the target may expand to something unintended. Quote and scope it."
     },
     {
@@ -90,12 +90,12 @@
     },
     {
       "id": "curl-pipe-shell",
-      "source": "\\b(?:curl|wget)\\b[^\\n]*\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|ksh)\\b",
+      "source": "\\b(?:curl|wget)\\b[^\\n]{0,200}\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|ksh)\\b",
       "message": "pipes a downloaded script straight into a shell; the content is unverified. Download, review, then run."
     },
     {
       "id": "git-push-force",
-      "source": "\\bgit\\s+push\\b[^\\n]*\\s(?:--force(?!-with-lease)|-f)\\b",
+      "source": "\\bgit\\s+push\\b[^\\n]{0,200}\\s(?:--force(?!-with-lease)|-f)\\b",
       "message": "force-pushes and can overwrite remote history. Prefer --force-with-lease."
     },
     {
@@ -105,7 +105,7 @@
     },
     {
       "id": "chown-recursive",
-      "source": "\\bchown\\b[^\\n]*\\s-[a-zA-Z]*R",
+      "source": "\\bchown\\b[^\\n]{0,200}\\s-[a-zA-Z]*R",
       "message": "recursively changes ownership; verify the target path is scoped."
     },
     {
@@ -115,7 +115,7 @@
     },
     {
       "id": "install-from-url",
-      "source": "\\b(?:pip|pip3|npm|gem|yarn|pnpm)\\s+(?:install|add|i)\\b[^\\n]*https?://",
+      "source": "\\b(?:pip|pip3|npm|gem|yarn|pnpm)\\s+(?:install|add|i)\\b[^\\n]{0,200}https?://",
       "message": "installs a package directly from a URL, bypassing registry integrity checks. Prefer a pinned registry package."
     },
     {
@@ -125,32 +125,32 @@
     },
     {
       "id": "download-pipe-interpreter",
-      "source": "\\b(?:curl|wget)\\b[^\\n]*https?://[^\\n]*\\|\\s*(?:sudo\\s+)?(?:python|python3|node|ruby|perl|pwsh|powershell)\\b",
+      "source": "\\b(?:curl|wget)\\b[^\\n]{0,200}https?://[^\\n]{0,200}\\|\\s*(?:sudo\\s+)?(?:python|python3|node|ruby|perl|pwsh|powershell)\\b",
       "message": "pipes downloaded content directly into an interpreter; download and review it before execution."
     },
     {
       "id": "powershell-download-exec",
-      "source": "(?:\\b(?:Invoke-WebRequest|iwr|Invoke-RestMethod|irm)\\b[^\\n|]*https?://[^\\n|]*\\|\\s*(?:Invoke-Expression|iex)\\b|\\b(?:Invoke-Expression|iex)\\b[^\\n]*(?:DownloadString|DownloadFile)\\s*\\([^\\n]*https?://)",
+      "source": "(?:\\b(?:Invoke-WebRequest|iwr|Invoke-RestMethod|irm)\\b[^\\n|]{0,200}https?://[^\\n|]{0,200}\\|\\s*(?:Invoke-Expression|iex)\\b|\\b(?:Invoke-Expression|iex)\\b[^\\n]{0,200}(?:DownloadString|DownloadFile)\\s*\\([^\\n]{0,200}https?://)",
       "message": "downloads remote PowerShell content and evaluates it immediately; save and review it before execution."
     },
     {
       "id": "powershell-encoded-command",
-      "source": "\\b(?:powershell|pwsh)(?:\\.exe)?\\b[^\\n]*\\s-(?:EncodedCommand|enc)\\b\\s+[A-Za-z0-9+/=]{8,}",
+      "source": "\\b(?:powershell|pwsh)(?:\\.exe)?\\b[^\\n]{0,200}\\s-(?:EncodedCommand|enc)\\b\\s+[A-Za-z0-9+/=]{8,}",
       "message": "runs an encoded PowerShell command that hides the executed content. Decode and review it first."
     },
     {
       "id": "git-reset-hard",
-      "source": "\\bgit\\s+reset\\b[^\\n]*\\s--hard\\b",
+      "source": "\\bgit\\s+reset\\b[^\\n]{0,200}\\s--hard\\b",
       "message": "discards tracked working-tree and index changes. Confirm the lost work is recoverable."
     },
     {
       "id": "git-clean-destructive",
-      "source": "\\bgit\\s+clean\\b(?![^\\n]*(?:\\s--dry-run\\b|\\s-[a-zA-Z]*n[a-zA-Z]*\\b))(?=[^\\n]*(?:\\s--force\\b|\\s-[a-zA-Z]*f[a-zA-Z]*\\b))(?=[^\\n]*\\s-[a-zA-Z]*d[a-zA-Z]*\\b)(?=[^\\n]*\\s-[a-zA-Z]*x[a-zA-Z]*\\b)[^\\n]*",
+      "source": "\\bgit\\s+clean\\b(?![^\\n]{0,200}(?:\\s--dry-run\\b|\\s-[a-zA-Z]*n[a-zA-Z]*\\b))(?=[^\\n]{0,200}(?:\\s--force\\b|\\s-[a-zA-Z]*f[a-zA-Z]*\\b))(?=[^\\n]{0,200}\\s-[a-zA-Z]*d[a-zA-Z]*\\b)(?=[^\\n]{0,200}\\s-[a-zA-Z]*x[a-zA-Z]*\\b)[^\\n]{0,200}",
       "message": "force-deletes untracked directories and ignored files. Preview with git clean -ndx first."
     },
     {
       "id": "disable-tls-verification",
-      "source": "(?:\\bcurl\\b[^\\n]*(?:\\s-k\\b|\\s--insecure\\b)|\\bwget\\b[^\\n]*\\s--no-check-certificate\\b|\\b(?:Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\\b[^\\n]*\\s-SkipCertificateCheck\\b|\\bNODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*[\"']?0\\b|\\bgit\\s+(?:-c\\s+http\\.sslVerify=false|config(?:\\s+--global)?\\s+http\\.sslVerify\\s+false)\\b)",
+      "source": "(?:\\bcurl\\b[^\\n]{0,200}(?:\\s-k\\b|\\s--insecure\\b)|\\bwget\\b[^\\n]{0,200}\\s--no-check-certificate\\b|\\b(?:Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\\b[^\\n]{0,200}\\s-SkipCertificateCheck\\b|\\bNODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*[\"']?0\\b|\\bgit\\s+(?:-c\\s+http\\.sslVerify=false|config(?:\\s+--global)?\\s+http\\.sslVerify\\s+false)\\b)",
       "message": "disables TLS certificate verification. Keep verification enabled or trust a specific certificate."
     },
     {
@@ -160,7 +160,7 @@
     },
     {
       "id": "agent-identity-write",
-      "source": "(?:\\b(?:echo|printf|cat|sed|awk|curl|wget|base64)\\b[^\\n]*>{1,2}\\s*[\"']?(?:[^\\s\"']*/)?(?:SOUL|MEMORY|AGENTS)\\.md\\b|\\btee\\b[^\\n]*(?:SOUL|MEMORY|AGENTS)\\.md\\b|\\b(?:Set-Content|Add-Content|Out-File)\\b[^\\n]*(?:SOUL|MEMORY|AGENTS)\\.md\\b)",
+      "source": "(?:\\b(?:echo|printf|cat|sed|awk|curl|wget|base64)\\b[^\\n]{0,200}>{1,2}\\s*[\"']?(?:[^\\s\"']*/)?(?:SOUL|MEMORY|AGENTS)\\.md\\b|\\btee\\b[^\\n]{0,200}(?:SOUL|MEMORY|AGENTS)\\.md\\b|\\b(?:Set-Content|Add-Content|Out-File)\\b[^\\n]{0,200}(?:SOUL|MEMORY|AGENTS)\\.md\\b)",
       "message": "writes persistent agent identity or instruction state. Require explicit review and justification."
     }
   ],
@@ -260,7 +260,7 @@
   "credentialedUrl": {
     "id": "credentialed-url",
     "label": "credentials embedded in a URL",
-    "source": "\\b[a-z][a-z0-9+.-]*://[^\\s/@:]+:[^\\s/@:]+@"
+    "source": "(?<![\\w.+-])[a-z][a-z0-9+.-]{0,31}://[^\\s/@:]{1,64}:[^\\s/@:]{1,64}@"
   },
   "secretPlaceholder": {
     "source": "<[^>]*>|\\$\\{?[A-Za-z0-9_]+\\}?|%[A-Za-z0-9_]+%|x{3,}|\\*{3,}|\\.\\.\\.|\\byour[_-]|example|changeme|placeholder|redacted|dummy|sample|<redacted>"

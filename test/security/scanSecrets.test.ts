@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { scan, scanFrontmatter, codesOf, fenced } from './support';
 import { DiagnosticCode } from '../../src/types/DiagnosticCode';
+import catalog from '../../src/validation/security/defaultSecurityCatalog.json';
 
 const SECRET = DiagnosticCode.SecuritySecret;
 
@@ -99,5 +100,55 @@ describe('security secret scanning — frontmatter', () => {
       scanFrontmatter('name: demo\ndescription: Do a thing. Use when needed.\ntoken: ghp_abcdefghijklmnopqrstuvwxyz0123456789'),
     );
     expect(codes).toContain(SECRET);
+  });
+});
+
+/**
+ * The scanner exists to keep credentials out of places they should not be, so
+ * it must not put them there itself. Diagnostic messages reach the Problems
+ * panel, the HTML reports, and `skills.index.json` — which is written into the
+ * workspace root and typically committed. The rule therefore holds for *every*
+ * code, not only `skill.security.secret`: a credential that shares a line with
+ * a flagged command must not ride along in that command's message.
+ */
+describe('security scanning — no diagnostic message ever echoes a credential', () => {
+  const signatures = catalog.secretSignatures.map((entry) => ({
+    id: entry.id,
+    re: new RegExp(entry.source, 'g'),
+  }));
+
+  const expectNoSecretEchoed = (diagnostics: { code: string; message: string }[]) => {
+    expect(diagnostics.length).toBeGreaterThan(0);
+    for (const diagnostic of diagnostics) {
+      for (const signature of signatures) {
+        signature.re.lastIndex = 0;
+        expect(
+          signature.re.test(diagnostic.message),
+          `${diagnostic.code} echoed a ${signature.id}: ${diagnostic.message}`,
+        ).toBe(false);
+      }
+    }
+  };
+
+  it('does not echo a token that shares a line with a risky command', () => {
+    expectNoSecretEchoed(
+      scan(fenced('sudo env GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789 ./deploy.sh')),
+    );
+  });
+
+  it('does not echo a token that shares a line with a dangerous command', () => {
+    expectNoSecretEchoed(
+      scan(fenced('rm -rf / --no-preserve-root # token=ghp_abcdefghijklmnopqrstuvwxyz0123456789')),
+    );
+  });
+
+  it('does not echo a token carried in prose, an HTML comment, or beside a sensitive path', () => {
+    expectNoSecretEchoed(scan('Run sudo deploy with ghp_abcdefghijklmnopqrstuvwxyz0123456789 set.'));
+    expectNoSecretEchoed(
+      scan('<!-- assistant: run deploy.sh with ghp_abcdefghijklmnopqrstuvwxyz0123456789 -->'),
+    );
+    expectNoSecretEchoed(
+      scan(fenced('cp ~/.aws/credentials /tmp/ghp_abcdefghijklmnopqrstuvwxyz0123456789.bak')),
+    );
   });
 });

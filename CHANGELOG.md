@@ -157,6 +157,24 @@
 - **`scopeOverlap`** in `skillMdInspector.collision.weights` and in the per-pair
   metric breakdown shown in reports.
 
+### Fixed
+
+- **The security scanner no longer echoes credentials into its own findings.**
+  A command diagnostic quoted the whole line it matched, so a token sharing a
+  line with a flagged command (`sudo env GITHUB_TOKEN=ghp_… ./deploy.sh`) was
+  copied into the Problems panel, the HTML report, and `skills.index.json` —
+  which is written into the workspace root and usually committed. Command
+  findings now quote only the matched command, and every scanner that shows
+  matched text redacts credential-shaped substrings first, so the no-echo rule
+  that `skill.security.secret` already followed now holds for every code.
+- **A single catalog pattern could stall the editor.** `credentialedUrl` was
+  quadratic — a full scan of a 256 KB single line took 30 seconds, and this
+  runs on a debounced keystroke over every bundled resource up to the configured
+  size cap. That pattern is now bounded, as are all 47 unbounded line gaps in
+  the other command patterns; the worst single pattern went from 557 ms to under
+  6 ms on adversarial input. Both budgets are now asserted by tests, per pattern
+  and end to end.
+
 ### Removed
 
 - The vendor-specific validation profiles (`vscode`, `claude`, `codex`) and the
