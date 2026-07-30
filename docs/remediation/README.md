@@ -1,16 +1,19 @@
-# Remediation plans — algorithm evaluation follow-up
+# Remediation plans — evaluation follow-up
 
-These plans package the findings of an empirical evaluation of the extension's core
+These plans package the findings of empirical evaluations of the extension's core
 algorithms (description quality scoring, collision detection, language detection,
-morphology, glob matching). Each plan is written to be **fully self-contained**: an
-isolated Claude (or human) session with no prior context can pick up one plan file and
-implement it end to end, including reproducing the problem before fixing it.
+morphology, glob matching) and of the static security scanner. Each plan is written to be
+**fully self-contained**: an isolated Claude (or human) session with no prior context can
+pick up one plan file and implement it end to end, including reproducing the problem
+before fixing it.
 
-There are two waves. **Plans 1–5 are complete and merged** — they fixed defects found in
-the first two evaluation rounds. **Plans 6–10 are open** and come from the
+There are three waves. **Plans 1–5 are complete and merged** — they fixed defects found
+in the first two evaluation rounds. **Plans 6–10 are open** and come from the
 [round-3 evaluation](../algorithm-quality-evaluation-round3.md), which asked a different
 question: assuming the code is correct, do the reported numbers mean what their labels
-claim? See [Wave 2](#wave-2--measurement-validity-plans-610-open) below.
+claim? See [Wave 2](#wave-2--measurement-validity-plans-610-open) below. **Plan 11 is
+open** and comes from a separate evaluation of the security scanner — see
+[Wave 3](#wave-3--security-scanner-plan-11-open).
 
 ## Wave 1 — defect remediation (plans 1–5, merged)
 
@@ -76,6 +79,26 @@ caveat: Plan 9 expands `actionVerbs`, which feeds the Jaccard exclusion set in
 edit `collisionFeatures.ts`. Run 7 to completion first — both later plans list it as a
 dependency for exactly this reason.
 
+## Wave 3 — security scanner (plan 11, open)
+
+Waves 1 and 2 cover the quality and collision algorithms. Wave 3 covers
+`src/validation/security/` and the two adjacent surfaces that share the `security`
+diagnostic kind. Measured answers: the sentence "Reboot the machine to finish the
+installation." is reported as an **error** and fails the skill;
+`api_key: os.environ["API_KEY"]` is reported as a hardcoded credential — the
+remediation the diagnostic itself recommends; one catalog pattern takes 11.7 s on a
+100 KB line; and a payload moved from `scripts/` to `bin/` produces zero findings.
+
+| # | Plan | Primary files | Depends on |
+|---|------|---------------|------------|
+| 11 | [Security scanner hardening](plan-11-security-hardening.md) | `src/validation/security/**`, `src/validation/validateLinks.ts`, `src/ui/render*.ts`, `src/config.ts`, `test/security/**` | — |
+
+**Independent of Plans 1–10** — no shared files, so it may run in parallel with any of
+them. Plan 11 is large and explicitly partitioned: Parts A–E are the first tranche and
+carry most of the value; Parts F–J are follow-ups. Part D1 (per-rule severity keys)
+should land before the Part C de-noising, because it is what lets an author keep a rule
+class enabled while silencing one pattern.
+
 ## How to run a plan in an isolated session
 
 Suggested kickoff prompt for each session:
@@ -113,6 +136,12 @@ Each plan contains:
 - **Purity constraints.** Everything under `src/quality/`, `src/workspace/`,
   `src/analysis/`, `src/validation/` is deliberately `vscode`-free and deterministic
   (no LLM calls, no network, no randomness). Keep it that way.
+- **Security-catalog messages need an l10n re-export.** The `message` strings in
+  `src/validation/security/defaultSecurityCatalog.json` are JSON data passed through
+  `l10n.t()` at runtime (`scanText.ts:111`), so the static extractor cannot see them —
+  `scripts/merge-l10n-data.js` merges them in. After editing any catalog message, run
+  `npm run l10n:export` and commit the regenerated `l10n/bundle.l10n.json`. Relevant to
+  Plan 11 only.
 - **Verification loop** (run before every commit):
   `npm run check-types && npm run lint && npm test && npm run check:heuristic-dictionaries`.
 
@@ -128,3 +157,8 @@ suite and the benchmark corpus** while forming findings, because both encode the
 assumptions as the implementation — agreement with them proves nothing about whether the
 metric is right. Every wave-2 plan follows the same discipline: reproduce by execution
 first, and treat a passing test as evidence of stability, not of correctness.
+
+Wave 3 follows it too, and the security evaluation makes the point concrete: changing
+`sensitivePaths.keychain` from `Library/Keychains` to `Library/Keychain` leaves the entire
+suite green, because 44 of the 106 catalog entries have no test that matches them. Plan 11
+Part I closes that by making an untested pattern impossible to add.
