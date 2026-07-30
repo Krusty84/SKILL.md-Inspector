@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
 import { isSkillFile } from '../diagnostics/mapping';
 import { QuickFixId } from '../types/DiagnosticCode';
@@ -78,7 +79,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           context,
           'name',
           `name: ${String(diagnostic.data?.suggestion ?? '')}`,
-          'Convert name to kebab-case',
+          l10n.t('Convert name to kebab-case'),
           true,
         );
 
@@ -92,7 +93,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           context,
           new vscode.Position(0, 0),
           frontmatterBlock(this.suggestName(skillDoc)),
-          'Insert SKILL.md frontmatter',
+          l10n.t('Insert SKILL.md frontmatter'),
         );
 
       case QuickFixId.InsertName:
@@ -102,7 +103,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           context,
           new vscode.Position(frontmatterStartLine(skillDoc), 0),
           `name: ${this.suggestName(skillDoc)}\n`,
-          'Insert name field',
+          l10n.t('Insert name field'),
         );
 
       case QuickFixId.InsertDescription:
@@ -112,7 +113,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           context,
           this.descriptionInsertPosition(skillDoc),
           `description: ${DESCRIPTION_PLACEHOLDER}\n`,
-          'Insert description field',
+          l10n.t('Insert description field'),
         );
 
       case QuickFixId.InsertBodyTemplate:
@@ -122,7 +123,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           context,
           document.lineAt(document.lineCount - 1).range.end,
           `\n${bodyTemplate(this.suggestName(skillDoc))}`,
-          'Insert recommended body template',
+          l10n.t('Insert recommended body template'),
         );
 
       case QuickFixId.InsertUseWhenClause:
@@ -132,7 +133,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           document,
           context,
           USE_WHEN_CLAUSE,
-          'Add "Use when..." clause to description',
+          l10n.t('Add "Use when..." clause to description'),
         );
 
       case QuickFixId.InsertDoNotUseClause:
@@ -142,7 +143,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
           document,
           context,
           DO_NOT_USE_CLAUSE,
-          'Add "Do not use when..." boundary to description',
+          l10n.t('Add "Do not use when..." boundary to description'),
         );
 
       case QuickFixId.CreateMissingLinkedFile:
@@ -152,22 +153,10 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
         return this.addResourceLink(diagnostic, document, context);
 
       case QuickFixId.AddActionVerbToDictionary:
-        return this.addToDictionary(
-          diagnostic,
-          document,
-          context,
-          'actionVerbs',
-          'recognized action verbs',
-        );
+        return this.addToDictionary(diagnostic, document, context, 'actionVerbs');
 
       case QuickFixId.AddArtifactToDictionary:
-        return this.addToDictionary(
-          diagnostic,
-          document,
-          context,
-          'artifactHints',
-          'recognized artifacts',
-        );
+        return this.addToDictionary(diagnostic, document, context, 'artifactHints');
 
       default:
         return undefined;
@@ -185,7 +174,6 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     context: vscode.CodeActionContext,
     key: 'actionVerbs' | 'artifactHints',
-    label: string,
   ): vscode.CodeAction | undefined {
     const word = diagnostic.data?.word;
     // The producing diagnostic already sanitizes, but the check is repeated here
@@ -194,7 +182,11 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     if (typeof word !== 'string' || !REGISTRABLE_WORD.test(word)) {
       return undefined;
     }
-    const action = this.newAction(`Add "${word}" to ${label}`, diagnostic, context);
+    const title =
+      key === 'actionVerbs'
+        ? l10n.t('Add "{0}" to recognized action verbs', word)
+        : l10n.t('Add "{0}" to recognized artifacts', word);
+    const action = this.newAction(title, diagnostic, context);
     action.isPreferred = false;
     action.command = {
       command: 'skillMdInspector.addHeuristicDictionaryWord',
@@ -254,7 +246,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     }
     const oldUri = vscode.Uri.file(skillDoc.directory);
     const newUri = vscode.Uri.file(path.join(parent, expected));
-    const action = this.newAction(`Rename folder to "${expected}"`, diagnostic, context);
+    const action = this.newAction(l10n.t('Rename folder to "{0}"', expected), diagnostic, context);
     action.edit = new vscode.WorkspaceEdit();
     action.edit.renameFile(oldUri, newUri, { ignoreIfExists: false });
     return action;
@@ -333,7 +325,7 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
     }
     const fileUri = vscode.Uri.file(absolutePath);
     const action = this.newAction(
-      `Create missing file "${path.basename(absolutePath)}"`,
+      l10n.t('Create missing file "{0}"', path.basename(absolutePath)),
       diagnostic,
       context,
     );
@@ -353,7 +345,11 @@ export class SkillCodeActionProvider implements vscode.CodeActionProvider {
       return undefined;
     }
     const label = path.basename(relativePath);
-    const action = this.newAction(`Add Markdown link to "${relativePath}"`, diagnostic, context);
+    const action = this.newAction(
+      l10n.t('Add Markdown link to "{0}"', relativePath),
+      diagnostic,
+      context,
+    );
     action.edit = new vscode.WorkspaceEdit();
     action.edit.insert(
       document.uri,

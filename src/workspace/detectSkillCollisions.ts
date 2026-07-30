@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 import type {
   SkillCollision,
   CollisionRisk,
@@ -345,11 +346,15 @@ function normalizeWeights(weights: CollisionWeights): Required<CollisionWeights>
 function recommendationFor(risk: CollisionRisk): string {
   switch (risk) {
     case 'High':
-      return 'Descriptions are nearly interchangeable — merge the skills or sharply differentiate their scope and boundaries.';
+      return l10n.t(
+        'Descriptions are nearly interchangeable — merge the skills or sharply differentiate their scope and boundaries.',
+      );
     case 'Medium':
-      return 'Clarify each description with distinct artifacts and "Do not use when..." boundaries.';
+      return l10n.t(
+        'Clarify each description with distinct artifacts and "Do not use when..." boundaries.',
+      );
     case 'Low':
-      return 'Minor overlap — verify the trigger contexts do not compete.';
+      return l10n.t('Minor overlap — verify the trigger contexts do not compete.');
   }
 }
 
