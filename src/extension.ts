@@ -124,21 +124,24 @@ export function activate(context: vscode.ExtensionContext): void {
     if (nextState === configurationWarningState) return;
     const hadWarnings = configurationWarningState !== '' && configurationWarningState !== '[]';
     configurationWarningState = nextState;
+    // The channel carries more than dictionary warnings now: security patterns,
+    // severity overrides, collision numerics and the profile length limits all
+    // report the values they had to reject through it.
     if (warnings.length === 0) {
-      if (hadWarnings) output.appendLine('Heuristic dictionary configuration warnings cleared.');
+      if (hadWarnings) output.appendLine('Configuration warnings cleared.');
       return;
     }
-    output.appendLine(`Heuristic dictionary configuration warnings (${warnings.length}):`);
+    output.appendLine(`Configuration warnings (${warnings.length}):`);
     for (const warning of warnings) {
       output.appendLine(`- ${warning.setting}: ${warning.message}`);
     }
     void vscode.window.showWarningMessage(
       warnings.length === 1
         ? l10n.t(
-            'SKILL.md Inspector ignored invalid heuristic dictionary configuration (1 warning). See the SKILL.md Inspector output for details.',
+            'SKILL.md Inspector ignored an invalid configuration value (1 warning). See the SKILL.md Inspector output for details.',
           )
         : l10n.t(
-            'SKILL.md Inspector ignored invalid heuristic dictionary configuration ({0} warnings). See the SKILL.md Inspector output for details.',
+            'SKILL.md Inspector ignored invalid configuration values ({0} warnings). See the SKILL.md Inspector output for details.',
             warnings.length,
           ),
     );

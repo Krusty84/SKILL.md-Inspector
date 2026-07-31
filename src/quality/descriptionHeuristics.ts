@@ -69,6 +69,13 @@ interface LeadingCapabilityMatch extends PhraseMatch {
 export interface DescriptionAnalysis {
   raw: string;
   trimmed: string;
+  /**
+   * Length in Unicode code points, not UTF-16 code units. An emoji or any other
+   * astral character is one character to the author and to every message that
+   * quotes this number; counting code units reported 520 of them as "1040
+   * characters; the maximum is 1024" — a message wrong in its own terms, on a
+   * `specification` error the author cannot switch off.
+   */
   length: number;
   wordCount: number;
   leadingText: string;
@@ -99,7 +106,7 @@ export function analyzeDescription(
   return {
     raw,
     trimmed,
-    length: trimmed.length,
+    length: [...trimmed].length,
     wordCount: trimmed.split(/\s+/).filter(Boolean).length,
     leadingText: trimmed.split(/\s+/).slice(0, 12).join(' ').toLowerCase(),
     actionVerb,

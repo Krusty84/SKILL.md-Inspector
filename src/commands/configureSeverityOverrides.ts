@@ -1,11 +1,11 @@
 import * as l10n from '@vscode/l10n';
 import * as vscode from 'vscode';
-import { KIND_BY_CODE } from '../types/DiagnosticCode';
 import {
   severityChoices,
   applyOverride,
   groupCodesByKind,
   isProtectedDowngrade,
+  kindForOverrideKey,
   removeOverride,
   type SeverityOverrideMap,
   type SeverityOverrideValue,
@@ -77,12 +77,16 @@ async function showManagePanel(
   const codes = Object.keys(current).sort();
   const items: ManageItem[] = codes.map((code) => {
     const severity = current[code];
-    const kind = KIND_BY_CODE[code] ?? 'quality';
-    const protectedNote =
-      kind === 'specification' && !allowSpec
-        ? `  ·  ${l10n.t('(protected — needs allowSpecificationOverrides)')}`
-        : '';
-    return { label: code, description: `→ ${severity}  ·  ${kind}${protectedNote}`, action: 'edit', code };
+    // An unrecognised key must read as `unknown`, not `quality`: listing a typo
+    // back as a valid quality override confirmed a setting that does nothing.
+    const kind = kindForOverrideKey(code);
+    const note =
+      kind === 'unknown'
+        ? `  ·  ${l10n.t('(no rule uses this code — this override does nothing)')}`
+        : kind === 'specification' && !allowSpec
+          ? `  ·  ${l10n.t('(protected — needs allowSpecificationOverrides)')}`
+          : '';
+    return { label: code, description: `→ ${severity}  ·  ${kind}${note}`, action: 'edit', code };
   });
 
   items.push({ label: '', kind: vscode.QuickPickItemKind.Separator });

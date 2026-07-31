@@ -70,6 +70,14 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
   }
 
   if (!NAME_PATTERN.test(value)) {
+    // `toKebabCase` keeps only ASCII letters and digits, so a name written
+    // entirely in a non-Latin script, in emoji, or in punctuation slugs to the
+    // empty string. Offering that as the *preferred* one-click fix replaced the
+    // author's name with `name: `, and the next pass reported
+    // `skill.name.missing`. No usable slug means no fix — the diagnostic still
+    // explains what a valid name looks like.
+    const suggestion = toKebabCase(value);
+    const fixable = NAME_PATTERN.test(suggestion);
     diagnostics.push(
       diag(
         DiagnosticCode.NameFormat,
@@ -78,7 +86,9 @@ export function validateName(doc: SkillDocument, profile: SkillProfile): SkillDi
           '`name` must use lowercase letters, numbers, and hyphens only, with no spaces and no leading or trailing hyphen.',
         ),
         range,
-        { quickFixId: QuickFixId.ConvertNameToKebabCase, data: { suggestion: toKebabCase(value) } },
+        fixable
+          ? { quickFixId: QuickFixId.ConvertNameToKebabCase, data: { suggestion } }
+          : undefined,
       ),
     );
   }

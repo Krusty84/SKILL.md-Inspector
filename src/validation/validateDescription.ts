@@ -5,10 +5,9 @@ import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { analyzeDescription } from '../quality/descriptionHeuristics';
+import { goodLengthBand } from '../quality/staticDescriptionQuality';
 import { isProbablyNonEnglish } from '../quality/language';
 import { diag, keyRange } from './util';
-
-const RECOMMENDED_DESCRIPTION_MAX_LENGTH = 500;
 
 /**
  * Words that may be offered for registration in a heuristic dictionary (plan 9
@@ -68,6 +67,10 @@ export function validateDescription(
   const analysis = analyzeDescription(value, dictionaries);
   const diagnostics: SkillDiagnostic[] = [];
   const { minLength, maxLength } = profile.description;
+  // Derived from the same band the quality score uses, so a profile that raises
+  // `minLength` above the default 500 can never produce `tooShort` ("aim for at
+  // least 600") and `tooVerbose` ("aim for at most 500") on the same range.
+  const recommendedMaxLength = goodLengthBand(minLength, maxLength).max;
 
   // Anthropic's platform rejects descriptions containing angle brackets (they
   // could inject XML into the system prompt), so a clean report must not hide
@@ -94,7 +97,7 @@ export function validateDescription(
         range,
       ),
     );
-  } else if (analysis.length > RECOMMENDED_DESCRIPTION_MAX_LENGTH) {
+  } else if (analysis.length > recommendedMaxLength) {
     diagnostics.push(
       diag(
         DiagnosticCode.DescriptionTooVerbose,
@@ -102,7 +105,7 @@ export function validateDescription(
         l10n.t(
           '`description` is {0} characters; aim for at most {1} and move detailed procedure to the Markdown body.',
           analysis.length,
-          RECOMMENDED_DESCRIPTION_MAX_LENGTH,
+          recommendedMaxLength,
         ),
         range,
       ),

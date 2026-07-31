@@ -75,6 +75,23 @@ export const CRITERION_POINTS = {
 /** Upper bound of the "good length" band; below `minLength` is penalized. */
 const GOOD_LENGTH_MAX = 500;
 
+/**
+ * The recommended length band for a profile, in code points.
+ *
+ * A profile may recommend a minimum above the default band ceiling, so the band
+ * must never invert ("aim for 600–500"). Exported because
+ * `validateDescription`'s `tooVerbose` rule used to carry its own literal `500`,
+ * which meant `description.minLength: 600` produced `tooShort` ("aim for at
+ * least 600") and `tooVerbose` ("aim for at most 500") on the same range.
+ */
+export function goodLengthBand(
+  minLength: number,
+  maxLength: number,
+): { min: number; max: number } {
+  const max = Math.min(maxLength, Math.max(GOOD_LENGTH_MAX, minLength));
+  return { min: Math.min(minLength, max), max };
+}
+
 /** Computes the 0–100 Static Description Quality Score for a raw description. */
 export function computeStaticDescriptionQuality(
   description: unknown,
@@ -109,10 +126,7 @@ export function scoreAnalysis(
 ): StaticDescriptionQualityResult {
   const minLength = options.minLength ?? 40;
   const maxLength = options.maxLength ?? 1024;
-  // A profile may recommend a minimum above the default band ceiling; the band
-  // must never invert ("aim for 600–500").
-  const goodLengthMax = Math.min(maxLength, Math.max(GOOD_LENGTH_MAX, minLength));
-  const goodLengthMin = Math.min(minLength, goodLengthMax);
+  const { min: goodLengthMin, max: goodLengthMax } = goodLengthBand(minLength, maxLength);
   const language = options.language ?? 'auto';
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
   const weights = normalizeWeights(options.weights ?? CRITERION_POINTS);

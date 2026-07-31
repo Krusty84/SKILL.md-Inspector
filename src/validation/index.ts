@@ -3,6 +3,7 @@ import type { SkillDocument } from '../types/SkillDocument';
 import type { SkillProfile } from '../types/SkillProfile';
 import type { HeuristicDictionaries } from '../quality/dictionaries';
 import { runRules } from './ruleRegistry';
+import { isSeverityOverrideValue } from './severityOverrides';
 import { sortDiagnostics } from './util';
 import { validateFrontmatter } from './validateFrontmatter';
 import { validateName } from './validateName';
@@ -70,7 +71,12 @@ function applyProfileOverrides(
     const override =
       (typeof ruleId === 'string' ? overrides[`${diagnostic.code}#${ruleId}`] : undefined) ??
       overrides[diagnostic.code];
-    if (override === undefined) {
+    // `severityOverrides` is untyped user JSON. `readConfig` drops values that
+    // are not a severity and warns about them, but a profile can be built by
+    // other paths (tests, future callers), so never let an unknown value reach
+    // `diagnostic.severity`: it renders as an Error, and it breaks the severity
+    // counters and the sort comparator that key on the three known values.
+    if (override === undefined || !isSeverityOverrideValue(override)) {
       result.push(diagnostic);
       continue;
     }
@@ -116,3 +122,9 @@ export { toKebabCase, NAME_PATTERN } from './validateName';
 export { sortDiagnostics } from './util';
 export { runRules, VALIDATION_RULES } from './ruleRegistry';
 export type { ValidationRule, ValidationContext } from './ruleRegistry';
+export {
+  validateSeverityOverrides,
+  isSeverityOverrideValue,
+  kindForOverrideKey,
+  baseCodeOf,
+} from './severityOverrides';

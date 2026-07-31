@@ -1,22 +1,34 @@
 import * as l10n from '@vscode/l10n';
 import { DiagnosticCode, KIND_BY_CODE } from '../types/DiagnosticCode';
-import type { SkillDiagnosticKind, SkillDiagnosticSeverity } from '../types/SkillDiagnostic';
+import { baseCodeOf } from '../validation/severityOverrides';
+import type {
+  PickableKind,
+  SeverityOverrideMap,
+  SeverityOverrideValue,
+} from '../validation/severityOverrides';
 
 /**
  * Pure, VS Code-free helpers backing the "Configure Severity Overrides" command
  * (see `configureSeverityOverrides.ts`). Kept in their own module so the picker
  * logic can be unit-tested without mocking the VS Code host, matching the repo
  * convention of separating domain logic from the editor glue.
+ *
+ * The override *schema* — which values are legal, which keys address a real
+ * rule — lives in `src/validation/severityOverrides.ts`, next to the code that
+ * has to distrust it, and is re-exported here for the picker.
  */
 
-/** A severity override value: a diagnostic severity, or `'off'` to disable the diagnostic. */
-export type SeverityOverrideValue = SkillDiagnosticSeverity | 'off';
-
-/** The map persisted in `skillMdInspector.severityOverrides` (code → severity | 'off'). */
-export type SeverityOverrideMap = Record<string, SeverityOverrideValue>;
-
-/** Kinds a user can meaningfully override, i.e. everything except `internal`. */
-export type PickableKind = Exclude<SkillDiagnosticKind, 'internal'>;
+export {
+  kindForOverrideKey,
+  isSeverityOverrideValue,
+  validateSeverityOverrides,
+  SEVERITY_OVERRIDE_VALUES,
+} from '../validation/severityOverrides';
+export type {
+  PickableKind,
+  SeverityOverrideMap,
+  SeverityOverrideValue,
+} from '../validation/severityOverrides';
 
 /**
  * Ordered severity choices offered in the picker, with human-readable
@@ -91,7 +103,8 @@ export function groupCodesByKind(): Array<{
 /**
  * `true` when applying `severity` to `code` would be silently ignored by the
  * validator because it downgrades or disables a protected specification error.
- * Mirrors the protection logic in `src/validation/index.ts` (`applyProfileOverrides`).
+ * Mirrors the protection logic in `src/validation/index.ts` (`applyProfileOverrides`),
+ * including its per-rule `code#ruleId` keys.
  */
 export function isProtectedDowngrade(
   code: string,
@@ -99,7 +112,9 @@ export function isProtectedDowngrade(
   allowSpecificationOverrides: boolean,
 ): boolean {
   return (
-    KIND_BY_CODE[code] === 'specification' && !allowSpecificationOverrides && severity !== 'error'
+    KIND_BY_CODE[baseCodeOf(code)] === 'specification' &&
+    !allowSpecificationOverrides &&
+    severity !== 'error'
   );
 }
 
