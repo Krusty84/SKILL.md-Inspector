@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
 import { analyzeSkill, type SkillAnalysis, type AnalysisMode } from '../analysis/analyzeSkill';
-import { FileTokenCache } from '../analysis/fileTokenCache';
-import { ResourceCache } from '../parser/resourceCache';
+import {
+  clearAnalysisCaches,
+  invalidateAnalysisCaches,
+  sharedFileTokenCache,
+  sharedResourceCache,
+} from '../analysis/analysisCaches';
 import { readConfig, type InspectorConfig } from '../config';
 import { isPathInsideDir } from '../parser/linkPaths';
 import { isSkillFile, toVscodeDiagnostic } from './mapping';
@@ -17,8 +21,9 @@ import { nodeRemoteLinkDependencies } from '../online/nodeRemoteLinkDependencies
  */
 export class DiagnosticsProvider implements vscode.Disposable {
   private readonly collection: vscode.DiagnosticCollection;
-  private readonly resourceCache = new ResourceCache();
-  private readonly fileTokenCache = new FileTokenCache();
+  // Shared with the workspace path, which used to run with neither seam.
+  private readonly resourceCache = sharedResourceCache;
+  private readonly fileTokenCache = sharedFileTokenCache;
   private readonly requests = new Map<string, ValidationRequest>();
   /**
    * Latest analysis per document, keyed by URI and stamped with the document
@@ -128,8 +133,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
 
   /** Invalidates cached resources for the skill directory containing `filePath`. */
   invalidateResource(filePath: string): void {
-    this.resourceCache.invalidateFile(filePath);
-    this.fileTokenCache.invalidateUnder(filePath);
+    invalidateAnalysisCaches(filePath);
     // Filesystem-dependent diagnostics can change with no document edit, so
     // version-matched analyses of the owning skill are stale too.
     for (const [key, entry] of [...this.lastAnalyses]) {
@@ -141,8 +145,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
 
   /** Clears the whole resource cache (e.g. on configuration change). */
   clearResourceCache(): void {
-    this.resourceCache.clear();
-    this.fileTokenCache.clear();
+    clearAnalysisCaches();
     this.lastAnalyses.clear();
   }
 

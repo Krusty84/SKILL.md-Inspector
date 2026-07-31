@@ -1,5 +1,5 @@
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
-import { escapeRegex, phraseRegex, stripMarkerClauses } from './textMatch';
+import { compareInvariant, escapeRegex, phraseRegex, stripMarkerClauses } from './textMatch';
 import { buildVerbForms, singularize } from './wordForms';
 
 export interface PhraseMatch {
@@ -970,7 +970,7 @@ export function assessScopeClause(
       (a, b) =>
         Number(b.contentFound) - Number(a.contentFound) ||
         a.absoluteOffset - b.absoluteOffset ||
-        a.marker.localeCompare(b.marker),
+        compareInvariant(a.marker, b.marker),
     );
   const selected = candidates[0];
   return (

@@ -82,10 +82,10 @@ describe('per-skill report Security section', () => {
 });
 
 describe('workspace report Security column and index security array', () => {
-  it('renders a Security column with per-skill counts', () => {
+  it('renders a Security column with per-skill counts', async () => {
     writeSkill('malicious', MALICIOUS_BODY);
     writeSkill('clean', CLEAN_BODY);
-    const analysis = analyzeWorkspace(
+    const analysis = await analyzeWorkspace(
       dir,
       [path.join(dir, 'malicious', 'SKILL.md'), path.join(dir, 'clean', 'SKILL.md')],
       genericProfile,
@@ -105,10 +105,10 @@ describe('workspace report Security column and index security array', () => {
     expect(html).toContain('>OK<');
   });
 
-  it('exports a security array per skill at schemaVersion 8', () => {
+  it('exports a security array per skill at schemaVersion 8', async () => {
     writeSkill('malicious', MALICIOUS_BODY);
     writeSkill('clean', CLEAN_BODY);
-    const analysis = analyzeWorkspace(
+    const analysis = await analyzeWorkspace(
       dir,
       [path.join(dir, 'malicious', 'SKILL.md'), path.join(dir, 'clean', 'SKILL.md')],
       genericProfile,

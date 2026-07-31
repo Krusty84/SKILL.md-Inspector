@@ -1,4 +1,5 @@
 import catalog from './defaultHeuristicDictionaries.json';
+import { compareInvariant } from './textMatch';
 
 export const HEURISTIC_LIST_DICTIONARY_KEYS = [
   'actionVerbs',
@@ -131,7 +132,9 @@ export function resolveHeuristicDictionariesWithWarnings(
   return {
     dictionaries,
     warnings: Object.freeze(
-      warnings.sort((a, b) => a.path.localeCompare(b.path) || a.message.localeCompare(b.message)),
+      warnings.sort(
+        (a, b) => compareInvariant(a.path, b.path) || compareInvariant(a.message, b.message),
+      ),
     ),
   };
 }

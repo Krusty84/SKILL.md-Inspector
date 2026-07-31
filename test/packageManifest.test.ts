@@ -123,6 +123,7 @@ describe('package manifest context menus and templates', () => {
           'skillMdInspector.collision.boundarySeparationWeight',
           'skillMdInspector.collision.ngramSize',
           'skillMdInspector.collision.threshold',
+          'skillMdInspector.collision.maxReported',
           'skillMdInspector.collision.weights',
           'skillMdInspector.names.similarityThreshold',
         ],
@@ -222,8 +223,8 @@ describe('package manifest context menus and templates', () => {
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
     // Every setting lives in exactly one section (60 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(62);
-    expect(new Set(allKeys).size).toBe(62);
+    expect(allKeys.length).toBe(63);
+    expect(new Set(allKeys).size).toBe(63);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

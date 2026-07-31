@@ -19,10 +19,15 @@ testable in Node and prevents validation rules from editing user files directly.
 Some of these modules still use Node filesystem APIs, so they are host-independent
 but not universally filesystem-independent.
 
-The canonical analysis pipeline is local, synchronous, and deterministic. An
-opt-in VS Code-facing augmentation can check remote-link availability after full
-analysis; it never participates in `analyzeSkill`, text-only validation, code
-actions, or OpenCode matching. The extension does not
+The canonical analysis pipeline is local and deterministic — same input, same
+output, independent of the host's locale, clock, or network. `analyzeSkill` is
+synchronous; the workspace scan (`analyzeWorkspace`) is `async` and yields to the
+host every few skills, because the cancellation and progress hooks threaded
+through it cannot be observed otherwise: the extension host has to get a turn
+before it can deliver a Cancel click or paint a progress bar. An opt-in VS
+Code-facing augmentation can check remote-link availability after full analysis;
+it never participates in `analyzeSkill`, text-only validation, code actions, or
+OpenCode matching. The extension does not
 execute skills, agent binaries, or commands recorded in OpenCode exports.
 `src/llm/` contains an unused provider boundary; there is no runtime LLM integration.
 

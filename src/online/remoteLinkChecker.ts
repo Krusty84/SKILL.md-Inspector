@@ -219,34 +219,48 @@ export class RemoteLinkCheckSession {
       return target;
     }
 
-    try {
-      const response = await this.dependencies.transport.request({
-        url,
-        method,
-        address: target.address,
-        timeoutMs: this.timeoutMs,
-        headers: method === 'GET' ? { Range: 'bytes=0-0' } : {},
-        signal: this.abortController.signal,
-      });
-      if (
-        !isPublicIpAddress(response.connectedAddress) ||
-        !addressesEqual(response.connectedAddress, target.address)
-      ) {
-        return {
-          kind: 'blocked',
-          reason: l10n.t('the connected socket did not use the validated public address'),
-        };
-      }
-      return response;
-    } catch (error) {
+    // Try each validated address in turn; a host that is unreachable over one
+    // family is routinely reachable over the other. A `blocked` verdict is
+    // terminal — it means the transport did not honor the address it was given,
+    // which is a security signal, not a routing failure.
+    let lastFailure: CheckResult = {
+      kind: 'failed',
+      reason: l10n.t('DNS resolution returned no addresses'),
+    };
+    for (const address of target.addresses) {
       if (this.abortController.signal.aborted) {
         return { kind: 'cancelled' };
       }
-      if (error instanceof RemoteTargetBlockedError) {
-        return { kind: 'blocked', reason: error.message };
+      try {
+        const response = await this.dependencies.transport.request({
+          url,
+          method,
+          address,
+          timeoutMs: this.timeoutMs,
+          headers: method === 'GET' ? { Range: 'bytes=0-0' } : {},
+          signal: this.abortController.signal,
+        });
+        if (
+          !isPublicIpAddress(response.connectedAddress) ||
+          !addressesEqual(response.connectedAddress, address)
+        ) {
+          return {
+            kind: 'blocked',
+            reason: l10n.t('the connected socket did not use the validated public address'),
+          };
+        }
+        return response;
+      } catch (error) {
+        if (this.abortController.signal.aborted) {
+          return { kind: 'cancelled' };
+        }
+        if (error instanceof RemoteTargetBlockedError) {
+          return { kind: 'blocked', reason: error.message };
+        }
+        lastFailure = { kind: 'failed', reason: networkFailureMessage(error) };
       }
-      return { kind: 'failed', reason: networkFailureMessage(error) };
     }
+    return lastFailure;
   }
 }
 
@@ -255,7 +269,7 @@ async function validateTarget(
   dns: RemoteDnsResolver,
   timeoutMs: number,
   signal: AbortSignal,
-): Promise<{ address: string } | CheckResult> {
+): Promise<{ addresses: readonly string[] } | CheckResult> {
   const parsed = parseHttpUrl(url.href);
   if ('error' in parsed) {
     return { kind: 'blocked', reason: parsed.error.url };
@@ -263,7 +277,7 @@ async function validateTarget(
   const hostname = unbracket(parsed.url.hostname);
   if (isIP(hostname)) {
     return isPublicIpAddress(hostname)
-      ? { address: hostname }
+      ? { addresses: [hostname] }
       : {
           kind: 'blocked',
           reason: l10n.t('{0} is a prohibited non-public destination', hostname),
@@ -291,7 +305,13 @@ async function validateTarget(
       reason: l10n.t('{0} resolved to prohibited destination {1}', hostname, invalid.address),
     };
   }
-  return { address: addresses[0].address };
+  // Every validated address, in resolution order. Taking only `addresses[0]`
+  // meant that on an IPv6-only network every dual-stack host resolved to its
+  // unreachable A record first and every remote link in every skill was
+  // reported unavailable after the full timeout. All addresses are still
+  // validated before any is used, so this is a reachability fix, not a change
+  // to the SSRF posture.
+  return { addresses: addresses.map((entry) => entry.address) };
 }
 
 function waitForResolution<T>(
@@ -478,10 +498,35 @@ class AsyncLimiter {
     });
   }
 
+  /**
+   * Starts queued tasks up to the concurrency limit.
+   *
+   * The `draining` guard keeps this iterative. A task that settles synchronously
+   * — every queued task does once the signal is aborted — calls `release`, which
+   * called `drain` again from inside the first `drain`'s own stack frame:
+   * ~4,000 queued URLs recursed ~4,000 levels deep, threw `RangeError`, and left
+   * every remaining `run()` promise unsettled, so `checkDocument`'s
+   * `Promise.all` never resolved.
+   */
+  private draining = false;
+
   private drain(): void {
-    while (this.active < this.maximum && this.queue.length > 0) {
-      this.active += 1;
-      this.queue.shift()!();
+    if (this.draining) {
+      return;
+    }
+    this.draining = true;
+    try {
+      while (this.active < this.maximum && this.queue.length > 0) {
+        this.active += 1;
+        this.queue.shift()!();
+      }
+    } finally {
+      this.draining = false;
+    }
+    // A synchronous settle inside the loop above returned early from its nested
+    // `drain`, so re-check once the outer loop has unwound.
+    if (this.active < this.maximum && this.queue.length > 0) {
+      this.drain();
     }
   }
 

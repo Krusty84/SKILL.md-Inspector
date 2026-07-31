@@ -855,6 +855,7 @@
   "{0} files": "{0} files",
   "{0} finish · {1}": "{0} finish · {1}",
   "{0} following actions": "{0} following actions",
+  "{0} further collision(s) were found but not listed. Narrow the skills' descriptions, or raise skillMdInspector.collision.maxReported.": "{0} further collision(s) were found but not listed. Narrow the skills' descriptions, or raise skillMdInspector.collision.maxReported.",
   "{0} further problems were suppressed.": "{0} further problems were suppressed.",
   "{0} grade limitations": "{0} grade limitations",
   "{0} is a bundled script that SKILL.md never references or explains.": "{0} is a bundled script that SKILL.md never references or explains.",

@@ -1007,6 +1007,13 @@
             "maximum": 1,
             "description": "%skillMdInspector.config.collision.threshold.description%"
           },
+          "skillMdInspector.collision.maxReported": {
+            "type": "integer",
+            "default": 500,
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "%skillMdInspector.config.collision.maxReported.description%"
+          },
           "skillMdInspector.collision.weights": {
             "type": "object",
             "properties": {

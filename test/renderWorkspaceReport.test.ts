@@ -316,7 +316,7 @@ describe('renderWorkspaceReportHtml', () => {
     expect(html).toContain('&lt;img src=x');
   });
 
-  it('renders the minimal frontmatter-only regression without conflating validation and quality', () => {
+  it('renders the minimal frontmatter-only regression without conflating validation and quality', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'workspace-report-minimal-'));
     const skillPath = path.join(root, 'minimal-skill', 'SKILL.md');
     try {
@@ -330,7 +330,7 @@ describe('renderWorkspaceReportHtml', () => {
           '---',
         ].join('\n'),
       );
-      const model = analyzeWorkspace(root, [skillPath], genericProfile);
+      const model = await analyzeWorkspace(root, [skillPath], genericProfile);
       const minimal = model.skills[0];
       const html = renderWorkspaceReportHtml(model, {
         nonce: 'n',

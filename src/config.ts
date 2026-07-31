@@ -59,6 +59,8 @@ export interface InspectorConfig {
   security: SecuritySettings;
   /** Largest bundled resource file that is read and token-counted, in bytes. */
   maxCountedFileSizeBytes: number;
+  /** Maximum number of collisions listed in the report and tree view. */
+  maxReportedCollisions: number;
 }
 
 /**
@@ -254,6 +256,10 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),
     collision: collision.options,
     security: securityResolution.settings,
+    maxReportedCollisions: Math.min(
+      100_000,
+      Math.max(1, Math.trunc(cfg.get<number>('collision.maxReported', 500)) || 500),
+    ),
     maxCountedFileSizeBytes:
       Math.min(
         65536,

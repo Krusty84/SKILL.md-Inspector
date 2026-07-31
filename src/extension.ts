@@ -209,6 +209,14 @@ export function activate(context: vscode.ExtensionContext): void {
   // are filtered against the resource-exclusion globs (a node_modules install
   // must not thrash the tree) and coalesced per burst: one invalidation sweep,
   // one Skills refresh, one revalidation — instead of one of each per file.
+  //
+  // This glob is narrower than what `discoverResources` walks, so it misses
+  // `my-skill/notes.md` and `my-skill/data/spec.md`. That used to mean the
+  // ResourceCache served a stale list; it no longer can, because the cache
+  // validates each entry against a directory signature on read (plan 17 Part C).
+  // The watcher is the fast path for the tree and revalidation, not the
+  // correctness guarantee — widening it to `**/*` would refresh the Skills view
+  // on every file change anywhere in the workspace.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(
     '**/{references,scripts,assets,templates}/**',
   );
@@ -390,6 +398,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
       if (isSkillFile(document)) {
+        // Order matters: a validation scheduled just before the close would
+        // otherwise fire after `clear` and resurrect the file's diagnostics.
+        changeDebouncer.cancel(document.uri.toString());
         provider.clear(document.uri);
       }
     }),

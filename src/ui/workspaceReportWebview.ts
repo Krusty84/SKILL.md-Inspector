@@ -8,6 +8,7 @@ import {
 } from './renderWorkspaceReport';
 import { readConfig } from '../config';
 import { formatTimestamp } from './formatTimestamp';
+import { createNonce } from './webviewNonce';
 
 /** Manages the single read-only Workspace Skill Report webview panel. */
 export class WorkspaceReportPanel {
@@ -51,11 +52,3 @@ export class WorkspaceReportPanel {
   }
 }
 
-function createNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let nonce = '';
-  for (let i = 0; i < 32; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
-}

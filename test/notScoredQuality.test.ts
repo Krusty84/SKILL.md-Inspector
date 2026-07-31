@@ -148,8 +148,8 @@ describe('explicit not-scored quality state', () => {
     expect(result.resources).toMatchObject({ score: 90, label: 'minor-issues' });
   });
 
-  it('serializes the explicit state in skills index schema version 8', () => {
-    const analysis = analyzeWorkspace(
+  it('serializes the explicit state in skills index schema version 8', async () => {
+    const analysis = await analyzeWorkspace(
       FIXTURE_ROOT,
       [fixturePath('json-formatter'), fixturePath('helper'), fixturePath('stuff')],
       genericProfile,
@@ -197,10 +197,10 @@ describe('explicit not-scored quality state', () => {
     });
   });
 
-  it('renders not-scored assessments without numeric placeholders or ordinary labels', () => {
+  it('renders not-scored assessments without numeric placeholders or ordinary labels', async () => {
     const report = fixtureReport('helper');
     const skillHtml = renderReportHtml(report, { nonce: 'n', cspSource: 'x' });
-    const workspace = analyzeWorkspace(FIXTURE_ROOT, [fixturePath('helper')], genericProfile);
+    const workspace = await analyzeWorkspace(FIXTURE_ROOT, [fixturePath('helper')], genericProfile);
     const workspaceHtml = renderWorkspaceReportHtml(workspace, {
       nonce: 'n',
       cspSource: 'x',

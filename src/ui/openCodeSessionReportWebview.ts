@@ -6,6 +6,7 @@ import {
 } from '../opencode/timelineViewModel';
 import type { NormalizedOpenCodeSession } from '../opencode/model';
 import type { ReportWebviewToExtensionMessage } from '../webview/openCodeSessionReport/model';
+import { createNonce } from './webviewNonce';
 
 export class OpenCodeSessionReportPanel {
   private static current: OpenCodeSessionReportPanel | undefined;
@@ -162,10 +163,4 @@ function escapeHtml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-function createNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let value = '';
-  for (let i = 0; i < 32; i += 1) value += chars[Math.floor(Math.random() * chars.length)];
-  return value;
 }

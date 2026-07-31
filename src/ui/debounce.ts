@@ -1,6 +1,14 @@
 export interface KeyedDebouncer {
   /** Coalesces calls per key; the latest callback wins when one fires. */
   schedule(key: string, fn: () => void): void;
+  /**
+   * Drops the pending call for one key without firing it. Needed when the thing
+   * the callback would act on has gone away: closing a document ran
+   * `provider.clear`, and ~250 ms later the pending callback re-published its
+   * diagnostics, so the Problems panel showed errors for a file that was not
+   * open.
+   */
+  cancel(key: string): void;
   /** Cancels every pending call. */
   dispose(): void;
 }
@@ -49,6 +57,13 @@ export function createKeyedDebouncer(delayMs: number, maxWaitMs: number): KeyedD
         timer: setTimeout(() => fire(key), delayMs),
         maxWaitTimer: setTimeout(() => fire(key), maxWaitMs),
       });
+    },
+    cancel(key: string): void {
+      const entry = pending.get(key);
+      if (!entry) return;
+      pending.delete(key);
+      clearTimeout(entry.timer);
+      clearTimeout(entry.maxWaitTimer);
     },
     dispose(): void {
       for (const entry of pending.values()) {

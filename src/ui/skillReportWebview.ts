@@ -4,6 +4,7 @@ import type { SkillReport } from './reportModel';
 import { renderReportHtml } from './renderReport';
 import { readConfig } from '../config';
 import { formatTimestamp } from './formatTimestamp';
+import { createNonce } from './webviewNonce';
 
 /** Manages the single read-only Skill Report webview panel. */
 export class SkillReportPanel {
@@ -45,11 +46,3 @@ export class SkillReportPanel {
   }
 }
 
-function createNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let nonce = '';
-  for (let i = 0; i < 32; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
-}

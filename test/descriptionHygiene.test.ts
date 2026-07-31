@@ -155,7 +155,7 @@ describe('description hygiene fixture regressions', () => {
 });
 
 describe('description hygiene grade-limitation visibility', () => {
-  it('includes the ceiling explanation in diagnostics, exported output, and rendered output', () => {
+  it('includes the ceiling explanation in diagnostics, exported output, and rendered output', async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'description-hygiene-'));
     const skillPath = path.join(root, 'demo', 'SKILL.md');
     const description =
@@ -166,7 +166,7 @@ describe('description hygiene grade-limitation visibility', () => {
         skillPath,
         `---\nname: demo\ndescription: ${JSON.stringify(description)}\n---\n`,
       );
-      const analysis = analyzeWorkspace(root, [skillPath], genericProfile);
+      const analysis = await analyzeWorkspace(root, [skillPath], genericProfile);
       const diagnostic = analysis.skills[0].diagnostics.find(
         (item) => item.code === DiagnosticCode.DescriptionOverbroadTrigger,
       );
