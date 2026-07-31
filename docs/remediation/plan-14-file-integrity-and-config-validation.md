@@ -5,7 +5,17 @@ Source: round-4 algorithm evaluation. Self-contained; no external report require
 **Independent of Plans 12, 13 and 15–17.** Touches `src/parser/parseFrontmatter.ts`,
 `src/validation/`, `src/workspace/detectSkillCollisions.ts`, and `src/config.ts`.
 
-Part A is a data-loss bug in a quick fix and should ship on its own, first.
+**Parts A and H–I are data-loss bugs in the extension's own fix-it actions and should ship
+on their own, first.** Three separate write paths make the user's frontmatter unparseable
+or silently wrong. Parts C–G are input-validation gaps at the configuration seam.
+
+The theme, in the completeness critic's words: *write paths were held to a lower standard
+than read paths.* Every scoring and scanning module in this repo has adversarial thinking
+in it; the three modules that write — `improveDescription.ts`,
+`addHeuristicDictionaryWord.ts`, `codeActions/templates.ts` — emit unquoted YAML, write
+dictionary entries no matcher can match (Plan 18), and inject placeholders the validator
+rejects. For a linter the read path is the product, but the write path is the only part
+that can destroy a user's file.
 
 ## Context
 
@@ -82,6 +92,51 @@ decoupled from the profile-derived good-length band. With `description.minLength
 550-character description gets both `tooShort` ("aim for at least 600") and `tooVerbose`
 ("aim for at most 500") on the same range.
 
+---
+
+The remaining three are in **`src/commands/improveDescription.ts`** — the "Improve
+description" command offered from the report and the command palette. It is the
+extension's flagship remediation action and no evaluation round had ever opened it. Two of
+the three destroy the user's frontmatter.
+
+**H. It writes unquoted YAML.** `improveDescription.ts:60` emits
+`` `description: ${improved}` `` with no quoting or escaping, in all three write branches
+(`:60`, `:63`, `:68`). Any description containing `": "` produces invalid YAML.
+Reproduced with `Formats source code: JavaScript, TypeScript, and JSON files.`:
+
+```
+parseErrors: ['skill.frontmatter.invalid: Nested mappings are not allowed
+               in compact mappings at line 2, column 14']
+description = undefined
+```
+
+One click turns a healthy skill into a file with no `name`, no `description`, no keys.
+
+**I. It replaces the key's first line only, silently duplicating the original text.**
+`improveDescription.ts:60` uses `editor.document.lineAt(keyRange.startLine).range`. The
+parser publishes `frontmatterValueRanges` for exactly this reason, and
+`SkillCodeActionProvider.replaceKeyLine` (`skillCodeActions.ts:196-217`) uses it with a
+comment explaining why ("so multi-line scalar values are not left orphaned"). This command
+ignores it. On a `>-` block scalar the continuation lines fold into the new plain scalar
+and the old description is concatenated onto the "improved" one — no parse error, no
+visible damage, wrong content. This is Part A's bug in a second consumer, and here the
+correct range is already available and simply unused.
+
+**J. It measurably lowers the score, every time.** `buildImprovedDescription`
+(`quality/improveDescription.ts:17`) appends clauses containing `<trigger context>` and
+`<boundary>`, which the same validator flags as a specification error and which trip the
+`unfilled-placeholder` ceiling of 59. Reproduced:
+
+```
+"Extracts tables from PDF invoices and writes them to CSV."
+  before 69 acceptable  →  after 59 weak
+  ceilings added: unfilled-placeholder (59), vague-usage-trigger (74)
+```
+
+The command never re-scores its own output, so it cannot notice. `REWRITE_TEMPLATE`
+(`quality/improveDescription.ts:8`) is also a byte-for-byte fourth copy of
+`DESCRIPTION_PLACEHOLDER` (`codeActions/templates.ts:3`) — see Plan 18.
+
 ## Reproduce first
 
 - `test/parser/valueRangeIntegrity.test.ts` — for each of {plain, single-quoted,
@@ -89,6 +144,11 @@ decoupled from the profile-derived good-length band. With `description.minLength
   another key}: apply a synthetic append-at-value-end edit and assert the result
   re-parses with the same key set. Part A's case must fail.
 - `test/config/userInputValidation.test.ts` — one failing case per Part C–G.
+- `test/commands/improveDescriptionIntegrity.test.ts` — drive the *pure* builder plus the
+  edit-construction helper (extracted per Scope below) over: a description containing
+  `": "`, a `|` block scalar, a `>-` folded scalar, and a plain multi-line scalar. Assert
+  the result re-parses with the same key set and that `description` equals the improved
+  text exactly. Assert the improved text does not lower the score. All must fail today.
 
 ## Scope
 
@@ -111,8 +171,20 @@ decoupled from the profile-derived good-length band. With `description.minLength
   profile band instead of a third literal `500`, and suppress it when it would contradict
   `tooShort`.
 
+- **`src/commands/improveDescription.ts`** — extract the edit construction into a pure,
+  testable helper (it currently only exists inside a `vscode` command body, which is why
+  no test covers it). That helper must: serialize through the `yaml` library's stringifier
+  rather than string concatenation, so quoting and escaping are the library's problem; and
+  target `frontmatterValueRanges[key]` via the existing `replaceKeyLine` path instead of
+  `lineAt`. Both fixes are "use the thing that already exists".
+- **`src/quality/improveDescription.ts`** — emit clauses with concrete, non-placeholder
+  wording, or leave the clause out entirely rather than inserting a placeholder the
+  validator rejects. Add a guard that re-scores the output and refuses to offer a rewrite
+  that scores lower than the input.
+
 **Non-goals.** No change to what the rules mean, to the default thresholds, or to the
-quick-fix catalogue beyond Part B.
+quick-fix catalogue beyond Part B. No redesign of what "improved" wording should say —
+Part J only requires that the command not make things worse.
 
 ## Acceptance criteria
 
@@ -126,6 +198,12 @@ quick-fix catalogue beyond Part B.
 5. `maxLength: 0` is clamped; `minLength: 500, maxLength: 100` is corrected, not obeyed.
 6. A 520-astral-character description reports 520, not 1040.
 7. No input produces both `tooShort` and `tooVerbose`.
+8. "Improve description" on a description containing `": "` leaves the frontmatter
+   parseable with every key intact.
+9. "Improve description" on `|`, `>-` and plain multi-line scalars replaces the whole
+   value — the original text never survives alongside the replacement.
+10. "Improve description" never returns a rewrite whose score is lower than the input's;
+    no rewrite it emits contains an unfilled `<placeholder>`.
 
 ## Verification checklist
 

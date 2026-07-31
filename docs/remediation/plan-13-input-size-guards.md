@@ -5,9 +5,13 @@ Source: round-4 algorithm evaluation. Self-contained; no external report require
 **Independent of Plans 12 and 14–17.** Touches `src/analysis/`, `src/parser/globMatch.ts`,
 `src/parser/valueRanges.ts`, `src/opencode/`, and `src/config.ts`.
 
-Four hot paths are superlinear in input size with no guard, and three of them run on the
-**250 ms debounced while-typing path**. Every number was measured under node against the
-shipped modules.
+Several hot paths are superlinear in input size with no guard, and the worst of them runs
+on the **250 ms debounced while-typing path**. Every number was measured under node
+against the shipped modules; where a first measurement overstated the severity, the
+correction is recorded in place (Part C).
+
+**Part A is the one that matters.** B, D and E are cheap and worth doing; C is defensive
+hardening only.
 
 ## Context
 
@@ -44,17 +48,34 @@ unbroken run.
 (`maxScannedFileSizeBytes`, 256 KB default). A 300 MB text resource is read whole and
 BPE-encoded.
 
-**C. The glob compiler is exponentially backtrackable.** `globToRegExp`
-(`globMatch.ts:20-64`) emits unbounded `(?:.*/)?` and alternation nesting with no
-complexity guard, and the compiled regex is tested against every discovered file.
+**C. The glob compiler is backtrackable, but only on contrived input — defensive
+hardening, not a practical DoS.** `globToRegExp` (`globMatch.ts:20-64`) emits unbounded
+`(?:.*/)?` chains and adjacent brace alternations with no length cap, complexity bound, or
+timeout, and the walkers that test it (`discoverResources.ts:53`, `discoverSkills.ts:39`)
+are synchronous and uncancellable.
+
+An earlier draft of this plan rated it `high` on the strength of two measurements. An
+adversarial re-check refuted that severity, and re-measuring against the path shapes the
+walkers **actually** pass (repo-relative, 1–4 segments) confirms the refutation:
+
+| pattern | `notes.md` | `references/guide.md` | 4-seg path | 32-seg path | 60-seg path |
+|---|---|---|---|---|---|
+| `**/` ×7 (`.*` crosses `/`) | 0 ms | 0 ms | 0 ms | 111 ms | 5,234 ms |
+| `{*,*}` ×7 (`[^/]*` cannot) | 12 ms | 8 ms | 8 ms | — | — |
+
+and for the brace form, cost is bounded by the length of the **first path segment**:
 
 ```
-"**/**/**/**/**/**/**/x"          vs a 121-char path → 14,774 ms
-"{*,*}{*,*}{*,*}{*,*}{*,*}{*,*}{*,*}{*,*}X" (41 chars) vs a 24-char name → 26,743 ms
+'a'×24 single segment  →    942 ms      'a'×24 + '/b/c'  → 919 ms
+'a'×40 single segment  → 19,570 ms      'references/…'   →   8 ms
 ```
 
-Source is the user's own `skillMdInspector.resources.exclude`, so it is self-inflicted —
-but it freezes the extension host and there is no error to explain why.
+So the `**/` form needs a ~30-deep directory tree and the `{*,*}` form needs a long
+*top-level* entry name, in both cases combined with a hand-written pathological pattern in
+the user's own settings. Reaching it through workspace settings requires Workspace Trust,
+which already permits code execution. Fix it because the guard is five lines, not because
+it is exploitable — and note `config.ts:223-245` already passes user-supplied regex
+sources straight to `new RegExp`, so globs are not a uniquely unguarded input.
 
 **D. `offsetRange` rescans from the value start for every match** (`valueRanges.ts:57`),
 making the invisible-Unicode scan quadratic: a 224 KB body with 8,000 zero-width spaces
@@ -115,7 +136,8 @@ the OpenCode data model.
 1. `analyzeSkill` on a 200,000-character single-line body completes in **< 2 s**.
 2. `countO200kTokens` on 16,000 CJK ideographs completes in **< 500 ms**.
 3. A resource file above the cap is skipped, not encoded, and the report says so.
-4. Both glob patterns in Part C are rejected with a configuration warning in **< 10 ms**.
+4. Both glob patterns in Part C are rejected with a configuration warning in **< 10 ms**
+   (lowest priority in this plan — see the severity note in Part C).
 5. A 224 KB body with 8,000 zero-width characters scans in **< 200 ms**.
 6. 30,000-part and 20,000-deep OpenCode exports parse and normalize without throwing;
    64,000 parts normalize in **< 5 s**.

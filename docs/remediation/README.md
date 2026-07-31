@@ -119,31 +119,68 @@ size bound, and a quick fix that corrupts the file it is editing.
 | 15 | [Description evidence scope](plan-15-description-evidence-scope.md) | `src/quality/descriptionHeuristics.ts`, `src/quality/staticDescriptionQuality.ts` | 8, 9, 14 |
 | 16 | [Vocabulary coherence](plan-16-vocabulary-coherence.md) | `src/quality/defaultHeuristicDictionaries.json`, `src/quality/wordForms.ts`, `src/workspace/collisionFeatures.ts` | 10 |
 | 17 | [Workspace pipeline + async](plan-17-workspace-pipeline-and-async.md) | `src/workspace/`, `src/parser/resourceCache.ts`, `src/online/`, `src/extension.ts` | — |
+| 18 | [One definition per shared concept](plan-18-shared-vocabulary.md) | cross-cutting; a new `src/shared/` plus every module that copies a concept | 12–17 |
+| 19 | [Unaudited seams](plan-19-unaudited-seams.md) | `src/validation/validateBody.ts`, `src/navigator/favoritesStore.ts`, `src/diagnostics/mapping.ts`, `src/analysis/textFile.ts`, `src/opencode/detectSanitizedExport.ts`, `src/evaluation/runner.ts` | — |
 
-**Why this order.** Plans 14 (Part A) and 12 are the two that matter most and are cheapest
-relative to their value: Part A of 14 is a **data-loss bug** — the `InsertUseWhenClause`
-quick fix makes the frontmatter unparseable whenever the `description` is a block scalar
-with another key after it, losing every key — and Plan 12 closes two gaps that make the
-security scanner decorative (the frontmatter `description`, the field an agent loads at
-discovery time for every session, is never scanned for injection; and one pair of
-asterisks defeats all 14 injection rules). Ship 14-A first, then 12.
+**Why this order.** Plan 14 first, then 12.
 
-Plan 13 is next: the measured worst case is **48.7 minutes** of frozen extension host for a
-200,000-character single-line body, on the debounced while-typing path, and the trigger —
-any long unbroken run of letters, ideographs or punctuation — includes the zero-width and
-NBSP padding the scanner itself hunts for.
+Plan 14 collects the **data-loss bugs**, and there are three separate write paths that make
+the user's frontmatter unparseable or silently wrong: the `InsertUseWhenClause` quick fix
+writes into the next key whenever the `description` is a block scalar followed by another
+key (Part A), and the *Improve description* command emits unquoted YAML (Part H) and
+replaces only the first line of a multi-line value, silently concatenating the old text
+onto the new (Part I). The same command measurably lowers the score every time it runs
+(Part J). Plan 12 then closes the two gaps that make the security scanner decorative: the
+frontmatter `description` — the field an agent loads at discovery time for every session —
+is never scanned for injection, and one pair of asterisks defeats all 14 injection rules.
 
-Plans 15, 16 and 17 are improvement rather than damage control and can follow in any order.
+Plan 13 Part A is next: the measured worst case is **48.7 minutes** of frozen extension
+host for a 200,000-character single-line body, on the debounced while-typing path, and the
+trigger — any long unbroken run of letters, ideographs or punctuation — includes the
+zero-width and NBSP padding the scanner itself hunts for. (Plan 13 Part C, the glob
+compiler, was rated `high` in a first draft and **downgraded after an adversarial
+re-check**; the plan records the corrected measurements. Do it for the cheap guard, not
+because it is reachable.)
+
+Plans 15, 16, 17 and 19 are improvement rather than damage control and can follow in any
+order. **Plan 18 is deliberately last**: it is the structural fix for the divergences that
+several of the earlier plans patch locally, and it needs their fixes in place first so it
+can delete duplicates rather than reconcile moving targets.
 
 **Shared-file conflicts within wave 4:** 12 and 11 both edit
 `src/validation/security/**` (run 11 first); 14 and 15 both edit
 `staticDescriptionQuality.ts`; 15 and 16 both edit
 `defaultHeuristicDictionaries.json` and `descriptionHeuristics.ts`; 13 and 17 both edit
-`src/opencode/` and `src/online/`. Run each of those pairs sequentially.
+`src/opencode/` and `src/online/`; 18 touches files from all of them. Run each of those
+pairs sequentially.
 
 **Part C of Plan 16 moves collision numbers.** Widening `contentWords` to Unicode changes
 what the 0.70-weight scope metric sees, so `npm run benchmark:collisions` must be re-run
 and the shift recorded in the commit message rather than tuned away.
+
+**The theme running through wave 4.** Two structural observations from the round-4
+completeness critique explain most of the individual findings, and are worth keeping in
+view while implementing any of these plans:
+
+> *Write paths were held to a lower standard than read paths.* Every scoring, matching and
+> scanning module here has adversarial thinking in it. The three modules that **write** —
+> `improveDescription.ts`, `addHeuristicDictionaryWord.ts`, `codeActions/templates.ts` —
+> emit unquoted YAML, write dictionary entries no matcher can match, and inject
+> placeholders the validator rejects. For a linter the read path is the product, but the
+> write path is the only part that can destroy a user's file.
+
+> *This codebase knows all the right things, in the wrong number of places.*
+> `similarity.ts:12` documents why the Unicode character class matters and
+> `bodySections.ts:75` and `collisionFeatures.ts:407` never got the memo;
+> `renderTemplate.ts:20` guards `toKebabCase` returning empty and `validateName.ts:81` does
+> not; `skillCodeActions.ts:196` explains why value ranges are needed for multi-line
+> scalars and `improveDescription.ts:60` uses `lineAt` anyway.
+
+The purity claim in `ARCHITECTURE.md` is genuinely earned — exactly one `vscode` import
+across ten analysis directories, and it is the one the doc names. Two claims are overstated
+and should be softened as the plans land: `src/opencode/` is listed as reusable but five of
+its twelve files import `vscode`, and "deterministic" is true of the arithmetic but not the
+ordering (see Plan 17 Part D and Plan 19 Part H).
 
 ## How to run a plan in an isolated session
 
