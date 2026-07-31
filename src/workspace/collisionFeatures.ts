@@ -15,7 +15,7 @@ import {
   DEFAULT_HEURISTIC_DICTIONARIES,
   type HeuristicDictionaries,
 } from '../quality/dictionaries';
-import { escapeRegex, phraseRegex } from '../quality/textMatch';
+import { escapeRegex, phraseRegex, stripMarkerClauses } from '../quality/textMatch';
 import { tokenizeContent } from './similarity';
 
 export interface SkillFeatures {
@@ -206,7 +206,7 @@ export function extractPositiveTriggers(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): string[] {
-  const withoutBoundaries = stripClauses(description, exclusionMarkers(dictionaries));
+  const withoutBoundaries = stripMarkerClauses(description, exclusionMarkers(dictionaries));
   return extractClauses(withoutBoundaries, [
     ...dictionaries.positiveTriggerPhrases,
     ...dictionaries.exclusiveTriggerPhrases,
@@ -355,7 +355,7 @@ export function boundaryFeatures(
   // it does: "Extract text out of PDFs. Do not use for creating PDFs." reported
   // `create` as one of its capabilities, which made it look like the PDF *writer*
   // it had just disclaimed (plan 10).
-  const scopeText = stripClauses(description, exclusionMarkers(dictionaries));
+  const scopeText = stripMarkerClauses(description, exclusionMarkers(dictionaries));
   // Computed once and reused: this runs per skill in the O(n) pre-pass, and
   // extractArtifacts is the most expensive call in it.
   const artifacts = scopeArtifacts(scopeText, dictionaries);
@@ -469,7 +469,7 @@ function contentWords(text: string): string[] {
  * makes two "Only for PDF files" skills read as overlapping (plan 7 Part A).
  */
 function domainTokens(description: string, dictionaries: HeuristicDictionaries): Set<string> {
-  const withoutBoundaries = stripClauses(description, exclusionMarkers(dictionaries));
+  const withoutBoundaries = stripMarkerClauses(description, exclusionMarkers(dictionaries));
   return new Set(
     tokenizeContent(withoutBoundaries, dictionaries.collisionStopwords).map((token) =>
       normalizeContentToken(token, dictionaries),
@@ -521,25 +521,6 @@ function extractClauses(text: string, markers: readonly string[]): string[] {
     .sort((x, y) => x.at - y.at)
     .map((c) => c.text)
     .filter((clause) => (seen.has(clause) ? false : (seen.add(clause), true)));
-}
-
-/** Removes every marker clause (marker → next terminator) from the text. */
-function stripClauses(text: string, markers: readonly string[]): string {
-  let result = text;
-  for (const marker of markers) {
-    const re = phraseRegex(marker, 'i');
-    let match: RegExpExecArray | null;
-    // Non-global regex: each exec rescans from the start of the shrunken text,
-    // and every iteration removes at least the marker, so this terminates.
-    while ((match = re.exec(result)) !== null) {
-      const start = match.index;
-      const after = result.slice(start + match[0].length);
-      const term = after.search(TERMINATOR);
-      const end = term === -1 ? result.length : start + match[0].length + term;
-      result = result.slice(0, start) + result.slice(end);
-    }
-  }
-  return result;
 }
 
 function clauseAfter(text: string, start: number): string {

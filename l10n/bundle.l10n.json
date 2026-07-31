@@ -352,6 +352,7 @@
   "No vague wording.": "No vague wording.",
   "No validation findings.": "No validation findings.",
   "None": "None",
+  "Not checked: this criterion is an English-dictionary check.": "Not checked: this criterion is an English-dictionary check.",
   "Not scored": "Not scored",
   "Not scored — {0}": "Not scored — {0}",
   "OK/Table cell: the skill has no issues in this column": {
@@ -586,6 +587,7 @@
   "The \"{0}\" section shows no recognizable concrete example (fenced code, an Input:/Output: pair, or a before/after pair). Add a representative input and expected outcome.": "The \"{0}\" section shows no recognizable concrete example (fenced code, an Input:/Output: pair, or a before/after pair). Add a representative input and expected outcome.",
   "The \"{0}\" validation rule did not finish ({1}). Other checks still ran; this is a linter error, not a problem with the skill.": "The \"{0}\" validation rule did not finish ({1}). Other checks still ran; this is a linter error, not a problem with the skill.",
   "The description claims an overbroad usage scope, so the adjusted score cannot exceed 69.": "The description claims an overbroad usage scope, so the adjusted score cannot exceed 69.",
+  "The description does not appear to be English, so only the language-independent criteria were scored; the adjusted score cannot exceed {0}.": "The description does not appear to be English, so only the language-independent criteria were scored; the adjusted score cannot exceed {0}.",
   "The description does not appear to be English, so the semantic checks (action verb, trigger, vagueness) may be unreliable.": "The description does not appear to be English, so the semantic checks (action verb, trigger, vagueness) may be unreliable.",
   "The description exceeds the configured maximum length, which is a specification error, so the adjusted score cannot exceed 59.": "The description exceeds the configured maximum length, which is a specification error, so the adjusted score cannot exceed 59.",
   "The description is empty, so the score reflects only missing-field penalties.": "The description is empty, so the score reflects only missing-field penalties.",

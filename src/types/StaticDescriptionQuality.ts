@@ -33,7 +33,8 @@ export type StaticDescriptionQualityGradeLimitationCode =
   | 'instruction-heavy-description'
   | 'echoed-scope-content'
   | 'unfilled-placeholder'
-  | 'over-maximum-length';
+  | 'over-maximum-length'
+  | 'language-limited';
 
 /** An explicit policy ceiling applied after the additive criterion score. */
 export interface StaticDescriptionQualityGradeLimitation {

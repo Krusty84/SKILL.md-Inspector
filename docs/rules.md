@@ -699,9 +699,25 @@ judgement that the description is good.
 
 **Structural capability evidence is Latin-script only.** The shape rules that
 recognize an unregistered capability verb ("Formatiert PDF-Rechnungen…") key off
-Latin suffixes, so a non-Latin description gets no such credit and keeps the
-`missing-action-capability` ceiling. Non-English descriptions are already marked
-language-limited; this is a further limit on what the score means for them.
+Latin suffixes, so a non-Latin description gets no such credit.
+
+**A language-limited description is scored on fewer criteria.** Five of the seven
+criteria — action verb, usage trigger, boundary, front-loaded intent, vagueness —
+are English-dictionary checks. On a description the dictionaries cannot read they
+measure nothing, so they are reported as *not checked* (0 of 0) rather than
+scored as failures, and the score is the share of the remaining, language-
+independent criteria that was earned. A visible `language-limited` ceiling caps
+the result at 74, because "excellent" would be a claim about text the tool did
+not analyze, and `coverage: low` plus `partial: true` say the same thing in the
+report. Before this, a Chinese description that stated its capability, artifact
+and trigger scored 35/poor — for being written in Chinese.
+
+**Evidence comes from what the skill says it does.** Capability and artifact
+evidence is read from the description with its `Do not use for …` clauses
+removed, and capability additionally with its `Use when …` clauses removed. A
+disclaimer used to pay for the capability and artifact it disclaimed (+31 points
+for adding "Do not use for generating reports."), and a verb inside the trigger
+clause used to pay the full action-verb criterion.
 
 ---
 
