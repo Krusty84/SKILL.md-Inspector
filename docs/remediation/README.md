@@ -7,13 +7,14 @@ morphology, glob matching) and of the static security scanner. Each plan is writ
 pick up one plan file and implement it end to end, including reproducing the problem
 before fixing it.
 
-There are three waves. **Plans 1–5 are complete and merged** — they fixed defects found
+There are four waves. **Plans 1–5 are complete and merged** — they fixed defects found
 in the first two evaluation rounds. **Plans 6–10 are open** and come from the
 [round-3 evaluation](../algorithm-quality-evaluation-round3.md), which asked a different
 question: assuming the code is correct, do the reported numbers mean what their labels
 claim? See [Wave 2](#wave-2--measurement-validity-plans-610-open) below. **Plan 11 is
 open** and comes from a separate evaluation of the security scanner — see
-[Wave 3](#wave-3--security-scanner-plan-11-open).
+[Wave 3](#wave-3--security-scanner-plan-11-open). **Plans 12–17 are complete** —
+see [Wave 4](#wave-4--round-4-follow-up-plans-1217-complete).
 
 ## Wave 1 — defect remediation (plans 1–5, merged)
 
@@ -99,7 +100,7 @@ carry most of the value; Parts F–J are follow-ups. Part D1 (per-rule severity 
 should land before the Part C de-noising, because it is what lets an author keep a rule
 class enabled while silencing one pattern.
 
-## Wave 4 — round-4 follow-up (plans 12–17, open)
+## Wave 4 — round-4 follow-up (plans 12–17, complete)
 
 Wave 4 comes from a fourth evaluation that re-measured wave 2's and wave 3's claims on the
 post-remediation tree and then looked for what the remediation itself left behind. The
@@ -144,6 +145,48 @@ Plans 15, 16 and 17 are improvement rather than damage control and can follow in
 **Part C of Plan 16 moves collision numbers.** Widening `contentWords` to Unicode changes
 what the 0.70-weight scope metric sees, so `npm run benchmark:collisions` must be re-run
 and the shift recorded in the commit message rather than tuned away.
+
+### What shipped, and what did not
+
+All six plans are implemented, each with its "Reproduce first" tests written and
+observed failing before any implementation change. Four prescriptions were
+deliberately not followed, and each commit says so in its own words:
+
+- **Plan 15 Part B** — demoting the whole-description verb scan to structural
+  half-credit was implemented, measured, and reverted: it cost 30 of the 37 real
+  shipped descriptions ten points each and dropped the calibration median from 79
+  to 69, because real skills state the capability across two sentences. Removing
+  the *trigger clause* from the text the capability criterion reads is the
+  precise fix and holds the corpus.
+- **Plan 15 Part E** — the vagueness penalty was not made monotone past two
+  terms. Every formula that keeps growing prevents a fully vague description
+  from reaching 0, which an existing invariant pins. Span de-duplication is what
+  the measured harm (`general` *and* `general-purpose` for one span) required.
+- **Plan 15 criterion 1** — "adding a `Do not use for …` clause never increases
+  the score" is not met and should not be: the boundary criterion is worth 15 and
+  a boundary clause satisfies it. The +31 the round-4 evaluation measured was the
+  16 points above that, and those are gone.
+- **Plan 16 criterion 3** — a non-empty `capabilities` list for German, French,
+  Spanish, Russian and Chinese is unreachable without non-English capability
+  verbs, which the plan's own non-goals forbid. What Part C delivers is that the
+  scope *token* sets see those languages at all, which is what the 0.70-weight
+  metric compares.
+- **Plan 17 Part C** — the watcher glob was not widened to `**/*`; that would
+  refresh the Skills view on every file change anywhere in the workspace. The
+  directory-signature validation added to `ResourceCache` closes the staleness
+  gap on its own, which is the plan's own first option.
+- **Plan 17 Part F** — the socket leak is fixed but verified by inspection, not
+  by a test: reaching the success path from a test needs either a public IP or a
+  weakening of the connected-peer revalidation.
+
+Two measured shifts were recorded rather than tuned away:
+
+- `benchmarks/collision-pairs` AUC rose 0.7381 → 0.8304 with recall (0.333) and
+  precision (1.000) unchanged; the zero-scope COLLIDE set halved from four pairs
+  to two, and `AUC_GATE` ratcheted 0.72 → 0.83.
+- `benchmarks/static-description-quality` cases 41, 42 and 67 were re-recorded
+  with the policy reason inline, as `benchmarks/README.md` requires. The
+  calibration corpus was not touched; its median holds at 78 (gate 75).
 
 ## How to run a plan in an isolated session
 
