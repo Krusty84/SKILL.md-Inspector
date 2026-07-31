@@ -1,6 +1,6 @@
 import { visit } from 'unist-util-visit';
 import { parseMarkdownRoot } from '../../parser/markdownAst';
-import { valueOrigin, offsetRange, type ValueOrigin } from '../../parser/valueRanges';
+import { valueOrigin, createOffsetCursor, type ValueOrigin } from '../../parser/valueRanges';
 import type { SkillDiagnostic } from '../../types/SkillDiagnostic';
 import type { SkillDocument } from '../../types/SkillDocument';
 import type { SecuritySettings } from './settings';
@@ -110,11 +110,18 @@ function pushMatches(
   value: string,
   matches: RawMatch[],
 ): void {
-  for (const match of matches) {
+  if (matches.length === 0) {
+    return;
+  }
+  // One forward-only cursor instead of a rescan-from-zero per match: the
+  // invisible-Unicode scan alone can report thousands of matches over the whole
+  // body, and resolving each from the start made the pass quadratic.
+  const cursor = createOffsetCursor(origin, value);
+  for (const match of [...matches].sort((a, b) => a.index - b.index)) {
     out.push(
       toSecurityDiagnostic(
         match,
-        offsetRange(origin, value, match.index, match.length),
+        cursor.rangeAt(match.index, match.length),
         match.ruleId
           ? { ruleId: match.ruleId, ruleIds: match.ruleIds ?? [match.ruleId] }
           : undefined,

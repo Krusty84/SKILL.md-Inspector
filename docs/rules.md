@@ -546,6 +546,25 @@ resource.
 These diagnostics affect validation status and warning/error counts. They do not
 change instruction or resource authoring-quality scores.
 
+**Two bounds on what is counted.**
+
+A bundled resource above `skillMdInspector.tokens.maxCountedFileSizeKb` (1 MB by
+default) is skipped rather than read and encoded, exactly as an over-size file is
+skipped by the security scanner. A skipped file contributes nothing to the
+per-file or aggregate totals.
+
+Counting is exact for every realistic document, and *approximate* for one shape
+that is not. BPE merging is quadratic in the length of a single unbroken run of
+non-whitespace characters, with no ceiling in the encoding itself: before this
+bound, a 200,000-character single-line body took 48.7 minutes to count, on the
+debounced while-typing path. Runs are therefore encoded whole up to a fixed work
+budget — which every ordinary word, URL, hash, base64 line and long identifier
+fits, so the whole shipped corpus counts exactly — and past that budget a long
+run is encoded in pieces and the pieces summed. The seams shift the count
+slightly. That only happens to input no real document contains (a 200,000-
+character word, or a page of zero-width padding), and an approximate count in
+bounded time is the better trade there.
+
 ### `skill.token.body.limit`
 
 **warning** · auto-fix: no

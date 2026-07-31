@@ -28,6 +28,33 @@ const knownParts = new Set([
 ]);
 const knownStatuses = new Set(['pending', 'running', 'completed', 'error']);
 
+/**
+ * Most parse diagnostics reported for one export.
+ *
+ * Events are already capped at 200, but diagnostics were not: a 20,000-part
+ * export produced 100,016 of them, and every one is structured-cloned across
+ * `postMessage` on each `initialize`. Past a few thousand the list has stopped
+ * being a list of problems and become a description of one problem, so the tail
+ * is replaced by a single entry that says how much was dropped.
+ */
+const MAX_PARSE_DIAGNOSTICS = 5_000;
+
+function capDiagnostics(diagnostics: OpenCodeParseDiagnostic[]): OpenCodeParseDiagnostic[] {
+  if (diagnostics.length <= MAX_PARSE_DIAGNOSTICS) {
+    return diagnostics;
+  }
+  const suppressed = diagnostics.length - MAX_PARSE_DIAGNOSTICS;
+  return [
+    ...diagnostics.slice(0, MAX_PARSE_DIAGNOSTICS),
+    {
+      severity: 'information',
+      code: 'opencode.diagnostics.truncated',
+      message: l10n.t('{0} further problems were suppressed.', suppressed),
+      path: '$',
+    },
+  ];
+}
+
 export function parseSessionExport(value: unknown): ParseResult {
   const diagnostics: OpenCodeParseDiagnostic[] = [];
   if (!isRecord(value))
@@ -44,7 +71,13 @@ export function parseSessionExport(value: unknown): ParseResult {
       l10n.t('OpenCode export messages must be an array.'),
       '$.messages',
     );
-  diagnostics.push(...validateSessionCompatibility(value));
+  // Not `push(...compat)`: compatibility reports several diagnostics per part,
+  // and spreading them makes each one a call argument — 30,000 parts (469 KB,
+  // far under the loader's 25 MB cap) threw `RangeError: Maximum call stack
+  // size exceeded` before any of this file's own validation ran.
+  for (const diagnostic of validateSessionCompatibility(value)) {
+    diagnostics.push(diagnostic);
+  }
   const messages: ParsedMessage[] = [];
   value.messages.forEach((messageValue, messageIndex) => {
     if (!isRecord(messageValue)) {
@@ -104,7 +137,7 @@ export function parseSessionExport(value: unknown): ParseResult {
     raw: value,
     sanitization: detectSanitizedExport(value),
   };
-  return { session, diagnostics, fatal: false };
+  return { session, diagnostics: capDiagnostics(diagnostics), fatal: false };
 
   function fatal(code: string, message: string, path = '$'): ParseResult {
     return { diagnostics: [{ severity: 'error', code, message, path }], fatal: true };

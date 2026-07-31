@@ -909,6 +909,13 @@
             "description": "%skillMdInspector.config.validation.runOnSave.description%",
             "order": 2
           },
+          "skillMdInspector.tokens.maxCountedFileSizeKb": {
+            "type": "integer",
+            "default": 1024,
+            "minimum": 1,
+            "maximum": 65536,
+            "description": "%skillMdInspector.config.tokens.maxCountedFileSizeKb.description%"
+          },
           "skillMdInspector.validation.compatibilityAgents.spec": {
             "type": "boolean",
             "default": true,

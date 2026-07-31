@@ -37,6 +37,8 @@ export interface WorkspaceAnalysisOptions {
   compatibilityAgents?: readonly AgentId[];
   /** Static security-scan settings; omitted = defaults. */
   security?: SecuritySettings;
+  /** Largest bundled resource file that is read and token-counted, in bytes. */
+  maxCountedFileSizeBytes?: number;
 }
 
 /**
@@ -146,6 +148,7 @@ function toWorkspaceSkill(
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,
     security: options.security,
+    maxCountedFileSizeBytes: options.maxCountedFileSizeBytes,
   });
   const name =
     typeof document.frontmatter?.name === 'string' && document.frontmatter.name

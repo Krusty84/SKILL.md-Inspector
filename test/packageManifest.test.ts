@@ -98,6 +98,7 @@ describe('package manifest context menus and templates', () => {
         keys: [
           'skillMdInspector.validation.enabled',
           'skillMdInspector.validation.runOnSave',
+          'skillMdInspector.tokens.maxCountedFileSizeKb',
           'skillMdInspector.validation.compatibilityAgents.spec',
           'skillMdInspector.validation.compatibilityAgents.claudeCode',
           'skillMdInspector.validation.compatibilityAgents.codex',
@@ -220,8 +221,8 @@ describe('package manifest context menus and templates', () => {
     expect(validation['skillMdInspector.validation.runOnSave'].order).toBe(2);
     // Every setting lives in exactly one section (60 total, no duplicates).
     const allKeys = configuration.flatMap((category) => Object.keys(category.properties));
-    expect(allKeys.length).toBe(60);
-    expect(new Set(allKeys).size).toBe(60);
+    expect(allKeys.length).toBe(61);
+    expect(new Set(allKeys).size).toBe(61);
   });
 
   it('keeps online link checks opt-in and globally bounded per operation', () => {

@@ -79,3 +79,48 @@ export function offsetRange(
     endCharacter: character + length,
   };
 }
+
+/**
+ * A forward-only cursor over one value, for mapping many match offsets to
+ * ranges.
+ *
+ * {@link offsetRange} rescans from the value start on every call, which makes a
+ * whole scan quadratic in the value size once the matches are numerous: a
+ * 224 KB body with 8,000 zero-width characters spent 1.93 s in `offsetRange`
+ * alone. This keeps the last resolved position and advances from it. Offsets
+ * that go backwards are still correct — the cursor restarts — so a caller may
+ * pass unsorted matches and only loses the speed-up.
+ */
+export function createOffsetCursor(
+  origin: ValueOrigin,
+  value: string,
+): { rangeAt(index: number, length: number): SkillDiagnosticRange } {
+  let cursor = 0;
+  let line = origin.line;
+  let character = origin.character;
+  return {
+    rangeAt(index: number, length: number): SkillDiagnosticRange {
+      if (index < cursor) {
+        cursor = 0;
+        line = origin.line;
+        character = origin.character;
+      }
+      const limit = Math.min(index, value.length);
+      while (cursor < limit) {
+        if (value.charCodeAt(cursor) === 10 /* \n */) {
+          line += 1;
+          character = 0;
+        } else {
+          character += 1;
+        }
+        cursor += 1;
+      }
+      return {
+        startLine: line,
+        startCharacter: character,
+        endLine: line,
+        endCharacter: character + length,
+      };
+    },
+  };
+}

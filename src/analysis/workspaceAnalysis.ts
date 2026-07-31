@@ -45,6 +45,7 @@ export function computeWorkspaceAnalysis(
         resourceDirectories: config.resourceDirectories,
         compatibilityAgents: config.compatibilityAgents,
         security: config.security,
+        maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
       },
     ),
   };
@@ -79,6 +80,7 @@ async function augmentAnalysisOnline(
           dictionaries: config.heuristicDictionaries,
           resourceDirectories: config.resourceDirectories,
           security: config.security,
+          maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
         });
         const augmented = await augmentWithRemoteDiagnostics(
           staticAnalysis,
@@ -150,6 +152,7 @@ export async function computeScopedAnalysisOnline(
       resourceDirectories: config.resourceDirectories,
       compatibilityAgents: config.compatibilityAgents,
       security: config.security,
+      maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
     },
   );
   if (!analysis.cancelled) {

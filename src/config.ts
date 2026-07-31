@@ -15,6 +15,7 @@ import {
 import { validateSeverityOverrides } from './validation/severityOverrides';
 import { genericProfile } from './profiles/genericProfile';
 import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
+import { globConfigurationWarnings } from './parser/globMatch';
 import { DEFAULT_SKILL_DISCOVERY_EXCLUDES } from './workspace/discoverSkills';
 import {
   DEFAULT_HEURISTIC_DICTIONARIES,
@@ -34,6 +35,8 @@ export interface AnalysisContext {
   resourceDirectories: readonly string[];
   compatibilityAgents: readonly AgentId[];
   security: SecuritySettings;
+  /** Largest bundled resource file that is read and token-counted, in bytes. */
+  maxCountedFileSizeBytes: number;
 }
 
 export interface InspectorConfig {
@@ -54,6 +57,8 @@ export interface InspectorConfig {
   compatibilityAgents: readonly AgentId[];
   /** Resolved static security-scan settings. */
   security: SecuritySettings;
+  /** Largest bundled resource file that is read and token-counted, in bytes. */
+  maxCountedFileSizeBytes: number;
 }
 
 /**
@@ -76,7 +81,12 @@ export interface ConfigurationWarning {
 export function analysisContextFromConfig(
   config: Pick<
     InspectorConfig,
-    'profile' | 'heuristicDictionaries' | 'resourceDirectories' | 'compatibilityAgents' | 'security'
+    | 'profile'
+    | 'heuristicDictionaries'
+    | 'resourceDirectories'
+    | 'compatibilityAgents'
+    | 'security'
+    | 'maxCountedFileSizeBytes'
   >,
 ): AnalysisContext {
   return {
@@ -85,6 +95,7 @@ export function analysisContextFromConfig(
     resourceDirectories: config.resourceDirectories,
     compatibilityAgents: config.compatibilityAgents,
     security: config.security,
+    maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
   };
 }
 
@@ -173,6 +184,24 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
       message: warning.message,
     });
   }
+  const resourceExclude = cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]);
+  const discoveryExclude = cfg.get<string[]>('discovery.exclude', [
+    ...DEFAULT_SKILL_DISCOVERY_EXCLUDES,
+  ]);
+  // A glob the compiler refuses is silently ignored while matching; without this
+  // the author would see resources they excluded still being scanned, with no
+  // explanation. (Before the guard, it froze the extension host instead.)
+  for (const [setting, globs] of [
+    ['resources.exclude', resourceExclude],
+    ['discovery.exclude', discoveryExclude],
+  ] as const) {
+    for (const warning of globConfigurationWarnings(globs ?? [])) {
+      configurationWarnings.push({
+        setting: `skillMdInspector.${setting}`,
+        message: warning.message,
+      });
+    }
+  }
   const overriddenDictionaryValues = readOverriddenDictionaryValues(cfg);
   // No overrides -> the packaged defaults BY OBJECT IDENTITY. Resolving would
   // produce content-equal copies (freezeDictionaries copies every array), and
@@ -220,11 +249,16 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
     )
       .map(normalizeResourceDirectory)
       .filter((entry): entry is string => Boolean(entry)),
-    resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
-    discoveryExclude: cfg.get<string[]>('discovery.exclude', [...DEFAULT_SKILL_DISCOVERY_EXCLUDES]),
+    resourceExclude,
+    discoveryExclude,
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),
     collision: collision.options,
     security: securityResolution.settings,
+    maxCountedFileSizeBytes:
+      Math.min(
+        65536,
+        Math.max(1, Math.trunc(cfg.get<number>('tokens.maxCountedFileSizeKb', 1024)) || 1024),
+      ) * 1024,
   };
 }
 

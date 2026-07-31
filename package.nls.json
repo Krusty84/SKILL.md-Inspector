@@ -85,6 +85,7 @@
   "skillMdInspector.config.validation.title": "Validation",
   "skillMdInspector.config.validation.enabled.description": "Enable deterministic validation of SKILL.md files.",
   "skillMdInspector.config.validation.runOnSave.description": "Re-run validation whenever a SKILL.md file is saved.",
+  "skillMdInspector.config.tokens.maxCountedFileSizeKb.description": "Largest bundled resource file that is read and token-counted, in kilobytes. Files above this are skipped and excluded from the token report; counting has to read and BPE-encode the whole file, so an unbounded one can stall analysis.",
   "skillMdInspector.config.validation.compatibilityAgents.spec.description": "Include the specification baseline (skills-ref) in the agent compatibility projection.",
   "skillMdInspector.config.validation.compatibilityAgents.claudeCode.description": "Include Claude Code in the agent compatibility projection.",
   "skillMdInspector.config.validation.compatibilityAgents.codex.description": "Include Codex in the agent compatibility projection.",

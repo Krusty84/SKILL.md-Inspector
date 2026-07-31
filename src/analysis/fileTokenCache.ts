@@ -5,6 +5,8 @@ import { countResourceTokens } from './tokenUsage';
 interface FileTokenEntry {
   mtimeMs: number;
   size: number;
+  /** The cap the count was produced under; a changed cap must not serve a stale answer. */
+  maxBytes: number | undefined;
   /** undefined records "binary or undecodable" so those files are not re-read either. */
   tokens: number | undefined;
 }
@@ -21,25 +23,42 @@ export class FileTokenCache {
   private readonly entries = new Map<string, FileTokenEntry>();
 
   constructor(
-    private readonly compute: (absolutePath: string) => number | undefined = countResourceTokens,
+    private readonly compute: (
+      absolutePath: string,
+      maxBytes: number | undefined,
+    ) => number | undefined = (absolutePath, maxBytes) =>
+      countResourceTokens(absolutePath, undefined, { maxBytes }),
   ) {}
 
-  /** Token count for the file, undefined when it is binary or unreadable. */
-  tokensFor(absolutePath: string): number | undefined {
+  /**
+   * Token count for the file, undefined when it is binary, unreadable, or above
+   * `maxBytes` (see `countResourceTokens`).
+   */
+  tokensFor(absolutePath: string, maxBytes?: number): number | undefined {
     let stats: fs.Stats;
     try {
       stats = fs.statSync(absolutePath);
     } catch {
       // Nothing to validate a cache entry against; report the file as-is.
       this.entries.delete(absolutePath);
-      return this.compute(absolutePath);
+      return this.compute(absolutePath, maxBytes);
     }
     const cached = this.entries.get(absolutePath);
-    if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) {
+    if (
+      cached &&
+      cached.mtimeMs === stats.mtimeMs &&
+      cached.size === stats.size &&
+      cached.maxBytes === maxBytes
+    ) {
       return cached.tokens;
     }
-    const tokens = this.compute(absolutePath);
-    this.entries.set(absolutePath, { mtimeMs: stats.mtimeMs, size: stats.size, tokens });
+    const tokens = this.compute(absolutePath, maxBytes);
+    this.entries.set(absolutePath, {
+      mtimeMs: stats.mtimeMs,
+      size: stats.size,
+      maxBytes,
+      tokens,
+    });
     return tokens;
   }
 

@@ -37,6 +37,7 @@ export function measureSkillTokenUsage(
   doc: SkillDocument,
   countTokens: TokenCounter = countO200kTokens,
   fileTokens?: ResourceTokenSource,
+  options: CountResourceTokensOptions = {},
 ): SkillTokenUsage {
   const bodyUsage = measureBodyTokenUsage(doc.body, countTokens);
   const references: TokenCountEntry[] = [];
@@ -53,7 +54,7 @@ export function measureSkillTokenUsage(
     }
     const tokens = fileTokens
       ? fileTokens(resource)
-      : countResourceTokens(resource.absolutePath, countTokens);
+      : countResourceTokens(resource.absolutePath, countTokens, options);
     if (tokens === undefined) {
       continue;
     }
@@ -72,15 +73,35 @@ export function measureSkillTokenUsage(
 }
 
 /**
- * Reads a resource as UTF-8 and counts its tokens; undefined for binary or
- * unreadable files. The one place the default measurement and cache-backed
- * callers share, so both skip exactly the same files.
+ * Largest resource file that is read and encoded, in bytes.
+ *
+ * Token counting was the only file-reading path with no cap: `readUtf8Text`
+ * takes a `maxBytes` option and the security scanner passes one
+ * (`maxScannedFileSizeBytes`, 256 KB by default), but this call did not — so a
+ * 300 MB text resource was read whole and BPE-encoded. Overridable through
+ * `skillMdInspector.tokens.maxCountedFileSizeKb`; `undefined` already means
+ * "skipped" to every caller, which is what an over-cap file becomes.
+ */
+export const DEFAULT_MAX_COUNTED_FILE_SIZE_BYTES = 1024 * 1024;
+
+export interface CountResourceTokensOptions {
+  /** Skip files above this many bytes. Defaults to {@link DEFAULT_MAX_COUNTED_FILE_SIZE_BYTES}. */
+  maxBytes?: number;
+}
+
+/**
+ * Reads a resource as UTF-8 and counts its tokens; undefined for binary,
+ * unreadable, or over-cap files. The one place the default measurement and
+ * cache-backed callers share, so both skip exactly the same files.
  */
 export function countResourceTokens(
   absolutePath: string,
   countTokens: TokenCounter = countO200kTokens,
+  options: CountResourceTokensOptions = {},
 ): number | undefined {
-  const text = readUtf8Text(absolutePath);
+  const text = readUtf8Text(absolutePath, {
+    maxBytes: options.maxBytes ?? DEFAULT_MAX_COUNTED_FILE_SIZE_BYTES,
+  });
   return text === undefined ? undefined : countTokens(text);
 }
 
