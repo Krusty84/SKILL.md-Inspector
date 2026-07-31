@@ -99,6 +99,52 @@ carry most of the value; Parts F–J are follow-ups. Part D1 (per-rule severity 
 should land before the Part C de-noising, because it is what lets an author keep a rule
 class enabled while silencing one pattern.
 
+## Wave 4 — round-4 follow-up (plans 12–17, open)
+
+Wave 4 comes from a fourth evaluation that re-measured wave 2's and wave 3's claims on the
+post-remediation tree and then looked for what the remediation itself left behind. The
+headline numbers moved a long way: the 16 real shipped skill descriptions now score a
+**median of 80** (was 59), and collision detection reaches **AUC 0.929, precision 1.00,
+recall 0.71** at the default threshold (was AUC 0.64, precision 0, recall 0). Six of the
+eight substantive round-3 findings are closed, verified by execution.
+
+What is left is a different shape of problem: things the scanner **misses**, paths with no
+size bound, and a quick fix that corrupts the file it is editing.
+
+| # | Plan | Primary files | Depends on |
+|---|------|---------------|------------|
+| 12 | [Security scanner coverage](plan-12-security-scanner-coverage.md) | `src/validation/security/**` | 11 |
+| 13 | [Input-size guards](plan-13-input-size-guards.md) | `src/analysis/`, `src/parser/globMatch.ts`, `src/parser/valueRanges.ts`, `src/opencode/` | — |
+| 14 | [File integrity + config validation](plan-14-file-integrity-and-config-validation.md) | `src/parser/parseFrontmatter.ts`, `src/validation/`, `src/config.ts` | — |
+| 15 | [Description evidence scope](plan-15-description-evidence-scope.md) | `src/quality/descriptionHeuristics.ts`, `src/quality/staticDescriptionQuality.ts` | 8, 9, 14 |
+| 16 | [Vocabulary coherence](plan-16-vocabulary-coherence.md) | `src/quality/defaultHeuristicDictionaries.json`, `src/quality/wordForms.ts`, `src/workspace/collisionFeatures.ts` | 10 |
+| 17 | [Workspace pipeline + async](plan-17-workspace-pipeline-and-async.md) | `src/workspace/`, `src/parser/resourceCache.ts`, `src/online/`, `src/extension.ts` | — |
+
+**Why this order.** Plans 14 (Part A) and 12 are the two that matter most and are cheapest
+relative to their value: Part A of 14 is a **data-loss bug** — the `InsertUseWhenClause`
+quick fix makes the frontmatter unparseable whenever the `description` is a block scalar
+with another key after it, losing every key — and Plan 12 closes two gaps that make the
+security scanner decorative (the frontmatter `description`, the field an agent loads at
+discovery time for every session, is never scanned for injection; and one pair of
+asterisks defeats all 14 injection rules). Ship 14-A first, then 12.
+
+Plan 13 is next: the measured worst case is **48.7 minutes** of frozen extension host for a
+200,000-character single-line body, on the debounced while-typing path, and the trigger —
+any long unbroken run of letters, ideographs or punctuation — includes the zero-width and
+NBSP padding the scanner itself hunts for.
+
+Plans 15, 16 and 17 are improvement rather than damage control and can follow in any order.
+
+**Shared-file conflicts within wave 4:** 12 and 11 both edit
+`src/validation/security/**` (run 11 first); 14 and 15 both edit
+`staticDescriptionQuality.ts`; 15 and 16 both edit
+`defaultHeuristicDictionaries.json` and `descriptionHeuristics.ts`; 13 and 17 both edit
+`src/opencode/` and `src/online/`. Run each of those pairs sequentially.
+
+**Part C of Plan 16 moves collision numbers.** Widening `contentWords` to Unicode changes
+what the 0.70-weight scope metric sees, so `npm run benchmark:collisions` must be re-run
+and the shift recorded in the commit message rather than tuned away.
+
 ## How to run a plan in an isolated session
 
 Suggested kickoff prompt for each session:
