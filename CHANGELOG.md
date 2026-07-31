@@ -4,6 +4,18 @@
 
 ### Added
 
+- **`skillMdInspector.tokens.maxCountedFileSizeKb`** (default 1 MB): bundled
+  resource files above it are skipped rather than read and token-counted. Token
+  counting was the only file-reading path with no byte cap.
+- **`skillMdInspector.collision.maxReported`** (default 500): collisions beyond
+  it are counted rather than rendered. A 500-skill workspace built from one house
+  template produced 124,750 collision objects, each carrying its metrics and
+  shared terms, all pushed into the webview and the tree view.
+- **`skillMdInspector.heuristics.dictionaryValues.dualRoleTerms`**: terms that
+  are both a capability verb and an artifact (`test`). A listed term is read as
+  the verb only in a verb position, so "Create unit tests" contributes the
+  artifact and "Test a module" contributes the capability.
+
 - **Static security scan** (on by default, fully offline, executes nothing): a
   new `security` validation rule flags instructions that could harm the user if
   an agent acted on them. Seven new `security`-kind diagnostics —
@@ -158,6 +170,101 @@
   metric breakdown shown in reports.
 
 ### Fixed
+
+- **The description quick fix no longer destroys the frontmatter.** For a block
+  scalar (`description: |`) followed by another key, the stored value range
+  ended at column 0 of that next key, so "Insert Use when clause" appended into
+  it (`… Use when <describe…>.license: MIT`). Re-parsing then failed and *every*
+  frontmatter key was lost.
+- **A 200,000-character single-line body no longer freezes the editor.** BPE
+  merging is quadratic in the length of one unbroken run of non-whitespace, with
+  no ceiling, and this runs on the 250 ms debounced while-typing path: the
+  measured worst case was 48.7 minutes. Long runs are now encoded in bounded
+  pieces. Ordinary prose is unaffected and its counts are unchanged — a 500 KB
+  control still reports exactly 113,641 tokens.
+- **A workspace scan can be cancelled, and its progress bar moves.** The scan was
+  one synchronous, non-yielding block, so the host could not process the Cancel
+  click or paint progress until it had already finished; at 500 skills the bar
+  sat at 0/500 for the whole scan.
+- **Saving one SKILL.md no longer re-analyzes every other skill's resources.**
+  The workspace path ran without the resource and token caches the extension
+  already owns.
+- **The frontmatter `description` is scanned for prompt injection.** It is the
+  one field an agent loads at discovery time, for every session, and it was
+  scanned for secrets only — a textbook injection there produced zero findings
+  while the identical sentence in the body produced two.
+- **Inline emphasis no longer defeats the injection rules.** The patterns ran
+  over raw Markdown, so `Ignore all *previous* instructions.` scanned clean while
+  the identical rendering without the asterisks did not. Injection phrases are
+  matched over the rendered text of each paragraph and heading.
+- **`rm -rf "/"`, a backslash-continued `rm -rf`, `export API_TOKEN=<secret>`
+  and `curl -o i.sh <url> && sh i.sh` are detected**, and
+  `Never run rm -rf / on a production host.` in prose is not reported as an
+  error — the negation guard every injection phrase carries now covers commands.
+- **A merged command finding can be addressed by any of its rules.**
+  `sudo chmod 777 /srv && git push --force` was one finding carrying only
+  `#sudo`, so neither `#chmod-777` nor `#git-push-force` could silence it, and
+  the squiggle covered four characters.
+- **`security.allowedCommands` needs substance.** `["o"]` silenced the entire
+  risky tier and `["sh"]` silenced `git push --force` through the "sh" inside
+  "push". An entry now needs three characters and a token-boundary match.
+- **Invalid settings are rejected instead of obeyed.** A misspelled severity
+  (`"warn"`) was published to the Problems panel as a red Error; a non-numeric or
+  NaN collision weight produced `similarity: NaN`; a NaN threshold reported every
+  pair in the workspace; `description.maxLength: 0` made every skill fail an
+  unsuppressable specification error. Each is now replaced with its default and
+  reported through the SKILL.md Inspector output.
+- **A description of astral characters is measured correctly.** 520 emoji were
+  reported as "1040 characters; the maximum is 1024".
+- **`tooShort` and `tooVerbose` can no longer both fire** on the same range.
+- **A "Do not use for …" clause no longer pays for the capability and artifact it
+  disclaims.** Adding "Do not use for generating reports." moved a description
+  from 59/weak to 90/excellent on the strength of `generate` and `report`.
+- **The action-verb criterion reads the capability statement, not the trigger.**
+  Any registered verb in the first two sentences paid the full criterion, so five
+  descriptions differing only in their opening word — `Extract`, `Yank`,
+  `Salvage`, `Frobnicate`, `Purple` — all scored 100/excellent on the strength of
+  `scanned`, a past participle in the *next* sentence.
+- **A non-English description is no longer marked down for being non-English.**
+  The five English-dictionary criteria are reported as not checked rather than
+  scored as failures, so a Chinese description stating its capability, artifact
+  and trigger no longer scores 35/poor. A visible ceiling of 74 keeps the partial
+  reading honest. French is detected at all now.
+- **A narrower boundary clause no longer costs two label bands**, and a single
+  vague adjective no longer zeroes the vagueness criterion by being counted
+  twice (`general` and `general-purpose` for one span).
+- **`Validate JWTs.` and `Check URLs.` match their acronyms.** Acronyms were the
+  only artifact vocabulary never singularized, so a plural lost the artifact
+  criterion and tripped the missing-artifact ceiling.
+- **The same visible text scores the same however it is encoded.** NFC/NFD
+  spellings produced different tokens, different language detection, and
+  different scores; two skills named `café-tool` in different normalizations were
+  "confusingly similar" rather than a hard name conflict.
+- **Non-Latin scripts reach the collision metric that decides collisions.**
+  Scope overlap carries weight 0.70 and tokenized ASCII-only, so it was blind to
+  Russian and Chinese and shredded accented Latin (`cálculo` → `c`, `lculo`).
+- **Bundled resources are re-discovered when they change.** The cache was keyed on
+  directory alone and its watcher covered four directory names, so a file created
+  or deleted anywhere else under a skill was served stale — on save included.
+- **`skills.index.json` is byte-identical across host locales.** Ordering used
+  the host's collation, so the same commit produced different output on `en-US`
+  and `sv-SE`.
+- **Cancelling a large online link check settles.** ~4,000 queued URLs recursed
+  until the stack overflowed and left every queued promise unsettled, so the
+  awaiting check never returned. A dual-stack host is also tried on every
+  resolved address instead of only the first, which on an IPv6-only network
+  reported every remote link unavailable.
+- **Closing a file no longer resurrects its diagnostics** from a validation that
+  was already scheduled.
+- **Two OpenCode exports that crashed the viewer now load.** A 30,000-part export
+  threw `RangeError` while collecting diagnostics, and a deeply nested value threw
+  out of `JSON.stringify` while building a display preview. Parse diagnostics are
+  capped with a "N further problems were suppressed" entry — 20,000 parts used to
+  produce 100,016, structured-cloned on every open — and normalization of a large
+  session is no longer superlinear.
+- **A pathological `resources.exclude` pattern is rejected, not compiled.** Two
+  patterns took 14.8 s and 26.7 s against a single path, with no error to explain
+  the freeze.
 
 - **The security scanner no longer echoes credentials into its own findings.**
   A command diagnostic quoted the whole line it matched, so a token sharing a

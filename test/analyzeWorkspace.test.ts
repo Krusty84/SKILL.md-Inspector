@@ -68,8 +68,8 @@ describe('workspace discovery + analysis', () => {
     expect(paths.some((p) => p.includes('node_modules'))).toBe(false);
   });
 
-  it('analyzes each skill with score, counts, and resource graph', () => {
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+  it('analyzes each skill with score, counts, and resource graph', async () => {
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     expect(analysis.skills).toHaveLength(3);
 
     const pdf = analysis.skills.find((s) => s.name === 'pdf-report-formatter');
@@ -88,7 +88,7 @@ describe('workspace discovery + analysis', () => {
     expect(broken!.validationStatus).toBe('fail');
   });
 
-  it('keeps validation, description, and authoring dimensions distinct for minimal frontmatter', () => {
+  it('keeps validation, description, and authoring dimensions distinct for minimal frontmatter', async () => {
     writeSkill(
       'skills/minimal-skill/SKILL.md',
       [
@@ -99,7 +99,7 @@ describe('workspace discovery + analysis', () => {
       ].join('\n'),
     );
 
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const minimal = analysis.skills.find((skill) => skill.name === 'minimal-skill')!;
 
     expect(minimal.validationStatus).toBe('warning');
@@ -119,15 +119,15 @@ describe('workspace discovery + analysis', () => {
     expect(minimal.authoringQuality.resources).toMatchObject({ score: 100, label: 'clean' });
   });
 
-  it('detects a collision between the two report formatters', () => {
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+  it('detects a collision between the two report formatters', async () => {
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     expect(analysis.collisions.length).toBeGreaterThanOrEqual(1);
     const names = analysis.collisions.flatMap((c) => [c.a, c.b]);
     expect(names).toContain('pdf-report-formatter');
     expect(names).toContain('engineering-report-formatter');
   });
 
-  it('detects duplicate and confusingly similar skill names', () => {
+  it('detects duplicate and confusingly similar skill names', async () => {
     writeSkill(
       'skills/dup/SKILL.md',
       '---\nname: PDF-Report-Formatter\ndescription: Format PDF reports. Use when needed.\n---\n',
@@ -136,7 +136,7 @@ describe('workspace discovery + analysis', () => {
       'skills/near/SKILL.md',
       '---\nname: pdf-reports-formatter\ndescription: Format PDF reports. Use when needed.\n---\n',
     );
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
 
     const conflict = analysis.nameConflicts.find((c) => c.normalized === 'pdf-report-formatter');
     expect(conflict).toBeDefined();
@@ -145,8 +145,8 @@ describe('workspace discovery + analysis', () => {
     expect(analysis.similarNames.flatMap((s) => [s.a, s.b])).toContain('pdf-reports-formatter');
   });
 
-  it('exports an index with the documented shape', () => {
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+  it('exports an index with the documented shape', async () => {
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const index = buildSkillsIndex(analysis);
     expect(typeof index.generatedAt).toBe('string');
     expect(index.skills).toHaveLength(3);
@@ -191,8 +191,8 @@ describe('workspace discovery + analysis', () => {
     expect(entry.information).toBeGreaterThanOrEqual(0);
   });
 
-  it('limits compatibility projections to the enabled agents', () => {
-    const analysis = analyzeWorkspace(
+  it('limits compatibility projections to the enabled agents', async () => {
+    const analysis = await analyzeWorkspace(
       root,
       discoverSkillPaths(root),
       genericProfile,
@@ -211,8 +211,8 @@ describe('workspace discovery + analysis', () => {
     }
   });
 
-  it('includes a machine-readable diagnostics summary in the index (Task 87)', () => {
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+  it('includes a machine-readable diagnostics summary in the index (Task 87)', async () => {
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const index = buildSkillsIndex(analysis);
     const broken = index.skills.find((s) => s.name === 'Broken Skill')!;
     expect(broken.diagnostics.length).toBeGreaterThan(0);
@@ -228,11 +228,11 @@ describe('workspace discovery + analysis', () => {
     expect(again.diagnostics).toEqual(broken.diagnostics);
   });
 
-  it('propagates resource token diagnostics into workspace counts and status', () => {
+  it('propagates resource token diagnostics into workspace counts and status', async () => {
     writeTokenBudgetSkill('warning-token-skill', 10_001);
     writeTokenBudgetSkill('large-token-skill', 25_001);
 
-    const analysis = analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
+    const analysis = await analyzeWorkspace(root, discoverSkillPaths(root), genericProfile);
     const warningSkill = analysis.skills.find((skill) => skill.name === 'warning-token-skill')!;
     const largeSkill = analysis.skills.find((skill) => skill.name === 'large-token-skill')!;
 
@@ -257,11 +257,11 @@ describe('workspace discovery + analysis', () => {
     expect(largeSkill.validationStatus).toBe('warning');
   });
 
-  it('stops analysis when cancellation is requested and marks the result partial (Task 64)', () => {
+  it('stops analysis when cancellation is requested and marks the result partial (Task 64)', async () => {
     const paths = discoverSkillPaths(root); // 3 skills
     const cancel = { isCancellationRequested: false };
     let lastDone = 0;
-    const analysis = analyzeWorkspace(
+    const analysis = await analyzeWorkspace(
       root,
       paths,
       genericProfile,
@@ -283,12 +283,12 @@ describe('workspace discovery + analysis', () => {
     expect(lastDone).toBe(1);
   });
 
-  it('marks the scan cancelled when the token trips in the similar-names phase', () => {
+  it('marks the scan cancelled when the token trips in the similar-names phase', async () => {
     // Every file is analyzed, so only the cross-skill tail sees the cancelled
     // token; the result must still not read as a complete comparison.
     const paths = discoverSkillPaths(root); // 3 skills
     const cancel = { isCancellationRequested: false };
-    const analysis = analyzeWorkspace(
+    const analysis = await analyzeWorkspace(
       root,
       paths,
       genericProfile,
@@ -309,10 +309,10 @@ describe('workspace discovery + analysis', () => {
     expect(analysis.similarNames).toEqual([]);
   });
 
-  it('reports progress for every skill on a completed scan (Task 65)', () => {
+  it('reports progress for every skill on a completed scan (Task 65)', async () => {
     const paths = discoverSkillPaths(root); // 3 skills
     const seen: Array<[number, number]> = [];
-    const analysis = analyzeWorkspace(
+    const analysis = await analyzeWorkspace(
       root,
       paths,
       genericProfile,

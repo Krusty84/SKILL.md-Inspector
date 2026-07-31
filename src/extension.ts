@@ -124,21 +124,24 @@ export function activate(context: vscode.ExtensionContext): void {
     if (nextState === configurationWarningState) return;
     const hadWarnings = configurationWarningState !== '' && configurationWarningState !== '[]';
     configurationWarningState = nextState;
+    // The channel carries more than dictionary warnings now: security patterns,
+    // severity overrides, collision numerics and the profile length limits all
+    // report the values they had to reject through it.
     if (warnings.length === 0) {
-      if (hadWarnings) output.appendLine('Heuristic dictionary configuration warnings cleared.');
+      if (hadWarnings) output.appendLine('Configuration warnings cleared.');
       return;
     }
-    output.appendLine(`Heuristic dictionary configuration warnings (${warnings.length}):`);
+    output.appendLine(`Configuration warnings (${warnings.length}):`);
     for (const warning of warnings) {
       output.appendLine(`- ${warning.setting}: ${warning.message}`);
     }
     void vscode.window.showWarningMessage(
       warnings.length === 1
         ? l10n.t(
-            'SKILL.md Inspector ignored invalid heuristic dictionary configuration (1 warning). See the SKILL.md Inspector output for details.',
+            'SKILL.md Inspector ignored an invalid configuration value (1 warning). See the SKILL.md Inspector output for details.',
           )
         : l10n.t(
-            'SKILL.md Inspector ignored invalid heuristic dictionary configuration ({0} warnings). See the SKILL.md Inspector output for details.',
+            'SKILL.md Inspector ignored invalid configuration values ({0} warnings). See the SKILL.md Inspector output for details.',
             warnings.length,
           ),
     );
@@ -206,6 +209,14 @@ export function activate(context: vscode.ExtensionContext): void {
   // are filtered against the resource-exclusion globs (a node_modules install
   // must not thrash the tree) and coalesced per burst: one invalidation sweep,
   // one Skills refresh, one revalidation — instead of one of each per file.
+  //
+  // This glob is narrower than what `discoverResources` walks, so it misses
+  // `my-skill/notes.md` and `my-skill/data/spec.md`. That used to mean the
+  // ResourceCache served a stale list; it no longer can, because the cache
+  // validates each entry against a directory signature on read (plan 17 Part C).
+  // The watcher is the fast path for the tree and revalidation, not the
+  // correctness guarantee — widening it to `**/*` would refresh the Skills view
+  // on every file change anywhere in the workspace.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(
     '**/{references,scripts,assets,templates}/**',
   );
@@ -387,6 +398,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
       if (isSkillFile(document)) {
+        // Order matters: a validation scheduled just before the close would
+        // otherwise fire after `clear` and resurrect the file's diagnostics.
+        changeDebouncer.cancel(document.uri.toString());
         provider.clear(document.uri);
       }
     }),

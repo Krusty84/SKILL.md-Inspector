@@ -1,3 +1,4 @@
+import * as l10n from '@vscode/l10n';
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -30,7 +31,20 @@ export function safeDuration(start?: number, end?: number): number | undefined {
 }
 export function preview(value: unknown, max = 20000): string | undefined {
   if (value === undefined) return undefined;
-  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  // `JSON.stringify` recurses, so a deeply nested part value throws
+  // `RangeError: Maximum call stack size exceeded` — measured at 20,000 levels,
+  // well under the loader's 25 MB file cap. A preview is display text; failing
+  // to build one must not abort the whole session load.
+  let text: string | undefined;
+  if (typeof value === 'string') {
+    text = value;
+  } else {
+    try {
+      text = JSON.stringify(value, null, 2);
+    } catch {
+      text = l10n.t('<value too deeply nested to display>');
+    }
+  }
   if (text === undefined) return undefined;
   return text.length > max
     ? `${text.slice(0, max)}\n… truncated ${text.length - max} characters`

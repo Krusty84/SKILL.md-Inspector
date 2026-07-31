@@ -15,6 +15,26 @@ const anyText = fc.oneof(
   ),
 );
 
+/**
+ * `rawScore` is the additive sum of the findings whenever every criterion could
+ * be evaluated. Plan 15 Part F marks the five English-dictionary criteria as
+ * *not applicable* (0 of 0) on a description the dictionaries cannot read, so
+ * there the score is the share of the applicable weight that was earned —
+ * scoring an unmeasured criterion as a failure was what capped a well-formed
+ * Chinese description at 35/poor. This states the invariant in the form that
+ * covers both.
+ */
+function expectRawScoreMatchesFindings(result: {
+  rawScore: number | null;
+  findings: ReadonlyArray<{ pointsEarned: number; pointsPossible: number }>;
+}): void {
+  const earned = result.findings.reduce((total, f) => total + f.pointsEarned, 0);
+  const possible = result.findings.reduce((total, f) => total + f.pointsPossible, 0);
+  const expected =
+    possible === 0 ? 0 : possible === 100 ? Math.round(earned) : Math.round((100 * earned) / possible);
+  expect(result.rawScore).toBe(Math.max(0, Math.min(100, expected)));
+}
+
 describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
   it('always yields 0 <= score <= rawScore <= 100 and findings sum to rawScore', () => {
     fc.assert(
@@ -34,8 +54,7 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
         expect(result.score).toBeLessThanOrEqual(result.rawScore);
         expect(result.rawScore).toBeLessThanOrEqual(100);
 
-        const sum = result.findings.reduce((total, f) => total + f.pointsEarned, 0);
-        expect(sum).toBe(result.rawScore);
+        expectRawScoreMatchesFindings(result);
 
         for (const finding of result.findings) {
           expect(finding.pointsEarned).toBeGreaterThanOrEqual(0);
@@ -74,10 +93,12 @@ describe('computeStaticDescriptionQuality invariants (Task 67)', () => {
         expect(result.score).toBeGreaterThanOrEqual(0);
         expect(result.score).toBeLessThanOrEqual(result.rawScore);
         expect(result.rawScore).toBeLessThanOrEqual(100);
-        expect(result.findings.reduce((total, f) => total + f.pointsEarned, 0)).toBe(
-          result.rawScore,
-        );
-        expect(result.findings.reduce((total, f) => total + f.pointsPossible, 0)).toBe(100);
+        expectRawScoreMatchesFindings(result);
+        // 100 when every criterion applies; less when some were skipped as
+        // not-applicable, which only happens on a language-limited description.
+        const possible = result.findings.reduce((total, f) => total + f.pointsPossible, 0);
+        expect(possible).toBeLessThanOrEqual(100);
+        expect(result.partial === true || possible === 100).toBe(true);
         for (const finding of result.findings) {
           expect(Number.isInteger(finding.pointsEarned)).toBe(true);
           expect(finding.pointsEarned).toBeGreaterThanOrEqual(0);

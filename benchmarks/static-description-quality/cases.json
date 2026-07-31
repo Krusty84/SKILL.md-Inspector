@@ -522,33 +522,33 @@
   {
     "id": "case-41",
     "language": "ru",
-    "description": "\u0424\u043e\u0440\u043c\u0430\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0438\u043d\u0441\u043f\u0435\u043a\u0446\u0438\u043e\u043d\u043d\u044b\u0435 \u043e\u0442\u0447\u0451\u0442\u044b \u043f\u043e \u0441\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u043d\u044b\u043c \u043f\u0440\u0430\u0432\u0438\u043b\u0430\u043c. \u0418\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c \u043f\u0440\u0438 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0435 \u043e\u0442\u0447\u0451\u0442\u043e\u0432.",
+    "description": "Форматировать инспекционные отчёты по стандартным правилам. Использовать при подготовке отчётов.",
     "expected": {
-      "minScore": 10,
-      "maxScore": 30,
+      "minScore": 33,
+      "maxScore": 53,
       "trigger": "none",
       "boundary": "none",
       "frontLoaded": false
     },
-    "notes": "Russian: analysis is language-limited; only structural scoring applies."
+    "notes": "Russian: analysis is language-limited; only structural scoring applies. Re-recorded by plan 15 Part F. The five English-dictionary criteria are now marked not-applicable rather than scored as failures — scoring an unmeasured criterion as 0 is the same absence-of-evidence inference plan 9 Part B3 removed for the dictionary-miss case — and a visible `language-limited` ceiling of 74 replaces the English-only `missing-*` ceilings. `coverage: low` and `partial: true` still report the partial reading."
   },
   {
     "id": "case-42",
     "language": "ru",
-    "description": "\u0413\u0435\u043d\u0435\u0440\u0438\u0440\u0443\u0435\u0442 \u043e\u0442\u0447\u0451\u0442\u044b \u043e \u0440\u0435\u043b\u0438\u0437\u0430\u0445 \u0438\u0437 \u0438\u0441\u0442\u043e\u0440\u0438\u0438 \u043a\u043e\u043c\u043c\u0438\u0442\u043e\u0432.",
+    "description": "Генерирует отчёты о релизах из истории коммитов.",
     "expected": {
-      "minScore": 10,
-      "maxScore": 30,
+      "minScore": 33,
+      "maxScore": 53,
       "trigger": "none",
       "boundary": "none",
       "frontLoaded": false
     },
-    "notes": "Russian capability sentence."
+    "notes": "Russian capability sentence. Re-recorded by plan 15 Part F. The five English-dictionary criteria are now marked not-applicable rather than scored as failures — scoring an unmeasured criterion as 0 is the same absence-of-evidence inference plan 9 Part B3 removed for the dictionary-miss case — and a visible `language-limited` ceiling of 74 replaces the English-only `missing-*` ceilings. `coverage: low` and `partial: true` still report the partial reading."
   },
   {
     "id": "case-43",
     "language": "ja",
-    "description": "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8\u3092\u8981\u7d04\u3059\u308b\u30b9\u30ad\u30eb\u3067\u3059\u3002",
+    "description": "日本語のテキストを要約するスキルです。",
     "expected": {
       "minScore": 0,
       "maxScore": 20,
@@ -798,7 +798,7 @@
       "boundary": "full",
       "frontLoaded": true
     },
-    "notes": "Documented limitation: keyword stuffing with *disjoint* trigger/boundary token sets still scores well \u2014 inherent to lexical analysis (see plan 2 non-goals). The echoed-scope variant is capped by case-52."
+    "notes": "Documented limitation: keyword stuffing with *disjoint* trigger/boundary token sets still scores well — inherent to lexical analysis (see plan 2 non-goals). The echoed-scope variant is capped by case-52."
   },
   {
     "id": "case-62",
@@ -849,7 +849,7 @@
   {
     "id": "case-65",
     "language": "de",
-    "description": "Formatiert PDF-Rechnungen in das Standardlayout. Verwenden bei der Monatsabrechnung. Nicht verwenden f\u00fcr gescannte Bilder.",
+    "description": "Formatiert PDF-Rechnungen in das Standardlayout. Verwenden bei der Monatsabrechnung. Nicht verwenden für gescannte Bilder.",
     "expected": {
       "minScore": 55,
       "maxScore": 75,
@@ -862,7 +862,7 @@
   {
     "id": "case-66",
     "language": "fr",
-    "description": "Extrait les tableaux des rapports PDF et les convertit en CSV. \u00c0 utiliser pour les donn\u00e9es tabulaires. Ne pas utiliser pour les documents scann\u00e9s.",
+    "description": "Extrait les tableaux des rapports PDF et les convertit en CSV. À utiliser pour les données tabulaires. Ne pas utiliser pour les documents scannés.",
     "expected": {
       "minScore": 55,
       "maxScore": 75,
@@ -875,15 +875,15 @@
   {
     "id": "case-67",
     "language": "es",
-    "description": "Genera informes PDF a partir de facturas de clientes. Usar cuando se procesan facturas. No usar para im\u00e1genes escaneadas.",
+    "description": "Genera informes PDF a partir de facturas de clientes. Usar cuando se procesan facturas. No usar para imágenes escaneadas.",
     "expected": {
-      "minScore": 35,
-      "maxScore": 55,
+      "minScore": 64,
+      "maxScore": 84,
       "trigger": "none",
       "boundary": "none",
       "frontLoaded": false
     },
-    "notes": "Spanish (Latin script) is detected via stopword profiles and marked language-limited."
+    "notes": "Spanish (Latin script) is detected via stopword profiles and marked language-limited. Re-recorded by plan 15 Part F. The five English-dictionary criteria are now marked not-applicable rather than scored as failures — scoring an unmeasured criterion as 0 is the same absence-of-evidence inference plan 9 Part B3 removed for the dictionary-miss case — and a visible `language-limited` ceiling of 74 replaces the English-only `missing-*` ceilings. `coverage: low` and `partial: true` still report the partial reading."
   },
   {
     "id": "case-68",
@@ -1039,7 +1039,7 @@
   {
     "id": "case-77",
     "language": "en",
-    "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path \u2014 even casually (like \"the xlsx in my downloads\") \u2014 and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved.",
+    "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved.",
     "expected": {
       "minScore": 70,
       "maxScore": 90,
@@ -1055,7 +1055,7 @@
     "id": "case-78",
     "language": "en",
     "description": "Pull tables from PDF invoices. Use when the user needs invoice line items. Do not use for images.",
-    "notes": "Plan 9's headline case: the synonym twin of a dictionary-verb description. \"Pull\" is not a registered capability verb, so this scored 59/weak against 100/excellent for the \"Extract tables\u2026\" wording \u2014 41 points and two label bands for a synonym. Structural capability evidence keeps the missing-action-capability ceiling off and pays half the criterion, which is the honest difference in confidence.",
+    "notes": "Plan 9's headline case: the synonym twin of a dictionary-verb description. \"Pull\" is not a registered capability verb, so this scored 59/weak against 100/excellent for the \"Extract tables…\" wording — 41 points and two label bands for a synonym. Structural capability evidence keeps the missing-action-capability ceiling off and pays half the criterion, which is the honest difference in confidence.",
     "expected": {
       "minScore": 80,
       "maxScore": 100,

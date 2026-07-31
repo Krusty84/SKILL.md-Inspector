@@ -14,7 +14,10 @@ export interface NamedSkill {
 export function detectNameConflicts(skills: NamedSkill[]): NameConflict[] {
   const groups = new Map<string, NamedSkill[]>();
   for (const skill of skills) {
-    const key = skill.name.trim().toLowerCase();
+    // NFC first: `café-tool` written composed and decomposed is one name to a
+    // reader and to the filesystem, and used to be reported as merely
+    // "confusingly similar" instead of a hard conflict.
+    const key = skill.name.normalize('NFC').trim().toLowerCase();
     const group = groups.get(key);
     if (group) {
       group.push(skill);

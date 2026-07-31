@@ -194,9 +194,9 @@ describe('SKILL.md fixture regression contract', () => {
     }
   });
 
-  it('preserves cross-fixture workspace behavior', () => {
+  it('preserves cross-fixture workspace behavior', async () => {
     const skillPaths = fixtureNames.map((name) => path.join(fixturesRoot, name, 'SKILL.md'));
-    const workspace = analyzeWorkspace(fixturesRoot, skillPaths, genericProfile);
+    const workspace = await analyzeWorkspace(fixturesRoot, skillPaths, genericProfile);
 
     expect(workspace.cancelled, 'fixture workspace: scan must complete').toBe(false);
 

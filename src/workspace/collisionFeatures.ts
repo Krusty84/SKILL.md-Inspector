@@ -15,7 +15,7 @@ import {
   DEFAULT_HEURISTIC_DICTIONARIES,
   type HeuristicDictionaries,
 } from '../quality/dictionaries';
-import { escapeRegex, phraseRegex } from '../quality/textMatch';
+import { escapeRegex, phraseRegex, stripMarkerClauses } from '../quality/textMatch';
 import { tokenizeContent } from './similarity';
 
 export interface SkillFeatures {
@@ -48,18 +48,61 @@ export function extractCapabilities(
   const result: string[] = [];
   const seen = new Set<string>();
   const { forms, toBase } = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms);
-  for (const token of contentWords(description)) {
-    if (!forms.has(token)) {
+  const dualRole = new Set(dictionaries.dualRoleTerms);
+  for (const occurrence of wordOccurrences(description)) {
+    if (!forms.has(occurrence.token)) {
       continue;
     }
     // Fold with the registry's own map so custom verbs normalize too.
-    const base = toBase.get(token) ?? token;
+    const base = toBase.get(occurrence.token) ?? occurrence.token;
+    // `test`, `draft`, `patch`… are both a verb and an artifact. Without this
+    // guard the noun won by extraction order: "Create unit tests for a source
+    // file" yielded capabilities ["create", "test"], putting the skill in two
+    // capability groups and halving its overlap with a genuine paraphrase.
+    if (dualRole.has(base) && !occurrence.inVerbPosition) {
+      continue;
+    }
     if (!seen.has(base)) {
       seen.add(base);
       result.push(base);
     }
   }
   return result;
+}
+
+/** Words that put the token after them in a verb position. */
+const VERB_POSITION_LEAD_INS = new Set(['to', 'and', 'or', 'then', 'can', 'will', 'should', 'must']);
+
+interface WordOccurrence {
+  token: string;
+  /**
+   * True when the token opens a sentence or follows a lead-in that only a verb
+   * can follow ("…asks **to** test a module"). Nouns are introduced by a
+   * determiner or a modifier instead ("unit **tests**"), which is the signal
+   * that separates the two readings of a dual-role term.
+   */
+  inVerbPosition: boolean;
+}
+
+/** Lower-cased word tokens with the verb/noun position of each. */
+function wordOccurrences(text: string): WordOccurrence[] {
+  const normalized = text.normalize('NFC');
+  const occurrences: WordOccurrence[] = [];
+  let previousToken: string | undefined;
+  let previousEnd = 0;
+  for (const match of normalized.matchAll(WORD_RE)) {
+    const start = match.index ?? 0;
+    const gap = normalized.slice(previousEnd, start);
+    const startsSentence = previousToken === undefined || /[.!?:;\n]/.test(gap);
+    occurrences.push({
+      token: match[0].toLowerCase(),
+      inVerbPosition:
+        startsSentence || (previousToken !== undefined && VERB_POSITION_LEAD_INS.has(previousToken)),
+    });
+    previousToken = match[0].toLowerCase();
+    previousEnd = start + match[0].length;
+  }
+  return occurrences;
 }
 
 /** Recognized artifacts/domain terms — single-word hints, acronyms, and multi-word phrases (Task 37). */
@@ -163,7 +206,7 @@ export function extractPositiveTriggers(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): string[] {
-  const withoutBoundaries = stripClauses(description, exclusionMarkers(dictionaries));
+  const withoutBoundaries = stripMarkerClauses(description, exclusionMarkers(dictionaries));
   return extractClauses(withoutBoundaries, [
     ...dictionaries.positiveTriggerPhrases,
     ...dictionaries.exclusiveTriggerPhrases,
@@ -312,7 +355,7 @@ export function boundaryFeatures(
   // it does: "Extract text out of PDFs. Do not use for creating PDFs." reported
   // `create` as one of its capabilities, which made it look like the PDF *writer*
   // it had just disclaimed (plan 10).
-  const scopeText = stripClauses(description, exclusionMarkers(dictionaries));
+  const scopeText = stripMarkerClauses(description, exclusionMarkers(dictionaries));
   // Computed once and reused: this runs per skill in the O(n) pre-pass, and
   // extractArtifacts is the most expensive call in it.
   const artifacts = scopeArtifacts(scopeText, dictionaries);
@@ -402,9 +445,22 @@ export function boundarySeparation(
   return boundarySeparationOf(boundaryFeatures(a, dictionaries), boundaryFeatures(b, dictionaries));
 }
 
-/** Lower-cased alphanumeric word tokens (keeps short tokens like acronyms). */
+/**
+ * Word tokens, matching `similarity.tokenizeContent` (keeps short tokens like
+ * acronyms).
+ *
+ * Plan 10 widened `similarity.ts` to `\p{L}\p{N}` but left this on `[a-z0-9]`,
+ * and scope overlap carries weight 0.70 — the leading term in the composite. So
+ * the metric that decides collisions was blind to every non-Latin description
+ * (Russian and Chinese produced no capabilities and no artifacts at all) and
+ * shredded accented Latin: `cálculo` tokenized as `['c', 'lculo']`. NFC first,
+ * so the same visible word tokenizes the same however the author's editor
+ * encoded it.
+ */
+const WORD_RE = /[\p{L}\p{N}]+/gu;
+
 function contentWords(text: string): string[] {
-  return text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  return text.normalize('NFC').toLowerCase().match(WORD_RE) ?? [];
 }
 
 /**
@@ -413,7 +469,7 @@ function contentWords(text: string): string[] {
  * makes two "Only for PDF files" skills read as overlapping (plan 7 Part A).
  */
 function domainTokens(description: string, dictionaries: HeuristicDictionaries): Set<string> {
-  const withoutBoundaries = stripClauses(description, exclusionMarkers(dictionaries));
+  const withoutBoundaries = stripMarkerClauses(description, exclusionMarkers(dictionaries));
   return new Set(
     tokenizeContent(withoutBoundaries, dictionaries.collisionStopwords).map((token) =>
       normalizeContentToken(token, dictionaries),
@@ -465,25 +521,6 @@ function extractClauses(text: string, markers: readonly string[]): string[] {
     .sort((x, y) => x.at - y.at)
     .map((c) => c.text)
     .filter((clause) => (seen.has(clause) ? false : (seen.add(clause), true)));
-}
-
-/** Removes every marker clause (marker → next terminator) from the text. */
-function stripClauses(text: string, markers: readonly string[]): string {
-  let result = text;
-  for (const marker of markers) {
-    const re = phraseRegex(marker, 'i');
-    let match: RegExpExecArray | null;
-    // Non-global regex: each exec rescans from the start of the shrunken text,
-    // and every iteration removes at least the marker, so this terminates.
-    while ((match = re.exec(result)) !== null) {
-      const start = match.index;
-      const after = result.slice(start + match[0].length);
-      const term = after.search(TERMINATOR);
-      const end = term === -1 ? result.length : start + match[0].length + term;
-      result = result.slice(0, start) + result.slice(end);
-    }
-  }
-  return result;
 }
 
 function clauseAfter(text: string, start: number): string {

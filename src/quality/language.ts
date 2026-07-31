@@ -43,7 +43,14 @@ function profile(unique: string, homograph: string): ForeignProfile {
 
 const FOREIGN_PROFILES: readonly ForeignProfile[] = [
   profile('für nicht werden wird verwenden ist und eine einen', 'der die das mit von bei'), // de
-  profile('pour pas avec dans ne aux utiliser sont', 'le la les des une est du au'), // fr
+  // The unique list carries conjugated and diacritic-bearing forms as well as
+  // infinitives: a description written as "Utilisez ceci lorsque…" contains no
+  // bare `utiliser`, so French went undetected and took the English-only
+  // ceilings with it (plan 15 Part F).
+  profile(
+    'pour pas avec dans ne aux utiliser utilise utilisez utilisent utilisé sont lorsque données être également ceci depuis',
+    'le la les des une est du au',
+  ), // fr
   profile('cuando usar desde según imágenes', 'el la los las una para con no se por es son'), // es
   profile('usare gli perché è sono quando', 'il lo la le una per con non di da'), // it
   profile('usar quando não são é', 'o os as um uma para com de da do'), // pt
@@ -57,6 +64,11 @@ const MIN_FOREIGN_HITS = 3;
 const MIN_DISTINCT_FOREIGN_MARKERS = 2;
 
 export function isProbablyNonEnglish(text: string): boolean {
+  // NFC first, for the same reason every other tokenizer entry point does it:
+  // the German markers in "Konvertiert PDF-Dateien für Berichte…" are found in
+  // the composed spelling and lost in the decomposed one, because `für` splits
+  // into `fu` + a combining mark. Same visible text, opposite answer.
+  text = text.normalize('NFC');
   const letters = text.match(/\p{L}/gu);
   if (!letters || letters.length === 0) {
     return false; // no letters (digits/punctuation only) — nothing to warn about

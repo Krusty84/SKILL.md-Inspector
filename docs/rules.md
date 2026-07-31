@@ -298,6 +298,25 @@ off all eighteen. The rule ids are the `id` fields in
 `src/validation/security/defaultSecurityCatalog.json`. A `code#ruleId` key takes
 precedence over the bare code.
 
+Several patterns matching the same line collapse into **one** finding, and that
+finding carries every id it covers — so `sudo chmod 777 /srv && git push --force`
+is addressable by `#sudo`, `#chmod-777` *or* `#git-push-force`.
+
+### What is scanned
+
+The Markdown body, every string value in the frontmatter, and (unless
+`security.scanResourceFiles` is off) each bundled resource file. The frontmatter
+`description` matters most: it is the one field an agent loads at *discovery*
+time, for every session, whether or not the skill is ever invoked, so it is
+scanned for injection wording, sensitive paths and invisible Unicode as well as
+for secrets. Frontmatter is treated as prose, so command patterns do not run
+over it.
+
+Injection phrases are matched over the **rendered** text of each paragraph and
+heading, reassembled across inline markup. `Ignore all *previous* instructions.`
+and `Ignore all previous instructions.` render the same and are reported the
+same; the reported range still points at the source columns.
+
 Each line reports at most one command finding per tier: a risky match on a line
 that already carries a dangerous one is dropped, and same-tier matches on one
 line are merged into a single finding naming each distinct rule.
@@ -330,6 +349,11 @@ permission-skipping agent flags, and writes to agent identity files.
 - Good: download, review, then run; or add the command — or the exact line you
   run it on — to `security.allowedCommands`. That allowlist applies to this tier
   only; it cannot suppress a `dangerous` finding.
+
+  An allowlist entry must be at least three characters and must line up with a
+  token boundary in what matched. `["o"]` used to silence the whole tier and
+  `["sh"]` silenced `git push --force` through the "sh" inside "push"; neither
+  does now.
 
 ### `skill.security.service.risky`
 
@@ -522,6 +546,25 @@ resource.
 These diagnostics affect validation status and warning/error counts. They do not
 change instruction or resource authoring-quality scores.
 
+**Two bounds on what is counted.**
+
+A bundled resource above `skillMdInspector.tokens.maxCountedFileSizeKb` (1 MB by
+default) is skipped rather than read and encoded, exactly as an over-size file is
+skipped by the security scanner. A skipped file contributes nothing to the
+per-file or aggregate totals.
+
+Counting is exact for every realistic document, and *approximate* for one shape
+that is not. BPE merging is quadratic in the length of a single unbroken run of
+non-whitespace characters, with no ceiling in the encoding itself: before this
+bound, a 200,000-character single-line body took 48.7 minutes to count, on the
+debounced while-typing path. Runs are therefore encoded whole up to a fixed work
+budget — which every ordinary word, URL, hash, base64 line and long identifier
+fits, so the whole shipped corpus counts exactly — and past that budget a long
+run is encoded in pieces and the pieces summed. The seams shift the count
+slightly. That only happens to input no real document contains (a 200,000-
+character word, or a page of zero-width padding), and an approximate count in
+bounded time is the better trade there.
+
 ### `skill.token.body.limit`
 
 **warning** · auto-fix: no
@@ -656,9 +699,25 @@ judgement that the description is good.
 
 **Structural capability evidence is Latin-script only.** The shape rules that
 recognize an unregistered capability verb ("Formatiert PDF-Rechnungen…") key off
-Latin suffixes, so a non-Latin description gets no such credit and keeps the
-`missing-action-capability` ceiling. Non-English descriptions are already marked
-language-limited; this is a further limit on what the score means for them.
+Latin suffixes, so a non-Latin description gets no such credit.
+
+**A language-limited description is scored on fewer criteria.** Five of the seven
+criteria — action verb, usage trigger, boundary, front-loaded intent, vagueness —
+are English-dictionary checks. On a description the dictionaries cannot read they
+measure nothing, so they are reported as *not checked* (0 of 0) rather than
+scored as failures, and the score is the share of the remaining, language-
+independent criteria that was earned. A visible `language-limited` ceiling caps
+the result at 74, because "excellent" would be a claim about text the tool did
+not analyze, and `coverage: low` plus `partial: true` say the same thing in the
+report. Before this, a Chinese description that stated its capability, artifact
+and trigger scored 35/poor — for being written in Chinese.
+
+**Evidence comes from what the skill says it does.** Capability and artifact
+evidence is read from the description with its `Do not use for …` clauses
+removed, and capability additionally with its `Use when …` clauses removed. A
+disclaimer used to pay for the capability and artifact it disclaimed (+31 points
+for adding "Do not use for generating reports."), and a verb inside the trigger
+clause used to pay the full action-verb criterion.
 
 ---
 

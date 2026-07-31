@@ -78,6 +78,121 @@ export interface CollisionOptions {
   boundarySeparationWeight?: number;
 }
 
+/** Smallest and largest usable character n-gram size. */
+const MIN_NGRAM_SIZE = 2;
+const MAX_NGRAM_SIZE = 8;
+
+/** One rejected numeric setting, for the caller to surface as a configuration warning. */
+export interface CollisionOptionWarning {
+  /** Dotted setting path relative to `skillMdInspector.`, e.g. `collision.weights.cosine`. */
+  setting: string;
+  message: string;
+}
+
+function describe(value: unknown): string {
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value);
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Replaces a non-finite, negative, or non-numeric setting with its default.
+ *
+ * Every one of these arrives from `skillMdInspector.collision.*`, which is plain
+ * user JSON. Unguarded they propagated straight into the composite: a single
+ * `NaN` weight made `normalizeWeights` return all-`NaN` and the report showed
+ * `similarity: NaN` at risk "Low", and a `NaN` *threshold* reported every pair
+ * in the workspace — 124,750 of them at 500 skills — because `NaN < NaN` is
+ * false.
+ */
+function sanitizeNumber(
+  value: number | undefined,
+  fallback: number,
+  bounds: { min: number; max: number },
+  setting: string,
+  warnings: CollisionOptionWarning[],
+): number {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    warnings.push({
+      setting,
+      message: `Ignoring non-numeric value ${describe(value)}; using ${fallback}.`,
+    });
+    return fallback;
+  }
+  const clamped = Math.min(bounds.max, Math.max(bounds.min, value));
+  if (clamped !== value) {
+    warnings.push({
+      setting,
+      message: `Value ${value} is outside ${bounds.min}–${bounds.max}; using ${clamped}.`,
+    });
+  }
+  return clamped;
+}
+
+/**
+ * Validates the user-tunable collision numerics, returning usable options plus
+ * the settings that had to be replaced. Idempotent, so `detectCollisions` can
+ * apply it defensively while `readConfig` applies it to collect the warnings.
+ */
+export function sanitizeCollisionOptions(options: CollisionOptions = {}): {
+  options: Required<CollisionOptions>;
+  warnings: CollisionOptionWarning[];
+} {
+  const warnings: CollisionOptionWarning[] = [];
+  const rawWeights = (options.weights ?? DEFAULT_COLLISION_WEIGHTS) as unknown as Record<
+    string,
+    unknown
+  >;
+  const weights = { ...DEFAULT_COLLISION_WEIGHTS };
+  for (const key of Object.keys(DEFAULT_COLLISION_WEIGHTS) as (keyof CollisionWeights)[]) {
+    // A weights object with no `scopeOverlap` key predates plan 10; the missing
+    // key takes its default rather than 0 (see normalizeWeights).
+    if (rawWeights[key] === undefined) continue;
+    weights[key] = sanitizeNumber(
+      rawWeights[key] as number,
+      DEFAULT_COLLISION_WEIGHTS[key],
+      { min: 0, max: Number.MAX_SAFE_INTEGER },
+      `collision.weights.${key}`,
+      warnings,
+    );
+  }
+  return {
+    options: {
+      threshold: sanitizeNumber(
+        options.threshold,
+        DEFAULT_COLLISION_THRESHOLD,
+        { min: 0, max: 1 },
+        'collision.threshold',
+        warnings,
+      ),
+      ngramSize: Math.trunc(
+        sanitizeNumber(
+          options.ngramSize,
+          DEFAULT_NGRAM_SIZE,
+          { min: MIN_NGRAM_SIZE, max: MAX_NGRAM_SIZE },
+          'collision.ngramSize',
+          warnings,
+        ),
+      ),
+      boundarySeparationWeight: sanitizeNumber(
+        options.boundarySeparationWeight,
+        DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
+        { min: 0, max: 1 },
+        'collision.boundarySeparationWeight',
+        warnings,
+      ),
+      weights,
+    },
+    warnings,
+  };
+}
+
 /**
  * Detects pairs of skills whose scope overlaps (brief §13.2). Each pair gets a
  * deterministic composite score led by scope overlap — whether the two skills do
@@ -112,10 +227,13 @@ export function detectCollisions(
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
   cancel?: { isCancellationRequested: boolean },
 ): SkillCollision[] {
-  const threshold = options.threshold ?? DEFAULT_COLLISION_THRESHOLD;
-  const weights = normalizeWeights(options.weights ?? DEFAULT_COLLISION_WEIGHTS);
-  const ngramSize = options.ngramSize ?? DEFAULT_NGRAM_SIZE;
-  const boundaryWeight = options.boundarySeparationWeight ?? DEFAULT_BOUNDARY_SEPARATION_WEIGHT;
+  // Defensive: the numerics are user JSON, and an unguarded `NaN` anywhere in
+  // them turned every reported similarity into `NaN` (see sanitizeCollisionOptions).
+  const sanitized = sanitizeCollisionOptions(options).options;
+  const threshold = sanitized.threshold;
+  const weights = normalizeWeights(sanitized.weights);
+  const ngramSize = sanitized.ngramSize;
+  const boundaryWeight = sanitized.boundarySeparationWeight;
 
   // O(n) pre-pass (P3): compute every per-skill quantity once here so the O(n²)
   // pair loop only combines precomputed values. Previously the char n-gram

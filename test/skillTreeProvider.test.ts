@@ -117,7 +117,7 @@ function analysis(): WorkspaceAnalysis {
 }
 
 async function loadedProvider(model = analysis()): Promise<SkillTreeProvider> {
-  vi.mocked(computeWorkspaceAnalysis).mockReturnValue({ rootDir: '/ws', analysis: model });
+  vi.mocked(computeWorkspaceAnalysis).mockResolvedValue({ rootDir: '/ws', analysis: model });
   const provider = new SkillTreeProvider();
   await provider.refresh();
   return provider;
@@ -125,7 +125,7 @@ async function loadedProvider(model = analysis()): Promise<SkillTreeProvider> {
 
 describe('SkillTreeProvider workspace skill tooltip', () => {
   it('renders validation and authoring quality details in the tooltip', async () => {
-    vi.mocked(computeWorkspaceAnalysis).mockReturnValue({ rootDir: '/ws', analysis: analysis() });
+    vi.mocked(computeWorkspaceAnalysis).mockResolvedValue({ rootDir: '/ws', analysis: analysis() });
     const provider = await loadedProvider();
     const node = provider.getChildren().find((candidate) => candidate.type === 'skill')!;
     const item = provider.getTreeItem(node);
@@ -244,7 +244,7 @@ describe('SkillTreeProvider collision tooltip', () => {
 
 describe('SkillTreeProvider loading', () => {
   it('returns a non-clickable spinner before analysis completes and refreshes afterward', async () => {
-    vi.mocked(computeWorkspaceAnalysis).mockReturnValue({ rootDir: '/ws', analysis: analysis() });
+    vi.mocked(computeWorkspaceAnalysis).mockResolvedValue({ rootDir: '/ws', analysis: analysis() });
     const provider = new SkillTreeProvider();
 
     const [loading] = provider.getChildren();
@@ -272,8 +272,8 @@ describe('SkillTreeProvider loading', () => {
     refreshed.skills[0]!.name = 'refreshed-skill';
     vi.mocked(computeWorkspaceAnalysis).mockClear();
     vi.mocked(computeWorkspaceAnalysis)
-      .mockReturnValueOnce({ rootDir: '/ws', analysis: analysis() })
-      .mockReturnValueOnce({ rootDir: '/ws', analysis: refreshed });
+      .mockResolvedValueOnce({ rootDir: '/ws', analysis: analysis() })
+      .mockResolvedValueOnce({ rootDir: '/ws', analysis: refreshed });
 
     const first = provider.refresh();
     const second = provider.refresh();
@@ -307,7 +307,7 @@ describe('SkillTreeProvider loading', () => {
       { type: 'message', text: 'Unable to analyze workspace skills.' },
     ]);
 
-    vi.mocked(computeWorkspaceAnalysis).mockReturnValue({ rootDir: '/ws', analysis: analysis() });
+    vi.mocked(computeWorkspaceAnalysis).mockResolvedValue({ rootDir: '/ws', analysis: analysis() });
     await provider.refresh();
     expect(provider.getChildren()).toEqual([expect.objectContaining({ type: 'skill' })]);
   });

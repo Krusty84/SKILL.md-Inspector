@@ -31,7 +31,9 @@ export function tokenizeContent(
   stopwords: readonly string[] = DEFAULT_HEURISTIC_DICTIONARIES.collisionStopwords,
 ): string[] {
   const ignored = new Set(stopwords);
-  return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter(
+  // NFC first, so a composed and a decomposed spelling of the same word produce
+  // the same token (and therefore the same similarity).
+  return (text.normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter(
     (token) => token.length > 2 && !ignored.has(token),
   );
 }

@@ -171,6 +171,12 @@ export interface WorkspaceAnalysis {
   similarNames: SimilarNames[];
   /** True when the scan stopped early due to cancellation; `skills` is then partial. */
   cancelled: boolean;
+  /**
+   * Collisions found but not reported, when the pair count exceeded the cap.
+   * Absent when nothing was dropped. A homogeneous 500-skill workspace produces
+   * 124,750 pairs, and rendering all of them says nothing the count does not.
+   */
+  suppressedCollisions?: number;
 }
 
 /** An exported agent projection: the report projection minus the display label. */

@@ -1,5 +1,5 @@
 import { DEFAULT_HEURISTIC_DICTIONARIES, type HeuristicDictionaries } from './dictionaries';
-import { escapeRegex, phraseRegex } from './textMatch';
+import { compareInvariant, escapeRegex, phraseRegex, stripMarkerClauses } from './textMatch';
 import { buildVerbForms, singularize } from './wordForms';
 
 export interface PhraseMatch {
@@ -69,6 +69,13 @@ interface LeadingCapabilityMatch extends PhraseMatch {
 export interface DescriptionAnalysis {
   raw: string;
   trimmed: string;
+  /**
+   * Length in Unicode code points, not UTF-16 code units. An emoji or any other
+   * astral character is one character to the author and to every message that
+   * quotes this number; counting code units reported 520 of them as "1040
+   * characters; the maximum is 1024" — a message wrong in its own terms, on a
+   * `specification` error the author cannot switch off.
+   */
   length: number;
   wordCount: number;
   leadingText: string;
@@ -85,6 +92,50 @@ export interface DescriptionAnalysis {
   instructionHeavy: InstructionHeavyAnalysis;
 }
 
+/**
+ * The description with its exclusion clauses removed — what the skill says it
+ * *does*, as opposed to what it says it does not.
+ *
+ * Uses the same marker lists the collision layer strips (`boundaryFeatures`), so
+ * the two layers agree on where a skill's scope ends.
+ */
+export function scopeTextOf(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): string {
+  return stripMarkerClauses(description, [
+    ...dictionaries.negativeBoundaryPhrases,
+    ...dictionaries.restrictiveBoundaryPhrases,
+  ]);
+}
+
+/**
+ * The description with both its exclusion clauses and its trigger clauses
+ * removed — what is left is the capability statement.
+ *
+ * The capability criterion used to be satisfied by any registered verb in the
+ * first two sentences, so the *trigger* clause paid for it: every one of
+ * `Extract | Yank | Salvage | Frobnicate | Purple line items from PDF invoices.
+ * Use when the user asks to pull structured data out of a scanned invoice.`
+ * scored 100/excellent on the strength of `scanned`, a past participle used
+ * adjectivally inside the trigger. Narrowing to the first sentence instead was
+ * measured and rejected: real shipped skills routinely state the capability
+ * across two sentences ("Help submit an expense … Detects the right tool, finds
+ * receipts, checks for duplicates"), and it cost the calibration corpus its
+ * median. Removing the clause that belongs to another criterion is the precise
+ * fix.
+ */
+export function capabilityTextOf(
+  description: string,
+  dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
+): string {
+  return stripMarkerClauses(scopeTextOf(description, dictionaries), [
+    ...dictionaries.positiveTriggerPhrases,
+    ...dictionaries.exclusiveTriggerPhrases,
+    ...dictionaries.scopeRestrictionPhrases,
+  ]);
+}
+
 export function analyzeDescription(
   description: string,
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
@@ -94,12 +145,21 @@ export function analyzeDescription(
   const tokens = tokenize(trimmed);
   const triggerClause = assessScopeClause(trimmed, 'trigger', dictionaries);
   const boundaryClause = assessScopeClause(trimmed, 'boundary', dictionaries);
-  const artifactEvidence = analyzeArtifactEvidence(trimmed, dictionaries);
-  const actionVerb = matchDescriptionVerb(trimmed, dictionaries);
+  // Capability and artifact evidence comes from what the skill says it DOES.
+  // The collision layer has stripped exclusion clauses since plan 10; the
+  // quality layer never got the same fix, so "Do not use for generating
+  // reports." credited the capability `generate` and the artifact `report` — the
+  // exact pair the sentence disclaims — and moved a description from 59/weak to
+  // 90/excellent. The boundary clause still scores the *boundary* criterion,
+  // which reads the full text.
+  const scopeText = scopeTextOf(trimmed, dictionaries);
+  const capabilityText = capabilityTextOf(trimmed, dictionaries);
+  const artifactEvidence = analyzeArtifactEvidence(scopeText, dictionaries);
+  const actionVerb = matchDescriptionVerb(trimmed, capabilityText, dictionaries);
   return {
     raw,
     trimmed,
-    length: trimmed.length,
+    length: [...trimmed].length,
     wordCount: trimmed.split(/\s+/).filter(Boolean).length,
     leadingText: trimmed.split(/\s+/).slice(0, 12).join(' ').toLowerCase(),
     actionVerb,
@@ -216,6 +276,54 @@ export function hasActionVerb(
  * at all.
  */
 const VERBISH_SHAPE = /(?:e|es|s|ify|ise|ize|ate|ing|[bcdfgklmnprtwx])$/i;
+
+/**
+ * Ordinary English words that satisfy {@link VERBISH_SHAPE} but are never the
+ * verb of a capability statement — colours and common adjectives, which end in
+ * the same weak `-e` / consonant the shape test accepts.
+ *
+ * Without this, "Purple line items from PDF invoices…" read as a stated (if
+ * unrecognized) capability, so the whole Extract | Frobnicate | Purple ladder
+ * scored alike. This is not a part-of-speech tagger; it is the closed set of
+ * words that make the shape test obviously wrong, in the same spirit as
+ * `COMMON_UPPERCASE_WORDS` on the artifact side.
+ */
+const NEVER_CAPABILITY_ADJECTIVES = new Set([
+  'purple',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'violet',
+  'white',
+  'black',
+  'silver',
+  'golden',
+  'able',
+  'ample',
+  'brief',
+  'calm',
+  'clever',
+  'eager',
+  'fancy',
+  'gentle',
+  'humble',
+  'little',
+  'lonely',
+  'lovely',
+  'mere',
+  'nimble',
+  'noble',
+  'quiet',
+  'ripe',
+  'sad',
+  'simple',
+  'subtle',
+  'tidy',
+  'vast',
+  'wise',
+]);
+
 /** Bare pronoun/auxiliary openings that are never a capability, whatever follows. */
 const NEVER_CAPABILITY = new Set([
   'is',
@@ -290,7 +398,11 @@ function structuralCapability(
       vagueWords.has(base)
     );
   };
-  if (isEmpty(candidate) || NEVER_CAPABILITY.has(candidate)) {
+  if (
+    isEmpty(candidate) ||
+    NEVER_CAPABILITY.has(candidate) ||
+    NEVER_CAPABILITY_ADJECTIVES.has(candidate)
+  ) {
     return undefined;
   }
   // An all-caps opening is a name or an acronym ("PDF reports…"), not a verb.
@@ -314,7 +426,11 @@ function structuralCapability(
 /** Dictionary and structural capability evidence, reported separately. */
 export function analyzeCapabilityEvidence(
   description: string,
-  actionVerb: PhraseMatch = matchDescriptionVerb(description, DEFAULT_HEURISTIC_DICTIONARIES),
+  actionVerb: PhraseMatch = matchDescriptionVerb(
+    description,
+    capabilityTextOf(description),
+    DEFAULT_HEURISTIC_DICTIONARIES,
+  ),
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): CapabilityEvidence {
   if (actionVerb.found) {
@@ -406,17 +522,56 @@ export function hasExclusiveTriggerPhrase(
 ): PhraseMatch {
   return matchPhrase(description, dictionaries.exclusiveTriggerPhrases);
 }
+/**
+ * The vague dictionary terms present in `text`, de-duplicated by span.
+ *
+ * `general` and `general-purpose` are both in the dictionary and both match "a
+ * general-purpose formatter", so one adjective was counted twice — enough to
+ * zero the whole criterion, with a message naming two problems that are one.
+ * When two matched terms occupy the same span, only the longer survives: it is
+ * the more specific description of what the author wrote.
+ */
 export function findVagueTerms(
   text: string,
   tokens: string[] = tokenize(text),
   dictionaries: HeuristicDictionaries = DEFAULT_HEURISTIC_DICTIONARIES,
 ): string[] {
   const forms = tokenForms(tokens, dictionaries);
-  return [...dictionaries.vagueTerms]
-    .filter((term) =>
-      /^[\p{L}\p{N}]+$/u.test(term) ? forms.has(term) : phraseRegex(term).test(text),
-    )
-    .sort();
+  const matched = [...dictionaries.vagueTerms].filter((term) =>
+    /^[\p{L}\p{N}]+$/u.test(term) ? forms.has(term) : phraseRegex(term).test(text),
+  );
+  // Longest first, so a compound claims its span before its own substring can.
+  const byLength = [...matched].sort((a, b) => b.length - a.length || (a < b ? -1 : 1));
+  const claimed: Array<{ start: number; end: number }> = [];
+  const kept: string[] = [];
+  for (const term of byLength) {
+    const spans = spansOf(text, term);
+    // A term with no locatable span matched through morphology (`forms`), not
+    // literally; keep it — there is nothing to overlap against.
+    if (spans.length === 0) {
+      kept.push(term);
+      continue;
+    }
+    const fresh = spans.filter(
+      (span) => !claimed.some((taken) => span.start >= taken.start && span.end <= taken.end),
+    );
+    if (fresh.length === 0) {
+      continue;
+    }
+    claimed.push(...fresh);
+    kept.push(term);
+  }
+  return kept.sort();
+}
+
+/** Every whole-word span of `term` in `text`. */
+function spansOf(text: string, term: string): Array<{ start: number; end: number }> {
+  const spans: Array<{ start: number; end: number }> = [];
+  for (const match of text.matchAll(phraseRegex(term, 'gi'))) {
+    const start = match.index ?? 0;
+    spans.push({ start, end: start + match[0].length });
+  }
+  return spans;
 }
 function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries): PhraseMatch {
   const forms = buildVerbForms(dictionaries.actionVerbs, dictionaries.actionVerbForms).forms;
@@ -431,13 +586,24 @@ function matchVerb(tokens: string[], dictionaries: HeuristicDictionaries): Phras
  */
 function matchDescriptionVerb(
   description: string,
+  capabilityText: string,
   dictionaries: HeuristicDictionaries,
 ): PhraseMatch {
+  // The positional match reads the whole description: a capability stated
+  // *inside* a leading trigger ("Use this skill when generating PDF reports")
+  // is a stated capability, and `matchLeadingCapability` already distinguishes
+  // that position from an incidental mention.
   const match = matchLeadingCapability(description, dictionaries);
   if (match.found) {
     return { found: true, matched: match.matched };
   }
-  const firstTwoSentences = description
+  // The unpositioned fallback reads `capabilityText`, which has the trigger and
+  // boundary clauses removed. It used to read the raw first two sentences and so
+  // paid the full 20/20 criterion for a verb inside the trigger — every one of
+  // `Extract | Yank | Salvage | Frobnicate | Purple line items from PDF
+  // invoices. Use when the user asks to pull structured data out of a scanned
+  // invoice.` scored 100/excellent on the strength of `scanned`.
+  const firstTwoSentences = capabilityText
     .split(/(?<=[.!?])\s+/)
     .slice(0, 2)
     .join(' ');
@@ -804,7 +970,7 @@ export function assessScopeClause(
       (a, b) =>
         Number(b.contentFound) - Number(a.contentFound) ||
         a.absoluteOffset - b.absoluteOffset ||
-        a.marker.localeCompare(b.marker),
+        compareInvariant(a.marker, b.marker),
     );
   const selected = candidates[0];
   return (
@@ -1059,6 +1225,27 @@ const COMMON_UPPERCASE_WORDS = new Set([
  * The mid-sentence rule is what keeps this from firing on every sentence-initial
  * capital, which would make the check vacuous.
  */
+/**
+ * Proper nouns that name the agent or its vendor rather than anything the skill
+ * operates on. A description mentions them because of the tool, so they are
+ * evidence of nothing about the skill's domain.
+ */
+const AGENT_PROPER_NOUNS = new Set([
+  'claude',
+  'anthropic',
+  'openai',
+  'chatgpt',
+  'copilot',
+  'cursor',
+  'gemini',
+  'codex',
+  'opencode',
+  'assistant',
+  'agent',
+  'skill',
+  'user',
+]);
+
 function structuralArtifact(text: string, dictionaries: HeuristicDictionaries): string | undefined {
   if (matchesFilename(text)) {
     const filename = text.match(/\p{L}[\p{L}\p{N}_-]{0,63}\.[a-z0-9]{1,8}\b/iu)?.[0];
@@ -1100,24 +1287,44 @@ function structuralArtifact(text: string, dictionaries: HeuristicDictionaries): 
       if (/^\p{L}{3,}(?:-\p{L}{3,})+$/u.test(token)) {
         return token;
       }
-      // A proper noun capitalized mid-sentence.
-      if (index > 0 && /^\p{Lu}[\p{Ll}]{2,}$/u.test(token)) {
+      // A proper noun capitalized mid-sentence — but not one of the names that
+      // appear in a description because of the *tool*, not the domain. "Helps
+      // the user with tasks. Use this skill when Claude needs assistance."
+      // names no artifact at all, and `Claude` was suppressing the
+      // `missing-concrete-artifact` ceiling and paying half the criterion.
+      if (
+        index > 0 &&
+        /^\p{Lu}[\p{Ll}]{2,}$/u.test(token) &&
+        !AGENT_PROPER_NOUNS.has(lower)
+      ) {
         return token;
       }
     }
   }
   return undefined;
 }
+/**
+ * Whether `term` (an acronym) appears in `text`.
+ *
+ * Acronyms were the only artifact vocabulary never singularized: `artifactHints`
+ * go through `tokenize` + `singularize`, while these were matched by a
+ * `\b`-anchored regex on the bare term. So `Validate JWT payloads.` matched and
+ * `Validate JWTs.` did not — costing the plural the whole 15-point artifact
+ * criterion and tripping the 59-point `missing-concrete-artifact` ceiling.
+ * An optional plural suffix is accepted, and the uppercase-only guard still
+ * looks at the acronym itself rather than the suffix (`JWTs` is uppercase, `jwts`
+ * is not).
+ */
 function acronymMatches(
   text: string,
   term: string,
   uppercaseOnlyAcronyms: readonly string[],
 ): boolean {
   const uppercaseOnly = new Set(uppercaseOnlyAcronyms);
-  const re = new RegExp(`\\b${escapeRegex(term)}\\b`, 'gi');
+  const re = new RegExp(`\\b(${escapeRegex(term)})(?:'?s)?\\b`, 'gi');
   const matches = [...text.matchAll(re)];
   return matches.some(
-    (match) => !uppercaseOnly.has(term.toLowerCase()) || match[0] === match[0].toUpperCase(),
+    (match) => !uppercaseOnly.has(term.toLowerCase()) || match[1] === match[1].toUpperCase(),
   );
 }
 function normalizeSeparators(text: string): string {
@@ -1129,8 +1336,17 @@ function normalizeSeparators(text: string): string {
 function phraseMatchesNormalized(text: string, phrase: string): boolean {
   return text.includes(` ${phrase.toLowerCase().replace(/[ _-]+/g, ' ')} `);
 }
+/**
+ * Lower-cased word tokens.
+ *
+ * NFC first: `tokenize('naïve')` returned `['naïve']` for the composed spelling
+ * and `['nai', 've']` for the decomposed one, so the same visible word matched a
+ * dictionary or did not depending on how the author's editor encoded it — and
+ * the German markers in "Konvertiert PDF-Dateien für Berichte…" were found in
+ * NFC and lost in NFD, flipping language detection with them.
+ */
 export function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return text.normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 function tokenForms(tokens: string[], dictionaries: HeuristicDictionaries): Set<string> {
   const forms = new Set<string>();

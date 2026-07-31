@@ -8,6 +8,7 @@ import { analyzeSkill } from './analyzeSkill';
 import { RemoteLinkCheckSession, type RemoteLinkDependencies } from '../online/remoteLinkChecker';
 import { nodeRemoteLinkDependencies } from '../online/nodeRemoteLinkDependencies';
 import { augmentWithRemoteDiagnostics } from '../online/augmentRemoteDiagnostics';
+import { sharedFileTokenCache, sharedResourceCache } from './analysisCaches';
 
 export interface WorkspaceAnalysisResult {
   rootDir: string;
@@ -20,9 +21,9 @@ export interface WorkspaceAnalysisResult {
  * tree view, workspace report, and index export share. Optional cancellation and
  * progress hooks are forwarded to the analyzer.
  */
-export function computeWorkspaceAnalysis(
+export async function computeWorkspaceAnalysis(
   options?: WorkspaceAnalysisOptions,
-): WorkspaceAnalysisResult | undefined {
+): Promise<WorkspaceAnalysisResult | undefined> {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
     return undefined;
@@ -32,7 +33,7 @@ export function computeWorkspaceAnalysis(
   const skillPaths = discoverSkillPaths(rootDir, config.discoveryExclude);
   return {
     rootDir,
-    analysis: analyzeWorkspace(
+    analysis: await analyzeWorkspace(
       rootDir,
       skillPaths,
       config.profile,
@@ -45,6 +46,16 @@ export function computeWorkspaceAnalysis(
         resourceDirectories: config.resourceDirectories,
         compatibilityAgents: config.compatibilityAgents,
         security: config.security,
+        maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
+        maxReportedCollisions: config.maxReportedCollisions,
+        // Share the caches the diagnostics provider owns. Without these the
+        // workspace path re-walked every skill directory and re-encoded every
+        // reference file on each scan, for the skills that had not changed.
+        discover: options?.discover ?? ((dir, exclude) => sharedResourceCache.discover(dir, exclude)),
+        fileTokens:
+          options?.fileTokens ??
+          ((resource) =>
+            sharedFileTokenCache.tokensFor(resource.absolutePath, config.maxCountedFileSizeBytes)),
       },
     ),
   };
@@ -79,6 +90,7 @@ async function augmentAnalysisOnline(
           dictionaries: config.heuristicDictionaries,
           resourceDirectories: config.resourceDirectories,
           security: config.security,
+          maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
         });
         const augmented = await augmentWithRemoteDiagnostics(
           staticAnalysis,
@@ -114,7 +126,7 @@ export async function computeWorkspaceAnalysisOnline(
   options?: WorkspaceAnalysisOptions,
   remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
 ): Promise<WorkspaceAnalysisResult | undefined> {
-  const result = computeWorkspaceAnalysis(options);
+  const result = await computeWorkspaceAnalysis(options);
   if (!result || result.analysis.cancelled) {
     return result;
   }
@@ -137,7 +149,7 @@ export async function computeScopedAnalysisOnline(
   remoteDependencies: RemoteLinkDependencies = nodeRemoteLinkDependencies,
 ): Promise<WorkspaceAnalysis> {
   const config = readConfig(scopeUri);
-  const analysis = analyzeWorkspace(
+  const analysis = await analyzeWorkspace(
     rootDir,
     skillPaths,
     config.profile,
@@ -150,6 +162,16 @@ export async function computeScopedAnalysisOnline(
       resourceDirectories: config.resourceDirectories,
       compatibilityAgents: config.compatibilityAgents,
       security: config.security,
+      maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
+      maxReportedCollisions: config.maxReportedCollisions,
+      // Share the caches the diagnostics provider owns. Without these the
+      // workspace path re-walked every skill directory and re-encoded every
+      // reference file on each scan, for the skills that had not changed.
+      discover: options?.discover ?? ((dir, exclude) => sharedResourceCache.discover(dir, exclude)),
+      fileTokens:
+        options?.fileTokens ??
+        ((resource) =>
+          sharedFileTokenCache.tokensFor(resource.absolutePath, config.maxCountedFileSizeBytes)),
     },
   );
   if (!analysis.cancelled) {

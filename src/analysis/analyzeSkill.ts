@@ -45,6 +45,12 @@ export interface AnalyzeSkillOptions {
    * encoding each file. Long-lived callers pass a cache-backed source.
    */
   fileTokens?: ResourceTokenSource;
+  /**
+   * Largest resource file that is read and BPE-encoded (full mode only).
+   * Defaults to DEFAULT_MAX_COUNTED_FILE_SIZE_BYTES; an over-cap file is
+   * skipped, which every caller already models as `undefined`.
+   */
+  maxCountedFileSizeBytes?: number;
   dictionaries?: HeuristicDictionaries;
   resourceDirectories?: readonly string[];
   /** Security-scan settings; defaults to DEFAULT_SECURITY_SETTINGS when omitted. */
@@ -98,7 +104,9 @@ export function analyzeSkill(
 
   const discover = options.discover ?? discoverResources;
   const document = withResources(parsed, discover(parsed.directory, options.exclude));
-  const tokenUsage = measureSkillTokenUsage(document, undefined, options.fileTokens);
+  const tokenUsage = measureSkillTokenUsage(document, undefined, options.fileTokens, {
+    maxBytes: options.maxCountedFileSizeBytes,
+  });
   const diagnostics = runAllValidations(document, profile, {
     dictionaries: options.dictionaries,
     resourceDirectories: options.resourceDirectories,

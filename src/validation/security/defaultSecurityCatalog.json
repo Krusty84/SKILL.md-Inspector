@@ -3,7 +3,7 @@
   "dangerousCommands": [
     {
       "id": "rm-rf-root",
-      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s(?:--no-preserve-root\\s+)?(?:--\\s+)?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
+      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s[ \\t]{0,16}(?:--no-preserve-root\\s[ \\t]{0,16})?(?:--\\s[ \\t]{0,16})?[\"']?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
       "message": "recursive force-delete of the filesystem root, a system directory, or the home directory; near-certainly destructive. Remove it or scope the path."
     },
     {
@@ -75,7 +75,7 @@
   "riskyCommands": [
     {
       "id": "rm-rf-generic",
-      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
+      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s[ \\t]{0,16}[\"']?\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
       "message": "recursive force-delete of a variable or unquoted-glob path; the target may expand to something unintended. Quote and scope it."
     },
     {
@@ -91,7 +91,7 @@
     },
     {
       "id": "curl-pipe-shell",
-      "source": "\\b(?:curl|wget)\\b[^\\n]{0,200}\\|\\s*(?:sudo\\s+)?(?:sh|bash|zsh|ksh)\\b",
+      "source": "\\b(?:curl|wget)\\b(?:[^\\n]|\\\\\\n){0,200}(?:\\||&&|;|\\|\\|)\\s*(?:sudo\\s+)?(?:sh|bash|zsh|ksh)\\b",
       "message": "pipes a downloaded script straight into a shell; the content is unverified. Download, review, then run."
     },
     {
@@ -127,7 +127,7 @@
     },
     {
       "id": "download-pipe-interpreter",
-      "source": "\\b(?:curl|wget)\\b[^\\n]{0,200}https?://[^\\n]{0,200}\\|\\s*(?:sudo\\s+)?(?:python|python3|node|ruby|perl|pwsh|powershell)\\b",
+      "source": "\\b(?:curl|wget)\\b(?:[^\\n]|\\\\\\n){0,200}https?://(?:[^\\n]|\\\\\\n){0,200}(?:\\||&&|;|\\|\\|)\\s*(?:sudo\\s+)?(?:python|python3|node|ruby|perl|pwsh|powershell)\\b",
       "message": "pipes downloaded content directly into an interpreter; download and review it before execution."
     },
     {
@@ -257,7 +257,7 @@
   "secretAssignment": {
     "id": "generic-credential",
     "label": "hardcoded credential",
-    "source": "\\b(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|aws[_-]?secret[_-]?access[_-]?key|aws[_-]?session[_-]?token)\\b\\s*[:=]\\s*[\"']?([^\\s\"'#`]{8,})"
+    "source": "\\b(password|passwd|secret|api[_-]?key|api[_-]?token|secret[_-]?key|bearer[_-]?token|refresh[_-]?token|session[_-]?token|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|aws[_-]?secret[_-]?access[_-]?key|aws[_-]?session[_-]?token)\\b\\s*[:=]\\s*[\"']?([^\\s\"'#`]{8,})"
   },
   "credentialedUrl": {
     "id": "credentialed-url",
@@ -423,6 +423,10 @@
   ],
   "hiddenUnicode": {
     "source": "[\\u200B-\\u200D\\u2060\\uFEFF\\u202A-\\u202E\\u2066-\\u2069]|[\\u{E0000}-\\u{E007F}]"
+  },
+  "proseNegation": {
+    "_comment": "Matches the tail of the text preceding a command match inside the same sentence when that text negates it. Mirrors the lookbehind every injectionPhrases entry carries, so \"Never run rm -rf / on a production host.\" is documentation rather than an error. Anchored at the end because it is tested against the preceding slice.",
+    "source": "\\b(?:never(?!\\s+mind)|not|don't|do\\s+not|avoid|refuse\\s+to|must\\s+not|no\\s+circumstances|any\\s+circumstances)\\b[^.!?\\n]{0,60}$"
   },
   "hiddenImperative": {
     "source": "^(?=[\\s\\S]*\\b(?:you|your|assistant|claude|agent|system|instructions?|model)\\b)[\\s\\S]*\\b(?:ignore|disregard|run|execute|exec|delete|remove|send|upload|curl|wget|eval|bypass|disable|exfiltrat(?:e|es|ing|ion)|do\\s+not\\s+tell|password|token|secret|credential)\\b|^\\s*(?:ignore|disregard|run|execute|exec|delete|remove|send|upload|curl|wget|eval|bypass|disable|exfiltrat(?:e|es|ing|ion)|do\\s+not\\s+tell)\\b"

@@ -104,6 +104,12 @@ function requestValidatedAddress(request: RemoteHttpRequest): Promise<RemoteHttp
           if (settled) return;
           settled = true;
           cleanup();
+          // The socket is created here with `createConnection`, so nothing else
+          // owns it. The failure path destroyed it and the success path did not,
+          // which leaked one handle per successful check — the limiter caps
+          // concurrency, not lifetime, and `dispose()` could not reclaim them.
+          nodeRequest?.destroy();
+          socket.destroy();
           const location = Array.isArray(response.headers.location)
             ? response.headers.location[0]
             : response.headers.location;

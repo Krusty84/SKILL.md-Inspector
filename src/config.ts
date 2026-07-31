@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { resolveProfile } from './profiles';
 import type { SkillProfile, DescriptionLanguage, BodyStrictness } from './types/SkillProfile';
 import type { AgentId } from './types/AgentCompatibility';
-import type { SkillDiagnosticSeverity } from './types/SkillDiagnostic';
 import type { TimestampFormat } from './types/TimestampFormat';
 import type { CollisionWeights } from './types/Workspace';
 import type { CollisionOptions } from './workspace/detectSkillCollisions';
@@ -11,8 +10,12 @@ import {
   DEFAULT_COLLISION_THRESHOLD,
   DEFAULT_NGRAM_SIZE,
   DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
+  sanitizeCollisionOptions,
 } from './workspace/detectSkillCollisions';
+import { validateSeverityOverrides } from './validation/severityOverrides';
+import { genericProfile } from './profiles/genericProfile';
 import { DEFAULT_RESOURCE_EXCLUDES } from './parser/discoverResources';
+import { globConfigurationWarnings } from './parser/globMatch';
 import { DEFAULT_SKILL_DISCOVERY_EXCLUDES } from './workspace/discoverSkills';
 import {
   DEFAULT_HEURISTIC_DICTIONARIES,
@@ -32,6 +35,8 @@ export interface AnalysisContext {
   resourceDirectories: readonly string[];
   compatibilityAgents: readonly AgentId[];
   security: SecuritySettings;
+  /** Largest bundled resource file that is read and token-counted, in bytes. */
+  maxCountedFileSizeBytes: number;
 }
 
 export interface InspectorConfig {
@@ -52,6 +57,10 @@ export interface InspectorConfig {
   compatibilityAgents: readonly AgentId[];
   /** Resolved static security-scan settings. */
   security: SecuritySettings;
+  /** Largest bundled resource file that is read and token-counted, in bytes. */
+  maxCountedFileSizeBytes: number;
+  /** Maximum number of collisions listed in the report and tree view. */
+  maxReportedCollisions: number;
 }
 
 /**
@@ -74,7 +83,12 @@ export interface ConfigurationWarning {
 export function analysisContextFromConfig(
   config: Pick<
     InspectorConfig,
-    'profile' | 'heuristicDictionaries' | 'resourceDirectories' | 'compatibilityAgents' | 'security'
+    | 'profile'
+    | 'heuristicDictionaries'
+    | 'resourceDirectories'
+    | 'compatibilityAgents'
+    | 'security'
+    | 'maxCountedFileSizeBytes'
   >,
 ): AnalysisContext {
   return {
@@ -83,6 +97,7 @@ export function analysisContextFromConfig(
     resourceDirectories: config.resourceDirectories,
     compatibilityAgents: config.compatibilityAgents,
     security: config.security,
+    maxCountedFileSizeBytes: config.maxCountedFileSizeBytes,
   };
 }
 
@@ -135,6 +150,60 @@ function scopeCacheKey(scope?: vscode.Uri): string {
 }
 
 function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
+  const configurationWarnings: ConfigurationWarning[] = [];
+  const lengths = readLengthSettings(cfg, configurationWarnings);
+  const overrides = validateSeverityOverrides(cfg.get<unknown>('severityOverrides'));
+  for (const { key, value } of overrides.invalidValues) {
+    configurationWarnings.push({
+      setting: 'skillMdInspector.severityOverrides',
+      message:
+        `Ignoring "${key}": ${JSON.stringify(value)} is not a severity. ` +
+        `Use "error", "warning", "information", or "off".`,
+    });
+  }
+  for (const key of overrides.unknownKeys) {
+    configurationWarnings.push({
+      setting: 'skillMdInspector.severityOverrides',
+      message: `"${key}" does not match any diagnostic code, so this override has no effect.`,
+    });
+  }
+  const collision = sanitizeCollisionOptions({
+    threshold: cfg.get<number>('collision.threshold', DEFAULT_COLLISION_THRESHOLD),
+    ngramSize: cfg.get<number>('collision.ngramSize', DEFAULT_NGRAM_SIZE),
+    boundarySeparationWeight: cfg.get<number>(
+      'collision.boundarySeparationWeight',
+      DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
+    ),
+    // Merge with defaults so a partial user override never leaves a weight undefined.
+    weights: {
+      ...DEFAULT_COLLISION_WEIGHTS,
+      ...cfg.get<Partial<CollisionWeights>>('collision.weights', {}),
+    },
+  });
+  for (const warning of collision.warnings) {
+    configurationWarnings.push({
+      setting: `skillMdInspector.${warning.setting}`,
+      message: warning.message,
+    });
+  }
+  const resourceExclude = cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]);
+  const discoveryExclude = cfg.get<string[]>('discovery.exclude', [
+    ...DEFAULT_SKILL_DISCOVERY_EXCLUDES,
+  ]);
+  // A glob the compiler refuses is silently ignored while matching; without this
+  // the author would see resources they excluded still being scanned, with no
+  // explanation. (Before the guard, it froze the extension host instead.)
+  for (const [setting, globs] of [
+    ['resources.exclude', resourceExclude],
+    ['discovery.exclude', discoveryExclude],
+  ] as const) {
+    for (const warning of globConfigurationWarnings(globs ?? [])) {
+      configurationWarnings.push({
+        setting: `skillMdInspector.${setting}`,
+        message: warning.message,
+      });
+    }
+  }
   const overriddenDictionaryValues = readOverriddenDictionaryValues(cfg);
   // No overrides -> the packaged defaults BY OBJECT IDENTITY. Resolving would
   // produce content-equal copies (freezeDictionaries copies every array), and
@@ -155,13 +224,12 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
     ),
     timeFormat: cfg.get<TimestampFormat>('general.timeFormat', 'european'),
     profile: resolveProfile({
-      nameMaxLength: cfg.get<number>('name.maxLength'),
-      descriptionMinLength: cfg.get<number>('description.minLength'),
-      descriptionMaxLength: cfg.get<number>('description.maxLength'),
+      nameMaxLength: lengths.nameMaxLength,
+      descriptionMinLength: lengths.descriptionMinLength,
+      descriptionMaxLength: lengths.descriptionMaxLength,
       descriptionLanguage: cfg.get<DescriptionLanguage>('description.language'),
       bodyStrictness: cfg.get<BodyStrictness>('body.strictness'),
-      severityOverrides:
-        cfg.get<Record<string, SkillDiagnosticSeverity | 'off'>>('severityOverrides'),
+      severityOverrides: overrides.overrides,
       allowSpecificationOverrides: cfg.get<boolean>('severity.allowSpecificationOverrides'),
     }),
     heuristicDictionaries: dictionaryResolution.dictionaries,
@@ -171,6 +239,7 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
         message: warning.message,
       })),
       ...securityResolution.warnings,
+      ...configurationWarnings,
     ],
     resourceDirectories: (
       cfg.get<string[]>('resources.directories', [
@@ -182,28 +251,108 @@ function buildConfig(cfg: vscode.WorkspaceConfiguration): InspectorConfig {
     )
       .map(normalizeResourceDirectory)
       .filter((entry): entry is string => Boolean(entry)),
-    resourceExclude: cfg.get<string[]>('resources.exclude', [...DEFAULT_RESOURCE_EXCLUDES]),
-    discoveryExclude: cfg.get<string[]>('discovery.exclude', [...DEFAULT_SKILL_DISCOVERY_EXCLUDES]),
+    resourceExclude,
+    discoveryExclude,
     nameSimilarityThreshold: cfg.get<number>('names.similarityThreshold', 0.8),
-    collision: {
-      threshold: cfg.get<number>('collision.threshold', DEFAULT_COLLISION_THRESHOLD),
-      ngramSize: cfg.get<number>('collision.ngramSize', DEFAULT_NGRAM_SIZE),
-      boundarySeparationWeight: cfg.get<number>(
-        'collision.boundarySeparationWeight',
-        DEFAULT_BOUNDARY_SEPARATION_WEIGHT,
-      ),
-      // Merge with defaults so a partial user override never leaves a weight undefined.
-      weights: {
-        ...DEFAULT_COLLISION_WEIGHTS,
-        ...cfg.get<Partial<CollisionWeights>>('collision.weights', {}),
-      },
-    },
+    collision: collision.options,
     security: securityResolution.settings,
+    maxReportedCollisions: Math.min(
+      100_000,
+      Math.max(1, Math.trunc(cfg.get<number>('collision.maxReported', 500)) || 500),
+    ),
+    maxCountedFileSizeBytes:
+      Math.min(
+        65536,
+        Math.max(1, Math.trunc(cfg.get<number>('tokens.maxCountedFileSizeKb', 1024)) || 1024),
+      ) * 1024,
   };
 }
 
 function clampOnlineCheckConcurrency(value: number): number {
   return Math.min(10, Math.max(1, Math.trunc(value) || 4));
+}
+
+/**
+ * Bounds for the profile length settings. Unlike the neighbouring settings these
+ * three used to be forwarded verbatim, so `description.maxLength: 0` made every
+ * skill in the workspace report `skill.description.tooLong` — a `specification`
+ * error, which `severityOverrides` is protected from and cannot switch off.
+ *
+ * `min` is the smallest value that can be *meant*. A limit below it is treated
+ * as unusable configuration and replaced by the packaged default rather than
+ * clamped, matching how `clampOnlineCheckConcurrency` and the security file-size
+ * setting already handle a 0: clamping 0 up to the floor would keep failing
+ * every real description, which is the harm this exists to stop. Above `max` the
+ * value is merely extreme, so it is clamped.
+ */
+const LENGTH_BOUNDS = {
+  'name.maxLength': { min: 1, max: 512 },
+  // 0 means "no minimum", which is a coherent choice, so the floor is 0.
+  'description.minLength': { min: 0, max: 8192 },
+  'description.maxLength': { min: 64, max: 8192 },
+} as const;
+
+function clampLengthSetting(
+  cfg: vscode.WorkspaceConfiguration,
+  key: keyof typeof LENGTH_BOUNDS,
+  fallback: number,
+  warnings: ConfigurationWarning[],
+): number {
+  const raw = cfg.get<number>(key);
+  if (raw === undefined) {
+    return fallback;
+  }
+  const { min, max } = LENGTH_BOUNDS[key];
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || Math.trunc(raw) < min) {
+    warnings.push({
+      setting: `skillMdInspector.${key}`,
+      message: `${JSON.stringify(raw)} is not a usable limit (minimum ${min}); using ${fallback}.`,
+    });
+    return fallback;
+  }
+  const clamped = Math.min(max, Math.trunc(raw));
+  if (clamped !== raw) {
+    warnings.push({
+      setting: `skillMdInspector.${key}`,
+      message: `Value ${raw} is above the maximum ${max}; using ${clamped}.`,
+    });
+  }
+  return clamped;
+}
+
+/** Reads the three profile length settings, clamped and de-inverted. */
+function readLengthSettings(
+  cfg: vscode.WorkspaceConfiguration,
+  warnings: ConfigurationWarning[],
+): { nameMaxLength: number; descriptionMinLength: number; descriptionMaxLength: number } {
+  const nameMaxLength = clampLengthSetting(
+    cfg,
+    'name.maxLength',
+    genericProfile.nameMaxLength,
+    warnings,
+  );
+  let descriptionMinLength = clampLengthSetting(
+    cfg,
+    'description.minLength',
+    genericProfile.description.minLength,
+    warnings,
+  );
+  let descriptionMaxLength = clampLengthSetting(
+    cfg,
+    'description.maxLength',
+    genericProfile.description.maxLength,
+    warnings,
+  );
+  if (descriptionMinLength > descriptionMaxLength) {
+    warnings.push({
+      setting: 'skillMdInspector.description.minLength',
+      message:
+        `Minimum ${descriptionMinLength} exceeds maximum ${descriptionMaxLength}; ` +
+        `swapping them so no description can be both too short and too long.`,
+    });
+    [descriptionMinLength, descriptionMaxLength] = [descriptionMaxLength, descriptionMinLength];
+  }
+  return { nameMaxLength, descriptionMinLength, descriptionMaxLength };
 }
 
 /** Lowercases, trims, and drops empty entries from a string-list setting. */

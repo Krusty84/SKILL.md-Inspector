@@ -75,6 +75,39 @@ export const CRITERION_POINTS = {
 /** Upper bound of the "good length" band; below `minLength` is penalized. */
 const GOOD_LENGTH_MAX = 500;
 
+/**
+ * Indexes into the `findings` array whose criterion is an English-dictionary
+ * check: action verb, usage trigger, boundary, front-loaded intent, and
+ * vagueness. Concrete artifact (acronyms, filenames, CamelCase) and length are
+ * language-independent and stay applicable.
+ */
+const LANGUAGE_DEPENDENT_CRITERIA = new Set([0, 1, 3, 4, 5]);
+
+/**
+ * Ceiling applied when the description could not be read by the English
+ * dictionaries. The remaining criteria are language-independent and can score
+ * full marks, and "excellent" would then be a claim about text the tool did not
+ * analyze. `good` is the honest maximum for a partial reading.
+ */
+const LANGUAGE_LIMITED_CEILING = 74;
+
+/**
+ * The recommended length band for a profile, in code points.
+ *
+ * A profile may recommend a minimum above the default band ceiling, so the band
+ * must never invert ("aim for 600–500"). Exported because
+ * `validateDescription`'s `tooVerbose` rule used to carry its own literal `500`,
+ * which meant `description.minLength: 600` produced `tooShort` ("aim for at
+ * least 600") and `tooVerbose` ("aim for at most 500") on the same range.
+ */
+export function goodLengthBand(
+  minLength: number,
+  maxLength: number,
+): { min: number; max: number } {
+  const max = Math.min(maxLength, Math.max(GOOD_LENGTH_MAX, minLength));
+  return { min: Math.min(minLength, max), max };
+}
+
 /** Computes the 0–100 Static Description Quality Score for a raw description. */
 export function computeStaticDescriptionQuality(
   description: unknown,
@@ -109,10 +142,7 @@ export function scoreAnalysis(
 ): StaticDescriptionQualityResult {
   const minLength = options.minLength ?? 40;
   const maxLength = options.maxLength ?? 1024;
-  // A profile may recommend a minimum above the default band ceiling; the band
-  // must never invert ("aim for 600–500").
-  const goodLengthMax = Math.min(maxLength, Math.max(GOOD_LENGTH_MAX, minLength));
-  const goodLengthMin = Math.min(minLength, goodLengthMax);
+  const { min: goodLengthMin, max: goodLengthMax } = goodLengthBand(minLength, maxLength);
   const language = options.language ?? 'auto';
   const languageLimited = language !== 'en' && isProbablyNonEnglish(analysis.trimmed);
   const weights = normalizeWeights(options.weights ?? CRITERION_POINTS);
@@ -121,8 +151,12 @@ export function scoreAnalysis(
   const boundary = analysis.boundaryClause.contentFound;
   const triggerPoints = clausePoints(analysis.triggerClause, weights.triggerPhrase);
   const boundaryPoints = clausePoints(analysis.boundaryClause, weights.boundary);
-  // Each vague term costs half the criterion's weight, so the penalty scales
-  // with custom profile weights instead of a hardcoded 5 points.
+  // Each vague term costs half the criterion, so the penalty scales with custom
+  // profile weights instead of a hardcoded 5 points. One adjective now costs
+  // exactly half rather than the whole criterion: `findVagueTerms` used to
+  // return both `general` and `general-purpose` for the same span, and two
+  // "terms" zeroed it. Deliberately still saturating at two — see the note in
+  // `findVagueTerms` on why the count is not made monotone past that.
   const vaguePoints = Math.max(
     0,
     Math.round(weights.lowVagueness - (weights.lowVagueness / 2) * analysis.vagueTerms.length),
@@ -252,6 +286,24 @@ export function scoreAnalysis(
   ];
 
   if (languageLimited) {
+    // Five of the seven criteria are English-dictionary checks. On a description
+    // the dictionaries cannot read they measure nothing, and scoring an
+    // unmeasured criterion as 0 is the same absence-of-evidence inference plan 9
+    // Part B3 removed for the dictionary-miss case: a Chinese description
+    // stating capability, artifact and trigger scored 35/poor for being written
+    // in Chinese. They are marked not-applicable (0 of 0) instead, so the score
+    // is a percentage of what was actually checked — reported alongside
+    // `coverage: 'low'`, `partial: true`, and a visible ceiling below.
+    for (const [index, entry] of findings.entries()) {
+      if (LANGUAGE_DEPENDENT_CRITERIA.has(index)) {
+        findings[index] = finding(
+          entry.criterion,
+          0,
+          0,
+          l10n.t('Not checked: this criterion is an English-dictionary check.'),
+        );
+      }
+    }
     findings.push(
       finding(
         'Language support',
@@ -266,14 +318,23 @@ export function scoreAnalysis(
 
   // Normalized weights can be fractional; keep the raw additive score an
   // integer in [0, 100]. Findings remain the transparent source of this total.
-  const rawScore = Math.max(
-    0,
-    Math.min(100, Math.round(findings.reduce((sum, f) => sum + f.pointsEarned, 0))),
-  );
+  //
+  // When a criterion could not be evaluated at all (the language-limited case
+  // marks five of the seven as 0 of 0), the additive sum would silently score
+  // those as failures. The score is then the share of the weight that *was*
+  // checked. Weights sum to 100 in every other case, so this is the additive sum.
+  const earned = findings.reduce((sum, f) => sum + f.pointsEarned, 0);
+  const possible = findings.reduce((sum, f) => sum + f.pointsPossible, 0);
+  const rawScore = languageLimited
+    ? possible > 0
+      ? Math.max(0, Math.min(100, Math.round((100 * earned) / possible)))
+      : 0
+    : Math.max(0, Math.min(100, Math.round(earned)));
   const gradeLimitations = assessGradeLimitations(
     analysis,
     options.dictionaries ?? DEFAULT_HEURISTIC_DICTIONARIES,
     maxLength,
+    languageLimited,
   );
   const adjustedScore = gradeLimitations.reduce(
     (score, limitation) => Math.min(score, limitation.ceiling),
@@ -317,8 +378,22 @@ function assessGradeLimitations(
   analysis: DescriptionAnalysis,
   dictionaries: HeuristicDictionaries,
   maxLength: number,
+  languageLimited: boolean,
 ): StaticDescriptionQualityGradeLimitation[] {
   const limitations: StaticDescriptionQualityGradeLimitation[] = [];
+
+  // Only the language-independent criteria were scored, so the result must not
+  // claim "excellent" about text the dictionaries never read.
+  if (languageLimited) {
+    limitations.push({
+      code: 'language-limited',
+      ceiling: LANGUAGE_LIMITED_CEILING,
+      reason: l10n.t(
+        'The description does not appear to be English, so only the language-independent criteria were scored; the adjusted score cannot exceed {0}.',
+        LANGUAGE_LIMITED_CEILING,
+      ),
+    });
+  }
 
   // A description the specification rejects is not an acceptable description.
   // `scoreLength` already zeroes the length criterion, but that costs only its
@@ -367,14 +442,25 @@ function assessGradeLimitations(
   // synonym cost two label bands. They now require the absence of *both*
   // dictionary and structural evidence. The criterion still only pays half for
   // structural-only evidence, so the score stays honest about being less sure.
-  if (!analysis.capabilityEvidence.dictionary && !analysis.capabilityEvidence.structural) {
+  // The three ceilings below infer *absence* from a dictionary miss, and on a
+  // non-English description the dictionaries miss by construction — which is
+  // exactly the inference plan 9 Part B3 removed for the English dictionary
+  // case. A Chinese or Russian description stating capability, artifact and
+  // trigger was capped at 35/poor for being written in Chinese or Russian. The
+  // report already says so honestly through `coverage: 'low'` and
+  // `partial: true`; it does not also need to pretend the content is missing.
+  if (
+    !languageLimited &&
+    !analysis.capabilityEvidence.dictionary &&
+    !analysis.capabilityEvidence.structural
+  ) {
     limitations.push({
       code: 'missing-action-capability',
       ceiling: 59,
       reason: l10n.t('No action capability is present, so the adjusted score cannot exceed 59.'),
     });
   }
-  if (!analysis.concreteArtifact && !analysis.artifactEvidence.structural) {
+  if (!languageLimited && !analysis.concreteArtifact && !analysis.artifactEvidence.structural) {
     limitations.push({
       code: 'missing-concrete-artifact',
       ceiling: 59,
@@ -401,7 +487,7 @@ function assessGradeLimitations(
       ),
     });
   }
-  if (analysis.triggerClause.contentFound) {
+  if (analysis.triggerClause.contentFound || languageLimited) {
     return limitations;
   }
   if (analysis.triggerClause.markerFound) {
@@ -501,16 +587,6 @@ function normalizedScopeTokens(
   );
 }
 
-/** True when every token of `a` is present in `b` (a ⊆ b). */
-function isSubsetOf(a: Set<string>, b: Set<string>): boolean {
-  for (const token of a) {
-    if (!b.has(token)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 /**
  * True when the trigger and boundary clauses describe the *same* scope, i.e. one
  * clause's normalized meaningful tokens are entirely contained in the other's, so
@@ -542,7 +618,25 @@ function scopeContentEchoed(
   if (trigger.size === 0 || boundary.size === 0) {
     return false;
   }
-  return isSubsetOf(trigger, boundary) || isSubsetOf(boundary, trigger);
+  // An echo is a boundary that leaves the trigger with nothing of substance.
+  //
+  // Testing containment in *either* direction called a narrower boundary an echo:
+  // "Use when the user asks to pull structured data out of a scanned invoice.
+  // Do not use for scanned invoices." carves out a genuine exception and lost
+  // two label bands for it (100 → 69). Testing only trigger ⊆ boundary missed the
+  // real stuffing case, where the leftover is a low-signal noun: "Use when PDF
+  // files. Do not use when PDF." leaves `file`, which distinguishes nothing.
+  //
+  // So: what does the trigger still cover that the boundary excludes? If that
+  // remainder is empty, or is entirely low-signal container nouns, the pair adds
+  // no guidance.
+  const remainder = [...trigger].filter((token) => !boundary.has(token));
+  const lowSignal = new Set([
+    ...dictionaries.lowSignalArtifactTerms,
+    ...dictionaries.scopeVagueTerms,
+    ...dictionaries.vagueTerms,
+  ]);
+  return remainder.every((token) => lowSignal.has(token));
 }
 
 /** Maps a score to its label band (brief §10.1). */

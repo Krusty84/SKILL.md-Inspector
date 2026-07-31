@@ -31,6 +31,7 @@ export async function showSkillReport(
       dictionaries: analysisContext.dictionaries,
       resourceDirectories: analysisContext.resourceDirectories,
       security: analysisContext.security,
+      maxCountedFileSizeBytes: analysisContext.maxCountedFileSizeBytes,
     },
   );
   if (config.onlineCheckEnabled) {

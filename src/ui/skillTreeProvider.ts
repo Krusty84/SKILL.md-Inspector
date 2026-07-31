@@ -195,7 +195,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       try {
         const result = await vscode.window.withProgress(
           { location: { viewId: 'skillMdInspectorSkills' } },
-          async () => computeWorkspaceAnalysis()?.analysis,
+          async () => (await computeWorkspaceAnalysis())?.analysis,
         );
         this.analysis = result;
         this.hasAnalysisResult = true;

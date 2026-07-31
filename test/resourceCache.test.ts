@@ -17,14 +17,23 @@ afterEach(() => {
 });
 
 describe('ResourceCache (Task 59)', () => {
-  it('memoizes discovery per directory', () => {
+  it('memoizes discovery per directory while the directory is unchanged', () => {
     const cache = new ResourceCache();
     const first = cache.discover(root);
-    // Add a file after the first discovery; without invalidation it stays cached.
+    expect(cache.discover(root)).toBe(first); // same cached array reference
+    expect(first).toHaveLength(1);
+  });
+
+  it('rescans when the directory changed, even with no invalidation event', () => {
+    // Plan 17 Part C. Entries are validated on read against a directory
+    // signature, the way FileTokenCache validates against mtime and size. The
+    // watcher globs cover references|scripts|assets|templates while
+    // discoverResources walks the whole skill directory, so a file added
+    // anywhere else fired no event and was served stale — on save included.
+    const cache = new ResourceCache();
+    cache.discover(root);
     fs.writeFileSync(path.join(root, 'scripts', 'b.py'), 'print(2)');
-    const second = cache.discover(root);
-    expect(second).toBe(first); // same cached array reference
-    expect(second).toHaveLength(1);
+    expect(cache.discover(root)).toHaveLength(2);
   });
 
   it('invalidateFile drops the enclosing directory so the next discovery rescans', () => {

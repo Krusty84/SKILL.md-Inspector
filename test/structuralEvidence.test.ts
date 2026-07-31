@@ -28,7 +28,10 @@ describe('structural capability evidence', () => {
   });
 
   it('accepts an unknown verb before a known one is reachable', () => {
-    const analysis = analyzeDescription('Pull tables from PDF invoices.');
+    // `pull` was this fixture's unknown verb until plan 16 registered it (making
+    // the `obtain` synonym group reachable), so the case moved to a verb the
+    // registry still does not know. The behaviour under test is unchanged.
+    const analysis = analyzeDescription('Yank tables from PDF invoices.');
     expect(analysis.capabilityEvidence.structural).toBe(true);
   });
 

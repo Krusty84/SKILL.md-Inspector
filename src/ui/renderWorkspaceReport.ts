@@ -131,6 +131,16 @@ export function renderWorkspaceReportHtml(
 
   <h2 id="collision-matrix">${l10n.t('Collision matrix')}</h2>
   ${renderCollisions(analysis.collisions)}
+  ${
+    analysis.suppressedCollisions
+      ? `<p class="empty">${escapeHtml(
+          l10n.t(
+            '{0} further collision(s) were found but not listed. Narrow the skills\' descriptions, or raise skillMdInspector.collision.maxReported.',
+            analysis.suppressedCollisions,
+          ),
+        )}</p>`
+      : ''
+  }
   </main>
   </div>
 </body>

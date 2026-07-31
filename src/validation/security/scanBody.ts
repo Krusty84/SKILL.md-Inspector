@@ -1,6 +1,6 @@
 import { visit } from 'unist-util-visit';
 import { parseMarkdownRoot } from '../../parser/markdownAst';
-import { valueOrigin, offsetRange, type ValueOrigin } from '../../parser/valueRanges';
+import { valueOrigin, createOffsetCursor, type ValueOrigin } from '../../parser/valueRanges';
 import type { SkillDiagnostic } from '../../types/SkillDiagnostic';
 import type { SkillDocument } from '../../types/SkillDocument';
 import type { SecuritySettings } from './settings';
@@ -17,6 +17,7 @@ import {
 } from './scanText';
 // scanSecrets is used in both the code and prose branches (token formats are
 // distinctive enough that prose scanning stays low-false-positive).
+import { collectProseBlocks, proseRange } from './proseStream';
 import { toSecurityDiagnostic } from './diagnostic';
 
 interface ScanNode {
@@ -69,7 +70,6 @@ export function scanBody(
         // `codeOnly` in the catalog and sit out this pass, because in prose
         // they match ordinary sentences rather than commands.
         ...scanCommands(value, patterns, settings.allowedCommands, 'prose'),
-        ...scanInjection(value, patterns),
         ...scanSecrets(value, patterns),
         ...scanSensitivePaths(value, patterns),
         ...scanServices(value, patterns, settings.allowedDomains),
@@ -79,6 +79,21 @@ export function scanBody(
       pushMatches(out, origin, value, scanHtmlCommentInstructions(value, patterns));
     }
   });
+
+  // Injection phrases are matched over *rendered* prose, reassembled across
+  // inline markup, because mdast splits a paragraph at every `*`, `**`, `_` and
+  // backtick — and one pair of asterisks used to defeat all fourteen rules.
+  for (const block of collectProseBlocks(tree)) {
+    for (const match of scanInjection(block.text, patterns)) {
+      out.push(
+        toSecurityDiagnostic(
+          match,
+          proseRange(block, doc.bodyStartLine, match.index, match.length),
+          match.ruleId ? { ruleId: match.ruleId, ruleIds: match.ruleIds ?? [match.ruleId] } : undefined,
+        ),
+      );
+    }
+  }
 
   pushMatches(
     out,
@@ -95,12 +110,21 @@ function pushMatches(
   value: string,
   matches: RawMatch[],
 ): void {
-  for (const match of matches) {
+  if (matches.length === 0) {
+    return;
+  }
+  // One forward-only cursor instead of a rescan-from-zero per match: the
+  // invisible-Unicode scan alone can report thousands of matches over the whole
+  // body, and resolving each from the start made the pass quadratic.
+  const cursor = createOffsetCursor(origin, value);
+  for (const match of [...matches].sort((a, b) => a.index - b.index)) {
     out.push(
       toSecurityDiagnostic(
         match,
-        offsetRange(origin, value, match.index, match.length),
-        match.ruleId ? { ruleId: match.ruleId } : undefined,
+        cursor.rangeAt(match.index, match.length),
+        match.ruleId
+          ? { ruleId: match.ruleId, ruleIds: match.ruleIds ?? [match.ruleId] }
+          : undefined,
       ),
     );
   }

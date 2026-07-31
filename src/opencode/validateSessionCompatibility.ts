@@ -431,6 +431,18 @@ function infoDiag(
   diagnostics.push({ severity: 'information', code, message, path });
 }
 function safe(value: unknown): string {
-  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  // `JSON.stringify` recurses; a deeply nested value throws rather than
+  // producing a string, and this only ever builds a 120-character excerpt for a
+  // diagnostic message.
+  let text: string | undefined;
+  if (typeof value === 'string') {
+    text = value;
+  } else {
+    try {
+      text = JSON.stringify(value);
+    } catch {
+      text = '<deeply nested value>';
+    }
+  }
   return text && text.length > 120 ? `${text.slice(0, 117)}…` : String(text);
 }

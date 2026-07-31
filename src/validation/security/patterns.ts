@@ -45,6 +45,13 @@ export interface CompiledSecurityPatterns {
   hiddenUnicode: RegExp;
   /** Imperative/command wording used to decide whether an HTML comment is hidden instruction. */
   hiddenImperative: RegExp;
+  /**
+   * Matched against the text preceding a *prose* command match, within the same
+   * sentence. The injection catalog carries this guard as a lookbehind on every
+   * entry; the command patterns had none, so "Never run `rm -rf /` on a
+   * production host." was reported as an error.
+   */
+  proseNegation: RegExp;
 }
 
 interface RawCommand {
@@ -92,6 +99,7 @@ const BUILTIN_SENSITIVE_PATHS: CompiledLabeledPattern[] = (
 ).map((e) => ({ id: e.id, re: new RegExp(e.source, 'gi'), message: e.message }));
 const HIDDEN_UNICODE = new RegExp(catalog.hiddenUnicode.source, 'gu');
 const HIDDEN_IMPERATIVE = new RegExp(catalog.hiddenImperative.source, 'i');
+const PROSE_NEGATION = new RegExp(catalog.proseNegation.source, 'i');
 const BUILTIN_SERVICE_HOSTS: readonly string[] = catalog.serviceHosts;
 
 /** Escapes a host so it can be embedded in the combined service-host alternation. */
@@ -168,6 +176,7 @@ export function resolveSecurityPatterns(settings: SecuritySettings): CompiledSec
     sensitivePaths: BUILTIN_SENSITIVE_PATHS,
     hiddenUnicode: HIDDEN_UNICODE,
     hiddenImperative: HIDDEN_IMPERATIVE,
+    proseNegation: PROSE_NEGATION,
   };
   resolvedCache.set(settings, resolved);
   return resolved;

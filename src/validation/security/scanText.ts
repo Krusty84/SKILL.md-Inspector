@@ -16,8 +16,19 @@ export interface RawMatch {
    * diagnostic's `data` so `severityOverrides` can address a single pattern
    * (`skill.security.command.risky#sudo`) instead of its whole class — the
    * alternative to disabling eighteen rules to silence one.
+   *
+   * For a finding merged from several patterns on one line this is the first of
+   * {@link ruleIds}, kept so existing single-id consumers keep working.
    */
   ruleId?: string;
+  /**
+   * Every catalog entry this finding covers, in source order. `mergePerLine`
+   * collapses same-tier matches on a line into one diagnostic; carrying only the
+   * first id made the other patterns unaddressable, so
+   * `sudo chmod 777 /srv && git push --force` could not be silenced by
+   * `#chmod-777` or `#git-push-force` at all.
+   */
+  ruleIds?: readonly string[];
   severity: SkillDiagnosticSeverity;
   message: string;
   index: number;
@@ -37,6 +48,30 @@ const HTML_COMMENT_RE = /<!--([\s\S]*?)-->/g;
 const EMOJI_BEFORE_ZWJ_RE =
   /\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?$/u;
 const EMOJI_AFTER_ZWJ_RE = /^\p{Extended_Pictographic}/u;
+
+/**
+ * True when the sentence leading up to `index` negates the command that follows,
+ * i.e. the text is telling the reader *not* to run it.
+ *
+ * The injection catalog carries this as a lookbehind on every entry, so
+ * "Never ignore all previous instructions" is documentation. The command
+ * patterns had no equivalent, so "Never run `rm -rf /` on a production host."
+ * was reported as an **error** and failed the skill. Applied to prose only:
+ * inside a fence, a comment about not running something sits above the command,
+ * not in front of it on the same line.
+ */
+function isNegatedInProse(
+  value: string,
+  index: number,
+  patterns: CompiledSecurityPatterns,
+): boolean {
+  const { text, start } = lineAt(value, index);
+  const before = text.slice(0, index - start);
+  // The pattern is anchored at the end and bounded to one sentence, so slicing
+  // a tail is enough; 160 characters covers its 60-character reach plus the
+  // negation itself.
+  return patterns.proseNegation.test(before.slice(-160));
+}
 
 /** Runs a global regex over `value`, resetting state and guarding zero-length matches. */
 function execAll(re: RegExp, value: string): RegExpExecArray[] {
@@ -149,6 +184,9 @@ export function scanCommands(
       continue;
     }
     for (const match of execAll(pattern.re, value)) {
+      if (context === 'prose' && isNegatedInProse(value, match.index, patterns)) {
+        continue;
+      }
       dangerous.push(
         toCommandMatch(
           match,
@@ -168,6 +206,9 @@ export function scanCommands(
       continue;
     }
     for (const match of execAll(pattern.re, value)) {
+      if (context === 'prose' && isNegatedInProse(value, match.index, patterns)) {
+        continue;
+      }
       const candidate = toCommandMatch(
         match,
         DiagnosticCode.SecurityCommandRisky,
@@ -194,10 +235,17 @@ export function scanCommands(
  * Collapses same-tier matches that share a line into one finding at the
  * earliest index, joining the distinct explanations. Four warnings whose
  * messages all open with the same snippet are noise, not four problems.
+ *
+ * The merged finding keeps *every* contributing rule id and spans the whole
+ * group. Previously it kept only the first, so on
+ * `sudo chmod 777 /srv && git push --force` the single reported finding was
+ * `ruleId: "sudo"` covering four characters: neither `#chmod-777` nor
+ * `#git-push-force` could address it, and the squiggle pointed at the wrong
+ * command.
  */
 function mergePerLine(value: string, matches: RawMatch[]): RawMatch[] {
   if (matches.length < 2) {
-    return matches;
+    return matches.map(withRuleIds);
   }
   const byLine = new Map<number, RawMatch[]>();
   for (const match of matches) {
@@ -212,21 +260,43 @@ function mergePerLine(value: string, matches: RawMatch[]): RawMatch[] {
   const merged: RawMatch[] = [];
   for (const group of byLine.values()) {
     if (group.length === 1) {
-      merged.push(group[0]);
+      merged.push(withRuleIds(group[0]));
       continue;
     }
     group.sort((a, b) => a.index - b.index);
     const seen = new Set<string>();
     const messages: string[] = [];
+    const ruleIds: string[] = [];
+    let end = 0;
     for (const match of group) {
       if (!seen.has(match.message)) {
         seen.add(match.message);
         messages.push(match.message);
       }
+      for (const id of match.ruleIds ?? (match.ruleId ? [match.ruleId] : [])) {
+        if (!ruleIds.includes(id)) {
+          ruleIds.push(id);
+        }
+      }
+      end = Math.max(end, match.index + match.length);
     }
-    merged.push({ ...group[0], message: messages.join(' ') });
+    merged.push({
+      ...group[0],
+      message: messages.join(' '),
+      ruleId: ruleIds[0] ?? group[0].ruleId,
+      ruleIds,
+      length: Math.max(1, end - group[0].index),
+    });
   }
   return merged.sort((a, b) => a.index - b.index);
+}
+
+/** Normalizes a single match so every consumer sees the same `ruleIds` shape. */
+function withRuleIds(match: RawMatch): RawMatch {
+  if (match.ruleIds) {
+    return match;
+  }
+  return match.ruleId ? { ...match, ruleIds: [match.ruleId] } : match;
 }
 
 function toCommandMatch(
@@ -268,7 +338,36 @@ function toCommandMatch(
  * working. So an entry qualifies two ways: it names the matched command (or
  * part of it), or it is a fuller command line that both contains what matched
  * and actually appears here.
+ *
+ * Two further conditions, because a bare substring test made the allowlist a
+ * blunt instrument: an entry must be at least {@link MIN_ALLOWED_LENGTH}
+ * characters — `allowedCommands: ["o"]` silenced the entire risky tier — and it
+ * must line up with a token boundary in the matched text, so `"sh"` no longer
+ * silences `git push --force` by matching the "sh" inside "push".
  */
+const MIN_ALLOWED_LENGTH = 3;
+
+/** True when `needle` occurs in `haystack` without cutting through a word. */
+function containsAtWordBoundary(haystack: string, needle: string): boolean {
+  const isWordChar = (char: string | undefined): boolean =>
+    char !== undefined && /[\w-]/.test(char);
+  let from = 0;
+  for (;;) {
+    const at = haystack.indexOf(needle, from);
+    if (at === -1) {
+      return false;
+    }
+    const before = at === 0 ? undefined : haystack[at - 1];
+    const after = haystack[at + needle.length];
+    const startsCleanly = !isWordChar(needle[0]) || !isWordChar(before);
+    const endsCleanly = !isWordChar(needle[needle.length - 1]) || !isWordChar(after);
+    if (startsCleanly && endsCleanly) {
+      return true;
+    }
+    from = at + 1;
+  }
+}
+
 function isAllowed(value: string, match: RawMatch, allowedCommands: readonly string[]): boolean {
   if (allowedCommands.length === 0) {
     return false;
@@ -276,10 +375,15 @@ function isAllowed(value: string, match: RawMatch, allowedCommands: readonly str
   const matched = value.slice(match.index, match.index + match.length).toLowerCase();
   const line = lineAt(value, match.index).text.toLowerCase();
   return allowedCommands.some((allowed) => {
-    if (allowed.length === 0) {
+    if (allowed.length < MIN_ALLOWED_LENGTH) {
       return false;
     }
-    return matched.includes(allowed) || (allowed.includes(matched) && line.includes(allowed));
+    if (containsAtWordBoundary(matched, allowed)) {
+      return true;
+    }
+    return (
+      containsAtWordBoundary(allowed, matched) && containsAtWordBoundary(line, allowed)
+    );
   });
 }
 

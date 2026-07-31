@@ -283,7 +283,7 @@ function addAssistantParts(
     deriveParentTime(current, nodes);
   }
   for (const stepId of parent.children) {
-    const step = nodes.find((node) => node.id === stepId);
+    const step = nodeById(nodes, stepId);
     if (step) deriveParentTime(step, nodes);
   }
   return order;
@@ -381,9 +381,38 @@ function toolLabel(part: ParsedPart): string {
   return label ? `${name}: ${label}` : name;
 }
 
+/**
+ * Id lookup over a node list that only ever grows by appending.
+ *
+ * `deriveParentTime` resolved each child with `all.find(...)`, so normalization
+ * was superlinear in the node count: 4,000 parts 60 ms, 8,000 parts 356 ms,
+ * 16,000 parts 2,113 ms. The index is built incrementally — the tail appended
+ * since the last lookup — which is why it can be kept per array rather than
+ * threaded through every builder. First entry wins, matching `find`.
+ */
+const nodeIndexes = new WeakMap<
+  TrajectoryNode[],
+  { map: Map<string, TrajectoryNode>; indexed: number }
+>();
+
+function nodeById(all: TrajectoryNode[], id: string): TrajectoryNode | undefined {
+  let entry = nodeIndexes.get(all);
+  if (!entry) {
+    entry = { map: new Map(), indexed: 0 };
+    nodeIndexes.set(all, entry);
+  }
+  for (; entry.indexed < all.length; entry.indexed += 1) {
+    const node = all[entry.indexed];
+    if (!entry.map.has(node.id)) {
+      entry.map.set(node.id, node);
+    }
+  }
+  return entry.map.get(id);
+}
+
 function deriveParentTime(node: TrajectoryNode, all: TrajectoryNode[]): void {
   const children = node.children
-    .map((id) => all.find((candidate) => candidate.id === id))
+    .map((id) => nodeById(all, id))
     .filter((candidate): candidate is TrajectoryNode => !!candidate);
   const starts = children
     .map((child) => child.start)

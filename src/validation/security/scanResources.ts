@@ -128,7 +128,9 @@ export function scanResources(
             absolutePath: resource.absolutePath,
             line,
             securityCode: match.code,
-            ...(match.ruleId ? { ruleId: match.ruleId } : {}),
+            ...(match.ruleId
+              ? { ruleId: match.ruleId, ruleIds: match.ruleIds ?? [match.ruleId] }
+              : {}),
           },
         ),
       );
