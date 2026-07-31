@@ -165,11 +165,15 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
       if (isScalar(item.key) && item.key.range) {
         const name = String(item.key.value);
         frontmatterKeyRanges[name] = toRange(item.key.range[0], item.key.range[1]);
-        // range[1] is the end of the value content (before trailing whitespace),
-        // which is exactly where an appended clause should go for block/plain
-        // scalars. Covers multi-line values, unlike the key's physical line.
+        // Quick fixes append at the value end, so the range must stop at the last
+        // content character. `range[1]` does that for plain and quoted scalars,
+        // but for a *block* scalar it includes the terminating newline — which
+        // puts it at column 0 of the following line, i.e. inside the next key.
+        // Appending there produced `... Use when ….license: MIT` and made the
+        // whole frontmatter unparseable. Trim trailing whitespace off the end.
         if (isScalar(item.value) && item.value.range) {
-          frontmatterValueRanges[name] = toRange(item.value.range[0], item.value.range[1]);
+          const [start, rawEnd] = item.value.range;
+          frontmatterValueRanges[name] = toRange(start, trimEnd(frontmatterRaw, start, rawEnd));
         }
       }
     }
@@ -248,6 +252,19 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
 
 function singleLineRange(line: number): SkillDiagnosticRange {
   return { startLine: line, startCharacter: 0, endLine: line, endCharacter: 3 };
+}
+
+/**
+ * Walks `end` back over trailing whitespace, never past `start`. Used to keep a
+ * value range inside its own value: a YAML block scalar's node range ends after
+ * the value's final newline, which is column 0 of the *next* key's line.
+ */
+function trimEnd(source: string, start: number, end: number): number {
+  let trimmed = end;
+  while (trimmed > start && /\s/.test(source[trimmed - 1])) {
+    trimmed--;
+  }
+  return trimmed;
 }
 
 /** First line of an error's message, matching how YAML parse errors are reported. */
