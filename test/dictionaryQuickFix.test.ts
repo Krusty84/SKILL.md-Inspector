@@ -179,17 +179,19 @@ describe('the "add to dictionary" quick fix', () => {
   it('offers the artifact variant for an unregistered artifact term', () => {
     const doc = `---
 name: contract-generator
-description: Generate deliverables from OpenAPI definitions. Use when the upstream service changes. Do not use for handwritten wikis.
+description: Generate deliverables from Protobuf definitions. Use when the upstream service changes. Do not use for handwritten wikis.
 ---
 
 # Contract Generator
 
 Generate each deliverable from the definitions, then confirm the output.
 `;
-    const action = actionsFor(doc).find((entry) => entry.title.startsWith('Add "OpenAPI"'));
-    expect(action?.title).toBe('Add "OpenAPI" to recognized artifacts');
+    // `OpenAPI` held this role until plan 16 registered it; `Protobuf` is the
+    // replacement unregistered term. The behaviour under test is unchanged.
+    const action = actionsFor(doc).find((entry) => entry.title.startsWith('Add "Protobuf"'));
+    expect(action?.title).toBe('Add "Protobuf" to recognized artifacts');
     expect(action?.command).toMatchObject({
-      arguments: [expect.objectContaining({ key: 'artifactHints', word: 'OpenAPI' })],
+      arguments: [expect.objectContaining({ key: 'artifactHints', word: 'Protobuf' })],
     });
   });
 });

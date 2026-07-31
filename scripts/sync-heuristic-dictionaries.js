@@ -69,7 +69,67 @@ const generated = Object.fromEntries(
   Object.keys(catalog).map((key) => [`${visiblePrefix}${key}`, visibleSetting(key)]),
 );
 
+/**
+ * Coherence of the catalog with itself.
+ *
+ * `capabilityGroupOf` / `artifactGroupOf` are only ever applied to terms the
+ * extractors already emitted, and the extractors only emit members of the source
+ * vocabularies. A group member outside them can never be reached — it reads like
+ * coverage and provides none, and `synonymGroupConflicts` (which checks a member
+ * is not in *two* groups) does not notice. 54 shipped members were in that state
+ * before plan 16. Checked here so a future dead entry cannot be added silently.
+ */
+function coherenceProblems() {
+  const problems = [];
+  const verbs = new Set(catalog.actionVerbs);
+  const artifacts = new Set([
+    ...catalog.artifactHints,
+    ...catalog.multiWordArtifacts,
+    ...catalog.acronyms,
+  ]);
+  const report = (label, groups, isPresent) => {
+    const missing = new Set();
+    for (const members of Object.values(groups)) {
+      for (const member of members) {
+        if (!isPresent(member)) missing.add(member);
+      }
+    }
+    if (missing.size > 0) {
+      problems.push(
+        `${label}: ${[...missing].sort().join(', ')} — add each to the source vocabulary or remove it from its group.`,
+      );
+    }
+  };
+  report('capabilitySynonymGroups members not in actionVerbs', catalog.capabilitySynonymGroups, (m) =>
+    verbs.has(m),
+  );
+  report(
+    'artifactSynonymGroups members not in artifactHints/multiWordArtifacts/acronyms',
+    catalog.artifactSynonymGroups,
+    (m) => artifacts.has(m),
+  );
+  const declared = new Set(catalog.dualRoleTerms ?? []);
+  const undeclared = catalog.actionVerbs.filter((v) => artifacts.has(v) && !declared.has(v));
+  if (undeclared.length > 0) {
+    problems.push(
+      `terms in both actionVerbs and an artifact vocabulary but not in dualRoleTerms: ${undeclared.sort().join(', ')}`,
+    );
+  }
+  for (const term of declared) {
+    if (!verbs.has(term) || !artifacts.has(term)) {
+      problems.push(`dualRoleTerms entry "${term}" is not in both actionVerbs and an artifact vocabulary`);
+    }
+  }
+  return problems;
+}
+
 if (process.argv.includes('--check')) {
+  const problems = coherenceProblems();
+  if (problems.length > 0) {
+    console.error('Heuristic dictionary catalog is incoherent:');
+    for (const problem of problems) console.error(`  - ${problem}`);
+    process.exit(1);
+  }
   const actual = Object.fromEntries(
     Object.entries(properties).filter(([key]) => key.startsWith(dictionaryPrefix)),
   );

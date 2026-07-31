@@ -19,6 +19,7 @@ export const HEURISTIC_LIST_DICTIONARY_KEYS = [
   'scopeStopwords',
   'scopeVagueTerms',
   'collisionStopwords',
+  'dualRoleTerms',
 ] as const;
 
 export const HEURISTIC_MAPPING_DICTIONARY_KEYS = [
@@ -54,6 +55,19 @@ export interface HeuristicDictionaries {
   scopeVagueTerms: readonly string[];
   irregularSingularForms: StringArrayMap;
   collisionStopwords: readonly string[];
+  /**
+   * Terms that are legitimately both a capability verb and an artifact — `test`,
+   * `draft`, `patch`, `plot`, `label`, `outline`, `benchmark`. Without an
+   * explicit list, whichever extractor ran first won: `extractCapabilities` read
+   * the noun in "Create unit tests for a source file" as the verb `test`, which
+   * put the skill in a second capability group and dropped its capability
+   * overlap with a genuine paraphrase from 1.0 to 0.5. A listed term is resolved
+   * by position instead (see `collisionFeatures.extractCapabilities`).
+   *
+   * Every entry must appear in both `actionVerbs` and one of the artifact
+   * vocabularies; `check:heuristic-dictionaries` enforces that.
+   */
+  dualRoleTerms: readonly string[];
   /**
    * Capability verbs that mean the same thing for *scope* purposes, keyed by
    * group id (plan 10 Part B). Collision analysis folds each extracted capability

@@ -1,5 +1,9 @@
 /** Shared, configurable word-form normalization for quality and collision analysis. */
-import { DEFAULT_HEURISTIC_DICTIONARIES, type StringArrayMap } from './dictionaries';
+import {
+  DEFAULT_HEURISTIC_DICTIONARIES,
+  type HeuristicDictionaries,
+  type StringArrayMap,
+} from './dictionaries';
 
 export interface VerbForms {
   /** Every recognized surface form, including each configured base. */
@@ -181,6 +185,66 @@ export function synonymGroupConflicts(groups: StringArrayMap): Map<string, strin
     }
   }
   return new Map([...byMember].filter(([, groups]) => groups.length > 1));
+}
+
+/**
+ * Every artifact term an extractor can emit, across the three vocabularies
+ * `extractArtifacts` draws from.
+ */
+function artifactVocabulary(dictionaries: HeuristicDictionaries): Set<string> {
+  return new Set([
+    ...dictionaries.artifactHints,
+    ...dictionaries.multiWordArtifacts,
+    ...dictionaries.acronyms,
+  ]);
+}
+
+/**
+ * Capability-group members that no extractor can ever produce.
+ *
+ * `capabilityGroupOf` is only applied to terms `extractCapabilities` already
+ * emitted, and that only emits members of `actionVerbs`. A group member outside
+ * `actionVerbs` is therefore dead configuration — it reads like coverage and
+ * provides none. `synonymGroupConflicts` checks that no member is in *two*
+ * groups; nothing checked that a member was in the source vocabulary at all, and
+ * 29 of the shipped ones were not.
+ */
+export function capabilityGroupMembersMissingFromVocabulary(
+  dictionaries: HeuristicDictionaries,
+): string[] {
+  const verbs = new Set(dictionaries.actionVerbs);
+  return uniqueMissing(dictionaries.capabilitySynonymGroups, (member) => verbs.has(member));
+}
+
+/** Artifact-group members outside `artifactHints` / `multiWordArtifacts` / `acronyms`. */
+export function artifactGroupMembersMissingFromVocabulary(
+  dictionaries: HeuristicDictionaries,
+): string[] {
+  const artifacts = artifactVocabulary(dictionaries);
+  return uniqueMissing(dictionaries.artifactSynonymGroups, (member) => artifacts.has(member));
+}
+
+function uniqueMissing(groups: StringArrayMap, isPresent: (member: string) => boolean): string[] {
+  const missing = new Set<string>();
+  for (const members of Object.values(groups)) {
+    for (const member of members) {
+      if (!isPresent(member)) missing.add(member);
+    }
+  }
+  return [...missing].sort();
+}
+
+/**
+ * Terms that are in both `actionVerbs` and an artifact vocabulary without being
+ * declared in `dualRoleTerms`. Such a term is resolved by whichever extractor
+ * runs first rather than by how it is used, so it has to be a deliberate entry.
+ */
+export function undeclaredDualRoleTerms(dictionaries: HeuristicDictionaries): string[] {
+  const artifacts = artifactVocabulary(dictionaries);
+  const declared = new Set(dictionaries.dualRoleTerms);
+  return dictionaries.actionVerbs
+    .filter((verb) => artifacts.has(verb) && !declared.has(verb))
+    .sort();
 }
 
 function singularFormMap(forms: StringArrayMap): ReadonlyMap<string, string> {

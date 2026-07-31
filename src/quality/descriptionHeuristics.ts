@@ -1115,16 +1115,28 @@ function structuralArtifact(text: string, dictionaries: HeuristicDictionaries): 
   }
   return undefined;
 }
+/**
+ * Whether `term` (an acronym) appears in `text`.
+ *
+ * Acronyms were the only artifact vocabulary never singularized: `artifactHints`
+ * go through `tokenize` + `singularize`, while these were matched by a
+ * `\b`-anchored regex on the bare term. So `Validate JWT payloads.` matched and
+ * `Validate JWTs.` did not — costing the plural the whole 15-point artifact
+ * criterion and tripping the 59-point `missing-concrete-artifact` ceiling.
+ * An optional plural suffix is accepted, and the uppercase-only guard still
+ * looks at the acronym itself rather than the suffix (`JWTs` is uppercase, `jwts`
+ * is not).
+ */
 function acronymMatches(
   text: string,
   term: string,
   uppercaseOnlyAcronyms: readonly string[],
 ): boolean {
   const uppercaseOnly = new Set(uppercaseOnlyAcronyms);
-  const re = new RegExp(`\\b${escapeRegex(term)}\\b`, 'gi');
+  const re = new RegExp(`\\b(${escapeRegex(term)})(?:'?s)?\\b`, 'gi');
   const matches = [...text.matchAll(re)];
   return matches.some(
-    (match) => !uppercaseOnly.has(term.toLowerCase()) || match[0] === match[0].toUpperCase(),
+    (match) => !uppercaseOnly.has(term.toLowerCase()) || match[1] === match[1].toUpperCase(),
   );
 }
 function normalizeSeparators(text: string): string {
@@ -1136,8 +1148,17 @@ function normalizeSeparators(text: string): string {
 function phraseMatchesNormalized(text: string, phrase: string): boolean {
   return text.includes(` ${phrase.toLowerCase().replace(/[ _-]+/g, ' ')} `);
 }
+/**
+ * Lower-cased word tokens.
+ *
+ * NFC first: `tokenize('naïve')` returned `['naïve']` for the composed spelling
+ * and `['nai', 've']` for the decomposed one, so the same visible word matched a
+ * dictionary or did not depending on how the author's editor encoded it — and
+ * the German markers in "Konvertiert PDF-Dateien für Berichte…" were found in
+ * NFC and lost in NFD, flipping language detection with them.
+ */
 export function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return text.normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 function tokenForms(tokens: string[], dictionaries: HeuristicDictionaries): Set<string> {
   const forms = new Set<string>();

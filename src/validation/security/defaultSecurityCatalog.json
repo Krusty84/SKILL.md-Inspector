@@ -3,7 +3,7 @@
   "dangerousCommands": [
     {
       "id": "rm-rf-root",
-      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s[ \\t]*(?:--no-preserve-root\\s[ \\t]*)?(?:--\\s[ \\t]*)?[\"']?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
+      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s[ \\t]{0,16}(?:--no-preserve-root\\s[ \\t]{0,16})?(?:--\\s[ \\t]{0,16})?[\"']?(?:~|\\$HOME|\\$\\{HOME\\}|/(?:etc|usr|var|bin|sbin|boot|lib|lib64|opt|sys|proc|dev|root|home)\\b|/(?![\\w.]))",
       "message": "recursive force-delete of the filesystem root, a system directory, or the home directory; near-certainly destructive. Remove it or scope the path."
     },
     {
@@ -75,7 +75,7 @@
   "riskyCommands": [
     {
       "id": "rm-rf-generic",
-      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s[ \\t]*[\"']?\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
+      "source": "\\brm\\b(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*r|\\s--recursive\\b))(?=[^\\n]{0,200}?(?:\\s-[a-zA-Z]*f|\\s--force\\b))[^\\n]{0,200}?\\s[ \\t]{0,16}[\"']?\\S*(?:\\$\\{?\\w+\\}?|\\*|\\.\\.)\\S*",
       "message": "recursive force-delete of a variable or unquoted-glob path; the target may expand to something unintended. Quote and scope it."
     },
     {

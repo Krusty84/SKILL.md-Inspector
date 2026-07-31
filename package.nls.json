@@ -114,6 +114,7 @@
   "skillMdInspector.config.heuristics.dictionaryValues.artifactHints.description": "High-signal artifact and domain terms used by description quality and collision feature extraction.",
   "skillMdInspector.config.heuristics.dictionaryValues.artifactSupportTerms.description": "Domain terms that make a low-signal artifact such as file, data, code, or document concrete.",
   "skillMdInspector.config.heuristics.dictionaryValues.collisionStopwords.description": "Common terms removed before workspace description collision similarity is calculated.",
+  "skillMdInspector.config.heuristics.dictionaryValues.dualRoleTerms.description": "Terms that are both a capability verb and an artifact (for example \"test\"). A listed term is read as the verb only in a verb position, so \"Create unit tests\" contributes the artifact and \"Test a module\" contributes the capability. Every entry must also appear in actionVerbs and in one of the artifact lists.",
   "skillMdInspector.config.heuristics.dictionaryValues.exclusiveTriggerPhrases.description": "Phrases that act as both a positive usage trigger and an exclusive boundary.",
   "skillMdInspector.config.heuristics.dictionaryValues.frontLoadedFillerTerms.description": "Terms ignored when deciding whether the opening sentence names a concrete capability object.",
   "skillMdInspector.config.heuristics.dictionaryValues.irregularSingularForms.description": "Irregular plural normalization used by artifact matching and collision analysis. Keys are singular bases and values are plural forms.",

@@ -32,12 +32,20 @@ import type { SkillCollision } from '../../src/types/Workspace';
  *
  * Never lower them to make a change pass: a drop here means the metric regressed,
  * not that the corpus needs adjusting (benchmarks/README.md).
- * TODO(plan-11): the four zero-scope COLLIDE pairs listed in `PLAN_10_TARGETS` need
- * evidence the dictionaries cannot supply. Raise these once they have it.
+ *
+ * Plan 16 ratcheted `AUC_GATE` from 0.72 to 0.83. Making every synonym-group
+ * member reachable, moving `spec` from the `interface` group to `test`, and
+ * resolving `test` by position gave two of the four zero-scope COLLIDE pairs
+ * real evidence: measured AUC rose 0.7381 → 0.8304 with recall (0.333) and
+ * precision (1.000) unchanged, and the blind-collision set halved.
+ *
+ * TODO(plan-11): the two remaining zero-scope COLLIDE pairs listed in
+ * `PLAN_10_TARGETS` need evidence the dictionaries cannot supply. Raise these
+ * once they have it.
  */
 export const RECALL_GATE = 0.33;
 export const PRECISION_GATE = 1.0;
-export const AUC_GATE = 0.72;
+export const AUC_GATE = 0.83;
 
 /**
  * Plan 10's targets, and the measured distance to each. Kept as a live assertion
@@ -281,19 +289,26 @@ describe(`collision discrimination at threshold ${DEFAULT_COLLISION_THRESHOLD}`,
     });
 
     /**
-     * Why the AUC target is not reachable by re-weighting, only by new evidence.
+     * How far the AUC can go while some collisions have no scope evidence at all.
      *
-     * Four labeled collisions score exactly 0 on scope overlap because neither
-     * description states an artifact or a capability the dictionaries recognize as
-     * shared. They therefore tie with the eleven DISTINCT pairs that also score 0,
-     * and a tie contributes 0.5 to AUC. Even if every other collision ranked above
-     * every non-collision, the ceiling is
+     * A labeled collision scoring exactly 0 on scope overlap ties with every
+     * DISTINCT pair that also scores 0, and a tie contributes 0.5 to AUC. So the
+     * blind collisions put a hard ceiling on what any re-weighting can reach:
      *
-     *     (8 x 14 + 4 x 11 x 0.5) / (12 x 14) = 0.798
+     *     ((12 - blind) x 14 + blind x 11 x 0.5) / (12 x 14)
      *
-     * which is below the 0.85 target. Closing it needs those four pairs to gain
-     * evidence — a wider artifact vocabulary, or a model of paraphrase the synonym
-     * tables cannot express — not a different blend of the metrics that exist.
+     * Plan 10 left four blind collisions, a ceiling of 0.798 — below the 0.85
+     * target, which is why that target was reported unreachable rather than
+     * tuned toward. Plan 16 gave two of them evidence
+     * (`commit-msg-vs-change-summary` through the reachable synonym members,
+     * `test-writer-vs-spec-generator` through `spec`'s move to the `test` group
+     * and the dual-role guard), lifting the ceiling to 0.899. The target is no
+     * longer structurally out of reach — the remaining 0.02 is real distance.
+     *
+     * The two that are still blind need evidence the dictionaries cannot supply:
+     * `docx-vs-doc-coauthoring` shares only generic container nouns, and
+     * `otchet-formatter-vs-otchet-generator` is Cyrillic, where the English
+     * capability and artifact vocabularies match nothing by construction.
      */
     it('is bounded above by the pairs with no scope evidence at all', () => {
       const collisions = measured.filter(({ pair }) => pair.label === 'COLLIDE');
@@ -304,18 +319,17 @@ describe(`collision discrimination at threshold ${DEFAULT_COLLISION_THRESHOLD}`,
       const blindDistinct = zeroScope(distinct);
 
       expect(blindCollisions.map(({ pair }) => pair.id).sort()).toEqual([
-        'commit-msg-vs-change-summary',
         'docx-vs-doc-coauthoring',
         'otchet-formatter-vs-otchet-generator',
-        'test-writer-vs-spec-generator',
       ]);
 
       const ceiling =
         ((collisions.length - blindCollisions.length) * distinct.length +
           blindCollisions.length * blindDistinct.length * 0.5) /
         (collisions.length * distinct.length);
-      expect(ceiling).toBeLessThan(PLAN_10_TARGETS.auc);
       expect(areaUnderCurve()).toBeLessThanOrEqual(ceiling);
+      // Still short of the target, but no longer by construction.
+      expect(areaUnderCurve()).toBeLessThan(PLAN_10_TARGETS.auc);
     });
   });
 

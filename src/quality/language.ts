@@ -57,6 +57,11 @@ const MIN_FOREIGN_HITS = 3;
 const MIN_DISTINCT_FOREIGN_MARKERS = 2;
 
 export function isProbablyNonEnglish(text: string): boolean {
+  // NFC first, for the same reason every other tokenizer entry point does it:
+  // the German markers in "Konvertiert PDF-Dateien für Berichte…" are found in
+  // the composed spelling and lost in the decomposed one, because `für` splits
+  // into `fu` + a combining mark. Same visible text, opposite answer.
+  text = text.normalize('NFC');
   const letters = text.match(/\p{L}/gu);
   if (!letters || letters.length === 0) {
     return false; // no letters (digits/punctuation only) — nothing to warn about
