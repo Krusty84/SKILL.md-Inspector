@@ -67,10 +67,12 @@ function applyProfileOverrides(
     // A `code#ruleId` key addresses one catalog pattern; the bare code still
     // addresses its whole class. The narrower key wins, so an author can keep
     // a rule class enabled while silencing a single pattern within it.
-    const ruleId = diagnostic.data?.ruleId;
-    const override =
-      (typeof ruleId === 'string' ? overrides[`${diagnostic.code}#${ruleId}`] : undefined) ??
-      overrides[diagnostic.code];
+    //
+    // A finding merged from several patterns on one line carries every id it
+    // covers, and any of them addresses it: `sudo chmod 777 /srv && git push
+    // --force` is one diagnostic, and `#chmod-777` must reach it.
+    const override = ruleIdsOf(diagnostic).map((id) => overrides[`${diagnostic.code}#${id}`])
+      .find((value) => value !== undefined) ?? overrides[diagnostic.code];
     // `severityOverrides` is untyped user JSON. `readConfig` drops values that
     // are not a severity and warns about them, but a profile can be built by
     // other paths (tests, future callers), so never let an unknown value reach
@@ -94,6 +96,16 @@ function applyProfileOverrides(
     result.push({ ...diagnostic, severity: override });
   }
   return result;
+}
+
+/** Every catalog rule id a diagnostic can be addressed by, most specific first. */
+function ruleIdsOf(diagnostic: SkillDiagnostic): string[] {
+  const ids = diagnostic.data?.ruleIds;
+  if (Array.isArray(ids)) {
+    return ids.filter((id): id is string => typeof id === 'string');
+  }
+  const single = diagnostic.data?.ruleId;
+  return typeof single === 'string' ? [single] : [];
 }
 
 /** Applies profile overrides to asynchronous additions, then performs the same stable sort. */

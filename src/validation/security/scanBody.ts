@@ -17,6 +17,7 @@ import {
 } from './scanText';
 // scanSecrets is used in both the code and prose branches (token formats are
 // distinctive enough that prose scanning stays low-false-positive).
+import { collectProseBlocks, proseRange } from './proseStream';
 import { toSecurityDiagnostic } from './diagnostic';
 
 interface ScanNode {
@@ -69,7 +70,6 @@ export function scanBody(
         // `codeOnly` in the catalog and sit out this pass, because in prose
         // they match ordinary sentences rather than commands.
         ...scanCommands(value, patterns, settings.allowedCommands, 'prose'),
-        ...scanInjection(value, patterns),
         ...scanSecrets(value, patterns),
         ...scanSensitivePaths(value, patterns),
         ...scanServices(value, patterns, settings.allowedDomains),
@@ -79,6 +79,21 @@ export function scanBody(
       pushMatches(out, origin, value, scanHtmlCommentInstructions(value, patterns));
     }
   });
+
+  // Injection phrases are matched over *rendered* prose, reassembled across
+  // inline markup, because mdast splits a paragraph at every `*`, `**`, `_` and
+  // backtick — and one pair of asterisks used to defeat all fourteen rules.
+  for (const block of collectProseBlocks(tree)) {
+    for (const match of scanInjection(block.text, patterns)) {
+      out.push(
+        toSecurityDiagnostic(
+          match,
+          proseRange(block, doc.bodyStartLine, match.index, match.length),
+          match.ruleId ? { ruleId: match.ruleId, ruleIds: match.ruleIds ?? [match.ruleId] } : undefined,
+        ),
+      );
+    }
+  }
 
   pushMatches(
     out,
@@ -100,7 +115,9 @@ function pushMatches(
       toSecurityDiagnostic(
         match,
         offsetRange(origin, value, match.index, match.length),
-        match.ruleId ? { ruleId: match.ruleId } : undefined,
+        match.ruleId
+          ? { ruleId: match.ruleId, ruleIds: match.ruleIds ?? [match.ruleId] }
+          : undefined,
       ),
     );
   }

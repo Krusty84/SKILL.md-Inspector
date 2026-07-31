@@ -64,6 +64,15 @@ describe('security catalog pattern budget', () => {
     'dd if=/dev/x '.repeat(2400),
     'rm -rf a '.repeat(3500),
     'git clean -fdx '.repeat(2100),
+    // Plan 12 widened the rm/curl sources to accept quoted roots, a
+    // backslash-newline continuation and `&&`/`;` chaining. Each of those adds
+    // an alternation the input below is built to make ambiguous.
+    'curl \\\n'.repeat(4000),
+    'curl x && '.repeat(3200),
+    `rm -rf ${' '.repeat(32000)}`,
+    `rm -rf ${'\t'.repeat(32000)}`,
+    `rm -rf ${'"'.repeat(32000)}`,
+    '\\'.repeat(32000),
   ];
   const BUDGET_MS = 25;
 

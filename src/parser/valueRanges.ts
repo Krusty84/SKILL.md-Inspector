@@ -42,6 +42,25 @@ export function valueOrigin(node: ValueRangeNode, bodyStartLine: number): ValueO
 }
 
 /**
+ * Document position of `value[index]`, walking newlines from the value origin so
+ * an offset inside a multi-line fenced block resolves to the right line/column.
+ */
+export function offsetPosition(origin: ValueOrigin, value: string, index: number): ValueOrigin {
+  let line = origin.line;
+  let character = origin.character;
+  const limit = Math.min(index, value.length);
+  for (let i = 0; i < limit; i++) {
+    if (value.charCodeAt(i) === 10 /* \n */) {
+      line += 1;
+      character = 0;
+    } else {
+      character += 1;
+    }
+  }
+  return { line, character };
+}
+
+/**
  * Range of a `length`-character match that starts at `value[index]`, walking
  * newlines from the value origin so a match spanning into later lines of a
  * fenced block still resolves to the correct document line/column.
@@ -52,16 +71,7 @@ export function offsetRange(
   index: number,
   length: number,
 ): SkillDiagnosticRange {
-  let line = origin.line;
-  let character = origin.character;
-  for (let i = 0; i < index; i++) {
-    if (value.charCodeAt(i) === 10 /* \n */) {
-      line += 1;
-      character = 0;
-    } else {
-      character += 1;
-    }
-  }
+  const { line, character } = offsetPosition(origin, value, index);
   return {
     startLine: line,
     startCharacter: character,

@@ -298,6 +298,25 @@ off all eighteen. The rule ids are the `id` fields in
 `src/validation/security/defaultSecurityCatalog.json`. A `code#ruleId` key takes
 precedence over the bare code.
 
+Several patterns matching the same line collapse into **one** finding, and that
+finding carries every id it covers — so `sudo chmod 777 /srv && git push --force`
+is addressable by `#sudo`, `#chmod-777` *or* `#git-push-force`.
+
+### What is scanned
+
+The Markdown body, every string value in the frontmatter, and (unless
+`security.scanResourceFiles` is off) each bundled resource file. The frontmatter
+`description` matters most: it is the one field an agent loads at *discovery*
+time, for every session, whether or not the skill is ever invoked, so it is
+scanned for injection wording, sensitive paths and invisible Unicode as well as
+for secrets. Frontmatter is treated as prose, so command patterns do not run
+over it.
+
+Injection phrases are matched over the **rendered** text of each paragraph and
+heading, reassembled across inline markup. `Ignore all *previous* instructions.`
+and `Ignore all previous instructions.` render the same and are reported the
+same; the reported range still points at the source columns.
+
 Each line reports at most one command finding per tier: a risky match on a line
 that already carries a dangerous one is dropped, and same-tier matches on one
 line are merged into a single finding naming each distinct rule.
@@ -330,6 +349,11 @@ permission-skipping agent flags, and writes to agent identity files.
 - Good: download, review, then run; or add the command — or the exact line you
   run it on — to `security.allowedCommands`. That allowlist applies to this tier
   only; it cannot suppress a `dangerous` finding.
+
+  An allowlist entry must be at least three characters and must line up with a
+  token boundary in what matched. `["o"]` used to silence the whole tier and
+  `["sh"]` silenced `git push --force` through the "sh" inside "push"; neither
+  does now.
 
 ### `skill.security.service.risky`
 
